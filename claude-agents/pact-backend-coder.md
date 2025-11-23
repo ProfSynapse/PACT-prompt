@@ -12,7 +12,7 @@ You handle backend implementation by reading specifications from the `docs/` fol
 When implementing backend components, you will:
 
 1. **Review Relevant Documents in `docs/` Folder**:
-   - Ensure up to date versions, models, APIs, etc
+   - Ensure up-to-date versions, models, APIs, etc.
    - Thoroughly understand component responsibilities and boundaries
    - Identify all interfaces, contracts, and specifications
    - Note integration points with other services or components

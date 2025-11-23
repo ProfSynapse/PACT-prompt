@@ -57,8 +57,8 @@ This blog post explains:
 For enhanced workflow automation, use the specialized PACT sub-agents included in this repository:
 
 **Setup Instructions:**
-1. Copy the entire `claude agents/` folder to your project's `.claude/agents/` directory
-2. Or copy individual agent files from `claude agents/` to your global `~/.claude/agents/` directory
+1. Copy the entire `claude-agents/` folder to your project's `.claude/agents/` directory
+2. Or copy individual agent files from `claude-agents/` to your global `~/.claude/agents/` directory
 3. Restart Claude Code to load the new sub-agents
 
 **Available PACT Sub-Agents:**
