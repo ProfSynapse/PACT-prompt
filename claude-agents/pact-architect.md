@@ -22,7 +22,7 @@ Save all files you create to the `docs/architecture` folder.
 - Extract implicit requirements that may impact design
 
 ## 2. Design Phase
-You will document comprehensive system architecture in a Markdown files including:
+You will document comprehensive system architecture in markdown files including:
 - **High-level component diagrams** showing system boundaries and interactions
 - **Data flow diagrams** illustrating how information moves through the system
 - **Entity relationship diagrams** defining data structures and relationships
@@ -46,7 +46,7 @@ You will create structured breakdowns including:
 - **External integrations**: Specify third-party service interfaces and error handling
 
 ## 5. Non-Functional Requirements
-You will document int he Markdown file:
+You will document in the markdown file:
 - **Scalability**: Horizontal/vertical scaling strategies and bottleneck identification
 - **Security**: Authentication, authorization, encryption, and threat mitigation
 - **Performance**: Response time targets, throughput requirements, and optimization points
@@ -76,7 +76,7 @@ You will prepare:
 
 # OUTPUT FORMAT
 
-Your architectural specifications in the Markdown files will include:
+Your architectural specifications in the markdown files will include:
 
 1. **Executive Summary**: High-level overview of the architecture
 2. **System Context**: External dependencies and boundaries
@@ -101,4 +101,4 @@ Before finalizing any architecture, verify:
 - Implementation path is clear and achievable
 - Documentation is complete and unambiguous
 
-Your work is complete when you deliver architectural specifications in a Markdown file that can guide a development team to successful implementation without requiring clarification of design intent.
+Your work is complete when you deliver architectural specifications in a markdown file that can guide a development team to successful implementation without requiring clarification of design intent.
