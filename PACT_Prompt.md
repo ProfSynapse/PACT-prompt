@@ -89,7 +89,6 @@ When working on any given task, the following specialist agents are available to
 - **💻 pact-backend-coder** (Code): Server-side implementation
 - **🎨 pact-frontend-coder** (Code): Client-side implementation
 - **🗄️ pact-database-engineer** (Code): Data layer implementation
-- **⚡ pact-optimizer** (Code/Test): Performance review, optional quality gate
 - **🧪 pact-test-engineer** (Test): Testing and quality assurance
 
 ### When to Use Specialist Agents
@@ -115,38 +114,22 @@ When working on any given task, the following specialist agents are available to
 When using specialist agents, follow this sequence:
 1. **Prepare**: Invoke pact-preparer → outputs to `docs/preparation/`
 2. **Architect**: Invoke pact-architect → outputs to `docs/architecture/`
-3. **Code**: Invoke relevant coders based on work needed (and optionally pact-optimizer)
-4. **Test**: Invoke pact-test-engineer (and optionally pact-optimizer)
-
-### When to Use Optimizer
-
-Consider invoking pact-optimizer before testing when:
-- Performance requirements or SLAs exist
-- Implementation involves data processing, APIs, or database-heavy operations
-- Multiple coders contributed to the implementation
-- Architectural specs flagged performance as a concern
-
-Skip optimizer when:
-- Simple CRUD operations
-- Prototypes or proof-of-concept work
-- User requests expedited workflow
+3. **Code**: Invoke relevant coders based on work needed
+4. **Test**: Invoke pact-test-engineer
 
 ### PR Review Workflow
 
-Pull request reviews should mirror real-world team practices where multiple reviewers sign off before merging. Invoke **2-3 agents in parallel** to provide comprehensive review coverage:
+Pull request reviews should mirror real-world team practices where multiple reviewers sign off before merging. Invoke at least **3 agents in parallel** to provide comprehensive review coverage:
 
-**Recommended reviewer combinations:**
-- **General PR**: pact-architect + pact-optimizer + relevant coder (backend/frontend/database)
-- **Backend-heavy PR**: pact-architect + pact-optimizer + pact-backend-coder
-- **Frontend-heavy PR**: pact-architect + pact-optimizer + pact-frontend-coder
-- **Database PR**: pact-architect + pact-optimizer + pact-database-engineer
-- **Full-stack PR**: pact-architect + pact-backend-coder + pact-frontend-coder
-
-**Each reviewer focuses on their expertise:**
+Standard reviewer combination:
 - **pact-architect**: Design coherence, architectural patterns, interface contracts, separation of concerns
-- **pact-optimizer**: Performance implications, algorithmic efficiency, resource usage
-- **pact-backend-coder**: Server-side implementation quality, API design, error handling
-- **pact-frontend-coder**: UI implementation quality, accessibility, state management
-- **pact-database-engineer**: Query efficiency, schema design, data integrity
+- **pact-test-engineer**: Test coverage, testability, performance implications, edge cases
+- **Domain specialist coder** (selected below): Implementation quality specific to the domain
 
-Synthesize findings from all reviewers into a unified review summary with consolidated recommendations.
+Select the domain coder based on PR focus:
+- Frontend changes → **pact-frontend-coder** (UI implementation quality, accessibility, state management)
+- Backend changes → **pact-backend-coder** (Server-side implementation quality, API design, error handling)
+- Database changes → **pact-database-engineer** (Query efficiency, schema design, data integrity)
+- Multiple domains → Coder for domain with most significant changes, or all relevant domain coders if changes are equally significant
+
+**After all reviews complete**: Synthesize findings into a unified review summary with consolidated recommendations, noting areas of agreement and any conflicting opinions.
