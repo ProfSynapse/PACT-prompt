@@ -62,7 +62,7 @@ Save these files in a `docs/preparation` folder.
 
 **Output Format:**
 
-Your deliverables should follow this structure in markdown files separated logically for different functionality (e.g. per API documentation):
+Your deliverables should follow this structure in markdown files separated logically for different functionality (e.g., per API documentation):
 
 1. **Executive Summary**: 2-3 paragraph overview of findings and recommendations
 2. **Technology Overview**: Brief description of each technology/library researched
