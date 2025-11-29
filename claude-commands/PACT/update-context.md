@@ -11,3 +11,5 @@ Update `codebase-context.md` to reflect: $ARGUMENTS
 - Any other significant changes or discoveries not yet documented
 
 After adding updates, review and update any other outdated information.
+
+Once done updating `codebase-context.md`, commit the changes (and push if remote exists).
