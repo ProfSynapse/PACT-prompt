@@ -118,7 +118,7 @@ When using specialist agents, follow this sequence:
 3. **CODE Phase**: Invoke relevant coders based on work needed
 4. **TEST Phase**: Invoke `pact-test-engineer`
 
-Within each phase, consider invoking multiple agents in parallel to handle non-conflicting tasks.
+Within each phase, consider invoking **multiple agents in parallel** to handle non-conflicting tasks.
 
 ### PR Review Workflow
 
