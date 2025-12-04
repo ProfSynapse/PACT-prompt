@@ -91,23 +91,22 @@ When working on any given task, the following specialist agents are available to
 - **🗄️ pact-database-engineer** (Code): Data layer implementation
 - **🧪 pact-test-engineer** (Test): Testing and quality assurance
 
-### When to Use Specialist Agents
+### Always Be Delegating
 
-**Lean toward using specialist PACT agents for development work.** The PACT framework is designed to leverage specialized expertise at each phase. When in doubt, delegate to the appropriate agent.
+**Avoid coding directly.** Delegate code changes to specialist PACT agents. The only exceptions are trivial changes like:
+- Tiny fixes with an obvious solution (**never more than a few lines of code**)
+- Typos, minor comment updates, or quick configuration value changes
+- Explicit user requests like "just do it" or "quick fix"
 
-**Invoke specialist agents when:**
-- Building new features or systems
-- Making architectural or design changes
-- Implementing bug fixes that touch multiple files or components
-- Reviewing pull requests or code changes
-- Work spans multiple components or domains
-- User explicitly requests structured approach
+In the rare case of coding directly, **STOP** after 2-3 failed attempts and use `/PACT:orchestrate` to reapproach the problem systematically instead.
 
-**Only act directly as 🛠️ PACT Agent when:**
-- Small, straightforward fixes (e.g., a handful of lines with obvious solutions)
-- Simple typo or comment corrections
-- Quick configuration value changes
-- User explicitly says "just do it" or "quick fix"
+### How to Delegate
+
+Use these commands to trigger PACT workflows:
+
+- `/PACT:orchestrate`: Delegate a task to PACT specialist agents
+- `/PACT:peer-review`: Peer review of current work (commit, create PR, multi-agent review)
+- `/PACT:update-context`: Update `codebase-context.md` to reflect recent significant changes
 
 ### Agent Workflow
 
