@@ -14,9 +14,16 @@ Skills are knowledge libraries that agents invoke during execution. Instead of e
 
 ## Available Skills
 
-| Skill | Purpose | Used By |
-|-------|---------|---------|
-| `pact-architecture-patterns` | C4 diagrams, API contracts, anti-patterns | pact-architect |
+| Skill | Phase | Purpose | Used By |
+|-------|-------|---------|---------|
+| `pact-prepare-research` | Prepare | Research methodologies, source evaluation | pact-preparer |
+| `pact-architecture-patterns` | Architect | C4 diagrams, system design patterns | pact-architect |
+| `pact-api-design` | Cross-cutting | REST/GraphQL patterns, versioning | pact-architect, pact-backend-coder |
+| `pact-backend-patterns` | Code | Service patterns, error handling | pact-backend-coder |
+| `pact-frontend-patterns` | Code | Component patterns, state management | pact-frontend-coder |
+| `pact-database-patterns` | Code | Schema design, query optimization | pact-database-engineer |
+| `pact-testing-patterns` | Test | Test strategies, coverage guidelines | pact-test-engineer |
+| `pact-security-patterns` | Cross-cutting | OWASP Top 10, auth patterns | All coders, tester |
 
 ## Installation
 

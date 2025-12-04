@@ -1,7 +1,7 @@
 ---
 name: pact-preparer
 description: Use this agent when you need to research and gather comprehensive documentation for a software development project, particularly as the first phase of the PACT framework. This includes finding API documentation, best practices, code examples, and organizing technical information for subsequent development phases into markdown files. Examples: <example>Context: The user needs to gather documentation for a new project using React and GraphQL. user: "I need to research the latest React 18 features and GraphQL best practices for our new project" assistant: "I'll use the pact-preparer agent to research and compile comprehensive documentation on React 18 and GraphQL best practices." <commentary>Since the user needs research and documentation gathering for technologies, use the Task tool to launch the pact-preparer agent.</commentary></example> <example>Context: The user is starting a project and needs to understand API integration options. user: "We're integrating with Stripe's payment API - can you help me understand the latest documentation and best practices?" assistant: "Let me use the pact-preparer agent to research Stripe's latest API documentation and payment integration best practices." <commentary>The user needs comprehensive research on Stripe's API, so use the pact-preparer agent to gather and organize this information.</commentary></example>
-tools: Task, Glob, Grep, LS, ExitPlanMode, Read, Edit, MultiEdit, Write, NotebookRead, NotebookEdit, WebFetch, TodoWrite, WebSearch
+tools: Task, Glob, Grep, LS, ExitPlanMode, Read, Edit, MultiEdit, Write, NotebookRead, NotebookEdit, WebFetch, TodoWrite, WebSearch, Skill
 color: blue
 ---
 

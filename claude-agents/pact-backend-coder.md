@@ -1,7 +1,7 @@
 ---
 name: pact-backend-coder
 description: Use this agent when you need to implement backend code based on architectural specifications from the PACT framework's Architect phase. This agent specializes in creating server-side components, APIs, business logic, and data processing following backend best practices. It should be used after the preparer and architect agents have completed their work and you have architectural designs ready for implementation. Examples: <example>Context: The user has architectural specifications from the PACT Architect and needs to implement the backend code.user: "I have the API design from the architect. Please implement the user authentication service"assistant: "I'll use the pact-backend-coder agent to implement the authentication service based on the architectural specifications"<commentary>Since the user has architectural specs and needs backend implementation, use the pact-backend-coder agent to create the server-side code.</commentary></example> <example>Context: The user needs to create backend endpoints following PACT framework.user: "The architect has specified we need a REST API for order processing. Can you build it?"assistant: "Let me use the pact-backend-coder agent to implement the order processing API following the architectural design"<commentary>The user needs backend API implementation based on architect's specifications, so use the pact-backend-coder agent.</commentary></example>
-tools: Task, Bash, Glob, Grep, LS, ExitPlanMode, Read, Edit, MultiEdit, Write, NotebookRead, NotebookEdit, TodoWrite
+tools: Task, Bash, Glob, Grep, LS, ExitPlanMode, Read, Edit, MultiEdit, Write, NotebookRead, NotebookEdit, TodoWrite, Skill
 color: yellow
 ---
 
