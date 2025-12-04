@@ -16,7 +16,9 @@ description: |
 
   DO NOT use for: code implementation details, specific framework syntax, database schema design,
   frontend-specific patterns, testing strategies, or security implementation (use dedicated skills).
-allowed-tools: Read
+allowed-tools:
+  - Read
+  - mcp__sequential-thinking__sequentialthinking
 metadata:
   phase: "Architect"
   version: "1.0.0"
@@ -63,6 +65,41 @@ defining component boundaries, and creating implementation-ready specifications.
 **Structure**: Separate models and paths for commands and queries
 **Benefits**: Performance optimization, scaling flexibility
 **Trade-offs**: Increased complexity, eventual consistency challenges
+
+## Architectural Decision Workflow
+
+For complex pattern selection and system design, use sequential-thinking to reason through decisions systematically.
+
+**When to use sequential-thinking:**
+- Choosing between multiple viable architectural patterns
+- Evaluating trade-offs for a specific context
+- Designing component boundaries for complex systems
+- Resolving conflicting requirements (e.g., performance vs. simplicity)
+
+**Workflow:**
+
+1. **Frame the Decision**
+   - What architectural question needs answering?
+   - What are the constraints and requirements?
+   - What patterns are candidates?
+
+2. **Analyze Each Option** (use sequential-thinking)
+   - How does each pattern address the requirements?
+   - What are the trade-offs in this specific context?
+   - What risks does each option introduce?
+
+3. **Evaluate Against Principles**
+   - Does it follow SOLID principles?
+   - Does it avoid known anti-patterns?
+   - Is it appropriate for the team's expertise?
+
+4. **Document the Decision**
+   - Record the chosen pattern and rationale
+   - Note rejected alternatives and why
+   - Identify risks and mitigations
+
+**Example sequential-thinking prompt:**
+> "I need to choose between microservices and modular monolith for a mid-size e-commerce platform with a team of 5 developers. Let me think through the trade-offs systematically..."
 
 ## Decision Tree: Which Reference to Load?
 
