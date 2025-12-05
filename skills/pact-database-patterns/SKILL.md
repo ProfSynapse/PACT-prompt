@@ -470,6 +470,45 @@ Walk through the trade-offs of each approach considering:
 - Cost at scale
 ```
 
+## MCP Tools for Database Design
+
+This section provides guidance on WHEN and WHY to use MCP tools during database implementation. See agent documentation for invocation syntax.
+
+### Available MCP Tools
+
+The following MCP tool enhances database design decisions:
+- **sequential-thinking**: Complex schema design and data modeling trade-offs
+
+---
+
+### sequential-thinking
+
+**Purpose**: Extended reasoning capability for complex database design decisions
+
+**When to use**:
+- Evaluating normalization vs denormalization trade-offs for specific access patterns (e.g., balancing query performance vs data consistency for reporting tables)
+- Choosing between different data modeling approaches for complex domains (e.g., multi-tenant SaaS schema: shared table with tenant_id vs schema-per-tenant vs database-per-tenant)
+- Designing partitioning strategies for large tables with competing access patterns (e.g., time-based vs hash-based partitioning for logs with both time-range and user-based queries)
+- Planning complex migration paths with zero-downtime requirements (e.g., column rename across distributed services with gradual rollout)
+- Designing composite index strategies with multiple column orderings (e.g., optimizing for conflicting query patterns on same table)
+- Evaluating transaction isolation levels for complex business workflows (e.g., balancing consistency vs performance for inventory management)
+- Planning distributed transaction patterns across microservices
+
+**When NOT to use**:
+- Standard normalized schema design following well-known domain patterns
+- Adding straightforward indexes based on query analysis
+- Simple data type selection with clear requirements
+- Routine database maintenance tasks (vacuuming, reindexing)
+- Well-documented migration patterns (adding nullable column)
+
+**Value for database coding**: Transparent reasoning about schema trade-offs creates documentation for future optimization decisions. Prevents costly migrations from poorly considered initial design. Reduces production incidents from transaction isolation issues.
+
+**Integration approach**: Review data model from architecture phase → Identify complex schema or performance decision → Use sequential-thinking to evaluate query patterns, consistency requirements, and scaling implications → Implement with documented rationale → Create performance baselines for reasoned optimizations.
+
+**See pact-database-engineer agent for invocation syntax and workflow integration.**
+
+---
+
 ## Reference Files
 
 Detailed patterns and examples available in:

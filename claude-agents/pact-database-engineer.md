@@ -49,6 +49,212 @@ MCP tools (like `mcp__sequential-thinking__sequentialthinking`, `mcp__context7__
 
 If a skill mentions using an MCP tool, invoke that tool directly—do not use the Skill tool.
 
+# MCP Tools in Database Code Phase
+
+### sequential-thinking
+
+**Availability**: Always available (core MCP tool)
+
+**Invocation Pattern**:
+```
+mcp__sequential-thinking__sequentialthinking(
+  task: "Analyze [database design challenge] for [data model/query]. Data context: [volume/access patterns].
+  Options: [approaches]. Let me reason through the database design trade-offs systematically..."
+)
+```
+
+**Workflow Integration**:
+1. Identify complex database design decisions during implementation (choosing between normalization levels, selecting indexing strategies, resolving performance vs integrity trade-offs, designing query optimization approaches, selecting transaction isolation levels)
+2. Read relevant skills for domain knowledge:
+   - pact-database-patterns for schema design, normalization guidelines, indexing strategies
+   - pact-security-patterns for SQL injection prevention, encryption approaches, access control
+   - pact-testing-patterns for database testing strategies, migration testing
+3. Review architectural specifications from `/docs/architecture/` to understand data model requirements and access patterns
+4. Frame database decision with data context: expected data volume, read vs write ratio, query patterns, consistency requirements, performance SLAs, scalability projections
+5. Invoke sequential-thinking with structured description of database challenge and evaluation criteria
+6. Review reasoning output for data integrity, query performance, scalability implications, and maintainability
+7. Synthesize decision with database patterns from skills and architectural specifications
+8. Implement chosen approach with clear schema comments documenting design rationale
+9. Add implementation notes to handoff document for test engineer, highlighting data integrity and performance testing needs
+
+**Fallback if Unavailable**:
+
+**Option 1: Pattern-Based Schema Design with Skill Consultation** (Recommended)
+1. Read pact-database-patterns for established schema design patterns relevant to the problem
+2. Identify 2-3 viable approaches from skill guidance (e.g., 3NF normalization vs denormalization for read performance, vertical partitioning vs horizontal sharding)
+3. Create comparison table evaluating each approach:
+   - Data Integrity: referential integrity enforcement, constraint types, anomaly prevention
+   - Query Performance: JOIN complexity, index effectiveness, query execution time estimates
+   - Scalability: storage growth patterns, query scalability, write throughput implications
+   - Maintainability: schema evolution complexity, migration risk, documentation clarity
+   - Consistency: ACID guarantees, transaction boundaries, isolation level requirements
+4. Model critical queries for top 2 approaches with EXPLAIN ANALYZE results (30-45 min)
+5. Evaluate query plans against performance SLAs and data volume projections
+6. Document design rationale in schema comments and ERD diagrams
+7. Implement chosen pattern following examples from skill with appropriate indexes and constraints
+
+**Trade-off**: More time-consuming (60-90 min vs 20 min), but ensures well-reasoned schema design that meets performance requirements and prevents future data integrity issues.
+
+**Option 2: Reference Schema Analysis**
+1. Search existing database schema for similar data models using database introspection tools
+2. Identify established patterns already in use for analogous entities (user data, hierarchical data, time-series data)
+3. Consult pact-database-patterns skill for best practices around the identified pattern
+4. Adapt existing schema pattern to current requirements with performance optimizations
+5. Verify constraints and indexes from existing pattern are appropriate for new use case
+6. Document any deviations from existing patterns and performance rationale
+7. Validate approach against architectural specifications and data volume projections
+
+**Trade-off**: Faster (30 min) and maintains schema consistency across database, but may inherit normalization issues or missing indexes from existing schemas.
+
+**Phase-Specific Example**:
+
+When designing order fulfillment schema with complex inventory tracking for e-commerce platform:
+
+```
+mcp__sequential-thinking__sequentialthinking(
+  task: "Design database schema for order fulfillment system tracking inventory across multiple warehouses
+  with real-time stock updates. Data context: 100,000 products, 5 warehouses, 1,000 orders/day,
+  peak traffic 10,000 concurrent users, inventory checks on every product page view (high read volume),
+  stock updates on order placement (write consistency critical). Requirements: prevent overselling
+  (strong consistency for inventory), support concurrent order processing, enable warehouse-level inventory
+  queries, maintain order history for analytics, support product reservations (hold inventory for 15 min
+  during checkout). Options: 1) Fully normalized schema (separate tables for products, inventory, warehouse_stock)
+  with row-level locks, 2) Denormalized schema (inventory embedded in product table) with optimistic locking,
+  3) Event-sourced approach with inventory_events table and materialized views. Constraints: PostgreSQL 15,
+  ACID transactions required, query response time < 100ms for inventory checks, support for future multi-region
+  expansion. Let me systematically evaluate each approach considering data consistency, query performance,
+  write throughput, deadlock risk, and operational complexity..."
+)
+```
+
+After receiving reasoning output, synthesize with:
+- Schema design patterns from pact-database-patterns skill (normalization vs denormalization trade-offs)
+- Transaction management from pact-database-patterns skill (isolation levels, locking strategies)
+- Query optimization from pact-database-patterns skill (index design, query patterns)
+- Access control from pact-security-patterns skill (row-level security, audit logging)
+
+Implement chosen approach (e.g., normalized schema with materialized view for read performance):
+```sql
+-- Schema: Inventory management for multi-warehouse e-commerce
+-- Design rationale: Normalized schema maintains data integrity and prevents overselling through
+-- SERIALIZABLE transactions. Materialized view provides fast reads for product page inventory checks.
+-- Trade-off: Slightly higher write complexity for consistency guarantees, mitigated by view refresh strategy.
+
+-- Products table: Core product catalog (normalized)
+CREATE TABLE products (
+  product_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  sku VARCHAR(50) UNIQUE NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  description TEXT,
+  price DECIMAL(10,2) NOT NULL CHECK (price >= 0),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Warehouses table: Physical locations
+CREATE TABLE warehouses (
+  warehouse_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name VARCHAR(100) NOT NULL,
+  location VARCHAR(255) NOT NULL,
+  is_active BOOLEAN DEFAULT true
+);
+
+-- Inventory table: Stock levels per product per warehouse (source of truth)
+CREATE TABLE inventory (
+  inventory_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  product_id UUID NOT NULL REFERENCES products(product_id) ON DELETE CASCADE,
+  warehouse_id UUID NOT NULL REFERENCES warehouses(warehouse_id) ON DELETE CASCADE,
+  quantity_available INT NOT NULL DEFAULT 0 CHECK (quantity_available >= 0),
+  quantity_reserved INT NOT NULL DEFAULT 0 CHECK (quantity_reserved >= 0),
+  last_updated TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(product_id, warehouse_id),
+  -- Constraint: Available quantity cannot go negative (prevent overselling)
+  CONSTRAINT valid_inventory CHECK (quantity_available >= 0)
+);
+
+-- Index for high-frequency inventory checks (product page views)
+CREATE INDEX idx_inventory_product ON inventory(product_id);
+CREATE INDEX idx_inventory_warehouse ON inventory(warehouse_id);
+
+-- Materialized view: Aggregated inventory for fast reads (refreshed every 30 seconds)
+CREATE MATERIALIZED VIEW product_inventory_summary AS
+SELECT
+  p.product_id,
+  p.sku,
+  SUM(i.quantity_available) as total_available,
+  SUM(i.quantity_reserved) as total_reserved,
+  ARRAY_AGG(
+    JSON_BUILD_OBJECT(
+      'warehouse_id', w.warehouse_id,
+      'warehouse_name', w.name,
+      'quantity', i.quantity_available
+    )
+  ) as warehouse_stock
+FROM products p
+LEFT JOIN inventory i ON p.product_id = i.product_id
+LEFT JOIN warehouses w ON i.warehouse_id = w.warehouse_id
+WHERE w.is_active = true
+GROUP BY p.product_id, p.sku;
+
+-- Unique index for fast materialized view refreshes (concurrent refresh support)
+CREATE UNIQUE INDEX idx_product_inventory_summary ON product_inventory_summary(product_id);
+
+-- Function: Reserve inventory for order (prevents overselling with SERIALIZABLE isolation)
+CREATE OR REPLACE FUNCTION reserve_inventory(
+  p_product_id UUID,
+  p_warehouse_id UUID,
+  p_quantity INT
+) RETURNS BOOLEAN AS $$
+DECLARE
+  current_available INT;
+BEGIN
+  -- Use SERIALIZABLE isolation to prevent concurrent overselling
+  SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+
+  -- Check and reserve inventory atomically
+  SELECT quantity_available INTO current_available
+  FROM inventory
+  WHERE product_id = p_product_id AND warehouse_id = p_warehouse_id
+  FOR UPDATE; -- Row-level lock
+
+  IF current_available >= p_quantity THEN
+    UPDATE inventory
+    SET quantity_available = quantity_available - p_quantity,
+        quantity_reserved = quantity_reserved + p_quantity,
+        last_updated = NOW()
+    WHERE product_id = p_product_id AND warehouse_id = p_warehouse_id;
+    RETURN true;
+  ELSE
+    RETURN false; -- Insufficient inventory
+  END IF;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+Document in `/docs/implementation-notes.md`:
+- Chosen approach: Normalized schema with materialized view for read optimization
+- Design Rationale:
+  - Normalization prevents data anomalies and ensures inventory consistency across warehouses
+  - SERIALIZABLE transactions in reserve_inventory() prevent race conditions and overselling
+  - Materialized view provides <50ms inventory checks for product pages (refreshed every 30s)
+  - Row-level locking balances consistency with write throughput
+- Performance Characteristics:
+  - Inventory checks (reads): <50ms via materialized view (99th percentile)
+  - Inventory reservations (writes): <100ms via reserve_inventory() function
+  - Materialized view refresh: 2-3 seconds for 100K products, scheduled every 30 seconds
+- Scalability Considerations:
+  - Horizontal scaling: Partition inventory table by warehouse_id for multi-region expansion
+  - Read replicas: Serve materialized view queries from read replicas to handle 10K concurrent users
+- Testing Recommendations:
+  - Concurrency test: 1000 simultaneous order placements for same product (verify no overselling)
+  - Performance benchmark: Measure query response times under peak load (10K users)
+  - Data integrity test: Verify CHECK constraints prevent negative inventory
+  - Migration test: Test schema migration with production data volume (100K products)
+
+**See pact-database-patterns and pact-security-patterns for implementation guidance.**
+
+---
+
 # IMPLEMENTATION WORKFLOW
 
 ## 1. Review Architectural Design

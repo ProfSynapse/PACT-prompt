@@ -449,6 +449,44 @@ src/
 - ❌ Synchronous long-running operations
 - ❌ No rate limiting
 
+## MCP Tools for Backend Implementation
+
+This section provides guidance on WHEN and WHY to use MCP tools during backend coding. See agent documentation for invocation syntax.
+
+### Available MCP Tools
+
+The following MCP tool enhances backend implementation decisions:
+- **sequential-thinking**: Complex backend logic design and error handling strategies
+
+---
+
+### sequential-thinking
+
+**Purpose**: Extended reasoning capability for complex backend implementation decisions
+
+**When to use**:
+- Designing complex business logic with multiple interacting rules (e.g., order fulfillment workflow coordinating inventory, payment, shipping with various failure modes)
+- Planning error handling strategies across service layers with cascading failures (e.g., payment failure during checkout requiring rollback coordination)
+- Designing multi-step transaction boundaries with competing consistency and performance requirements
+- Planning security implementations for multi-tenant systems (e.g., data isolation strategies with shared vs separate schemas)
+- Optimizing performance bottlenecks with multiple competing approaches (e.g., query optimization vs caching vs async processing trade-offs)
+- Designing integration patterns for unreliable external services (e.g., retry strategies, circuit breakers, idempotency considerations)
+
+**When NOT to use**:
+- Straightforward CRUD operations following established service patterns
+- Simple input validation with clear schema requirements
+- Standard authentication flows using well-documented libraries
+- Performance optimization with obvious solutions (e.g., adding missing database index)
+- Refactoring existing code without changing business logic
+
+**Value for backend coding**: Systematic reasoning prevents overlooking edge cases in complex business logic. Creates clear documentation of error handling rationale for future maintenance. Reduces bugs in critical transaction paths.
+
+**Integration approach**: Review architectural specification → Identify complex implementation decision → Use sequential-thinking to reason through edge cases and failure modes → Implement solution with documented rationale → Create tests covering reasoned scenarios.
+
+**See pact-backend-coder agent for invocation syntax and workflow integration.**
+
+---
+
 ## Reference Files
 
 This skill includes detailed reference documentation:

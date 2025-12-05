@@ -416,6 +416,45 @@ When providing API design guidance, structure your output as:
 - Example requests and responses
 - Error code reference
 
+## MCP Tools for API Design
+
+This section provides guidance on WHEN and WHY to use MCP tools for API design decisions. See agent documentation for invocation syntax.
+
+### Available MCP Tools
+
+The following MCP tool enhances API design decisions:
+- **sequential-thinking**: Complex API architecture and contract design reasoning
+
+---
+
+### sequential-thinking
+
+**Purpose**: Extended reasoning capability for complex API design decisions
+
+**When to use**:
+- Evaluating REST vs GraphQL vs hybrid architectural approaches with competing requirements (e.g., balancing client flexibility, caching, performance, team expertise, mobile vs web needs)
+- Designing backward-compatible versioning strategies for evolving APIs (e.g., URL versioning vs header versioning with gradual client migration, deprecation timelines, code duplication minimization)
+- Planning complex resource modeling with multiple relationship types (e.g., deeply nested resources, many-to-many relationships, sparse field selection, embedding vs linking trade-offs)
+- Designing error response taxonomies for comprehensive client error handling (e.g., distinguishing validation errors, business rule violations, transient failures, permanent errors with retry guidance)
+- Evaluating pagination strategies for different access patterns (e.g., offset vs cursor vs keyset pagination with performance, consistency, and UX implications)
+- Planning authentication flows for multi-platform clients (e.g., web, mobile, third-party integrations with OAuth2, API keys, JWT considerations)
+- Designing API rate limiting and throttling strategies balancing fairness, abuse prevention, and legitimate use cases
+
+**When NOT to use**:
+- Standard CRUD REST API design following established conventions
+- Simple API documentation tasks without design decisions
+- Implementing API specifications already defined by architect
+- Straightforward status code selection with clear semantics
+- Following API style guide for consistent error formats
+
+**Value for API design**: Transparent reasoning creates clear API contract rationale for client developers. Reduces breaking changes from poorly considered initial design. Documents trade-offs for future API evolution decisions.
+
+**Integration approach**: Review requirements and client needs → Identify complex API design decision → Use sequential-thinking to evaluate developer experience, performance, evolvability, and ecosystem constraints → Document decision in API specification → Create examples demonstrating reasoned design choices.
+
+**See pact-architect and pact-backend-coder agents for invocation syntax and workflow integration.**
+
+---
+
 ## Reference Materials
 
 Consult these reference files for detailed patterns:

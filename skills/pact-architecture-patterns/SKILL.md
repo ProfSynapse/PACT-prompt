@@ -254,6 +254,42 @@ Your architecture documentation should include:
 6. **Data Model**: Entities, relationships, and constraints
 7. **Decision Log**: Why key architectural choices were made
 
+## MCP Tools for Architectural Decisions
+
+This section provides guidance on WHEN and WHY to use MCP tools during the Architect phase. See agent documentation for invocation syntax.
+
+### Available MCP Tools
+
+The following MCP tool enhances architectural decision-making:
+- **sequential-thinking**: Complex architectural reasoning and pattern evaluation
+
+---
+
+### sequential-thinking
+
+**Purpose**: Extended reasoning capability for complex architectural decisions requiring systematic trade-off analysis
+
+**When to use**:
+- Choosing between 3+ viable architectural patterns (e.g., microservices vs modular monolith vs serverless with team size, scaling needs, operational complexity considerations)
+- Evaluating trade-offs with multiple competing non-functional requirements (e.g., balancing scalability, cost, maintainability, and team expertise)
+- Designing component boundaries for systems with complex domain logic and unclear separation of concerns
+- Resolving conflicting architectural principles (e.g., YAGNI vs future-proofing, performance vs simplicity, consistency vs availability)
+- Planning major architectural migrations with many dependencies and risk factors (e.g., monolith to microservices transition strategy)
+
+**When NOT to use**:
+- Well-established patterns with clear best practices for your context (e.g., standard CRUD REST API)
+- Time-sensitive architectural spikes where rapid prototyping is preferred over deep analysis
+- Simple binary choices with obvious answers based on requirements (e.g., SQL vs NoSQL when relational data model is clear)
+- Tactical implementation decisions better suited to coding phase (e.g., specific library selection)
+
+**Value for architecture phase**: Transparent reasoning process creates auditable Architectural Decision Records (ADRs). Reduces risk of overlooking critical trade-offs in foundational design decisions. Provides clear rationale for stakeholders reviewing architectural specifications.
+
+**Integration approach**: Load architecture patterns from this skill → Identify decision requiring extended reasoning → Use sequential-thinking to systematically evaluate options against principles → Document decision rationale in architecture specification with clear trade-off analysis.
+
+**See pact-architect agent for invocation syntax and workflow integration.**
+
+---
+
 ## Additional Resources
 
 - **Comprehensive diagram templates**: `references/c4-templates.md`

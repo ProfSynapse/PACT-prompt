@@ -642,6 +642,44 @@ Before completing Test phase, verify:
 
 ---
 
+## MCP Tools for Testing
+
+This section provides guidance on WHEN and WHY to use MCP tools during the Test phase. See agent documentation for invocation syntax.
+
+### Available MCP Tools
+
+The following MCP tool enhances testing strategy and execution:
+- **sequential-thinking**: Test strategy design and complex test scenario planning
+
+---
+
+### sequential-thinking
+
+**Purpose**: Extended reasoning capability for complex testing decisions and scenario analysis
+
+**When to use**:
+- Designing test strategies for complex features with multiple integration points (e.g., payment flow with inventory, shipping, notifications, accounting integrations)
+- Identifying critical test scenarios for high-risk features (e.g., authentication system with MFA, account recovery, session management edge cases)
+- Debugging flaky tests with intermittent failures across multiple potential causes (e.g., race conditions, timing issues, test pollution, external service instability)
+- Planning performance test scenarios for realistic user behaviors (e.g., e-commerce load testing with cart abandonment, concurrent checkouts, flash sale spikes)
+- Designing security test cases from threat model analysis (e.g., API security testing covering OWASP Top 10 with domain-specific attack vectors)
+- Evaluating test pyramid balance for specific project constraints (e.g., adjusting unit/integration/E2E ratio based on deployment frequency and team expertise)
+
+**When NOT to use**:
+- Writing straightforward unit tests for pure functions
+- Following established test patterns for CRUD operations
+- Simple test data setup with clear requirements
+- Running existing test suites without modification
+- Debugging tests with obvious failure messages pointing to specific code
+
+**Value for testing phase**: Systematic reasoning identifies edge cases and failure modes that simple test checklists miss. Creates comprehensive test coverage for critical business workflows. Provides clear rationale for test strategy decisions to stakeholders.
+
+**Integration approach**: Review implementation and architectural specifications → Identify complex testing decision or high-risk feature → Use sequential-thinking to enumerate scenarios, edge cases, and failure modes → Prioritize test cases by risk and impact → Implement tests with documented coverage rationale.
+
+**See pact-test-engineer agent for invocation syntax and workflow integration.**
+
+---
+
 ## Related Skills
 
 This skill focuses on testing strategies and patterns. For complementary guidance:

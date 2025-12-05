@@ -47,6 +47,97 @@ MCP tools (like `mcp__sequential-thinking__sequentialthinking`, `mcp__context7__
 
 If a skill mentions using an MCP tool, invoke that tool directly—do not use the Skill tool.
 
+# MCP Tools in Architect Phase
+
+### sequential-thinking
+
+**Availability**: Always available (core MCP tool)
+
+**Invocation Pattern**:
+```
+mcp__sequential-thinking__sequentialthinking(
+  task: "Evaluate [architectural options] for [system context]. Requirements: [list].
+  Constraints: [list]. Let me think through the architectural trade-offs systematically..."
+)
+```
+
+**Workflow Integration**:
+1. Identify architectural decision requiring systematic reasoning (choosing between 3+ architectural patterns, resolving conflicting non-functional requirements, designing component boundaries)
+2. Read pact-architecture-patterns skill for relevant architectural patterns, principles, and decision frameworks
+3. Read preparation phase documentation from `/docs/preparation/` to understand requirements and constraints
+4. Frame architectural decision with clear context: system purpose, options being evaluated, functional and non-functional requirements, constraints (team, timeline, budget, technology)
+5. Invoke sequential-thinking with structured task description including all architectural options and evaluation dimensions
+6. Review reasoning output for architectural soundness, completeness, and alignment with best practices
+7. Synthesize decision with architectural patterns from pact-architecture-patterns skill
+8. Document decision rationale in Architectural Decision Record (ADR) format in architecture specification markdown
+9. Create supporting diagrams (C4, sequence, component) to visualize the chosen architecture
+
+**Fallback if Unavailable**:
+
+**Option 1: Architectural Decision Matrix** (Recommended)
+1. Read pact-architecture-patterns for ADR template and decision framework
+2. List all viable architectural options as columns (Microservices, Modular Monolith, Serverless)
+3. Define evaluation criteria as rows based on project context:
+   - Functional: scalability, maintainability, testability, deployability
+   - Non-functional: performance, security, reliability, observability
+   - Organizational: team expertise, development velocity, operational complexity
+   - Economic: infrastructure cost, development cost, time-to-market
+4. Score each option 1-5 for each criterion with evidence from preparation phase research
+5. Weight criteria by project priorities (e.g., scalability: 5, cost: 3, team expertise: 4)
+6. Calculate weighted scores and document reasoning for each score
+7. Identify risks and mitigation strategies for top-scored option
+8. Create ADR documenting decision, alternatives considered, and rationale
+
+**Trade-off**: More time-consuming (45-60 min vs 10 min), but creates comprehensive, auditable architectural decision record suitable for team review and future reference.
+
+**Option 2: Collaborative Architecture Review**
+1. Draft preliminary architecture based on patterns from pact-architecture-patterns skill
+2. Create C4 Context and Container diagrams for visualization
+3. Document key architectural drivers (quality attributes, constraints, assumptions)
+4. Schedule architecture review session with technical stakeholders
+5. Present options with pros/cons and preliminary recommendation
+6. Facilitate discussion of trade-offs and risks
+7. Document consensus decision and dissenting opinions
+8. Create final ADR with team sign-off
+
+**Trade-off**: Requires stakeholder availability (schedule 60-90 min meeting), but ensures team alignment, surfaces blind spots, and builds shared understanding of architectural decisions.
+
+**Phase-Specific Example**:
+
+When designing authentication architecture for a microservices platform:
+
+```
+mcp__sequential-thinking__sequentialthinking(
+  task: "Evaluate session-based authentication, JWT tokens, and OAuth 2.0 with centralized auth service
+  for microservices architecture. System context: Healthcare patient portal with mobile app, web app,
+  and 5 backend microservices (user management, appointments, medical records, billing, notifications).
+  Requirements: HIPAA compliance, mobile app support, third-party integrations (insurance providers),
+  single sign-on across services, token refresh capability, audit logging. Constraints: 5-person team
+  (React + Node.js expertise, no OAuth experience), budget-conscious startup, security-critical
+  healthcare data, 12-month product lifespan for v1. Let me systematically analyze each authentication
+  approach against these requirements and constraints, considering security implications, implementation
+  complexity, operational overhead, and long-term maintainability..."
+)
+```
+
+After receiving reasoning output, synthesize with:
+- Authentication patterns from pact-architecture-patterns skill (session vs token trade-offs)
+- Security requirements from pact-security-patterns skill (HIPAA compliance, audit trails)
+- API design implications from pact-api-design skill (token passing, refresh flows)
+- Preparation phase research on OAuth 2.0 providers and implementation complexity
+
+Document in `/docs/architecture/authentication-architecture.md`:
+- Chosen approach: JWT with centralized auth service (decision + rationale)
+- Architecture diagrams: C4 Container diagram showing auth service integration with microservices
+- Token flow sequences: login, refresh, logout, cross-service requests
+- Security controls: token expiration, refresh token rotation, audit logging
+- Implementation roadmap: auth service first, then microservice integration
+- Risk assessment: OAuth learning curve mitigated by starting with simpler JWT approach
+
+**See pact-architecture-patterns for decision criteria and architectural pattern guidance.**
+
+---
+
 # ARCHITECTURAL WORKFLOW
 
 ## 1. Analysis Phase
