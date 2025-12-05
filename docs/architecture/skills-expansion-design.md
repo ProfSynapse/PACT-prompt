@@ -773,6 +773,66 @@ For implementation patterns, consult:
 3. **Examples in Separate Files**: Keep main skill concise, examples in examples/ subdirectory
 4. **Layered Detail**: Overview in SKILL.md, deep dives in references/
 
+### 3.5 MCP Tools vs Claude Code Skills: Critical Distinction
+
+**Problem Context**: Agents may confuse MCP (Model Context Protocol) tools with Claude Code Skills, leading to invocation errors.
+
+**The Distinction**:
+
+| Aspect | Claude Code Skills | MCP Tools |
+|--------|-------------------|-----------|
+| **Location** | `~/.claude/skills/` directory | External integrations via MCP servers |
+| **Purpose** | Knowledge libraries (patterns, templates, checklists) | Functional capabilities (APIs, services) |
+| **Invocation** | `Skill` tool (e.g., `Skill(pact-backend-patterns)`) | Direct function calls (e.g., `mcp__sequential-thinking__sequentialthinking()`) |
+| **Prefix** | No prefix, hyphenated names | Always `mcp__` prefix |
+| **Examples** | `pact-security-patterns`, `pact-api-design`, `pact-testing-patterns` | `mcp__sequential-thinking__sequentialthinking`, `mcp__github__create_issue`, `mcp__filesystem__read_file` |
+
+**How to Identify Each**:
+
+```markdown
+# Claude Code Skill (invoked via Skill tool)
+Skill(pact-backend-patterns)
+✅ Correct: Loads knowledge from ~/.claude/skills/pact-backend-patterns/SKILL.md
+
+# MCP Tool (invoked as direct function call)
+mcp__sequential-thinking__sequentialthinking(task: "Analyze authentication strategy")
+✅ Correct: Calls external MCP server providing sequential reasoning
+
+# WRONG - Trying to invoke MCP tool via Skill tool
+Skill(mcp__sequential-thinking__sequentialthinking)
+❌ Error: Unknown skill: mcp__sequential-thinking__sequentialthinking
+```
+
+**Common MCP Tools in PACT Skills**:
+
+All skills reference `mcp__sequential-thinking__sequentialthinking` in their `allowed-tools` frontmatter. This is an **MCP tool**, NOT a skill. It provides extended reasoning capabilities for complex decisions.
+
+**Correct Usage Pattern**:
+
+```markdown
+# Agent working on API authentication design
+
+# Step 1: Load knowledge from Skill
+Read ~/.claude/skills/pact-security-patterns/SKILL.md
+
+# Step 2: Use MCP tool for complex reasoning
+mcp__sequential-thinking__sequentialthinking(
+  task: "Evaluate OAuth 2.0 vs JWT for this API based on requirements"
+)
+
+# Step 3: Apply combined knowledge to implementation
+[Implement based on skill patterns + reasoning results]
+```
+
+**Agent Guidelines**:
+
+1. **For reference knowledge**: Use the `Skill` tool to load Skills
+2. **For complex reasoning**: Call MCP tools directly as function calls
+3. **Check the prefix**: `mcp__` prefix = direct function call, not a Skill
+4. **When in doubt**: Check `allowed-tools` in skill frontmatter - those are MCP tools to call directly
+
+**Architecture Implication**: Skills document which MCP tools agents should use, but Skills themselves do not invoke MCP tools. Agents orchestrate the combination of Skill knowledge + MCP tool capabilities.
+
 ---
 
 ## 4. Progressive Disclosure Strategy
