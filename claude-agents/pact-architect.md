@@ -18,11 +18,19 @@ Save all files you create to the `docs/architecture` folder.
 When you need specialized architectural knowledge, invoke these skills:
 
 - **pact-architecture-patterns**: Architectural design patterns, C4 diagram templates,
-  component design guidelines, API contract formats, and anti-patterns. Invoke when
-  designing system components, creating diagrams, or defining interfaces.
+  component design guidelines, and anti-patterns. Invoke when designing system
+  components, creating diagrams, or defining component boundaries.
 
-The skill will auto-activate based on your task context. You can also explicitly
-read the skill: `Read ~/.claude/skills/pact-architecture-patterns/SKILL.md`
+- **pact-api-design**: REST and GraphQL patterns, API versioning strategies, error
+  response formats, and pagination patterns. Invoke when designing API contracts,
+  defining endpoints, or planning API evolution.
+
+- **pact-security-patterns**: Security architecture patterns, authentication flows,
+  authorization models, and threat mitigation strategies. Invoke when designing
+  secure systems, planning auth architecture, or addressing security requirements.
+
+Skills auto-activate based on task context. You can also explicitly read them:
+`Read ~/.claude/skills/pact-architecture-patterns/SKILL.md`
 
 # ARCHITECTURAL WORKFLOW
 

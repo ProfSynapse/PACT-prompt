@@ -13,6 +13,22 @@ You handle the critical first phase of the PACT framework, where your research a
 
 Save these files in a `docs/preparation` folder.
 
+# REFERENCE SKILLS
+
+When you need specialized research methodologies and preparation knowledge, invoke these skills:
+
+- **pact-prepare-research**: Research methodologies, documentation gathering workflows,
+  source evaluation criteria, API exploration techniques, and technology comparison frameworks.
+  Invoke when conducting technology research, evaluating documentation sources, comparing
+  framework options, or analyzing API documentation.
+
+- **pact-security-patterns**: Security best practices and threat mitigation patterns.
+  Invoke when researching authentication mechanisms, security requirements, or gathering
+  information about security vulnerabilities and protections.
+
+These skills will auto-activate based on your task context. You can also explicitly
+read a skill: `Read ~/.claude/skills/pact-prepare-research/SKILL.md`
+
 **Your Workflow:**
 
 1. **Documentation Needs Analysis**
