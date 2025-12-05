@@ -902,6 +902,22 @@ skill-name/
 4. **Code Snippets**: Minimal examples in SKILL.md, full examples in examples/
 5. **Links to References**: Instead of repeating content, point to reference files
 
+**Cross-Skill Workflow Pattern**:
+
+When agents need knowledge from multiple skills (e.g., secure API design requires api-design + security + backend patterns), they orchestrate by:
+
+1. Loading primary skill relevant to current task (auto-activation or explicit read)
+2. Following skill's "Related Skills" references to identify complementary knowledge
+3. Explicitly reading additional skills as needed
+4. Synthesizing guidance from multiple skills into project-specific implementation
+
+*Example*: Designing a secure API endpoint requires:
+- **pact-api-design**: Endpoint structure, versioning, error formats
+- **pact-security-patterns**: Authentication, input validation, rate limiting
+- **pact-backend-patterns**: Service layer implementation approach
+
+The agent loads pact-api-design first, which references the other skills, prompting explicit reads as needed.
+
 **Example Token Optimization**:
 
 Before (verbose prose in SKILL.md):
@@ -990,17 +1006,34 @@ For detailed implementation: `references/authentication-strategies.md`
 
 **Phase 4: Optimization & Quality (Weeks 7-8)**
 - Enhance existing skills with reference files
+- Address content gaps identified in internal review
 - Add medium-priority skills based on usage data
 
 **Tasks**:
+
+*Skills Content Expansion*:
 - Expand pact-architecture-patterns with missing reference files
 - Create templates/ directories for all existing skills
 - Add examples/ directories with worked examples
+
+*Content Gaps from Internal Review (2025-12-05)*:
+- **pact-backend-patterns**: Add async processing patterns (job queues, workers, retry strategies, dead letter queues)
+- **pact-security-patterns**: Add rate limiting implementation details (token bucket, sliding window, distributed rate limiting)
+- **pact-testing-patterns**: Add contract testing for microservices (consumer-driven contracts, Pact framework patterns)
+- **pact-api-design**: Add API deprecation/sunset workflows (versioning communication, migration paths, sunset timelines)
+
+*New Skill Proposals*:
+- **pact-observability-patterns** (proposed): Logging strategies, metrics collection, distributed tracing, APM integration
+  - Status: Under consideration, deferred pending deployment-patterns validation
+  - Rationale: Observability spans backend, database, and test phases - warrants dedicated skill
+
+*Medium-Priority Skills*:
 - Build pact-code-quality skill (if validated by usage)
 - Build pact-deployment-patterns skill (if validated by usage)
 
 **Milestone Success Criteria**:
 - [ ] All high-priority skills have complete reference files
+- [ ] Content gaps from internal review addressed
 - [ ] Templates exist for common scaffolding needs
 - [ ] Examples demonstrate complex use cases
 - [ ] Usage data shows skills are actively invoked
@@ -1485,6 +1518,65 @@ metadata:
 - Skills maintain backward compatibility within MAJOR version
 - Agents specify compatible skill version range in metadata (future enhancement)
 - Deprecation warnings added one MINOR version before removal
+
+---
+
+### Appendix F: Internal Review Findings
+
+**Review Date**: 2025-12-05
+**Review Type**: Multi-agent peer review of Skills Expansion implementation
+**Reviewers**: pact-architect, pact-test-engineer, pact-backend-coder
+**Overall Assessment**: APPROVED FOR PRODUCTION
+
+#### Review Summary
+
+| Reviewer | Assessment | Key Finding |
+|----------|------------|-------------|
+| pact-architect | EXCELLENT | Architecture faithfully implemented |
+| pact-test-engineer | PASS (100%) | 8/8 skills, 6/6 agents validated |
+| pact-backend-coder | VERY USEFUL | Production-ready, actionable patterns |
+
+#### Content Gaps Identified
+
+**pact-backend-patterns**:
+- Async processing patterns (job queues, workers, retry strategies)
+- Distributed systems patterns (message queues, event-driven architecture)
+
+**pact-security-patterns**:
+- Rate limiting implementation (token bucket, sliding window algorithms)
+- Distributed rate limiting (Redis-based strategies)
+
+**pact-testing-patterns**:
+- Contract testing for microservices (consumer-driven contracts)
+- Service virtualization patterns
+
+**pact-api-design**:
+- API deprecation/sunset workflows
+- Breaking change management and client migration
+
+#### New Skill Proposal
+
+**pact-observability-patterns** (Under Consideration)
+- Structured logging patterns
+- Metrics collection (Prometheus, StatsD)
+- Distributed tracing (OpenTelemetry, Jaeger)
+- APM integration patterns
+
+Status: Deferred to Phase 4, pending deployment-patterns validation.
+
+#### Items Tracked as GitHub Issues
+
+The following require empirical validation rather than architectural definition:
+
+1. **Skill Auto-Activation Validation** ([#3](https://github.com/ProfSynapse/PACT-prompt/issues/3)): Test descriptions with real user tasks
+2. **Performance Monitoring** ([#4](https://github.com/ProfSynapse/PACT-prompt/issues/4)): Track skill invocation patterns and load times
+3. **pact-observability-patterns** ([#5](https://github.com/ProfSynapse/PACT-prompt/issues/5)): Conditional implementation based on deployment-patterns success
+
+#### Review Documents
+
+- Architect Review: `docs/architecture/skills-expansion-implementation-review.md`
+- Test Engineer Review: Validation in `docs/architecture/knowledge-migration-review.md`
+- Backend Coder Review: `docs/reviews/backend-coder-skill-review.md`
 
 ---
 
