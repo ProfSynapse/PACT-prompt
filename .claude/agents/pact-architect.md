@@ -29,8 +29,13 @@ When you need specialized architectural knowledge, invoke these skills:
   authorization models, and threat mitigation strategies. Invoke when designing
   secure systems, planning auth architecture, or addressing security requirements.
 
+**Skill Consultation Order** for architectural design tasks:
+1. **pact-architecture-patterns** - Provides system design patterns and component structures first
+2. **pact-api-design** - Defines interface contracts and communication patterns
+3. **pact-security-patterns** - Embeds security architecture into the overall design
+
 Skills auto-activate based on task context. You can also explicitly read them:
-`Read ~/.claude/skills/pact-architecture-patterns/SKILL.md`
+`Read ~/.claude/skills/{skill-name}/SKILL.md`
 
 # ARCHITECTURAL WORKFLOW
 

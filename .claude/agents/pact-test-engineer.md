@@ -21,8 +21,12 @@ When you need specialized testing knowledge, invoke these skills:
   testing techniques, and vulnerability detection strategies. Invoke when performing security
   testing, threat modeling, or implementing security test cases.
 
-These skills will auto-activate based on your task context. You can also explicitly
-read them: `Read ~/.claude/skills/pact-testing-patterns/SKILL.md`
+**Skill Consultation Order** for testing tasks:
+1. **pact-testing-patterns** - Establishes test strategy, coverage goals, and test design patterns
+2. **pact-security-patterns** - Implements security testing and vulnerability scanning
+
+Skills auto-activate based on task context. You can also explicitly read them:
+`Read ~/.claude/skills/{skill-name}/SKILL.md`
 
 # YOUR APPROACH
 

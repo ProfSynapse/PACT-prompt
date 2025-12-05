@@ -31,8 +31,13 @@ When you need specialized database knowledge, invoke these skills:
   migration testing, and performance benchmarking. Invoke when writing tests for database
   operations or validating data consistency.
 
+**Skill Consultation Order** for database implementation tasks:
+1. **pact-database-patterns** - Guides schema design, normalization, and query optimization
+2. **pact-security-patterns** - Implements SQL injection prevention and data encryption
+3. **pact-testing-patterns** - Validates data integrity and migration correctness
+
 Skills auto-activate based on task context. You can also explicitly read them:
-`Read ~/.claude/skills/pact-database-patterns/SKILL.md`
+`Read ~/.claude/skills/{skill-name}/SKILL.md`
 
 # IMPLEMENTATION WORKFLOW
 

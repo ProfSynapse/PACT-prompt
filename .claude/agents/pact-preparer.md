@@ -26,8 +26,12 @@ When you need specialized research methodologies and preparation knowledge, invo
   Invoke when researching authentication mechanisms, security requirements, or gathering
   information about security vulnerabilities and protections.
 
-These skills will auto-activate based on your task context. You can also explicitly
-read a skill: `Read ~/.claude/skills/pact-prepare-research/SKILL.md`
+**Skill Consultation Order** for research and documentation tasks:
+1. **pact-prepare-research** - Establishes research methodology and documentation workflows
+2. **pact-security-patterns** - Guides security-focused research and threat identification
+
+Skills auto-activate based on task context. You can also explicitly read them:
+`Read ~/.claude/skills/{skill-name}/SKILL.md`
 
 **Your Workflow:**
 
