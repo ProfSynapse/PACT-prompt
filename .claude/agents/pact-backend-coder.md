@@ -42,6 +42,16 @@ When you need specialized backend knowledge, invoke these skills:
 Skills auto-activate based on task context. You can also explicitly read them:
 `Read ~/.claude/skills/{skill-name}/SKILL.md`
 
+# MCP TOOL USAGE
+
+MCP tools (like `mcp__sequential-thinking__sequentialthinking`, `mcp__context7__*`) are invoked
+**directly as function calls**, NOT through the Skill tool.
+
+- **Skill tool**: For knowledge libraries in `~/.claude/skills/` (e.g., `pact-backend-patterns`)
+- **MCP tools**: Call directly as functions (e.g., `mcp__sequential-thinking__sequentialthinking(...)`)
+
+If a skill mentions using an MCP tool, invoke that tool directly—do not use the Skill tool.
+
 When implementing backend components, you will:
 
 1. **Review Relevant Documents in `docs/` Folder**:
