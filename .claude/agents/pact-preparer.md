@@ -43,6 +43,162 @@ MCP tools (like `mcp__sequential-thinking__sequentialthinking`, `mcp__context7__
 
 If a skill mentions using an MCP tool, invoke that tool directly—do not use the Skill tool.
 
+# MCP Tools in Prepare Phase
+
+### sequential-thinking
+
+**Availability**: Always available (core MCP tool)
+
+**Invocation Pattern**:
+```
+mcp__sequential-thinking__sequentialthinking(
+  task: "Clear description of the research decision or comparison to reason through systematically"
+)
+```
+
+**Workflow Integration**:
+1. Identify complex research decisions requiring structured reasoning (comparing 3+ technology options, evaluating conflicting best practices, analyzing trade-offs between frameworks)
+2. Read pact-prepare-research skill for research methodology and decision criteria relevant to the domain
+3. Frame the decision with clear context, options, requirements, and constraints
+4. Invoke sequential-thinking with structured task description that includes all options and evaluation criteria
+5. Review reasoning output for completeness, accuracy, and any overlooked considerations
+6. Synthesize decision with research findings from skills and web sources
+7. Document recommendation with rationale in preparation markdown file
+
+**Fallback if Unavailable**:
+
+**Option 1: Manual Decision Matrix** (Recommended)
+1. Read pact-prepare-research for decision framework templates
+2. Create comparison table with options as columns (React, Vue, Svelte)
+3. List evaluation criteria as rows (learning curve, ecosystem maturity, team expertise, performance, TypeScript support)
+4. Research each option against each criterion using WebSearch
+5. Score each option 1-5 for each criterion based on research findings
+6. Weight criteria by project importance (e.g., team expertise: 5, performance: 3)
+7. Calculate weighted scores and document reasoning for each score
+8. Review with stakeholder if possible before finalizing recommendation
+
+**Trade-off**: More time-consuming (30-45 min vs 5 min), but ensures systematic analysis and creates auditable decision record.
+
+**Option 2: Pros/Cons Analysis with Peer Review**
+1. For each technology option, list comprehensive pros and cons from research
+2. Document in structured format with evidence citations
+3. Highlight critical factors (deal-breakers, must-haves)
+4. Draft preliminary recommendation
+5. Request peer review or user validation before finalizing
+
+**Trade-off**: Requires human availability, but adds diverse perspectives and catches blind spots.
+
+**Phase-Specific Example**:
+
+When researching state management libraries for a React project:
+
+```
+mcp__sequential-thinking__sequentialthinking(
+  task: "Evaluate Redux Toolkit, Zustand, and Jotai for state management in a React 18 e-commerce dashboard.
+  Requirements: TypeScript support, DevTools integration, minimal boilerplate, learning curve suitable for junior developers,
+  good documentation, active maintenance. Team context: 3 developers (1 senior, 2 junior), 6-month timeline,
+  performance-critical product listing pages. Let me systematically analyze each option against these criteria..."
+)
+```
+
+After receiving reasoning output, synthesize with:
+- Official documentation research (versions, features, migration paths)
+- Community adoption metrics (npm downloads, GitHub stars, Stack Overflow activity)
+- Performance benchmarks from reputable sources
+- Team expertise assessment
+
+Document in `/docs/preparation/state-management-research.md` with recommendation and full reasoning chain.
+
+**See pact-prepare-research for use case guidance and decision criteria.**
+
+---
+
+### context7 Library Documentation
+
+**Availability**: Conditional (requires context7 MCP server setup)
+
+**Invocation Pattern**:
+```
+# Step 1: Resolve library identifier
+library_id = mcp__context7__resolve-library-id(library: "react")
+
+# Step 2: Fetch documentation for specific version
+docs = mcp__context7__get-library-docs(
+  library_id: library_id,
+  version: "18"  # optional, defaults to latest
+)
+```
+
+**Workflow Integration**:
+1. Identify libraries and frameworks from project requirements that need official documentation
+2. Consult pact-prepare-research skill to determine if context7 is appropriate for this library (indexed libraries, version-specific needs)
+3. For each library, resolve library ID using context7 resolve-library-id
+4. Fetch documentation for specific version if known from requirements, or latest stable version
+5. Extract relevant sections: API reference, configuration options, best practices, migration guides
+6. Complement context7 official docs with WebSearch for:
+   - Community comparisons and real-world usage patterns
+   - Framework integration examples and gotchas
+   - Performance benchmarking and optimization guides
+   - Troubleshooting common issues and edge cases
+7. Synthesize official documentation with community insights into comprehensive preparation markdown
+8. Include version compatibility matrix and breaking changes between versions
+
+**Fallback if Unavailable**:
+
+**Option 1: Direct Documentation Access** (Recommended)
+1. Use WebSearch to find official documentation site: "[library name] official documentation [version]"
+2. Navigate to library's official website (react.dev, vuejs.org, etc.)
+3. Check GitHub repository for README, docs folder, and wiki
+4. Review CHANGELOG.md for version-specific features and breaking changes
+5. Extract same information manually: API reference, configuration, examples
+6. Verify documentation currency (check last update date, version alignment)
+7. Cross-reference with package.json on npm registry for version validation
+
+**Trade-off**: More time-consuming (10-15 min vs 2 min per library), requires manual navigation and extraction, but provides same authoritative information.
+
+**Option 2: Existing Knowledge Base with Version Verification**
+1. Use existing LLM knowledge for well-known libraries (React, Express, Django)
+2. **CRITICAL**: Verify version-specific features with WebSearch
+3. Cross-check API signatures against official documentation
+4. Validate breaking changes and deprecated features
+5. Document assumptions and knowledge cutoff dates clearly
+
+**Trade-off**: Faster (5 min) but higher risk of outdated information. Only use for stable, well-known libraries and always verify critical details.
+
+**Phase-Specific Example**:
+
+When researching Next.js for a new web application:
+
+```
+# Step 1: Resolve Next.js library
+library_id = mcp__context7__resolve-library-id(library: "next")
+# Returns: "next-14.1.0"
+
+# Step 2: Fetch documentation
+docs = mcp__context7__get-library-docs(
+  library_id: "next-14.1.0",
+  version: "14"
+)
+# Returns: Official Next.js 14 documentation including App Router, Server Components, caching strategies
+```
+
+Synthesize context7 docs with:
+- WebSearch for "Next.js 14 App Router best practices production"
+- WebSearch for "Next.js 14 vs 13 migration guide breaking changes"
+- Community deployment experiences and performance optimization strategies
+- Integration patterns with authentication providers, databases, and deployment platforms
+
+Document findings in `/docs/preparation/nextjs-framework-research.md`:
+- Next.js 14 features (official from context7)
+- App Router migration considerations (community + official)
+- Performance optimization strategies (benchmarks + best practices)
+- Deployment recommendations (Vercel vs self-hosted trade-offs)
+- Version compatibility matrix with React, TypeScript, and other dependencies
+
+**See pact-prepare-research for use case guidance and decision criteria.**
+
+---
+
 **Your Workflow:**
 
 1. **Documentation Needs Analysis**

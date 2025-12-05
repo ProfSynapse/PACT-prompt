@@ -506,6 +506,45 @@ When reviewing code for security:
 - SOC 2 (Service Organizations)
 - ISO 27001 (Information Security Management)
 
+## MCP Tools for Security
+
+This section provides guidance on WHEN and WHY to use MCP tools for security decisions. See agent documentation for invocation syntax.
+
+### Available MCP Tools
+
+The following MCP tool enhances security analysis and design:
+- **sequential-thinking**: Threat modeling and security architecture reasoning
+
+---
+
+### sequential-thinking
+
+**Purpose**: Extended reasoning capability for complex security decisions and threat analysis
+
+**When to use**:
+- Designing authentication flows with multiple decision points and failure modes (e.g., OAuth2 flow with PKCE, token refresh, account linking, and various attack vectors)
+- Analyzing security vulnerabilities and their cascading impacts across system layers (e.g., SQL injection risk leading to data breach, privilege escalation, lateral movement)
+- Planning defense-in-depth strategies for high-value assets (e.g., protecting financial transactions with input validation, authorization, encryption, audit logging, anomaly detection)
+- Evaluating security vs usability trade-offs in access control design (e.g., MFA requirements, session timeout policies, password complexity rules)
+- Designing incident response procedures for security breaches (e.g., detection, containment, eradication, recovery steps for different threat scenarios)
+- Planning authorization models for complex multi-tenant systems (e.g., RBAC vs ABAC with hierarchical permissions, resource ownership, delegation)
+- Evaluating encryption strategies across multiple threat models (e.g., data at rest, in transit, in use with key management considerations)
+
+**When NOT to use**:
+- Implementing well-established security patterns from references (e.g., password hashing with bcrypt)
+- Simple HTTPS enforcement or security header configuration
+- Routine security updates and vulnerability patching
+- Following security checklists for standard OWASP Top 10 mitigation
+- Security code reviews with clear violation of documented patterns
+
+**Value for security**: Systematic reasoning reveals attack chains and vulnerabilities that simple checklists miss. Creates comprehensive threat models covering attacker motivations and capabilities. Documents security trade-off rationale for compliance audits.
+
+**Integration approach**: Identify security-critical feature or design decision → Review OWASP Top 10 and threat landscape → Use sequential-thinking to enumerate attack vectors, defense layers, and failure scenarios → Implement controls with documented threat model → Test against reasoned attack scenarios.
+
+**See all PACT coding agents (backend, frontend, database) and pact-test-engineer for invocation syntax and workflow integration.**
+
+---
+
 ## When to Escalate
 
 Security concerns that require specialist review:

@@ -390,6 +390,69 @@ The Architect phase uses Prepare phase outputs to:
 - ✅ Integration points documented with examples
 - ✅ Performance and scalability requirements captured
 
+## MCP Tools for Research
+
+This section provides guidance on WHEN and WHY to use MCP tools during the Prepare phase. See agent documentation for invocation syntax.
+
+### Available MCP Tools
+
+The following MCP tools enhance research activities:
+- **sequential-thinking**: Complex decision-making and technology comparisons
+- **context7**: Library documentation lookup
+
+---
+
+### sequential-thinking
+
+**Purpose**: Extended reasoning capability for systematic technology evaluation and research decisions
+
+**When to use**:
+- Comparing 3+ technology options with multiple competing criteria (e.g., React vs Vue vs Svelte with team expertise, performance, ecosystem maturity, and timeline constraints)
+- Evaluating security trade-offs across multiple threat vectors (e.g., authentication mechanisms with different attack surfaces)
+- Analyzing version compatibility matrices with complex dependency chains
+- Resolving conflicting documentation sources or community opinions with transparent reasoning
+- Planning integration strategies for unfamiliar third-party services with multiple configuration options
+
+**When NOT to use**:
+- Simple binary technology choices with clear best practices (e.g., HTTPS vs HTTP)
+- Time-sensitive exploratory research where quick iteration is preferred
+- Well-established patterns with official recommendation (e.g., password hashing with bcrypt)
+- Research gathering facts rather than evaluating trade-offs
+
+**Value for Prepare phase**: Transparent reasoning process creates auditable documentation of research decisions. Reduces risk of overlooking critical evaluation criteria during technology selection.
+
+**Integration approach**: Define research scope → Gather sources from official docs and community → Use sequential-thinking to evaluate complex trade-offs → Synthesize reasoning into preparation markdown with clear recommendations.
+
+**See pact-preparer agent for invocation syntax and workflow integration.**
+
+---
+
+### context7 (Library Documentation Lookup)
+
+**Purpose**: Fetch current, version-specific documentation directly from official library sources
+
+**When to use**:
+- Researching popular JavaScript/TypeScript libraries with rapidly evolving APIs (React, Next.js, Vue, Angular, Express, Nest.js)
+- Researching Python frameworks and libraries (FastAPI, Django, Flask, SQLAlchemy, Pydantic)
+- Verifying version-specific features before documenting technology recommendations
+- Confirming breaking changes between major versions during migration research
+- Getting canonical code examples for integration planning from official sources
+
+**When NOT to use**:
+- Internal or proprietary libraries (not indexed in context7)
+- Very new libraries released within last 2-3 months (may not be indexed yet)
+- Broad ecosystem research requiring comparison discussions (use WebSearch for community insights and comparisons)
+- Historical context about technology evolution (WebSearch better for blog posts, migration guides, lessons learned)
+- Researching configuration tools, build tools, or CLI utilities (context7 focuses on application libraries)
+
+**Value for Prepare phase**: Ensures research documentation is based on current, authoritative sources rather than outdated blog posts. Reduces risk of documenting deprecated APIs or incorrect version assumptions.
+
+**Integration approach**: Identify libraries from project requirements → Use context7 for official API documentation → Complement with WebSearch for community insights and real-world patterns → Synthesize official docs + community wisdom into comprehensive preparation markdown.
+
+**See pact-preparer agent for invocation workflow.**
+
+---
+
 ## Self-Verification Checklist
 
 Before completing Prepare phase research, verify:

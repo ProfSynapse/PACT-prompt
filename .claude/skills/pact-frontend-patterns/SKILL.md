@@ -450,6 +450,44 @@ Always add test identifiers for reliable test automation:
 />
 ```
 
+## MCP Tools for Frontend Implementation
+
+This section provides guidance on WHEN and WHY to use MCP tools during frontend coding. See agent documentation for invocation syntax.
+
+### Available MCP Tools
+
+The following MCP tool enhances frontend implementation decisions:
+- **sequential-thinking**: Complex frontend architecture and UX logic design
+
+---
+
+### sequential-thinking
+
+**Purpose**: Extended reasoning capability for complex frontend implementation decisions
+
+**When to use**:
+- Designing complex state management for multi-step workflows (e.g., checkout flow with cart, shipping, payment, confirmation states and various error recovery paths)
+- Planning keyboard navigation flows for complex interactive widgets (e.g., accessible drag-and-drop, nested menus, custom datepicker with ARIA requirements)
+- Analyzing render performance optimizations with multiple competing approaches (e.g., virtualization vs pagination vs infinite scroll trade-offs for large lists)
+- Designing form validation with complex cross-field dependencies (e.g., multi-step form with conditional fields, async validation, field interdependencies)
+- Planning component architecture for compound components with flexible composition (e.g., design system component with multiple sub-components and context sharing)
+- Optimizing bundle size with competing lazy-loading strategies (e.g., route-based vs component-based vs user-interaction-based code splitting)
+
+**When NOT to use**:
+- Simple presentational components with clear prop interfaces
+- Standard form handling following established patterns
+- Basic accessibility fixes with clear WCAG guidelines
+- Straightforward CSS layout problems
+- Simple state management with obvious useState/useReducer choice
+
+**Value for frontend coding**: Systematic reasoning ensures accessibility and UX edge cases are considered upfront. Reduces costly refactoring from performance issues discovered late. Creates clear rationale for state management architecture.
+
+**Integration approach**: Review UI/UX requirements → Identify complex interaction or performance decision → Use sequential-thinking to evaluate accessibility, performance, and maintainability trade-offs → Implement with documented approach → Create tests for reasoned scenarios.
+
+**See pact-frontend-coder agent for invocation syntax and workflow integration.**
+
+---
+
 ## Related Skills
 
 - **pact-backend-patterns**: API integration and data fetching strategies
