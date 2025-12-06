@@ -18,7 +18,7 @@ This is the **PACT Framework Prompts** repository - a collection of ready-to-use
 
 | Date | Change | Impact |
 |------|--------|--------|
-| 2025-12 | MCP Tools integration across all skills and agents | All agents now clarify when to use MCP tools vs Claude Code built-in tools |
+| 2025-12-05 | **MCP Tools Hybrid Integration** | Skills document WHEN/WHY; Agents document HOW; Validated with 3 pairings |
 | 2025-12 | Skills ecosystem expansion (8 skills total) | Comprehensive knowledge libraries for all PACT phases |
 | 2025-12 | Knowledge migration from agents to skills | Agents are now leaner; duplicated knowledge moved to shared skills |
 | 2025-12 | Added PACT slash commands | `/PACT:orchestrate`, `/PACT:peer-review`, `/PACT:update-context` |
@@ -60,10 +60,12 @@ This is the **PACT Framework Prompts** repository - a collection of ready-to-use
 │
 └── docs/                       # Design documentation
     ├── skills-as-agent-knowledge-libraries.md  # Skills pattern doc
-    ├── mcp-tools-reference.md  # MCP vs built-in tools guide
+    ├── mcp-tools-reference.md  # MCP tool reference index (for maintainers)
     ├── preparation/            # Research docs from Prepare phases
     ├── architecture/           # Architecture specs from Architect phases
+    │   └── mcp-tools-joint-recommendation.md  # MCP integration design
     └── reviews/                # Multi-agent review outputs
+        └── mcp-integration-validation-report.md  # Phase 3 validation
 ```
 
 ## Key Architectural Patterns
@@ -96,6 +98,23 @@ PACT Orchestrator (coordinates, never codes)
 Prepare → Architect → Code → Test
 
 Each phase produces artifacts that feed into the next phase. Quality gates ensure phase completion before progression.
+
+### 4. MCP Tools Hybrid Approach
+
+MCP tools guidance is split between Skills and Agents:
+
+```
+Skills (WHEN/WHY)              Agents (HOW)
+─────────────────              ────────────
+• Use case scenarios           • Invocation syntax
+• Decision criteria            • Workflow integration
+• Anti-patterns                • Fallback strategies
+• Value proposition            • Phase-specific examples
+```
+
+**Key principle**: Skills remain portable (valuable even if MCP tools unavailable); Agents provide operational workflow integration.
+
+**Reference**: `docs/architecture/mcp-tools-joint-recommendation.md`
 
 ## Skills Ecosystem
 
@@ -130,9 +149,11 @@ Each phase produces artifacts that feed into the next phase. Quality gates ensur
 - Review outputs → `docs/reviews/`
 
 ### MCP Tools vs Built-in Tools
-- **MCP tools**: Use for specialized capabilities (GitHub, Playwright, filesystem operations on allowed directories)
-- **Built-in tools**: Use for general operations (Read, Write, Edit, Grep, Glob, Bash)
-- See `docs/mcp-tools-reference.md` for detailed guidance
+- **MCP tools**: Invoked directly as function calls (e.g., `mcp__sequential-thinking__sequentialthinking(...)`)
+- **Skills**: Loaded via Skill tool for knowledge libraries in `~/.claude/skills/`
+- **Built-in tools**: Read, Write, Edit, Grep, Glob, Bash for general operations
+- Skills document WHEN/WHY to use MCP tools; Agents document HOW
+- See `docs/mcp-tools-reference.md` for tool-to-documentation mapping
 
 ## Known Constraints
 
@@ -150,6 +171,15 @@ Each phase produces artifacts that feed into the next phase. Quality gates ensur
 ---
 
 ## Changelog
+
+### 2025-12-05 (Update 2)
+- Documented MCP Tools Hybrid Integration completion
+  - Phase 1: All 8 skills updated with "MCP Tools for [Domain]" sections
+  - Phase 2: All 6 agents updated with "MCP Tools in [Phase] Phase" sections
+  - Phase 3: Validation report created (`docs/reviews/mcp-integration-validation-report.md`)
+- Added MCP Tools Hybrid Approach as architectural pattern #4
+- Updated repository structure to include architecture and review artifacts
+- Clarified MCP tools vs Skills vs built-in tools distinction
 
 ### 2025-12-05
 - Created initial `codebase-context.md`
