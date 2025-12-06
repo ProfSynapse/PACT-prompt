@@ -48,6 +48,14 @@ This skill provides comprehensive testing strategies, patterns, and quality assu
 
 ## Quick Reference: Test Pyramid Strategy
 
+### Available MCP Tools
+
+- **sequential-thinking**: Test strategy design and complex test scenario planning
+
+See "MCP Tools for Testing" section below for detailed usage guidance.
+
+---
+
 ```
            /\
           /  \

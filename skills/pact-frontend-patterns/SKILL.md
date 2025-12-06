@@ -24,6 +24,14 @@ This skill provides comprehensive frontend implementation patterns aligned with 
 
 ## Quick Reference
 
+### Available MCP Tools
+
+- **sequential-thinking**: Complex frontend architecture and UX logic design
+
+See "MCP Tools for Frontend Implementation" section below for detailed usage guidance.
+
+---
+
 ### Component Architecture Decision Tree
 
 ```

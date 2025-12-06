@@ -43,6 +43,16 @@ Invoke this skill when:
 - Reviewing API contracts for consistency
 - Designing authentication/authorization patterns
 
+## Quick Reference
+
+### Available MCP Tools
+
+- **sequential-thinking**: Complex API architecture and contract design reasoning
+
+See "MCP Tools for API Design" section below for detailed usage guidance.
+
+---
+
 ## REST vs GraphQL Decision Tree
 
 Use this decision tree to guide API style selection:
