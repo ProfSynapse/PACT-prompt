@@ -36,6 +36,14 @@ defining component boundaries, and creating implementation-ready specifications.
 
 ## Quick Reference: Common Patterns
 
+### Available MCP Tools
+
+- **sequential-thinking**: Complex architectural reasoning and pattern evaluation
+
+See "MCP Tools for Architectural Decisions" section below for detailed usage guidance.
+
+---
+
 ### 1. Layered Architecture
 **When to use**: Traditional applications with clear separation of concerns
 **Structure**: Presentation → Business Logic → Data Access → Database

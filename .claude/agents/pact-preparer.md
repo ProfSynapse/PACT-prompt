@@ -195,7 +195,7 @@ Document findings in `/docs/preparation/nextjs-framework-research.md`:
 - Deployment recommendations (Vercel vs self-hosted trade-offs)
 - Version compatibility matrix with React, TypeScript, and other dependencies
 
-**See pact-prepare-research for use case guidance and decision criteria.**
+**See pact-prepare-research for library applicability guidance (when to use context7 vs WebSearch).**
 
 ---
 

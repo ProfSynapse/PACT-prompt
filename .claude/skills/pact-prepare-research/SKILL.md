@@ -39,6 +39,15 @@ This skill helps you:
 
 ## Quick Reference
 
+### Available MCP Tools
+
+- **sequential-thinking**: Complex decision-making and technology comparisons
+- **context7**: Library documentation lookup from official sources
+
+See "MCP Tools for Research" section below for detailed usage guidance.
+
+---
+
 ### Research Workflow Overview
 
 ```

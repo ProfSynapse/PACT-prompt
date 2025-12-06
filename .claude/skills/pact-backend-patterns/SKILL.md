@@ -38,6 +38,14 @@ Use this skill when:
 
 ## Quick Reference: Service Layer Patterns
 
+### Available MCP Tools
+
+- **sequential-thinking**: Complex backend logic design and error handling strategies
+
+See "MCP Tools for Backend Implementation" section below for detailed usage guidance.
+
+---
+
 ### Repository Pattern
 ```
 Repository: Data access abstraction layer

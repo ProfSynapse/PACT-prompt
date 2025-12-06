@@ -27,6 +27,14 @@ Cross-cutting security patterns and best practices for ALL phases of PACT framew
 
 ## Quick Reference
 
+### Available MCP Tools
+
+- **sequential-thinking**: Threat modeling and security architecture reasoning
+
+See "MCP Tools for Security" section below for detailed usage guidance.
+
+---
+
 ### Security Decision Tree
 
 ```

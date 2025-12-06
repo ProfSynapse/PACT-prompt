@@ -24,6 +24,14 @@ Database implementation patterns and best practices for the CODE phase of PACT f
 
 ## Quick Reference
 
+### Available MCP Tools
+
+- **sequential-thinking**: Complex schema design and data modeling trade-offs
+
+See "MCP Tools for Database Design" section below for detailed usage guidance.
+
+---
+
 ### Schema Design Decision Tree
 
 ```
