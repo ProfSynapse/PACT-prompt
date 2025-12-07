@@ -519,11 +519,19 @@ The following MCP tool enhances database design decisions:
 
 ## Reference Files
 
-Detailed patterns and examples available in:
+Detailed reference documentation:
+- **references/schema-design.md**: Normalization, denormalization, relationships, data types
+- **references/query-optimization.md**: Indexes, query plans, performance tuning, caching
+- **references/data-integrity.md**: Constraints, transactions, validation, audit trails
 
-- **schema-design.md**: Normalization, denormalization, relationships, data types
-- **query-optimization.md**: Indexes, query plans, performance tuning, caching
-- **data-integrity.md**: Constraints, transactions, validation, audit trails
+## Templates
+
+Ready-to-use templates for database design:
+- **templates/schema-design.md**: Database schema template with ERD, table definitions, indexes, migrations
+
+## Examples
+
+(Examples to be added in future iterations)
 
 ## Integration with PACT Workflow
 

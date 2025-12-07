@@ -298,11 +298,23 @@ The following MCP tool enhances architectural decision-making:
 
 ---
 
-## Additional Resources
+## Reference Files
 
-- **Comprehensive diagram templates**: `references/c4-templates.md`
-- **API contract examples**: `references/api-contracts.md`
-- **Common pitfalls to avoid**: `references/anti-patterns.md`
+Detailed reference documentation:
+- **references/c4-templates.md**: Comprehensive C4 diagram templates
+- **references/api-contracts.md**: API contract examples and patterns
+- **references/anti-patterns.md**: Common pitfalls to avoid
+
+## Templates
+
+Ready-to-use templates for architecture artifacts:
+- **templates/component-specification.md**: Component spec with responsibilities, dependencies, interfaces
+- **templates/system-context-diagram.md**: C4 Level 1 diagram template with actors and external systems
+
+## Examples
+
+Worked examples demonstrating patterns in practice:
+- **examples/c4-ecommerce-example.md**: Complete C4 diagrams for an e-commerce platform
 
 ## Integration with PACT Workflow
 

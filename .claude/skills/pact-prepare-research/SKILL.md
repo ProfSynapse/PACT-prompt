@@ -311,29 +311,21 @@ What are you researching?
       3. documentation-templates.md (how to document results)
 ```
 
-## Additional Resources
+## Reference Files
 
-### Reference Files
+Detailed reference documentation:
+- **references/research-workflow.md**: Complete step-by-step research methodology, detailed guidance for each phase
+- **references/source-evaluation.md**: Criteria for assessing source credibility, handling conflicting information
+- **references/documentation-templates.md**: Templates for all Prepare phase outputs (technology, API, comparison, requirements)
 
-**references/research-workflow.md**
-- Complete step-by-step research methodology
-- Detailed guidance for each research phase
-- Integration with PACT workflow
-- **Load when**: Starting a new research task or need systematic approach
+## Templates
 
-**references/source-evaluation.md**
-- Detailed criteria for assessing source credibility
-- How to verify information accuracy
-- Handling conflicting information
-- **Load when**: Evaluating reliability of documentation or community resources
+Ready-to-use templates for research outputs:
+- **templates/research-summary.md**: Research summary template with sources, findings, recommendations
 
-**references/documentation-templates.md**
-- Complete templates for all Prepare phase outputs
-- Technology summary template
-- API documentation template
-- Comparison matrix template
-- Requirements documentation template
-- **Load when**: Creating documentation for handoff to Architect phase
+## Examples
+
+(Examples to be added in future iterations)
 
 ### Related Skills
 

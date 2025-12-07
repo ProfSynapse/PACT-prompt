@@ -51,6 +51,14 @@ Implementing authentication/authorization?
 │       ├─ Enforce length and range limits
 │       └─ Use allowlists over denylists
 │
+├─ Protecting against abuse/DoS?
+│   └─ YES → Use Rate Limiting Patterns (see references/rate-limiting.md)
+│       ├─ General API → Token Bucket (allows bursts)
+│       ├─ Precise limits → Sliding Window Counter
+│       ├─ Traffic shaping → Leaky Bucket
+│       ├─ Critical endpoints → Aggressive limits + CAPTCHA
+│       └─ Distributed systems → Redis-based coordination
+│
 ├─ Storing sensitive data?
 │   └─ YES → Secrets Management Patterns
 │       ├─ Never commit secrets to version control
@@ -197,6 +205,14 @@ When implementing features:
   - Log input validation failures
   - Include correlation IDs
   - Never log secrets or PII
+
+- [ ] **Rate Limiting**: Protect against abuse (see `references/rate-limiting.md`)
+  - Implement endpoint-specific limits
+  - Rate limit authentication endpoints aggressively
+  - Use Token Bucket for general APIs
+  - Include rate limit headers in responses
+  - Consider CAPTCHA for repeated violations
+  - Log rate limit bypass attempts
 
 - [ ] **Dependencies**: Secure supply chain
   - Pin dependency versions
@@ -493,14 +509,24 @@ When reviewing code for security:
 - [ ] CSRF protection implemented
 - [ ] XSS protection in place
 
-## Resources and References
+## Reference Files
 
-### Detailed Guides
-- `references/owasp-top10.md` - Each OWASP vulnerability with prevention strategies
-- `references/authentication.md` - JWT, sessions, OAuth patterns and implementation
-- `references/input-validation.md` - Sanitization, encoding, validation patterns
+Detailed reference documentation:
+- **references/owasp-top10.md**: Each OWASP vulnerability with prevention strategies
+- **references/authentication.md**: JWT, sessions, OAuth patterns and implementation
+- **references/input-validation.md**: Sanitization, encoding, validation patterns
+- **references/rate-limiting.md**: Token bucket, sliding window, distributed rate limiting, bypass prevention
 
-### External Resources
+## Templates
+
+Ready-to-use templates for security implementation:
+- **templates/security-checklist.md**: Comprehensive security review checklist with auth, input validation, headers
+
+## Examples
+
+(Examples to be added in future iterations)
+
+## External Resources
 - OWASP Top 10: https://owasp.org/www-project-top-ten/
 - OWASP Cheat Sheet Series: https://cheatsheetseries.owasp.org/
 - CWE Top 25: https://cwe.mitre.org/top25/

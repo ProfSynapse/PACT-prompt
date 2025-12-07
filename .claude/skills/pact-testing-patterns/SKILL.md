@@ -451,6 +451,9 @@ Need coverage metrics and analysis guidance?
 Need E2E testing patterns (Playwright, Cypress, Selenium)?
 → **Read**: `references/e2e-patterns.md` for browser automation, visual testing
 
+Need contract testing for microservices and APIs?
+→ **Read**: `references/contract-testing.md` for consumer-driven contracts, Pact framework, schema validation
+
 Need test data management (fixtures, factories, seeders)?
 → **Read**: `references/test-strategies.md` section on test data
 
@@ -698,7 +701,22 @@ This skill focuses on testing strategies and patterns. For complementary guidanc
 - **pact-database-patterns**: Database design to inform data integrity testing
 - **pact-security-patterns**: Security testing strategies and OWASP validation
 
-For detailed testing guidance, load the reference files in `references/` directory based on the decision tree above.
+## Reference Files
+
+Detailed reference documentation:
+- **references/test-strategies.md**: Unit, integration, E2E testing approaches
+- **references/test-coverage.md**: Coverage tools, thresholds, analysis
+- **references/e2e-patterns.md**: Browser automation, visual testing
+- **references/contract-testing.md**: Consumer-driven contracts, Pact framework, schema validation
+
+## Templates
+
+Ready-to-use templates for test planning:
+- **templates/test-plan.md**: Test plan template with scope, cases, data requirements, acceptance criteria
+
+## Examples
+
+(Examples to be added in future iterations)
 
 ---
 

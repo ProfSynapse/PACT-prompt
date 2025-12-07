@@ -4,10 +4,11 @@ description: |
   CROSS-CUTTING: API contract design patterns for architects and implementers.
 
   Provides REST API design patterns, GraphQL schema design, API versioning strategies,
-  error response formats, pagination patterns, and API documentation standards.
+  API deprecation workflows, error response formats, pagination patterns, and API
+  documentation standards.
 
   Use when: designing API contracts, choosing between REST/GraphQL, planning versioning,
-  defining error formats, implementing pagination, documenting APIs.
+  deprecating API versions, defining error formats, implementing pagination, documenting APIs.
 allowed-tools:
   - Read
   - mcp__sequential-thinking__sequentialthinking
@@ -37,6 +38,8 @@ Invoke this skill when:
 - Designing new API endpoints or GraphQL schemas
 - Choosing between REST and GraphQL for a new feature
 - Planning API versioning strategy for an existing API
+- Deprecating API versions and planning sunset timelines
+- Communicating API changes to consumers
 - Standardizing error response formats across services
 - Implementing pagination or filtering patterns
 - Creating API documentation (OpenAPI, Swagger, GraphQL schema)
@@ -465,13 +468,23 @@ The following MCP tool enhances API design decisions:
 
 ---
 
-## Reference Materials
+## Reference Files
 
-Consult these reference files for detailed patterns:
-
+Detailed reference documentation:
 - **references/rest-patterns.md**: REST-specific design patterns, HATEOAS, resource naming
 - **references/graphql-patterns.md**: GraphQL schema design, resolver patterns, mutations
 - **references/versioning.md**: Versioning strategies with pros/cons
+- **references/deprecation-workflows.md**: API deprecation communication, sunset timelines, migration paths
+
+## Templates
+
+Ready-to-use templates for API design:
+- **templates/api-specification.md**: Complete REST API specification template with endpoints, errors, pagination
+
+## Examples
+
+Worked examples demonstrating patterns in practice:
+- **examples/rest-api-example.md**: Task management API with full CRUD, pagination, error handling
 
 ## Integration with PACT Workflow
 

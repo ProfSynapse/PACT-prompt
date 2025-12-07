@@ -502,12 +502,21 @@ The following MCP tool enhances frontend implementation decisions:
 - **pact-database-engineer**: Data modeling for client-side state
 - **pact-architect**: Component architecture and system design
 
-## Reference Documentation
+## Reference Files
 
-Detailed implementation patterns and guidelines:
-- `references/component-patterns.md` - Comprehensive component architecture patterns
-- `references/state-management.md` - State management strategies and trade-offs
-- `references/accessibility.md` - Complete accessibility implementation guide
+Detailed reference documentation:
+- **references/component-patterns.md**: Comprehensive component architecture patterns
+- **references/state-management.md**: State management strategies and trade-offs
+- **references/accessibility.md**: Complete accessibility implementation guide
+
+## Templates
+
+Ready-to-use templates for frontend implementation:
+- **templates/component-specification.md**: Frontend component spec with props, states, accessibility, styling
+
+## Examples
+
+(Examples to be added in future iterations)
 
 ## Version History
 

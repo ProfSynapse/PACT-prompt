@@ -22,7 +22,7 @@ metadata:
 
 ## Overview
 
-This skill provides backend implementation patterns and best practices for the CODE phase of the PACT framework. It focuses on server-side development including service layers, API design, error handling, data validation, middleware, and security.
+This skill provides backend implementation patterns and best practices for the CODE phase of the PACT framework. It focuses on server-side development including service layers, API design, error handling, data validation, middleware, async processing, and security.
 
 ## When to Use This Skill
 
@@ -230,9 +230,16 @@ START: What are you implementing?
 │  ├─ Service patterns → service-patterns.md (Middleware section)
 │  └─ Error handling → error-handling.md (Authorization Errors section)
 │
-└─ Performance / Scalability?
-   ├─ Caching → service-patterns.md (Caching Patterns section)
-   └─ Async processing → service-patterns.md (Async Patterns section)
+├─ Performance / Scalability?
+│  ├─ Caching → service-patterns.md (Caching Patterns section)
+│  └─ Async processing → async-processing.md
+│
+└─ Background Jobs / Queues?
+   ├─ Job queue setup → async-processing.md (Job Queue Patterns section)
+   ├─ Worker configuration → async-processing.md (Background Workers section)
+   ├─ Retry logic → async-processing.md (Retry Strategies section)
+   ├─ Dead letter queues → async-processing.md (Dead Letter Queues section)
+   └─ Event-driven patterns → async-processing.md (Event-Driven Architecture section)
 ```
 
 ## Common Backend Patterns
@@ -497,13 +504,23 @@ The following MCP tool enhances backend implementation decisions:
 
 ## Reference Files
 
-This skill includes detailed reference documentation:
-
-1. **service-patterns.md**: Repository, service, controller patterns with implementation examples
-2. **error-handling.md**: Error types, logging strategies, recovery patterns
-3. **data-validation.md**: Input validation, sanitization, schema design
+Detailed reference documentation:
+- **references/service-patterns.md**: Repository, service, controller patterns with implementation examples
+- **references/error-handling.md**: Error types, logging strategies, recovery patterns
+- **references/data-validation.md**: Input validation, sanitization, schema design
+- **references/async-processing.md**: Job queues, background workers, retry strategies, dead letter queues, event-driven patterns
 
 Use the decision tree above to determine which reference to consult for your specific implementation needs.
+
+## Templates
+
+Ready-to-use templates for backend implementation:
+- **templates/service-scaffold.md**: Service directory structure with domain, application, infrastructure layers
+
+## Examples
+
+Worked examples demonstrating patterns in practice:
+- **examples/error-handling-example.md**: Comprehensive error handling for user registration service
 
 ## Integration with PACT Framework
 
