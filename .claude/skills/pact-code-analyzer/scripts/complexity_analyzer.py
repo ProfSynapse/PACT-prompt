@@ -400,8 +400,8 @@ def calculate_javascript_body_complexity(body: str) -> int:
     complexity += len(re.findall(r'(?<![?])\?\?(?![?])', body_cleaned))  # Nullish coalescing
 
     # Ternary operators: match ? not part of ?. (optional chaining) or ?? (nullish coalescing)
-    # Simplified pattern: ? not preceded/followed by ? and not followed by .
-    complexity += len(re.findall(r'(?<!\?)\?(?![?\.])', body_cleaned))
+    # Pattern: ? not followed by ? or . (allows chained ternaries to count correctly)
+    complexity += len(re.findall(r'\?(?![?.])', body_cleaned))
 
     return complexity
 
