@@ -14,6 +14,8 @@ Skills are knowledge libraries that agents invoke during execution. Instead of e
 
 ## Available Skills
 
+### Production Skills
+
 | Skill | Phase | Purpose | Used By |
 |-------|-------|---------|---------|
 | `pact-prepare-research` | Prepare | Research methodologies, source evaluation | pact-preparer |
@@ -24,6 +26,27 @@ Skills are knowledge libraries that agents invoke during execution. Instead of e
 | `pact-database-patterns` | Code | Schema design, query optimization | pact-database-engineer |
 | `pact-testing-patterns` | Test | Test strategies, coverage guidelines | pact-test-engineer |
 | `pact-security-patterns` | Cross-cutting | OWASP Top 10, auth patterns | All coders, tester |
+
+### Experimental Skills (Phase 5)
+
+These skills are experimental and may have limitations. Report issues for improvements.
+
+| Skill | Phase | Purpose | Used By |
+|-------|-------|---------|---------|
+| `pact-code-analyzer` | All | **Executable Python scripts** for code analysis (complexity, dependencies, coupling) | All agents |
+| `pact-diagram-generator` | Architect | Mermaid diagram templates for architecture documentation | pact-architect |
+
+**pact-code-analyzer** provides four Python scripts:
+- `complexity_analyzer.py` - Cyclomatic complexity per function
+- `dependency_mapper.py` - Module dependencies and circular references
+- `coupling_detector.py` - Fan-in/fan-out coupling metrics
+- `file_metrics.py` - LOC, function counts, PACT 600-line compliance
+
+**pact-diagram-generator** provides Mermaid templates:
+- C4 Context diagrams (system boundary)
+- C4 Container diagrams (deployable units)
+- Sequence diagrams (API flows)
+- ER diagrams (database schemas)
 
 ## Installation
 

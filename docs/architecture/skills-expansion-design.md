@@ -1100,17 +1100,36 @@ For detailed implementation: `references/authentication-strategies.md`
 
 ---
 
-**Phase 5: Advanced Capabilities (Weeks 9+)**
+**Phase 5: Advanced Capabilities (Weeks 9+)** ✅ IN PROGRESS
 - Experiment with executable code in skills
 - Research diagram generation capabilities
 
 **Experimental Skills**:
 - pact-code-analyzer (executable Python for code analysis)
-- pact-diagram-generator (executable scripts for diagram generation)
+- pact-diagram-generator (template-based Mermaid diagram generation)
+
+**Implementation Status** (2025-12-07):
+- [x] Design specifications completed for both skills
+- [x] Security analysis documented (`phase5-security-analysis.md`)
+- [x] pact-code-analyzer: 4 Python scripts (complexity, dependencies, coupling, metrics)
+- [x] pact-diagram-generator: 4 Mermaid templates (C4 context, container, sequence, ER)
+- [ ] Integration testing with agents
+- [ ] Production validation
+
+**Key Design Decisions**:
+1. **pact-code-analyzer**: Executable Python scripts invoked via Bash tool
+   - Standard library only (no pip dependencies)
+   - Comprehensive security controls (path validation, timeouts, size limits)
+   - JSON output for agent parsing
+
+2. **pact-diagram-generator**: Template-based (NOT script-based)
+   - Lower risk than executable code
+   - Mermaid-only (GitHub native support)
+   - Leverages Claude's text transformation strengths
 
 **Milestone Success Criteria**:
-- [ ] Prototype skill with executable code works
-- [ ] Security implications of code execution understood
+- [x] Prototype skill with executable code works
+- [x] Security implications of code execution understood (see `phase5-security-analysis.md`)
 - [ ] Use case validation: Does executable code provide value?
 
 ---
@@ -1477,6 +1496,8 @@ If skills cause issues:
 | pact-database-patterns | Code | pact-database-engineer | Read, Grep, sequential-thinking | Database design |
 | pact-security-patterns | All | All agents | Read, Grep, WebSearch, sequential-thinking | Cross-cutting security |
 | pact-api-design | Architect/Code | pact-architect, backend/frontend coders | Read, sequential-thinking | API contracts |
+| pact-code-analyzer | All | All agents | Read, Bash, Grep | 🧪 EXPERIMENTAL - Executable Python analysis scripts |
+| pact-diagram-generator | Architect | pact-architect | Read, sequential-thinking | 🧪 EXPERIMENTAL - Mermaid diagram templates |
 
 ---
 
