@@ -11,15 +11,16 @@ This is the **PACT Framework Prompts** repository - a collection of ready-to-use
 ## Current State
 
 **Status**: Active development
-**Last Updated**: 2025-12-05
+**Last Updated**: 2025-12-07
 **Current Branch**: `feat/add-commands`
 
 ### Recent Significant Changes
 
 | Date | Change | Impact |
 |------|--------|--------|
+| 2025-12-07 | **Phase 5 Complete: Experimental Skills** | 2 new skills with executable code (pact-code-analyzer, pact-diagram-generator) |
 | 2025-12-05 | **MCP Tools Hybrid Integration** | Skills document WHEN/WHY; Agents document HOW; Validated with 3 pairings |
-| 2025-12 | Skills ecosystem expansion (8 skills total) | Comprehensive knowledge libraries for all PACT phases |
+| 2025-12 | Skills ecosystem expansion (10 skills total) | Comprehensive knowledge libraries for all PACT phases |
 | 2025-12 | Knowledge migration from agents to skills | Agents are now leaner; duplicated knowledge moved to shared skills |
 | 2025-12 | Added PACT slash commands | `/PACT:orchestrate`, `/PACT:peer-review`, `/PACT:update-context` |
 
@@ -56,7 +57,9 @@ This is the **PACT Framework Prompts** repository - a collection of ready-to-use
 │   ├── pact-frontend-patterns/ # Component patterns, state management
 │   ├── pact-database-patterns/ # Schema design, query optimization
 │   ├── pact-testing-patterns/  # Test strategies, coverage
-│   └── pact-security-patterns/ # OWASP Top 10, auth patterns
+│   ├── pact-security-patterns/ # OWASP Top 10, auth patterns
+│   ├── pact-code-analyzer/     # Executable code analysis (Python/Node.js)
+│   └── pact-diagram-generator/ # Mermaid diagram templates
 │
 └── docs/                       # Design documentation
     ├── skills-as-agent-knowledge-libraries.md  # Skills pattern doc
@@ -128,6 +131,8 @@ Skills (WHEN/WHY)              Agents (HOW)
 | `pact-database-patterns` | Code | Schema design, query optimization | pact-database-engineer |
 | `pact-testing-patterns` | Test | Test strategies, coverage guidelines | pact-test-engineer |
 | `pact-security-patterns` | Cross-cutting | OWASP Top 10, auth patterns | All agents |
+| `pact-code-analyzer` | Code | **Experimental** - Executable code metrics analysis | pact-architect, pact-backend-coder |
+| `pact-diagram-generator` | Architect | **Experimental** - Mermaid diagram templates | pact-architect |
 
 ## Slash Commands
 
@@ -162,15 +167,46 @@ Skills (WHEN/WHY)              Agents (HOW)
 3. **Skills Location**: Users must install skills to `~/.claude/skills/` for agent access
 4. **Agent Metadata**: Frontmatter format must match Claude Code expectations
 
+## Experimental Skills (Phase 5)
+
+Two new skills push the boundaries of what skills can do, introducing executable code capabilities:
+
+### pact-code-analyzer
+Provides executable scripts for objective code quality measurement:
+- **Python scripts**: `complexity_analyzer.py`, `coupling_detector.py`, `dependency_mapper.py`, `file_metrics.py`
+- **Node.js AST analyzer**: `js-complexity-analyzer.js` for accurate JS/TS cyclomatic complexity
+- **Metrics**: Cyclomatic complexity, coupling analysis, dependency mapping, file-level metrics
+- **Reference**: `docs/architecture/phase5-code-analyzer-design.md`
+
+### pact-diagram-generator
+Provides Mermaid diagram templates for consistent architecture visualization:
+- **Templates**: C4 context, C4 container, sequence diagrams, ER diagrams
+- **Validation**: Syntax validation guide and troubleshooting reference
+- **Reference**: `docs/architecture/phase5-diagram-generator-design.md`
+
+**Security considerations**: See `docs/architecture/phase5-security-analysis.md`
+
 ## Future Considerations
 
 - Additional specialized agents for specific domains (mobile, DevOps, etc.)
 - Enhanced skill cross-referencing capabilities
 - Integration with additional AI coding assistants
+- Production validation of experimental skills (pact-code-analyzer, pact-diagram-generator)
 
 ---
 
 ## Changelog
+
+### 2025-12-07
+- Documented Phase 5 completion: experimental skills implementation
+  - Added `pact-code-analyzer` skill with executable Python scripts and Node.js AST analyzer
+  - Added `pact-diagram-generator` skill with Mermaid diagram templates
+  - Design specs: `phase5-code-analyzer-design.md`, `phase5-diagram-generator-design.md`
+  - Security analysis: `phase5-security-analysis.md`
+- Updated skills count from 8 to 10 (total skills in ecosystem)
+- Updated repository structure to include new experimental skills
+- Added "Experimental Skills (Phase 5)" section documenting new capabilities
+- Updated Future Considerations to include experimental skills validation
 
 ### 2025-12-05 (Update 2)
 - Documented MCP Tools Hybrid Integration completion

@@ -1111,11 +1111,22 @@ For detailed implementation: `references/authentication-strategies.md`
 **Implementation Status** (2025-12-07):
 - [x] Design specifications completed for both skills
 - [x] Security analysis documented (`phase5-security-analysis.md`)
-- [x] pact-code-analyzer: 4 Python scripts (complexity, dependencies, coupling, metrics)
+- [x] pact-code-analyzer: 4 Python scripts + Node.js AST analyzer for JS/TS
+- [x] pact-code-analyzer: 3 reference files (complexity-calculation, dependency-analysis, script-integration)
 - [x] pact-diagram-generator: 4 Mermaid templates (C4 context, container, sequence, ER)
-- [x] Peer review completed (architecture, implementation, test coverage)
+- [x] pact-diagram-generator: 3 reference files (mermaid-syntax-guide, validation-guide, troubleshooting)
+- [x] Peer review completed with bug fixes applied (see commits ac7a456, 09977c8, 233262c)
 - [ ] Integration testing with agents (pending real-world usage)
 - [ ] Production validation (pending real-world usage)
+
+**Optional Items from Detailed Design Specs** (not required for Phase 5 completion):
+- [ ] pact-code-analyzer: Test suite with fixtures (`scripts/tests/`)
+- [ ] pact-code-analyzer: `references/coupling-metrics.md`
+- [ ] pact-code-analyzer: `examples/` directory
+- [ ] pact-diagram-generator: `templates/component-graph-mermaid.md`
+- [ ] pact-diagram-generator: `references/c4-mermaid-patterns.md`
+- [ ] pact-diagram-generator: `examples/` directory
+- [ ] Agent integration: Add skill references to pact-architect.md
 
 **Key Design Decisions**:
 1. **pact-code-analyzer**: Executable Python scripts invoked via Bash tool
