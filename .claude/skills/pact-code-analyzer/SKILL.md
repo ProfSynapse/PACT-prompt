@@ -118,6 +118,7 @@ python ~/.claude/skills/pact-code-analyzer/scripts/complexity_analyzer.py \
     {
       "path": "src/services/user_service.py",
       "language": "python",
+      "analysis_method": "python_ast",
       "total_complexity": 45,
       "average_complexity": 7.5,
       "functions": [
@@ -139,6 +140,11 @@ python ~/.claude/skills/pact-code-analyzer/scripts/complexity_analyzer.py \
   ]
 }
 ```
+
+**Analysis Methods** (`analysis_method` field):
+- `python_ast` - Python AST parsing (always used for .py files)
+- `nodejs_ast` - Node.js AST parsing via typhonjs-escomplex (JS/TS when available)
+- `regex_fallback` - Regex pattern matching (JS/TS fallback when Node.js unavailable)
 
 **Use Cases**:
 - Identify high-complexity functions requiring refactoring
@@ -542,14 +548,28 @@ For detailed algorithm explanations and integration guidance, see:
 
 ### Known Limitations
 
-**JavaScript/TypeScript Complexity Analysis (Best-Effort)**:
-- Uses regex-based function detection instead of AST parsing
-- May miss or miscount:
-  - Arrow functions without braces: `const fn = () => value`
-  - Functions inside template literals or strings
-  - Minified code (single-line functions)
-  - JSX/TSX edge cases
-- Recommendation: Use for rough estimates; for production JS/TS metrics, consider native tools like ESLint complexity rules
+**JavaScript/TypeScript Complexity Analysis**:
+The complexity analyzer supports two analysis methods:
+
+1. **Node.js AST Analysis** (High Accuracy) - Used when Node.js and npm dependencies are installed:
+   - Uses `acorn` parser for accurate AST-based analysis
+   - Supports modern ES6+ JavaScript (.js files)
+   - Accurate cyclomatic complexity calculation matching McCabe's methodology
+   - **Limitation**: Currently only supports .js files (not .jsx, .ts, .tsx)
+
+2. **Regex Fallback** (Best-Effort) - Used when Node.js is unavailable or for TypeScript files:
+   - Pattern-based function detection
+   - Supports .js, .ts, .tsx files
+   - May miss or miscount edge cases (some arrow function patterns, minified code)
+   - Suitable for rough estimates
+
+**Installing Node.js Dependencies for High-Accuracy JS Analysis**:
+```bash
+cd ~/.claude/skills/pact-code-analyzer/scripts/
+npm install
+```
+
+The output JSON includes `analysis_method` field (`nodejs_ast` or `regex_fallback`) indicating which method was used.
 
 **Import Resolution**:
 - Limited to local project files (no node_modules analysis)
@@ -593,19 +613,34 @@ For detailed algorithm explanations and integration guidance, see:
 **Requirements**:
 - Python 3.11+ (standard library only, no pip dependencies)
 - Unix-like OS for timeout handling (macOS, Linux; Windows best-effort)
+- **Optional**: Node.js 18+ for high-accuracy JS/TS complexity analysis
 
 **Installation**:
-Scripts are included in this skill directory. No additional installation needed.
+Scripts are included in this skill directory. No additional installation needed for basic functionality.
+
+**Optional: Enable High-Accuracy JS/TS Complexity Analysis**:
+```bash
+# Install Node.js dependencies for AST-based JS/TS analysis
+cd ~/.claude/skills/pact-code-analyzer/scripts/
+npm install
+```
+
+Without Node.js dependencies, JS/TS files are analyzed using regex patterns (less accurate but functional).
 
 **Verification**:
 ```bash
-# Test complexity analyzer
+# Test complexity analyzer (Python)
 python ~/.claude/skills/pact-code-analyzer/scripts/complexity_analyzer.py \
   --file ~/.claude/skills/pact-code-analyzer/scripts/complexity_analyzer.py
 
 # Test file metrics
 python ~/.claude/skills/pact-code-analyzer/scripts/file_metrics.py \
   --directory ~/.claude/skills/pact-code-analyzer/scripts/
+
+# Test JS/TS analysis (if Node.js installed)
+python ~/.claude/skills/pact-code-analyzer/scripts/complexity_analyzer.py \
+  --file path/to/javascript-file.js
+# Output will show "analysis_method": "nodejs_ast" if Node.js is working
 ```
 
 ## Quick Reference Summary
@@ -621,12 +656,14 @@ python ~/.claude/skills/pact-code-analyzer/scripts/file_metrics.py \
 
 | Script | Python | JavaScript | TypeScript | Notes |
 |--------|--------|------------|------------|-------|
-| **complexity_analyzer.py** | ✅ Full (AST) | ⚠️ Best-effort (regex) | ⚠️ Best-effort (regex) | JS/TS uses regex pattern matching, less accurate than AST |
+| **complexity_analyzer.py** | ✅ Full (AST) | ✅ Full (AST)* | ⚠️ Regex | *JS uses Node.js+acorn when available; TS uses regex fallback |
 | **dependency_mapper.py** | ✅ Full | ✅ Full | ✅ Full | Path aliases (e.g., `@/components`) not resolved |
 | **coupling_detector.py** | ✅ Full | ❌ Not supported | ❌ Not supported | Python-only; uses simplified dependency analysis |
 | **file_metrics.py** | ✅ Full | ✅ Full | ✅ Full | Comment detection may miss edge cases |
 
 **Legend**: ✅ Full support (AST-based) | ⚠️ Best-effort (regex-based) | ❌ Not supported
+
+\* JavaScript complexity uses Node.js AST parsing via `acorn` when `npm install` has been run, with automatic regex fallback for .ts/.tsx files or when Node.js is unavailable.
 
 **Common Thresholds**:
 - Complexity: 10 (warn), 15 (critical)

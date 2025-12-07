@@ -1,0 +1,28 @@
+{
+  "name": "pact-code-analyzer-scripts",
+  "version": "0.1.0",
+  "description": "JavaScript/TypeScript complexity analysis scripts for PACT code analyzer skill",
+  "type": "module",
+  "main": "js-complexity-analyzer.js",
+  "scripts": {
+    "analyze": "node js-complexity-analyzer.js",
+    "test": "node js-complexity-analyzer.js --file ./js-complexity-analyzer.js --threshold 10"
+  },
+  "keywords": [
+    "complexity",
+    "cyclomatic",
+    "analysis",
+    "javascript",
+    "typescript",
+    "pact"
+  ],
+  "author": "PACT Framework",
+  "license": "MIT",
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "dependencies": {
+    "acorn": "^8.15.0",
+    "acorn-walk": "^8.3.4"
+  }
+}

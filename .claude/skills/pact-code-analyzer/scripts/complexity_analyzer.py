@@ -19,11 +19,20 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Any, Optional
+import subprocess
+import shutil
 
 # Constants
 MAX_FILE_SIZE = 1024 * 1024  # 1MB
 TIMEOUT_SECONDS = 60
 DEFAULT_THRESHOLD = 10
+
+# Path to Node.js analyzer script (relative to this script)
+SCRIPTS_DIR = Path(__file__).parent
+JS_ANALYZER_SCRIPT = SCRIPTS_DIR / 'js-complexity-analyzer.js'
+
+# Check if Node.js is available
+NODE_AVAILABLE = shutil.which('node') is not None
 
 
 class TimeoutError(Exception):
@@ -153,11 +162,53 @@ def calculate_node_complexity(node: ast.AST) -> int:
     return complexity
 
 
-def calculate_javascript_complexity(file_path: Path) -> List[Dict[str, Any]]:
+def try_nodejs_analysis(file_path: Path, threshold: int) -> Optional[Dict[str, Any]]:
+    """
+    Try to analyze JavaScript/TypeScript file using Node.js analyzer.
+
+    Args:
+        file_path: Path to JS/TS file
+        threshold: Complexity threshold
+
+    Returns:
+        Analysis result dict if successful, None if Node.js not available or failed
+    """
+    if not NODE_AVAILABLE or not JS_ANALYZER_SCRIPT.exists():
+        return None
+
+    # Check if npm dependencies are installed
+    node_modules = SCRIPTS_DIR / 'node_modules'
+    if not node_modules.exists():
+        return None
+
+    try:
+        result = subprocess.run(
+            ['node', str(JS_ANALYZER_SCRIPT), '--file', str(file_path), '--threshold', str(threshold)],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            cwd=str(SCRIPTS_DIR)
+        )
+
+        if result.returncode == 0:
+            data = json.loads(result.stdout)
+            # Return the file analysis result (first file in files array)
+            if data.get('files') and len(data['files']) > 0:
+                file_result = data['files'][0]
+                # Add analysis_method to track which method was used
+                file_result['analysis_method'] = 'nodejs_ast'
+                return file_result
+        return None
+    except (subprocess.TimeoutExpired, subprocess.SubprocessError, json.JSONDecodeError):
+        return None
+
+
+def calculate_javascript_complexity_regex(file_path: Path) -> List[Dict[str, Any]]:
     """
     Calculate cyclomatic complexity for JavaScript/TypeScript using regex.
 
     Note: Less accurate than AST parsing, but avoids external dependencies.
+    Best-effort approach that handles common patterns but may miss edge cases.
 
     Args:
         file_path: Path to JS/TS file
@@ -170,29 +221,87 @@ def calculate_javascript_complexity(file_path: Path) -> List[Dict[str, Any]]:
 
     functions = []
 
-    # Find function declarations (simplified regex, may miss edge cases)
-    function_pattern = r'(?:function\s+(\w+)|(?:const|let|var)\s+(\w+)\s*=\s*(?:async\s+)?(?:function|\([^)]*\)\s*=>))'
+    # Improved function detection patterns:
+    # 1. Named function declarations: function name() {}
+    # 2. Function expressions: const/let/var name = function() {}
+    # 3. Arrow functions with parens: const name = () => {} or const name = () => expr
+    # 4. Arrow functions without parens: const name = x => {} or const name = x => expr
+    # 5. Async variants: async function, async () =>
+    # 6. Generator functions: function* name() {}
+    # 7. Class methods: methodName() {} or async methodName() {}
+    # 8. Object method shorthand: { methodName() {} }
 
-    # Split by functions (very simplified approach)
+    # Pattern for arrow functions (with and without braces)
+    arrow_pattern = r'^\s*(?:const|let|var)\s+(\w+)\s*=\s*(?:async\s+)?(?:\([^)]*\)|\w+)\s*=>\s*([^{;]+);?\s*$'
+    arrow_brace_pattern = r'^\s*(?:const|let|var)\s+(\w+)\s*=\s*(?:async\s+)?(?:\([^)]*\)|\w+)\s*=>\s*\{'
+
+    # Control flow keywords to exclude from method detection
+    control_flow_keywords = r'(?:if|for|while|switch|catch|with|return)'
+
+    function_patterns = [
+        # Named function declarations (including async, generator)
+        r'^\s*(?:export\s+)?(?:async\s+)?function\s*\*?\s+(\w+)\s*\(',
+        # Function expressions assigned to variables
+        r'^\s*(?:export\s+)?(?:const|let|var)\s+(\w+)\s*=\s*(?:async\s+)?function\s*\*?\s*\(',
+        # Class methods and object method shorthand - must be at start of line (after whitespace)
+        # Use negative lookahead to exclude control flow keywords
+        r'^\s*(?:async\s+)?(?!' + control_flow_keywords + r'\b)([a-zA-Z_$][\w$]*)\s*\([^)]*\)\s*\{',
+    ]
+
+    # Combine all patterns with alternation
+    combined_pattern = '|'.join(f'(?:{p})' for p in function_patterns)
+
+    # Split by functions (simplified approach using brace matching)
     lines = source.split('\n')
     current_function = None
     function_start = 0
+    function_start_depth = 0
     brace_depth = 0
 
     for line_num, line in enumerate(lines, 1):
-        # Check for function declaration
-        match = re.search(function_pattern, line)
-        if match and brace_depth == 0:
-            func_name = match.group(1) or match.group(2)
-            current_function = func_name
-            function_start = line_num
+        # If not currently tracking a function, look for new function declarations
+        # (Do this BEFORE updating brace_depth so we can detect top-level arrow functions)
+        if not current_function:
+            # Check for single-line arrow functions (without braces)
+            arrow_match = re.search(arrow_pattern, line)
+            if arrow_match:
+                func_name = arrow_match.group(1)
+                function_body = lines[line_num - 1]
+                complexity = calculate_javascript_body_complexity(function_body)
 
-        # Track brace depth
+                functions.append({
+                    'name': func_name,
+                    'line': line_num,
+                    'complexity': complexity
+                })
+                continue
+
+            # Check for arrow functions with braces (only top-level)
+            if brace_depth == 0:
+                arrow_brace_match = re.search(arrow_brace_pattern, line)
+                if arrow_brace_match:
+                    func_name = arrow_brace_match.group(1)
+                    current_function = func_name
+                    function_start = line_num
+                    function_start_depth = brace_depth
+
+            # Check for other function patterns (can be nested in classes/objects)
+            if not current_function:
+                match = re.search(combined_pattern, line)
+                if match:
+                    # Extract function name from the first non-None group
+                    func_name = next((g for g in match.groups() if g), 'anonymous')
+                    current_function = func_name
+                    function_start = line_num
+                    function_start_depth = brace_depth
+
+        # Update brace depth tracking
+        old_depth = brace_depth
         brace_depth += line.count('{') - line.count('}')
 
-        # Function ended
-        if current_function and brace_depth == 0 and line.count('}') > 0:
-            # Extract function body
+        # Function ended - check if we've returned to the starting depth
+        if current_function and brace_depth == function_start_depth and old_depth > function_start_depth:
+            # Extract function body from original source
             function_body = '\n'.join(lines[function_start-1:line_num])
             complexity = calculate_javascript_body_complexity(function_body)
 
@@ -210,23 +319,42 @@ def calculate_javascript_body_complexity(body: str) -> int:
     """
     Calculate complexity for JavaScript function body using regex.
 
-    Decision points: if, for, while, case, catch, &&, ||, ? (ternary)
+    Decision points: if, for, while, case, catch, &&, ||, ??, ? (ternary)
+
+    Note: This is a best-effort regex approach. Some edge cases:
+    - May count operators in comments/strings (cleaned upstream but not perfect)
+    - May miss complex nested expressions
+    - Treats each operator occurrence as a decision point
     """
     complexity = 1  # Base complexity
 
-    # Control flow keywords
-    complexity += len(re.findall(r'\bif\b', body))
-    complexity += len(re.findall(r'\bfor\b', body))
-    complexity += len(re.findall(r'\bwhile\b', body))
-    complexity += len(re.findall(r'\bcase\b', body))
-    complexity += len(re.findall(r'\bcatch\b', body))
+    # Remove comments and strings to reduce false positives
+    # (This is a safety net since upstream should handle most cases)
+    body_cleaned = re.sub(r'//.*?$', '', body, flags=re.MULTILINE)
+    body_cleaned = re.sub(r'/\*.*?\*/', '', body_cleaned, flags=re.DOTALL)
+    body_cleaned = re.sub(r'`[^`]*`', '""', body_cleaned)
+    body_cleaned = re.sub(r'"(?:[^"\\]|\\.)*"', '""', body_cleaned)
+    body_cleaned = re.sub(r"'(?:[^'\\]|\\.)*'", "''", body_cleaned)
+
+    # Control flow keywords (word boundaries to avoid partial matches)
+    complexity += len(re.findall(r'\bif\b', body_cleaned))
+    complexity += len(re.findall(r'\belse\s+if\b', body_cleaned))  # Explicit else if
+    complexity += len(re.findall(r'\bfor\b', body_cleaned))
+    complexity += len(re.findall(r'\bwhile\b', body_cleaned))
+    complexity += len(re.findall(r'\bdo\b', body_cleaned))  # do-while loops
+    complexity += len(re.findall(r'\bcase\b', body_cleaned))
+    complexity += len(re.findall(r'\bcatch\b', body_cleaned))
 
     # Logical operators (each adds decision point)
-    complexity += len(re.findall(r'&&', body))
-    complexity += len(re.findall(r'\|\|', body))
+    # Use negative lookbehind/lookahead to avoid matching &&& or |||
+    complexity += len(re.findall(r'(?<![&|])&&(?![&])', body_cleaned))  # Logical AND
+    complexity += len(re.findall(r'(?<![&|])\|\|(?![|])', body_cleaned))  # Logical OR
+    complexity += len(re.findall(r'(?<![?])\?\?(?![?])', body_cleaned))  # Nullish coalescing
 
-    # Ternary operators
-    complexity += len(re.findall(r'\?', body))
+    # Ternary operators: match ? that's not part of ?. (optional chaining) or ?? (nullish coalescing)
+    # This is tricky - we want ? in ternaries but not in optional chaining or nullish coalescing
+    # Pattern: ? not followed by . or ? and not preceded by ?
+    complexity += len(re.findall(r'(?<![?])\?(?![.?])', body_cleaned))
 
     return complexity
 
@@ -243,11 +371,22 @@ def analyze_file(file_path: Path, threshold: int) -> Dict[str, Any]:
         File analysis result
     """
     language = detect_language(file_path)
+    analysis_method = 'python_ast'  # Default for Python
 
     if language == 'python':
         functions = calculate_python_complexity(file_path)
     elif language in ('javascript', 'typescript'):
-        functions = calculate_javascript_complexity(file_path)
+        # Try Node.js AST analysis first (more accurate)
+        nodejs_result = try_nodejs_analysis(file_path, threshold)
+        if nodejs_result:
+            # Node.js analysis succeeded - use its results directly
+            # The result already has functions with complexity scores
+            analysis_method = nodejs_result.get('analysis_method', 'nodejs_ast')
+            functions = nodejs_result.get('functions', [])
+        else:
+            # Fall back to regex-based analysis
+            analysis_method = 'regex_fallback'
+            functions = calculate_javascript_complexity_regex(file_path)
     else:
         raise ValueError(f"Unsupported language for file: {file_path}")
 
@@ -263,6 +402,7 @@ def analyze_file(file_path: Path, threshold: int) -> Dict[str, Any]:
     return {
         'path': str(file_path),
         'language': language,
+        'analysis_method': analysis_method,
         'total_complexity': total_complexity,
         'average_complexity': round(avg_complexity, 1),
         'functions': functions
