@@ -147,6 +147,41 @@ Before embedding generated diagram in architecture documentation:
 - [ ] Diagram tested in Mermaid Live Editor (https://mermaid.live)
 - [ ] Diagram renders correctly in target environment (GitHub, GitLab, VSCode)
 
+## Optional: Automated Validation
+
+For users who prefer automated syntax validation, Mermaid CLI provides command-line validation.
+
+**Installation**:
+```bash
+npm install -g @mermaid-js/mermaid-cli
+```
+
+**Validation Examples**:
+```bash
+# Validate a Mermaid file
+mmdc -i diagram.mmd -o /dev/null
+
+# Validate inline (pipe diagram content)
+echo 'graph TD; A-->B' | mmdc -i - -o /dev/null
+
+# Check exit code: 0 = valid, non-zero = syntax error
+mmdc -i diagram.mmd -o /dev/null && echo "Valid" || echo "Syntax error"
+```
+
+**Integration with Agent Workflow**:
+- After generating diagram, save to temporary `.mmd` file
+- Run `mmdc` validation command
+- Check exit code for syntax errors
+- If validation fails, review error message and fix syntax
+- Delete temporary file after validation
+
+**Fallback if mmdc Not Installed**:
+- Manual validation via Mermaid Live Editor (https://mermaid.live) still works
+- Copy/paste diagram into editor, verify rendering
+- No installation required, universally accessible
+
+**Note**: This is optional tooling for users who want automated validation. The manual validation checklist above remains the primary validation method.
+
 ## When to Use This Skill
 
 **Use this skill when**:

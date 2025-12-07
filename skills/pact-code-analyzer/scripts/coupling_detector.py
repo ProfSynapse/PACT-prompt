@@ -13,6 +13,8 @@ import json
 import argparse
 import sys
 import signal
+import time
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 from collections import defaultdict
@@ -219,6 +221,8 @@ def generate_summary(modules: List[Dict[str, Any]], threshold: int) -> Dict[str,
 
 def main():
     """Main entry point."""
+    start_time = time.perf_counter()
+
     if sys.version_info < (3, 11):
         print("Error: Python 3.11+ required", file=sys.stderr)
         sys.exit(1)
@@ -248,8 +252,17 @@ def main():
         # Build dependency graph
         graph = build_simplified_dependency_graph(root_dir)
 
+        # Calculate execution duration
+        duration_ms = int((time.perf_counter() - start_time) * 1000)
+
         if not graph:
             print(json.dumps({
+                'metadata': {
+                    'schema_version': '1.0.0',
+                    'script_version': '0.1.0',
+                    'timestamp': datetime.now(timezone.utc).isoformat(),
+                    'execution_duration_ms': duration_ms
+                },
                 'summary': {
                     'total_modules': 0,
                     'average_coupling': 0,
@@ -272,6 +285,12 @@ def main():
 
         # Prepare output
         output = {
+            'metadata': {
+                'schema_version': '1.0.0',
+                'script_version': '0.1.0',
+                'timestamp': datetime.now(timezone.utc).isoformat(),
+                'execution_duration_ms': duration_ms
+            },
             'summary': summary,
             'modules': modules if args.show_details else [
                 {k: v for k, v in m.items() if k not in ['fan_in', 'fan_out']}

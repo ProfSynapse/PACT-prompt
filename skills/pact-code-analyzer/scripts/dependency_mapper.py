@@ -15,6 +15,8 @@ import argparse
 import re
 import sys
 import signal
+import time
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Set, Any, Optional, Tuple
 from collections import defaultdict
@@ -420,6 +422,8 @@ def output_dot_format(graph: Dict[str, List[str]]):
 
 def main():
     """Main entry point."""
+    start_time = time.perf_counter()
+
     if sys.version_info < (3, 11):
         print("Error: Python 3.11+ required", file=sys.stderr)
         sys.exit(1)
@@ -452,7 +456,7 @@ def main():
         graph, errors = build_dependency_graph(root_dir, args.language)
 
         if args.output_graph == 'dot':
-            # Output DOT format
+            # Output DOT format (no metadata for dot format)
             output_dot_format(graph)
         else:
             # Build detailed module info
@@ -469,8 +473,17 @@ def main():
             # Generate summary
             summary = generate_summary(graph, circular_deps, orphans)
 
+            # Calculate execution duration
+            duration_ms = int((time.perf_counter() - start_time) * 1000)
+
             # Output JSON
             output = {
+                'metadata': {
+                    'schema_version': '1.0.0',
+                    'script_version': '0.1.0',
+                    'timestamp': datetime.now(timezone.utc).isoformat(),
+                    'execution_duration_ms': duration_ms
+                },
                 'summary': summary,
                 'modules': modules
             }

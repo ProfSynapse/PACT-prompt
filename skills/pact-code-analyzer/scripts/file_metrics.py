@@ -15,6 +15,8 @@ import argparse
 import re
 import sys
 import signal
+import time
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 
@@ -340,6 +342,8 @@ def generate_summary(files: List[Dict[str, Any]]) -> Dict[str, Any]:
 
 def main():
     """Main entry point."""
+    start_time = time.perf_counter()
+
     if sys.version_info < (3, 11):
         print("Error: Python 3.11+ required", file=sys.stderr)
         sys.exit(1)
@@ -380,8 +384,17 @@ def main():
         # Generate summary
         summary = generate_summary(files)
 
+        # Calculate execution duration
+        duration_ms = int((time.perf_counter() - start_time) * 1000)
+
         # Output results
         output = {
+            'metadata': {
+                'schema_version': '1.0.0',
+                'script_version': '0.1.0',
+                'timestamp': datetime.now(timezone.utc).isoformat(),
+                'execution_duration_ms': duration_ms
+            },
             'summary': summary,
             'files': files
         }

@@ -540,10 +540,40 @@ For detailed algorithm explanations and integration guidance, see:
 
 **This is an experimental skill (v0.1.0)** testing executable code in skills pattern.
 
-**Known Limitations**:
-- JavaScript/TypeScript complexity uses regex (less accurate than AST)
-- Import resolution limited to local project files (no node_modules analysis)
-- Windows timeout handling fallback (signal.alarm not available)
+### Known Limitations
+
+**JavaScript/TypeScript Complexity Analysis (Best-Effort)**:
+- Uses regex-based function detection instead of AST parsing
+- May miss or miscount:
+  - Arrow functions without braces: `const fn = () => value`
+  - Functions inside template literals or strings
+  - Minified code (single-line functions)
+  - JSX/TSX edge cases
+- Recommendation: Use for rough estimates; for production JS/TS metrics, consider native tools like ESLint complexity rules
+
+**Import Resolution**:
+- Limited to local project files (no node_modules analysis)
+- Path aliases (e.g., `@/components` in webpack/vite configs) not resolved
+- Relative imports fully supported; absolute imports best-effort
+
+**coupling_detector.py**:
+- Python-only (does not support JavaScript/TypeScript)
+- Uses simplified dependency graph (not full dependency_mapper.py algorithm)
+
+**Comment Detection Edge Cases**:
+- Python docstrings counted as comments (may affect comment density metrics)
+- JS/TS inline comments after code may be miscounted
+- Comments inside strings may be incorrectly detected
+
+### Platform Considerations
+
+**macOS/Linux**: Full functionality including 60-second timeout enforcement via `signal.SIGALRM`.
+
+**Windows**:
+- Scripts run without timeout enforcement (`signal.SIGALRM` not available)
+- Potential for long-running processes on very large codebases
+- Workaround: Manually interrupt with Ctrl+C if script hangs
+- Recommendation: Limit analysis scope (e.g., specific directories vs entire project)
 
 **Feedback Needed**:
 1. Do scripts provide value over native reading for your use cases?
@@ -586,6 +616,17 @@ python ~/.claude/skills/pact-code-analyzer/scripts/file_metrics.py \
 | **dependency_mapper.py** | Dependency graph | --directory, --language, --detect-circular | Module dependencies, cycles |
 | **coupling_detector.py** | Module coupling | --directory, --threshold, --show-details | Fan-in/fan-out metrics |
 | **file_metrics.py** | File statistics | --file/--directory, --language | LOC, functions, PACT compliance |
+
+### Language Support Matrix
+
+| Script | Python | JavaScript | TypeScript | Notes |
+|--------|--------|------------|------------|-------|
+| **complexity_analyzer.py** | ✅ Full (AST) | ⚠️ Best-effort (regex) | ⚠️ Best-effort (regex) | JS/TS uses regex pattern matching, less accurate than AST |
+| **dependency_mapper.py** | ✅ Full | ✅ Full | ✅ Full | Path aliases (e.g., `@/components`) not resolved |
+| **coupling_detector.py** | ✅ Full | ❌ Not supported | ❌ Not supported | Python-only; uses simplified dependency analysis |
+| **file_metrics.py** | ✅ Full | ✅ Full | ✅ Full | Comment detection may miss edge cases |
+
+**Legend**: ✅ Full support (AST-based) | ⚠️ Best-effort (regex-based) | ❌ Not supported
 
 **Common Thresholds**:
 - Complexity: 10 (warn), 15 (critical)
