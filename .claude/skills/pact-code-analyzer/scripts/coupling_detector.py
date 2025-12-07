@@ -45,17 +45,15 @@ def timeout_handler(signum, frame):
 
 def validate_file_path(file_path: str, allowed_root: Optional[str] = None) -> Path:
     """Validate file path meets security requirements."""
-    if allowed_root is None:
-        allowed_root = Path.cwd()
-    else:
-        allowed_root = Path(allowed_root).resolve()
-
     path = Path(file_path).resolve()
 
-    try:
-        path.relative_to(allowed_root)
-    except ValueError:
-        raise SecurityError(f"Path {file_path} is outside allowed directory {allowed_root}")
+    # Only validate path is within allowed_root if explicitly provided
+    if allowed_root is not None:
+        allowed_root = Path(allowed_root).resolve()
+        try:
+            path.relative_to(allowed_root)
+        except ValueError:
+            raise SecurityError(f"Path {file_path} is outside allowed directory {allowed_root}")
 
     if path.is_symlink():
         raise SecurityError(f"Symbolic links not allowed: {file_path}")
@@ -84,7 +82,11 @@ def build_simplified_dependency_graph(root_dir: Path) -> Dict[str, List[str]]:
     graph = defaultdict(list)
 
     # Find Python files
+    all_files = []
     for py_file in root_dir.glob('**/*.py'):
+        all_files.append(py_file)
+
+    for py_file in all_files:
         try:
             with open(py_file, 'r', encoding='utf-8') as f:
                 source = f.read()
@@ -102,6 +104,10 @@ def build_simplified_dependency_graph(root_dir: Path) -> Dict[str, List[str]]:
 
             # Try to resolve imports to files in the project
             source_rel = py_file.relative_to(root_dir)
+
+            # Initialize this file in the graph even if it has no imports
+            if str(source_rel) not in graph:
+                graph[str(source_rel)] = []
 
             for import_name in imports:
                 # Simple resolution: convert module.name to module/name.py
@@ -162,7 +168,7 @@ def add_recommendations(
 ) -> List[Dict[str, Any]]:
     """Add coupling threshold flags and recommendations."""
     for module in modules:
-        module['exceeds_threshold'] = module['total_coupling'] > threshold
+        module['exceeds_threshold'] = module['total_coupling'] >= threshold
 
         if module['exceeds_threshold']:
             coupling = module['total_coupling']

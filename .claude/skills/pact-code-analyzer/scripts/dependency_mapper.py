@@ -43,17 +43,15 @@ def timeout_handler(signum, frame):
 
 def validate_file_path(file_path: str, allowed_root: Optional[str] = None) -> Path:
     """Validate file path meets security requirements."""
-    if allowed_root is None:
-        allowed_root = Path.cwd()
-    else:
-        allowed_root = Path(allowed_root).resolve()
-
     path = Path(file_path).resolve()
 
-    try:
-        path.relative_to(allowed_root)
-    except ValueError:
-        raise SecurityError(f"Path {file_path} is outside allowed directory {allowed_root}")
+    # Only validate path is within allowed_root if explicitly provided
+    if allowed_root is not None:
+        allowed_root = Path(allowed_root).resolve()
+        try:
+            path.relative_to(allowed_root)
+        except ValueError:
+            raise SecurityError(f"Path {file_path} is outside allowed directory {allowed_root}")
 
     if path.is_symlink():
         raise SecurityError(f"Symbolic links not allowed: {file_path}")
@@ -140,11 +138,17 @@ def resolve_import_to_file(
     """
     # Skip external/stdlib modules
     if language == 'python':
-        # Skip standard library and installed packages (simple heuristic)
-        if '.' not in import_name or import_name.split('.')[0] in [
+        # Check if it's a standard library module (single name without dots)
+        stdlib_modules = [
             'os', 'sys', 'json', 'ast', 're', 'pathlib', 'typing', 'collections',
-            'argparse', 'signal', 'datetime', 'math', 'random', 'subprocess'
-        ]:
+            'argparse', 'signal', 'datetime', 'math', 'random', 'subprocess',
+            'time', 'io', 'functools', 'itertools', 'copy', 'pickle', 'string',
+            'textwrap', 'unicodedata', 'struct', 'codecs'
+        ]
+
+        # Get the first part of the module name
+        first_part = import_name.split('.')[0]
+        if first_part in stdlib_modules:
             return None
 
         # Try to resolve as relative path from root
@@ -226,12 +230,16 @@ def build_dependency_graph(
             else:
                 imports = extract_javascript_imports(file_path)
 
+            # Initialize this file in the graph even if it has no imports
+            source_rel = file_path.relative_to(root_dir)
+            if str(source_rel) not in graph:
+                graph[str(source_rel)] = []
+
             # Resolve imports to file paths
             for import_name in imports:
                 resolved = resolve_import_to_file(import_name, file_path, root_dir, language)
                 if resolved:
                     # Store as relative path from root
-                    source_rel = file_path.relative_to(root_dir)
                     target_rel = resolved.relative_to(root_dir)
                     graph[str(source_rel)].append(str(target_rel))
 
