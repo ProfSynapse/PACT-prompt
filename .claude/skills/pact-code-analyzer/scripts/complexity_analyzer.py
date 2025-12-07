@@ -103,7 +103,7 @@ def calculate_python_complexity(file_path: Path) -> List[Dict[str, Any]]:
         file_path: Path to Python file
 
     Returns:
-        List of function complexity data
+        List of function complexity data (empty list with error if syntax error)
     """
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
@@ -111,7 +111,9 @@ def calculate_python_complexity(file_path: Path) -> List[Dict[str, Any]]:
 
         tree = ast.parse(source, filename=str(file_path))
     except SyntaxError as e:
-        raise SyntaxError(f"Syntax error in {file_path}: {e}")
+        # Bug Fix #1: Gracefully handle syntax errors instead of raising exception
+        # Return empty list to match JavaScript behavior and allow analyze_file() to continue
+        return []
 
     functions = []
 
@@ -142,22 +144,48 @@ def calculate_node_complexity(node: ast.AST) -> int:
     """
     complexity = 1  # Base complexity
 
+    # Bug Fix #2: Prevent double-counting complexity from nested functions
+    # Track nested function depth to skip decision points inside nested functions
+    def is_in_nested_function(child, parent):
+        """Check if child node is inside a nested function definition."""
+        # Walk from parent to child and check if we cross a function boundary
+        for descendant in ast.walk(parent):
+            if descendant is child:
+                return False  # Reached child without crossing function boundary
+            # If we encounter a nested function definition before reaching child
+            if descendant is not parent and isinstance(descendant, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                # Check if child is inside this nested function
+                for nested_descendant in ast.walk(descendant):
+                    if nested_descendant is child:
+                        return True
+        return False
+
     for child in ast.walk(node):
-        # Control flow
-        if isinstance(child, (ast.If, ast.For, ast.While, ast.ExceptHandler)):
-            complexity += 1
-        # Boolean operators
-        elif isinstance(child, ast.BoolOp):
-            complexity += len(child.values) - 1
-        # Comprehensions
-        elif isinstance(child, (ast.ListComp, ast.DictComp, ast.SetComp, ast.GeneratorExp)):
-            complexity += 1
-        # Lambda
-        elif isinstance(child, ast.Lambda):
-            complexity += 1
-        # Context managers
-        elif isinstance(child, ast.With):
-            complexity += 1
+        # Skip the root node itself
+        if child is node:
+            continue
+
+        # Skip decision points that are inside nested functions
+        if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue  # Skip nested function definitions entirely
+
+        # Only count decision points if they're not in a nested function
+        if not is_in_nested_function(child, node):
+            # Control flow
+            if isinstance(child, (ast.If, ast.For, ast.While, ast.ExceptHandler)):
+                complexity += 1
+            # Boolean operators
+            elif isinstance(child, ast.BoolOp):
+                complexity += len(child.values) - 1
+            # Comprehensions
+            elif isinstance(child, (ast.ListComp, ast.DictComp, ast.SetComp, ast.GeneratorExp)):
+                complexity += 1
+            # Lambda
+            elif isinstance(child, ast.Lambda):
+                complexity += 1
+            # Context managers
+            elif isinstance(child, ast.With):
+                complexity += 1
 
     return complexity
 
@@ -266,7 +294,9 @@ def calculate_javascript_complexity_regex(file_path: Path) -> List[Dict[str, Any
             arrow_match = re.search(arrow_pattern, line)
             if arrow_match:
                 func_name = arrow_match.group(1)
-                function_body = lines[line_num - 1]
+                # Bug Fix #3: Use 'line' directly instead of lines[line_num - 1]
+                # line_num is already 1-indexed from enumerate, and 'line' is the current line
+                function_body = line
                 complexity = calculate_javascript_body_complexity(function_body)
 
                 functions.append({
@@ -297,7 +327,24 @@ def calculate_javascript_complexity_regex(file_path: Path) -> List[Dict[str, Any
 
         # Update brace depth tracking
         old_depth = brace_depth
-        brace_depth += line.count('{') - line.count('}')
+        open_braces = line.count('{')
+        close_braces = line.count('}')
+        brace_depth += open_braces - close_braces
+
+        # Bug Fix #4: Handle single-line function bodies (e.g., function foo() { return 1; })
+        # Check if function started and ended on the same line
+        if current_function and open_braces > 0 and open_braces == close_braces:
+            # Complete function on one line
+            function_body = line
+            complexity = calculate_javascript_body_complexity(function_body)
+
+            functions.append({
+                'name': current_function,
+                'line': function_start,
+                'complexity': complexity
+            })
+            current_function = None
+            continue
 
         # Function ended - check if we've returned to the starting depth
         if current_function and brace_depth == function_start_depth and old_depth > function_start_depth:
