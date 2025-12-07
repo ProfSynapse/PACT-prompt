@@ -563,13 +563,39 @@ The complexity analyzer supports two analysis methods:
    - May miss or miscount edge cases (some arrow function patterns, minified code)
    - Suitable for rough estimates
 
+**When Regex Fallback is Used**:
+
+The analyzer automatically falls back to regex-based analysis when any of these conditions occur:
+
+| Condition | `analysis_method` Value | Notes |
+|-----------|------------------------|-------|
+| Node.js not installed on system | `regex_fallback` | Check with `node --version` |
+| npm dependencies not installed | `regex_fallback` | Run `npm install` in scripts/ directory |
+| Node.js analyzer script fails | `regex_fallback` | Script syntax error or runtime exception |
+| Node.js analyzer times out | `regex_fallback` | 30-second timeout per file |
+| Node.js returns invalid JSON | `regex_fallback` | Parsing error in Node.js output |
+| File is .ts or .tsx | `regex_fallback` | TypeScript not yet supported in Node.js analyzer |
+
+**Checking Which Method Was Used**:
+
+The output JSON always includes an `analysis_method` field for each file:
+
+```json
+{
+  "path": "src/utils/helper.js",
+  "language": "javascript",
+  "analysis_method": "nodejs_ast",  // or "regex_fallback"
+  "functions": [...]
+}
+```
+
 **Installing Node.js Dependencies for High-Accuracy JS Analysis**:
 ```bash
 cd ~/.claude/skills/pact-code-analyzer/scripts/
 npm install
 ```
 
-The output JSON includes `analysis_method` field (`nodejs_ast` or `regex_fallback`) indicating which method was used.
+After installation, .js files will automatically use `nodejs_ast` method. TypeScript files (.ts, .tsx) will continue using `regex_fallback` until TypeScript support is added.
 
 **Import Resolution**:
 - Limited to local project files (no node_modules analysis)

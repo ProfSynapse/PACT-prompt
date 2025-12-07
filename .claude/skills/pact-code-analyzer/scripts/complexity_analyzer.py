@@ -25,6 +25,7 @@ import shutil
 # Constants
 MAX_FILE_SIZE = 1024 * 1024  # 1MB
 TIMEOUT_SECONDS = 60
+NODEJS_TIMEOUT_SECONDS = 30
 DEFAULT_THRESHOLD = 10
 
 # Path to Node.js analyzer script (relative to this script)
@@ -214,7 +215,7 @@ def try_nodejs_analysis(file_path: Path, threshold: int) -> Optional[Dict[str, A
             ['node', str(JS_ANALYZER_SCRIPT), '--file', str(file_path), '--threshold', str(threshold)],
             capture_output=True,
             text=True,
-            timeout=30,
+            timeout=NODEJS_TIMEOUT_SECONDS,
             cwd=str(SCRIPTS_DIR)
         )
 
@@ -398,15 +399,14 @@ def calculate_javascript_body_complexity(body: str) -> int:
     complexity += len(re.findall(r'(?<![&|])\|\|(?![|])', body_cleaned))  # Logical OR
     complexity += len(re.findall(r'(?<![?])\?\?(?![?])', body_cleaned))  # Nullish coalescing
 
-    # Ternary operators: match ? that's not part of ?. (optional chaining) or ?? (nullish coalescing)
-    # This is tricky - we want ? in ternaries but not in optional chaining or nullish coalescing
-    # Pattern: ? not followed by . or ? and not preceded by ?
-    complexity += len(re.findall(r'(?<![?])\?(?![.?])', body_cleaned))
+    # Ternary operators: match ? not part of ?. (optional chaining) or ?? (nullish coalescing)
+    # Simplified pattern: ? not preceded/followed by ? and not followed by .
+    complexity += len(re.findall(r'(?<!\?)\?(?![?\.])', body_cleaned))
 
     return complexity
 
 
-def analyze_file(file_path: Path, threshold: int) -> Dict[str, Any]:
+def analyze_file(file_path: Path, threshold: int) -> tuple[Dict[str, Any], Optional[Dict[str, str]]]:
     """
     Analyze a single file and return complexity data.
 
@@ -415,10 +415,12 @@ def analyze_file(file_path: Path, threshold: int) -> Dict[str, Any]:
         threshold: Complexity threshold for flagging
 
     Returns:
-        File analysis result
+        Tuple of (file analysis result, optional warning dict)
+        Warning dict is returned when regex fallback is used for JS/TS files
     """
     language = detect_language(file_path)
     analysis_method = 'python_ast'  # Default for Python
+    warning = None
 
     if language == 'python':
         functions = calculate_python_complexity(file_path)
@@ -434,6 +436,13 @@ def analyze_file(file_path: Path, threshold: int) -> Dict[str, Any]:
             # Fall back to regex-based analysis
             analysis_method = 'regex_fallback'
             functions = calculate_javascript_complexity_regex(file_path)
+            # Add warning when using regex fallback
+            warning = {
+                'file': str(file_path),
+                'warning': 'Using regex fallback for complexity analysis. For more accurate results, install Node.js and run: cd scripts && npm install',
+                'severity': 'info',
+                'action': 'Analysis completed with regex-based method (less accurate than AST)'
+            }
     else:
         raise ValueError(f"Unsupported language for file: {file_path}")
 
@@ -446,7 +455,7 @@ def analyze_file(file_path: Path, threshold: int) -> Dict[str, Any]:
     total_complexity = sum(f['complexity'] for f in functions)
     avg_complexity = total_complexity / len(functions) if functions else 0
 
-    return {
+    result = {
         'path': str(file_path),
         'language': language,
         'analysis_method': analysis_method,
@@ -454,6 +463,8 @@ def analyze_file(file_path: Path, threshold: int) -> Dict[str, Any]:
         'average_complexity': round(avg_complexity, 1),
         'functions': functions
     }
+
+    return result, warning
 
 
 def detect_language(file_path: Path) -> str:
@@ -470,7 +481,7 @@ def detect_language(file_path: Path) -> str:
         raise ValueError(f"Unsupported file extension: {suffix}")
 
 
-def analyze_directory(directory: Path, threshold: int) -> List[Dict[str, Any]]:
+def analyze_directory(directory: Path, threshold: int) -> tuple[List[Dict[str, Any]], List[Dict[str, str]]]:
     """
     Analyze all supported files in directory recursively.
 
@@ -479,7 +490,7 @@ def analyze_directory(directory: Path, threshold: int) -> List[Dict[str, Any]]:
         threshold: Complexity threshold
 
     Returns:
-        List of file analysis results and errors
+        Tuple of (file analysis results, errors/warnings list)
     """
     results = []
     errors = []
@@ -490,8 +501,11 @@ def analyze_directory(directory: Path, threshold: int) -> List[Dict[str, Any]]:
     for pattern in patterns:
         for file_path in directory.glob(pattern):
             try:
-                result = analyze_file(file_path, threshold)
+                result, warning = analyze_file(file_path, threshold)
                 results.append(result)
+                # Collect warnings (e.g., regex fallback usage)
+                if warning:
+                    errors.append(warning)
             except Exception as e:
                 errors.append({
                     'file': str(file_path),
@@ -564,7 +578,10 @@ def main():
         if args.file:
             # Single file analysis
             file_path = validate_file_path(args.file)
-            files = [analyze_file(file_path, args.threshold)]
+            result, warning = analyze_file(file_path, args.threshold)
+            files = [result]
+            if warning:
+                errors.append(warning)
         else:
             # Directory analysis
             dir_path = validate_file_path(args.directory)
