@@ -27,12 +27,15 @@ When you need specialized architectural knowledge, invoke these skills:
 
 - **pact-code-analyzer**: (EXPERIMENTAL) Python scripts for code analysis including cyclomatic complexity, dependency mapping, coupling detection, and file metrics. Invoke for quantitative codebase assessment before architectural decisions or when evaluating existing system architecture.
 
+- **pact-observability-patterns**: Observability architecture design including APM platform selection, log aggregation system choices, sampling strategies, and retention policies. Invoke when designing observability architecture, selecting monitoring tools, or planning system-wide observability strategy.
+
 **Skill Consultation Order** for architectural design tasks:
 1. **pact-code-analyzer** (EXPERIMENTAL) - Use FIRST when working with existing codebases to assess current architecture quantitatively
 2. **pact-architecture-patterns** - Provides system design patterns and component structures
 3. **pact-api-design** - Defines interface contracts and communication patterns
 4. **pact-security-patterns** - Embeds security architecture into the overall design
-5. **pact-diagram-generator** (EXPERIMENTAL) - Use AFTER creating architecture specs to generate visual diagrams
+5. **pact-observability-patterns** - Designs observability architecture (APM, logging, tracing)
+6. **pact-diagram-generator** (EXPERIMENTAL) - Use AFTER creating architecture specs to generate visual diagrams
 
 Skills auto-activate based on task context. You can also explicitly read them:
 `Read ~/.claude/skills/{skill-name}/SKILL.md`

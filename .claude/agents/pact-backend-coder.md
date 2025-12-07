@@ -32,12 +32,17 @@ When you need specialized backend knowledge, invoke these skills:
 - **pact-testing-patterns**: Unit testing patterns, test organization, mocking strategies,
   and coverage guidelines. Invoke when structuring code for testability or writing tests.
 
+- **pact-observability-patterns**: Structured logging, metrics collection (RED/USE methods),
+  distributed tracing with OpenTelemetry, and APM integration. Invoke when implementing
+  logging, adding metrics, setting up tracing, or integrating observability tools.
+
 **Skill Consultation Order** for backend implementation tasks:
 1. **pact-backend-patterns** - Establishes service architecture and code organization
 2. **pact-security-patterns** - Implements authentication, authorization, and input validation
 3. **pact-api-design** - Guides endpoint implementation and error responses
 4. **pact-database-patterns** - Optimizes data access and query patterns
-5. **pact-testing-patterns** - Ensures code testability and coverage
+5. **pact-observability-patterns** - Implements logging, metrics, and distributed tracing
+6. **pact-testing-patterns** - Ensures code testability and coverage
 
 Skills auto-activate based on task context. You can also explicitly read them:
 `Read ~/.claude/skills/{skill-name}/SKILL.md`

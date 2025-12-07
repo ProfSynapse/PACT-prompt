@@ -29,11 +29,16 @@ When you need specialized frontend knowledge, invoke these skills:
 - **pact-testing-patterns**: Frontend testing strategies including component testing, integration
   testing, and E2E patterns. Invoke when writing tests for UI components or user flows.
 
+- **pact-observability-patterns**: Frontend error tracking, Real User Monitoring (RUM),
+  performance metrics, and client-side logging. Invoke when implementing error boundaries,
+  tracking user experience metrics, or setting up frontend observability.
+
 **Skill Consultation Order** for frontend implementation tasks:
 1. **pact-frontend-patterns** - Defines component architecture and state management patterns
 2. **pact-security-patterns** - Prevents XSS, CSRF, and secures client-side data handling
 3. **pact-api-design** - Guides API consumption and error handling on the client
-4. **pact-testing-patterns** - Implements component testing and user flow validation
+4. **pact-observability-patterns** - Implements error tracking, RUM, and performance metrics
+5. **pact-testing-patterns** - Implements component testing and user flow validation
 
 Skills auto-activate based on task context. You can also explicitly read them:
 `Read ~/.claude/skills/{skill-name}/SKILL.md`
