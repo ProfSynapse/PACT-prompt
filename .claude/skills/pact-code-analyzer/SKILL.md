@@ -539,8 +539,16 @@ Scripts return partial results on errors with `errors` array in JSON:
 For detailed algorithm explanations and integration guidance, see:
 
 - **references/complexity-calculation.md** - McCabe's cyclomatic complexity algorithm, decision point counting methodology, interpretation guidelines
+- **references/coupling-metrics.md** - Fan-in/fan-out calculation, coupling patterns (God Objects, utility modules), refactoring strategies to reduce coupling
 - **references/dependency-analysis.md** - Dependency graph construction, circular dependency detection (DFS), orphan module identification
 - **references/script-integration.md** - Detailed agent workflow examples, JSON parsing patterns, combining multiple script outputs
+
+## Example Workflows
+
+For worked examples demonstrating real-world usage, see:
+
+- **examples/pre-refactoring-analysis.md** - Complete workflow for analyzing codebase before microservice extraction (combining complexity + coupling + dependency analysis)
+- **examples/test-prioritization.md** - Using metrics to prioritize test coverage in legacy codebase (risk-based testing strategy)
 
 ## Experimental Status and Feedback
 

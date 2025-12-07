@@ -1119,14 +1119,14 @@ For detailed implementation: `references/authentication-strategies.md`
 - [ ] Integration testing with agents (pending real-world usage)
 - [ ] Production validation (pending real-world usage)
 
-**Optional Items from Detailed Design Specs** (not required for Phase 5 completion):
-- [ ] pact-code-analyzer: Test suite with fixtures (`scripts/tests/`)
-- [ ] pact-code-analyzer: `references/coupling-metrics.md`
-- [ ] pact-code-analyzer: `examples/` directory
-- [ ] pact-diagram-generator: `templates/component-graph-mermaid.md`
-- [ ] pact-diagram-generator: `references/c4-mermaid-patterns.md`
-- [ ] pact-diagram-generator: `examples/` directory
-- [ ] Agent integration: Add skill references to pact-architect.md
+**Optional Items from Detailed Design Specs** ✅ COMPLETE (2025-12-07):
+- [x] pact-code-analyzer: Test suite with fixtures (`scripts/tests/`) - 73 test cases with Python/JS/TS fixtures
+- [x] pact-code-analyzer: `references/coupling-metrics.md` - Comprehensive coupling analysis guide
+- [x] pact-code-analyzer: `examples/` directory - pre-refactoring-analysis.md, test-prioritization.md
+- [x] pact-diagram-generator: `templates/component-graph-mermaid.md` - Component dependency visualization
+- [x] pact-diagram-generator: `references/c4-mermaid-patterns.md` - Comprehensive C4 patterns guide
+- [x] pact-diagram-generator: `examples/` directory - e-commerce-architecture.md, authentication-flow.md
+- [x] Agent integration: Add skill references to pact-architect.md - Both experimental skills referenced
 
 **Key Design Decisions**:
 1. **pact-code-analyzer**: Executable Python scripts invoked via Bash tool

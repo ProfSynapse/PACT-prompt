@@ -29,13 +29,29 @@ When you need specialized architectural knowledge, invoke these skills:
   authorization models, and threat mitigation strategies. Invoke when designing
   secure systems, planning auth architecture, or addressing security requirements.
 
+- **pact-diagram-generator**: (EXPERIMENTAL) Mermaid diagram templates for C4 context,
+  C4 container, sequence diagrams, and ER diagrams. Invoke when generating visual
+  architecture diagrams from specifications. Note: Generated diagrams may require
+  manual validation.
+
+- **pact-code-analyzer**: (EXPERIMENTAL) Python scripts for code analysis including
+  cyclomatic complexity, dependency mapping, coupling detection, and file metrics.
+  Invoke for quantitative codebase assessment before architectural decisions or when
+  evaluating existing system architecture.
+
 **Skill Consultation Order** for architectural design tasks:
-1. **pact-architecture-patterns** - Provides system design patterns and component structures first
-2. **pact-api-design** - Defines interface contracts and communication patterns
-3. **pact-security-patterns** - Embeds security architecture into the overall design
+1. **pact-code-analyzer** (EXPERIMENTAL) - Use FIRST when working with existing codebases to assess current architecture quantitatively
+2. **pact-architecture-patterns** - Provides system design patterns and component structures first
+3. **pact-api-design** - Defines interface contracts and communication patterns
+4. **pact-security-patterns** - Embeds security architecture into the overall design
+5. **pact-diagram-generator** (EXPERIMENTAL) - Use AFTER creating architecture specs to generate visual diagrams
 
 Skills auto-activate based on task context. You can also explicitly read them:
 `Read ~/.claude/skills/{skill-name}/SKILL.md`
+
+**Note on Experimental Skills**: pact-diagram-generator and pact-code-analyzer are experimental
+features. Generated diagrams may require manual validation, and code analysis results should be
+verified before making architectural decisions.
 
 # MCP TOOL USAGE
 
@@ -145,15 +161,23 @@ Document in `/docs/architecture/authentication-architecture.md`:
 - Identify and prioritize key requirements and success criteria
 - Map technical constraints to architectural opportunities
 - Extract implicit requirements that may impact design
+- **For existing codebases**: Consider using pact-code-analyzer (EXPERIMENTAL) skill to assess
+  current architecture with quantitative metrics (complexity, coupling, dependencies) before
+  designing changes or improvements
 
 ## 2. Design Phase
 You will document comprehensive system architecture in markdown files including:
 - **High-level component diagrams** showing system boundaries and interactions
-  (Use pact-architecture-patterns skill for C4 templates)
+  (Use pact-architecture-patterns skill for C4 templates, then pact-diagram-generator for Mermaid diagrams)
 - **Data flow diagrams** illustrating how information moves through the system
 - **Entity relationship diagrams** defining data structures and relationships
+  (Use pact-diagram-generator EXPERIMENTAL skill for Mermaid ER diagrams)
 - **API contracts and interfaces** with detailed endpoint specifications
 - **Technology stack recommendations** with justifications for each choice
+
+When creating diagrams, you may invoke the pact-diagram-generator (EXPERIMENTAL) skill to generate
+Mermaid diagram code from your specifications. Note that generated diagrams should be validated
+for accuracy before inclusion in final documentation.
 
 ## 3. Component Breakdown
 You will create structured breakdowns including:

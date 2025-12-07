@@ -18,6 +18,7 @@ This is the **PACT Framework Prompts** repository - a collection of ready-to-use
 
 | Date | Change | Impact |
 |------|--------|--------|
+| 2025-12-07 | **Phase 5 Optional Enhancements Complete** | Test suites, coupling-metrics docs, examples, component-graph template, C4 patterns reference |
 | 2025-12-07 | **Phase 5 Complete: Experimental Skills** | 2 new skills with executable code (pact-code-analyzer, pact-diagram-generator) |
 | 2025-12-05 | **MCP Tools Hybrid Integration** | Skills document WHEN/WHY; Agents document HOW; Validated with 3 pairings |
 | 2025-12 | Skills ecosystem expansion (10 skills total) | Comprehensive knowledge libraries for all PACT phases |
@@ -176,13 +177,17 @@ Provides executable scripts for objective code quality measurement:
 - **Python scripts**: `complexity_analyzer.py`, `coupling_detector.py`, `dependency_mapper.py`, `file_metrics.py`
 - **Node.js AST analyzer**: `js-complexity-analyzer.js` for accurate JS/TS cyclomatic complexity
 - **Metrics**: Cyclomatic complexity, coupling analysis, dependency mapping, file-level metrics
-- **Reference**: `docs/architecture/phase5-code-analyzer-design.md`
+- **References**: `complexity-calculation.md`, `dependency-analysis.md`, `coupling-metrics.md`, `script-integration.md`
+- **Examples**: `pre-refactoring-analysis.md`, `test-prioritization.md`
+- **Test suite**: 73 test cases with fixtures for Python/JavaScript/TypeScript
+- **Design spec**: `docs/architecture/phase5-code-analyzer-design.md`
 
 ### pact-diagram-generator
 Provides Mermaid diagram templates for consistent architecture visualization:
-- **Templates**: C4 context, C4 container, sequence diagrams, ER diagrams
-- **Validation**: Syntax validation guide and troubleshooting reference
-- **Reference**: `docs/architecture/phase5-diagram-generator-design.md`
+- **Templates**: C4 context, C4 container, sequence diagrams, ER diagrams, component dependency graphs
+- **References**: `mermaid-syntax-guide.md`, `validation-guide.md`, `troubleshooting.md`, `c4-mermaid-patterns.md`
+- **Examples**: `e-commerce-architecture.md`, `authentication-flow.md`
+- **Design spec**: `docs/architecture/phase5-diagram-generator-design.md`
 
 **Security considerations**: See `docs/architecture/phase5-security-analysis.md`
 
@@ -196,6 +201,20 @@ Provides Mermaid diagram templates for consistent architecture visualization:
 ---
 
 ## Changelog
+
+### 2025-12-07 (Update 2)
+- Completed Phase 5 optional enhancements via parallel PACT agent delegation:
+  - **pact-code-analyzer**:
+    - Added `references/coupling-metrics.md` - comprehensive coupling analysis guide
+    - Added `examples/` directory with `pre-refactoring-analysis.md` and `test-prioritization.md`
+    - Added `scripts/tests/` with 73 test cases and fixtures for Python/JS/TS
+  - **pact-diagram-generator**:
+    - Added `templates/component-graph-mermaid.md` - component dependency visualization
+    - Added `references/c4-mermaid-patterns.md` - comprehensive C4 patterns guide
+    - Added `examples/` directory with `e-commerce-architecture.md` and `authentication-flow.md`
+  - **Agent integration**:
+    - Updated `pact-architect.md` with skill references to both experimental skills
+    - Added skill consultation order guidance for existing codebase analysis
 
 ### 2025-12-07
 - Documented Phase 5 completion: experimental skills implementation
