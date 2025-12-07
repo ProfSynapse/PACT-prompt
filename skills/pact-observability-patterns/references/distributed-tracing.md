@@ -760,10 +760,24 @@ java -jar zipkin.jar
 - **Requires Grafana ecosystem**: Best value when using Grafana, Prometheus, Loki together
 - **Query performance**: Trade-off for cost savings - queries slower than Jaeger/Elasticsearch
 
-**Storage costs** (S3):
-- Jaeger with Elasticsearch: ~$0.10/GB storage + compute
-- Tempo with S3: ~$0.023/GB storage (Standard tier)
-- **Result**: Tempo is ~4-5x cheaper for storage
+**Concrete cost comparison**:
+
+**Grafana Cloud Tempo** (managed):
+- Trace ingestion: **~$0.50/GB** traces ingested
+- No additional storage costs (included in ingestion price)
+- Example: 100 GB/month = $50/month
+
+**Self-hosted Tempo with S3**:
+- S3 Standard storage: **~$0.023/GB/month**
+- Transfer costs: ~$0.09/GB egress (queries)
+- Example: 1 TB stored = $23/month storage + query costs
+
+**Jaeger with Elasticsearch** (for comparison):
+- Elasticsearch storage: **~$0.10-0.20/GB/month** (EC2 + EBS costs)
+- Compute overhead: Additional $100-500/month for ES cluster
+- Example: 1 TB stored = $100-200/month storage + $200/month compute
+
+**Result**: Tempo is ~4-10x cheaper than Jaeger with Elasticsearch at scale
 
 **Setup (Docker Compose)**:
 ```yaml
@@ -884,9 +898,10 @@ const exporter = new OTLPTraceExporter({
 
 | Feature | Jaeger | Zipkin | Grafana Tempo | DataDog APM | New Relic |
 |---------|--------|--------|---------------|-------------|-----------|
-| **Cost (self-hosted)** | Free | Free | Free | N/A | N/A |
-| **Cost (managed)** | N/A | N/A | From $0.50/GB | $31-40/host + spans | $99/user + $0.35/GB |
-| **Storage cost** | Medium | Medium | **Low** (10x cheaper) | N/A | N/A |
+| **Cost (self-hosted)** | Free + infra | Free + infra | Free + infra | N/A | N/A |
+| **Cost (managed)** | N/A | N/A | $0.50/GB ingested | $31-40/host + spans | $99/user + $0.35/GB |
+| **Storage cost (self-hosted)** | $0.10-0.20/GB + compute | $0.10-0.20/GB + compute | **$0.023/GB (S3)** | N/A | N/A |
+| **Cost efficiency** | Medium ($$) | Medium ($$) | **High ($)** | Low ($$$) | Medium ($$) |
 | **OpenTelemetry support** | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ |
 | **Analysis features** | ⭐⭐⭐ (basic) | ⭐⭐ (basic) | ⭐⭐⭐⭐ (TraceQL) | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ |
 | **Unified observability** | ⭐⭐ | ⭐ | ⭐⭐⭐⭐ (with Grafana) | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ |

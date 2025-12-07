@@ -558,6 +558,301 @@ public class PaymentService
 }
 ```
 
+### Go - zap
+
+zap is the fastest structured logging library for Go with zero-allocation JSON encoding.
+
+**Installation**:
+```bash
+go get go.uber.org/zap
+```
+
+**Configuration**:
+```go
+// logger.go - Centralized logger configuration
+// Location: pkg/observability/logger.go
+// Used by: All application modules for logging
+// Dependencies: go.uber.org/zap
+
+package observability
+
+import (
+	"os"
+
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+)
+
+// NewLogger creates a new production logger instance
+func NewLogger() (*zap.Logger, error) {
+	// Configure encoder for production JSON output
+	encoderConfig := zap.NewProductionEncoderConfig()
+	encoderConfig.TimeKey = "timestamp"
+	encoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+	encoderConfig.LevelKey = "level"
+	encoderConfig.EncodeLevel = zapcore.CapitalLevelEncoder
+
+	// Determine log level from environment with error handling
+	logLevel := zapcore.InfoLevel
+	if lvl := os.Getenv("LOG_LEVEL"); lvl != "" {
+		if err := logLevel.UnmarshalText([]byte(lvl)); err != nil {
+			// Fall back to INFO level if invalid level specified
+			logLevel = zapcore.InfoLevel
+		}
+	}
+
+	core := zapcore.NewCore(
+		zapcore.NewJSONEncoder(encoderConfig),
+		zapcore.AddSync(os.Stdout),
+		logLevel,
+	)
+
+	logger := zap.New(core).With(
+		zap.String("service", getEnvOrDefault("SERVICE_NAME", "default-service")),
+		zap.String("environment", getEnvOrDefault("ENVIRONMENT", "production")),
+	)
+
+	return logger, nil
+}
+
+// WithContext creates a request-scoped logger with trace context
+func WithContext(logger *zap.Logger, correlationID, traceID, spanID string) *zap.Logger {
+	return logger.With(
+		zap.String("correlationId", correlationID),
+		zap.String("traceId", traceID),
+		zap.String("spanId", spanID),
+	)
+}
+
+func getEnvOrDefault(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return defaultValue
+}
+```
+
+**Usage with HTTP Middleware**:
+```go
+// middleware.go - HTTP middleware for request logging
+// Location: pkg/middleware/logging.go
+// Used by: HTTP router (applied to all routes)
+// Dependencies: logger.go, go.opentelemetry.io/otel/trace
+
+package middleware
+
+import (
+	"context"
+	"crypto/rand"
+	"encoding/hex"
+	"net/http"
+	"time"
+
+	"go.opentelemetry.io/otel/trace"
+	"go.uber.org/zap"
+
+	"myapp/pkg/observability"
+)
+
+type contextKey string
+
+const loggerKey contextKey = "logger"
+
+// NewLoggingMiddleware creates HTTP middleware for request logging
+func NewLoggingMiddleware(logger *zap.Logger) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			start := time.Now()
+
+			// Extract or generate correlation ID
+			correlationID := r.Header.Get("X-Correlation-ID")
+			if correlationID == "" {
+				correlationID = generateCorrelationID()
+			}
+
+			// Extract OpenTelemetry trace context
+			span := trace.SpanFromContext(r.Context())
+			spanCtx := span.SpanContext()
+
+			// Format trace IDs as hex strings (consistent with other languages)
+			traceID := spanCtx.TraceID().String()
+			spanID := spanCtx.SpanID().String()
+
+			// Create request-scoped logger
+			reqLogger := observability.WithContext(logger, correlationID, traceID, spanID)
+
+			// Add logger to request context for downstream handlers
+			ctx := context.WithValue(r.Context(), loggerKey, reqLogger)
+			r = r.WithContext(ctx)
+
+			// Log incoming request
+			reqLogger.Info("Incoming request",
+				zap.String("method", r.Method),
+				zap.String("path", r.URL.Path),
+				zap.String("userAgent", r.UserAgent()),
+			)
+
+			// Wrap response writer to capture status code
+			wrapped := &responseWriter{ResponseWriter: w, statusCode: http.StatusOK}
+
+			// Process request
+			next.ServeHTTP(wrapped, r)
+
+			// Log completed request
+			duration := time.Since(start)
+			reqLogger.Info("Request completed",
+				zap.String("method", r.Method),
+				zap.String("path", r.URL.Path),
+				zap.Int("statusCode", wrapped.statusCode),
+				zap.Duration("duration", duration),
+			)
+		})
+	}
+}
+
+// LoggerFromContext extracts the logger from the request context
+func LoggerFromContext(ctx context.Context) *zap.Logger {
+	if logger, ok := ctx.Value(loggerKey).(*zap.Logger); ok {
+		return logger
+	}
+	// Return no-op logger if not found (should never happen in practice)
+	return zap.NewNop()
+}
+
+func generateCorrelationID() string {
+	b := make([]byte, 8)
+	rand.Read(b)
+	return "req_" + hex.EncodeToString(b)
+}
+
+type responseWriter struct {
+	http.ResponseWriter
+	statusCode int
+}
+
+func (rw *responseWriter) WriteHeader(code int) {
+	rw.statusCode = code
+	rw.ResponseWriter.WriteHeader(code)
+}
+```
+
+**Usage in Application Code**:
+```go
+// payment_service.go - Payment service with structured logging
+// Location: pkg/services/payment_service.go
+// Used by: HTTP handlers for payment processing
+// Dependencies: logger.go, middleware.LoggerFromContext
+
+package services
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"runtime/debug"
+
+	"go.uber.org/zap"
+
+	"myapp/pkg/middleware"
+)
+
+type PaymentService struct {
+	paymentGateway PaymentGateway
+}
+
+func NewPaymentService(gateway PaymentGateway) *PaymentService {
+	return &PaymentService{paymentGateway: gateway}
+}
+
+type PaymentData struct {
+	Amount   float64
+	Currency string
+	Method   string
+}
+
+type PaymentResult struct {
+	ID       string
+	Amount   float64
+	Currency string
+	Duration int64
+}
+
+// ProcessPayment processes a payment with structured logging
+func (s *PaymentService) ProcessPayment(ctx context.Context, data PaymentData) (*PaymentResult, error) {
+	// Extract logger from context (added by middleware)
+	logger := middleware.LoggerFromContext(ctx)
+
+	logger.Info("Processing payment",
+		zap.Float64("amount", data.Amount),
+		zap.String("currency", data.Currency),
+		zap.String("paymentMethod", data.Method),
+	)
+
+	result, err := s.paymentGateway.Charge(ctx, data)
+	if err != nil {
+		// Log error with structured fields matching other language examples
+		logger.Error("Payment processing failed",
+			zap.Error(err),
+			zap.String("errorType", getErrorType(err)),
+			zap.String("errorMessage", err.Error()),
+			zap.String("stack", string(debug.Stack())),
+			zap.Float64("amount", data.Amount),
+			zap.String("currency", data.Currency),
+		)
+		return nil, fmt.Errorf("payment processing failed: %w", err)
+	}
+
+	logger.Info("Payment processed successfully",
+		zap.String("transactionId", result.ID),
+		zap.Float64("amount", data.Amount),
+		zap.String("currency", data.Currency),
+		zap.Int64("duration", result.Duration),
+	)
+
+	return result, nil
+}
+
+// getErrorType extracts error type for categorization
+func getErrorType(err error) string {
+	// Check for common error types
+	var gatewayErr *GatewayError
+	if errors.As(err, &gatewayErr) {
+		return "GatewayError"
+	}
+
+	var validationErr *ValidationError
+	if errors.As(err, &validationErr) {
+		return "ValidationError"
+	}
+
+	// Fall back to generic error type
+	return "UnknownError"
+}
+
+// Example error types
+type GatewayError struct {
+	Message string
+}
+
+func (e *GatewayError) Error() string {
+	return e.Message
+}
+
+type ValidationError struct {
+	Field   string
+	Message string
+}
+
+func (e *ValidationError) Error() string {
+	return fmt.Sprintf("%s: %s", e.Field, e.Message)
+}
+
+// PaymentGateway interface for payment processing
+type PaymentGateway interface {
+	Charge(ctx context.Context, data PaymentData) (*PaymentResult, error)
+}
+```
+
 ### Language Comparison Summary
 
 | Language | Library | JSON Output | Performance | Learning Curve | Ecosystem |
@@ -706,17 +1001,23 @@ function addTraceContext(req, res, next) {
 from opentelemetry import trace
 
 def add_trace_context(request, logger):
-    span = trace.get_current_span()
+    try:
+        span = trace.get_current_span()
 
-    if span:
-        span_context = span.get_span_context()
-        trace_id = format(span_context.trace_id, '032x')
-        span_id = format(span_context.span_id, '016x')
+        if span and span.is_recording():
+            span_context = span.get_span_context()
+            if span_context.is_valid:
+                trace_id = format(span_context.trace_id, '032x')
+                span_id = format(span_context.span_id, '016x')
 
-        return logger.bind(
-            traceId=trace_id,
-            spanId=span_id
-        )
+                return logger.bind(
+                    traceId=trace_id,
+                    spanId=span_id
+                )
+    except Exception as e:
+        # Tracing not initialized or error accessing span context
+        # Log error but continue without trace context
+        logger.warning(f"Failed to extract trace context: {e}")
 
     return logger
 ```

@@ -113,6 +113,21 @@ payment-service/
 }
 ```
 
+**Best Practice: Package Lock File Management**
+
+After running `npm install`, a `package-lock.json` file will be generated. This file should be committed to version control for several important reasons:
+
+1. **Reproducible Builds**: Ensures exact dependency versions across development, CI/CD, and production environments
+2. **Security**: Locks specific package versions, preventing automatic updates that could introduce vulnerabilities
+3. **CI/CD Optimization**: Use `npm ci` instead of `npm install` in CI/CD pipelines for faster, more reliable installs
+
+```bash
+# In CI/CD pipelines, use npm ci (clean install) instead of npm install
+npm ci  # Installs exact versions from package-lock.json, fails if out of sync
+```
+
+Always commit `package-lock.json` to your repository. If you see merge conflicts in this file, resolve by running `npm install` after merging and committing the updated lock file.
+
 ### Environment Variables
 
 Create `.env` file:

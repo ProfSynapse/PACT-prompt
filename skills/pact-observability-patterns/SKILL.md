@@ -1,26 +1,21 @@
 ---
 name: pact-observability-patterns
 description: |
-  CODE PHASE (Cross-cutting): Observability patterns for logging, metrics, and distributed tracing.
+  CODE PHASE: Observability patterns for logging, metrics, and distributed tracing - structured
+  logging with correlation IDs, metrics collection (RED/USE methods), distributed tracing via
+  OpenTelemetry, and APM platform integration.
 
-  Provides structured logging patterns, metrics collection strategies (RED/USE method),
-  distributed tracing implementation (OpenTelemetry), APM platform integration, and
-  log aggregation system guidance.
+  Use when implementing: structured JSON logging, correlation ID propagation, Prometheus metrics,
+  OpenTelemetry instrumentation (auto/manual), distributed tracing, W3C Trace Context, APM integration
+  (DataDog, New Relic, Application Insights, Grafana), log aggregation (ELK, Loki), metrics dashboards,
+  trace sampling strategies, or correlating logs/metrics/traces.
 
-  Use when: implementing logging, collecting metrics, setting up distributed tracing,
-  integrating APM tools (DataDog, New Relic, Application Insights), choosing log
-  aggregation systems (ELK, Loki), implementing OpenTelemetry instrumentation,
-  correlating logs/metrics/traces, or when user mentions: observability, logging,
-  metrics, tracing, monitoring, APM, telemetry, OpenTelemetry, Prometheus, structured
-  logging, correlation IDs, distributed tracing, Jaeger, Grafana, DataDog, New Relic.
+  Activation keywords: observability, logging, metrics, tracing, monitoring, telemetry, OpenTelemetry,
+  Prometheus, correlation IDs, distributed tracing, Jaeger, APM, structured logging, RED method, USE
+  method, Grafana, DataDog, New Relic, Loki, sampling.
 
-  Use for: structured logging, JSON logging, correlation IDs, log aggregation, metrics
-  collection, Prometheus integration, RED method, USE method, distributed tracing,
-  W3C Trace Context, OpenTelemetry setup, APM integration, observability strategy.
-
-  DO NOT use for: security logging patterns (use pact-security-patterns), testing
-  observability instrumentation (use pact-testing-patterns), infrastructure monitoring
-  (use cloud provider documentation).
+  DO NOT use for: security logging/audit patterns (use pact-security-patterns), testing observability
+  code (use pact-testing-patterns), infrastructure monitoring setup (use cloud provider docs).
 allowed-tools:
   - Read
   - mcp__sequential-thinking__sequentialthinking
@@ -228,6 +223,58 @@ considering team size, budget constraints, Azure integration needs, and long-ter
 - Standard OpenTelemetry setup following official documentation
 - Simple tool selection with clear winner (e.g., already using Azure? Use Application Insights)
 
+### Fallback if sequential-thinking is unavailable
+
+If the sequential-thinking MCP tool is not configured, use structured manual decision-making:
+
+**Option 1: Weighted Criteria Matrix** (Recommended for complex decisions with multiple competing priorities)
+
+1. List all options being considered (e.g., DataDog, New Relic, Application Insights, Grafana Stack)
+2. Define evaluation criteria with weights based on project priorities:
+   - Cost (30%): Monthly budget impact, pricing predictability
+   - Ease of use (20%): Setup complexity, learning curve, team expertise required
+   - Features (25%): Required capabilities (APM, logs, traces, alerting)
+   - Integration (15%): Compatibility with existing infrastructure
+   - Vendor lock-in risk (10%): Migration difficulty, data portability
+3. Score each option 1-10 on each criterion
+4. Calculate weighted total: (criterion score × weight) summed across all criteria
+5. Compare totals, but also review for deal-breakers (e.g., option with highest score exceeds budget)
+
+**Example matrix**:
+```
+Criteria              Weight   DataDog   New Relic   App Insights   Grafana
+Cost                  30%      4 (1.2)   6 (1.8)     9 (2.7)        10 (3.0)
+Ease of use           20%      6 (1.2)   8 (1.6)     7 (1.4)        4 (0.8)
+Features              25%      10 (2.5)  8 (2.0)     6 (1.5)        7 (1.75)
+Integration (Azure)   15%      7 (1.05)  6 (0.9)     10 (1.5)       6 (0.9)
+Vendor lock-in        10%      4 (0.4)   5 (0.5)     6 (0.6)        9 (0.9)
+-------------------------------------------------------------------
+TOTAL                         6.35      6.8         7.7            7.35
+```
+Conclusion: Application Insights scores highest (7.7) due to Azure integration and cost-effectiveness, Grafana second (7.35) for low vendor lock-in and cost.
+
+**Option 2: Pros/Cons with Decision Framework** (Faster for decisions with clear trade-offs)
+
+1. List 2-3 finalist options after eliminating clear non-starters
+2. Create pros/cons list for each option
+3. Identify must-have requirements (e.g., "must integrate with Azure", "must stay under $5k/month")
+4. Eliminate options that fail must-haves
+5. For remaining options, identify key trade-off (e.g., cost vs features, ease of use vs customization)
+6. Choose based on project context (e.g., choose simplicity if team is small, choose features if scale is critical)
+
+**Option 3: Break Complex Decisions into Smaller Steps**
+
+For overwhelming decisions with 5+ variables:
+
+1. Make initial filtering decision: Narrow from 6 options to 2-3 finalists using one critical criterion (e.g., "budget <$5k/month" eliminates DataDog and New Relic at scale)
+2. Prototype finalist options: Spend 2-4 hours setting up minimal viable implementation for each finalist
+3. Evaluate prototypes against remaining criteria: Hands-on experience reveals hidden complexity, ease of use, integration friction
+4. Make final decision based on prototype learnings
+
+**Trade-off**: More time investment (4-8 hours) but reduces risk of choosing poorly based on marketing materials vs real-world experience.
+
+**Documentation requirement**: Regardless of method chosen, document decision rationale in architecture docs or implementation notes for future reference and team alignment.
+
 **See pact-backend-coder agent for invocation syntax and workflow integration.**
 
 ## OpenTelemetry Integration
@@ -335,6 +382,34 @@ The OpenTelemetry Collector is a vendor-neutral telemetry pipeline for receiving
 **Recommendation**: Use Collector in production for flexibility and cost control. Export directly from SDK for development simplicity.
 
 **For implementation details**: See `references/distributed-tracing.md`
+
+### Kubernetes Deployment Patterns
+
+When deploying OpenTelemetry Collector in Kubernetes, choose a deployment pattern based on your data processing needs:
+
+**Sidecar Pattern**: OTel Collector deployed as sidecar container alongside application pod
+- **Use when**: Application-specific processing required, isolated failure domains preferred, fine-grained resource control needed
+- **Trade-offs**: Higher resource overhead (one collector per pod), simpler networking (localhost communication), isolated configuration per application
+- **Configuration**: Define collector container in pod spec, application sends telemetry to `localhost:4317`
+
+**DaemonSet Pattern**: OTel Collector deployed per Kubernetes node
+- **Use when**: Node-level metrics collection required (kubelet, cAdvisor), moderate traffic volume, want to reduce pod count
+- **Trade-offs**: Medium resource overhead (one collector per node), efficient for node metrics, shared processing across pod workloads
+- **Configuration**: Deploy as DaemonSet, applications send to node IP via downward API (`status.hostIP`)
+
+**Deployment Pattern**: Centralized OTel Collector cluster
+- **Use when**: High traffic requiring horizontal scaling, advanced processing pipelines needed (tail sampling, aggregation), want separation of concerns
+- **Trade-offs**: Lowest resource overhead (shared infrastructure), requires load balancer, added network hop increases latency slightly
+- **Configuration**: Deploy as Kubernetes Deployment with Service, applications send to service DNS name
+
+**Hybrid Approach**: DaemonSet agents + Deployment gateway
+- **Use when**: Best of both worlds needed: node metrics + centralized processing
+- **Architecture**: DaemonSet collectors receive app telemetry and node metrics, forward to centralized Deployment for processing/export
+- **Benefits**: Offloads heavy processing from node agents, enables tail sampling across all traffic, maintains node-level collection
+
+**Recommendation**: Start with DaemonSet pattern for simplicity. Move to hybrid (DaemonSet + Deployment gateway) when implementing tail sampling or complex processing pipelines.
+
+**Reference**: Official [OpenTelemetry Operator for Kubernetes](https://opentelemetry.io/docs/k8s-operator/) automates collector deployment and provides custom resources for configuration management.
 
 ## Observability Patterns by Domain
 
