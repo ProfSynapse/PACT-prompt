@@ -1342,7 +1342,7 @@ const cluster = new RedisCluster([
 });
 
 // NTP synchronization check
-function checkClockSkew() {
+async function checkClockSkew() {
   const localTime = Date.now();
   const redisTime = await redis.time(); // [seconds, microseconds]
   const redisMs = redisTime[0] * 1000 + Math.floor(redisTime[1] / 1000);
