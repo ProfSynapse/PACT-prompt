@@ -329,6 +329,58 @@ Use this consistent error format across all APIs:
 - **INTERNAL_ERROR**: Server error (500)
 - **SERVICE_UNAVAILABLE**: Temporary unavailability (503)
 
+## API Observability
+
+### Request/Response Logging
+
+**Log Essential Request Data**
+```javascript
+// Log incoming requests with correlation ID
+app.use((req, res, next) => {
+  req.id = req.headers['x-request-id'] || generateId();
+  logger.info('Request received', {
+    requestId: req.id,
+    method: req.method,
+    path: req.path,
+    userId: req.user?.id
+  });
+  next();
+});
+
+// Log responses with timing
+res.on('finish', () => {
+  logger.info('Request completed', {
+    requestId: req.id,
+    statusCode: res.statusCode,
+    duration: Date.now() - req.startTime
+  });
+});
+```
+
+**API Metrics**
+- Latency percentiles by endpoint (p50, p95, p99)
+- Error rate percentage (4xx client errors, 5xx server errors)
+- Request rate per endpoint and per client
+- Payload size distribution (detect anomalous large requests)
+
+**Health Check Endpoints**
+```javascript
+// Minimal health check (service alive)
+GET /health
+=> 200 { "status": "ok" }
+
+// Detailed readiness check (dependencies healthy)
+GET /health/ready
+=> 200 {
+  "status": "ready",
+  "checks": {
+    "database": "ok",
+    "cache": "ok",
+    "external_api": "degraded"
+  }
+}
+```
+
 ## When to Use Sequential Thinking
 
 For complex API design decisions, use the `mcp__sequential-thinking__sequentialthinking` tool when:
@@ -474,7 +526,10 @@ Detailed reference documentation:
 - **references/rest-patterns.md**: REST-specific design patterns, HATEOAS, resource naming
 - **references/graphql-patterns.md**: GraphQL schema design, resolver patterns, mutations
 - **references/versioning.md**: Versioning strategies with pros/cons
-- **references/deprecation-workflows.md**: API deprecation communication, sunset timelines, migration paths
+- **references/deprecation-workflows.md**: API deprecation overview and quick start guide (links to detailed guides below)
+- **references/deprecation-planning.md**: Deprecation communication, timeline strategies, monitoring, enterprise considerations
+- **references/deprecation-implementation.md**: HTTP headers, version lifecycle states, code annotations, feature flags
+- **references/deprecation-migration.md**: Migration guides, compatibility layers, automated tooling, backward compatibility
 
 ## Templates
 

@@ -509,37 +509,6 @@ When reviewing code for security:
 - [ ] CSRF protection implemented
 - [ ] XSS protection in place
 
-## Reference Files
-
-Detailed reference documentation:
-- **references/owasp-top10.md**: Each OWASP vulnerability with prevention strategies
-- **references/authentication.md**: JWT, sessions, OAuth patterns and implementation
-- **references/input-validation.md**: Sanitization, encoding, validation patterns
-- **references/rate-limiting.md**: Token bucket, sliding window, distributed rate limiting, bypass prevention
-
-## Templates
-
-Ready-to-use templates for security implementation:
-- **templates/security-checklist.md**: Comprehensive security review checklist with auth, input validation, headers
-
-## Examples
-
-(Examples to be added in future iterations)
-
-## External Resources
-- OWASP Top 10: https://owasp.org/www-project-top-ten/
-- OWASP Cheat Sheet Series: https://cheatsheetseries.owasp.org/
-- CWE Top 25: https://cwe.mitre.org/top25/
-- NIST Cybersecurity Framework: https://www.nist.gov/cyberframework
-- SANS Secure Coding Practices: https://www.sans.org/secure-coding/
-
-### Security Standards
-- PCI-DSS (Payment Card Industry)
-- HIPAA (Healthcare)
-- GDPR (EU Privacy)
-- SOC 2 (Service Organizations)
-- ISO 27001 (Information Security Management)
-
 ## MCP Tools for Security
 
 This section provides guidance on WHEN and WHY to use MCP tools for security decisions. See agent documentation for invocation syntax.
@@ -578,6 +547,64 @@ The following MCP tool enhances security analysis and design:
 **See all PACT coding agents (backend, frontend, database) and pact-test-engineer for invocation syntax and workflow integration.**
 
 ---
+
+## Reference Files
+
+Detailed reference documentation:
+- **references/owasp-top10.md**: Each OWASP vulnerability with prevention strategies
+- **references/authentication.md**: JWT, sessions, OAuth patterns and implementation
+- **references/input-validation.md**: Sanitization, encoding, validation patterns
+- **references/rate-limiting.md**: Token bucket, sliding window, distributed rate limiting, bypass prevention
+
+## Templates
+
+Ready-to-use templates for security implementation:
+- **templates/security-checklist.md**: Comprehensive security review checklist with auth, input validation, headers
+
+## Examples
+
+(Examples to be added in future iterations)
+
+## Integration with PACT Workflow
+
+Security is cross-cutting and integrated into all PACT phases:
+
+### PREPARE Phase
+- Research security requirements and compliance needs
+- Identify sensitive data types and security standards
+- Document threat landscape for planned features
+
+### ARCHITECT Phase
+- Design authentication and authorization models
+- Plan defense-in-depth security layers
+- Define security boundaries and trust zones
+- Design audit logging and monitoring strategy
+
+### CODE Phase
+- Implement input validation and output encoding
+- Apply secure coding patterns from this skill
+- Handle errors without leaking sensitive information
+- Integrate security headers and protective mechanisms
+
+### TEST Phase
+- Validate OWASP Top 10 mitigations
+- Test authentication and authorization flows
+- Perform security scanning (SAST, DAST)
+- Verify encryption and secrets management
+
+### External Resources
+- OWASP Top 10: https://owasp.org/www-project-top-ten/
+- OWASP Cheat Sheet Series: https://cheatsheetseries.owasp.org/
+- CWE Top 25: https://cwe.mitre.org/top25/
+- NIST Cybersecurity Framework: https://www.nist.gov/cyberframework
+- SANS Secure Coding Practices: https://www.sans.org/secure-coding/
+
+### Security Standards
+- PCI-DSS (Payment Card Industry)
+- HIPAA (Healthcare)
+- GDPR (EU Privacy)
+- SOC 2 (Service Organizations)
+- ISO 27001 (Information Security Management)
 
 ## When to Escalate
 

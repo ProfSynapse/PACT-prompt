@@ -431,6 +431,40 @@ FROM pg_stat_user_indexes
 ORDER BY idx_scan ASC;
 ```
 
+### Database Observability
+
+**Query Performance Monitoring**
+```javascript
+// Instrument queries with execution time tracking
+const startTime = Date.now();
+const result = await db.query(sql, params);
+const duration = Date.now() - startTime;
+
+if (duration > 100) {
+  logger.warn('Slow query detected', {
+    sql: sql.substring(0, 200),
+    duration,
+    rowCount: result.rowCount
+  });
+}
+```
+
+**Connection Pool Metrics**
+- Active connections vs pool size
+- Connection wait time (time spent waiting for available connection)
+- Connection lifetime (detect connection leaks)
+- Pool exhaustion events (requests rejected due to full pool)
+
+**Slow Query Logging**
+```sql
+-- PostgreSQL: Log queries exceeding threshold
+ALTER DATABASE mydb SET log_min_duration_statement = 100;  -- 100ms
+
+-- Include query execution context
+ALTER DATABASE mydb SET log_line_prefix = '%t [%p] %u@%d ';
+ALTER DATABASE mydb SET log_statement = 'all';  -- or 'mod' for writes only
+```
+
 ## When to Use Sequential Thinking
 
 Database design often requires deep reasoning about trade-offs. Use the `mcp__sequential-thinking__sequentialthinking` tool when:

@@ -1162,6 +1162,510 @@ async function loadTest() {
 
 ---
 
+## Common Issues and Solutions
+
+### Legitimate Users Getting Rate Limited
+
+**Symptoms**: Real users report 429 errors during normal usage
+
+**Root Causes**:
+- Limits set too aggressively for actual usage patterns
+- Shared IP addresses (corporate NAT, VPN) hitting IP-based limits
+- Burst traffic patterns exceeding fixed window limits
+- Browser prefetching or polling triggering excessive requests
+
+**Solutions**:
+```javascript
+// Use Token Bucket to allow controlled bursts
+const userLimiter = new TokenBucket(
+  100,  // Capacity allows burst of 100 requests
+  10    // Refills at 10 requests/second for sustained usage
+);
+
+// Differentiate authenticated vs anonymous users
+app.use(async (req, res, next) => {
+  if (req.user) {
+    // Authenticated users get higher limits
+    const result = await rateLimiter.checkLimit(req.user.id, 1000, 3600);
+  } else {
+    // Anonymous users: stricter IP-based limits
+    const result = await rateLimiter.checkLimit(req.ip, 100, 3600);
+  }
+
+  if (!result.allowed) {
+    res.set('Retry-After', Math.ceil((result.resetAt - Date.now()) / 1000));
+    return res.status(429).json({
+      error: 'Rate limit exceeded',
+      upgradeUrl: '/pricing',  // Encourage paid plans
+    });
+  }
+
+  next();
+});
+
+// Whitelist trusted IPs
+const WHITELISTED_IPS = new Set([
+  '10.0.0.0/8',      // Internal network
+  '203.0.113.0/24',  // Partner API gateway
+]);
+
+function isWhitelisted(ip) {
+  return WHITELISTED_IPS.has(ip) || ip.startsWith('10.0.');
+}
+```
+
+**Debugging Tips**:
+- Analyze rate limit violations by endpoint to identify hot spots
+- Review user agent strings to detect legitimate bots vs malicious traffic
+- Monitor `X-RateLimit-Remaining` header distribution (if many users hit 0, limits too low)
+- Check for correlation between 429s and specific user actions (e.g., page refresh)
+
+---
+
+### Rate Limiter Performance Bottleneck
+
+**Symptoms**: API latency increases as traffic grows, rate limiter becomes slowest component
+
+**Root Causes**:
+- Synchronous Redis calls blocking request handling
+- Missing Redis connection pooling
+- Lua script inefficiency (complex logic in Redis)
+- Network latency to Redis instance
+
+**Solutions**:
+```javascript
+// Use pipelining for batch operations
+async function checkMultipleRateLimits(req) {
+  const pipeline = redis.pipeline();
+
+  pipeline.eval(/* IP-based limit Lua script */);
+  pipeline.eval(/* User-based limit Lua script */);
+  pipeline.eval(/* Endpoint-based limit Lua script */);
+
+  const results = await pipeline.exec();
+  return results.every(r => r[1][0] === 1); // All checks passed
+}
+
+// Connection pooling
+const Redis = require('ioredis');
+const redisCluster = new Redis.Cluster([
+  { host: '127.0.0.1', port: 6379 },
+  { host: '127.0.0.2', port: 6379 },
+], {
+  redisOptions: {
+    connectionName: 'rate-limiter',
+    maxRetriesPerRequest: 2,
+  },
+  clusterRetryStrategy: (times) => Math.min(100 * times, 2000),
+});
+
+// Cache compiled Lua scripts
+const rateLimitScript = redis.defineCommand('rateLimit', {
+  numberOfKeys: 1,
+  lua: `/* Lua script content */`,
+});
+
+// Non-blocking rate limit check with fallback
+async function checkRateLimitFast(identifier, limit, window) {
+  try {
+    const result = await Promise.race([
+      rateLimiter.checkLimit(identifier, limit, window),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Timeout')), 50)
+      ),
+    ]);
+    return result;
+  } catch (error) {
+    // Fail open: allow request if rate limiter times out
+    console.warn('Rate limiter timeout, allowing request', { identifier });
+    metrics.increment('rate_limiter.timeout');
+    return { allowed: true, remaining: limit };
+  }
+}
+```
+
+**Debugging Tips**:
+- Measure rate limiter latency separately: `const start = Date.now(); await checkLimit(...); metrics.histogram('rate_limit.latency', Date.now() - start);`
+- Check Redis latency: `redis-cli --latency-history`
+- Monitor Redis CPU usage: `redis-cli INFO cpu`
+- Use Redis `MONITOR` command to inspect command patterns (disable in production)
+
+---
+
+### Distributed Rate Limiting Inconsistency
+
+**Symptoms**: Rate limits not enforced correctly across multiple servers, users exceed limits
+
+**Root Causes**:
+- Clock skew between servers (sliding window miscalculation)
+- Race conditions in distributed counter updates
+- Redis replication lag
+- Missing atomic operations in Lua scripts
+
+**Solutions**:
+```javascript
+// Use Redis EVAL for atomicity
+const atomicRateLimitLua = `
+  local key = KEYS[1]
+  local limit = tonumber(ARGV[1])
+  local window = tonumber(ARGV[2])
+  local now = tonumber(ARGV[3])
+
+  -- Remove expired entries
+  redis.call('ZREMRANGEBYSCORE', key, 0, now - window)
+
+  -- Count current requests
+  local current = redis.call('ZCARD', key)
+
+  if current >= limit then
+    return {0, current, limit}
+  end
+
+  -- Add current request atomically
+  redis.call('ZADD', key, now, now .. ':' .. redis.call('INCR', 'request_counter'))
+  redis.call('EXPIRE', key, window)
+
+  return {1, current + 1, limit}
+`;
+
+// Use Redis Cluster for high availability
+const RedisCluster = require('ioredis').Cluster;
+const cluster = new RedisCluster([
+  { host: 'redis-1', port: 6379 },
+  { host: 'redis-2', port: 6379 },
+  { host: 'redis-3', port: 6379 },
+], {
+  scaleReads: 'slave',  // Read from replicas, write to master
+  redisOptions: {
+    enableReadyCheck: true,
+  },
+});
+
+// NTP synchronization check
+function checkClockSkew() {
+  const localTime = Date.now();
+  const redisTime = await redis.time(); // [seconds, microseconds]
+  const redisMs = redisTime[0] * 1000 + Math.floor(redisTime[1] / 1000);
+  const skew = Math.abs(localTime - redisMs);
+
+  if (skew > 1000) { // More than 1 second skew
+    console.error(`Clock skew detected: ${skew}ms`);
+    alertOps({ type: 'clock_skew', skew });
+  }
+}
+```
+
+**Debugging Tips**:
+- Compare timestamps from different servers: `curl -I https://api.example.com | grep Date`
+- Verify Redis replication status: `redis-cli INFO replication`
+- Test race conditions with concurrent requests: `ab -n 1000 -c 100 http://localhost/api/test`
+- Check for split-brain scenarios in Redis cluster: `redis-cli CLUSTER NODES`
+
+---
+
+### Rate Limit Bypass via IP Rotation
+
+**Symptoms**: Attacker bypasses IP-based rate limits by rotating through proxies/VPNs
+
+**Root Causes**:
+- Relying solely on IP address for identification
+- No device fingerprinting
+- Missing behavioral analysis
+- No CAPTCHA challenge
+
+**Solutions**:
+```javascript
+// Multi-factor rate limiting
+class AdvancedRateLimiter {
+  async checkRequest(req) {
+    const checks = [];
+
+    // Check 1: IP-based (can be bypassed)
+    checks.push(this.checkIP(req.ip, 100, 60));
+
+    // Check 2: Device fingerprint (harder to bypass)
+    const fingerprint = this.createFingerprint(req);
+    checks.push(this.checkFingerprint(fingerprint, 200, 60));
+
+    // Check 3: User account (if authenticated)
+    if (req.user) {
+      checks.push(this.checkUser(req.user.id, 500, 60));
+    }
+
+    // Check 4: Behavioral analysis
+    const riskScore = await this.calculateRiskScore(req);
+    if (riskScore > 0.8) {
+      return { allowed: false, requiresCaptcha: true };
+    }
+
+    const results = await Promise.all(checks);
+    const failed = results.find(r => !r.allowed);
+    return failed || { allowed: true };
+  }
+
+  createFingerprint(req) {
+    const components = [
+      req.get('User-Agent'),
+      req.get('Accept-Language'),
+      req.get('Accept-Encoding'),
+      req.headers['x-client-fingerprint'], // Client-side JS fingerprint
+    ];
+    return crypto.createHash('sha256').update(components.join(':')).digest('hex');
+  }
+
+  async calculateRiskScore(req) {
+    let score = 0;
+
+    // Suspicious user agent
+    if (!req.get('User-Agent') || req.get('User-Agent').includes('curl')) {
+      score += 0.3;
+    }
+
+    // Known proxy/VPN IP
+    const isProxy = await this.isProxyIP(req.ip);
+    if (isProxy) score += 0.3;
+
+    // Rapid endpoint switching
+    const recentEndpoints = await this.getRecentEndpoints(req.ip);
+    if (recentEndpoints.size > 10) score += 0.2;
+
+    // Timing patterns (too fast, too consistent)
+    const requestTiming = await this.analyzeTimingPattern(req.ip);
+    if (requestTiming.tooFast) score += 0.3;
+
+    return Math.min(score, 1.0);
+  }
+}
+```
+
+**Debugging Tips**:
+- Monitor IP diversity per user: unique IPs per hour for authenticated users
+- Track fingerprint changes: alert when user's fingerprint changes multiple times
+- Analyze request timing distribution: human traffic has variance, bots are consistent
+- Check against proxy/VPN databases: IPHub, IP2Proxy, MaxMind
+
+---
+
+### Memory Exhaustion from Rate Limit Data
+
+**Symptoms**: Redis memory usage grows unbounded, eventually crashes
+
+**Root Causes**:
+- Missing TTL on rate limit keys
+- Too many unique identifiers (IP addresses, session IDs)
+- Storing full request history instead of counters
+- No cleanup of expired data
+
+**Solutions**:
+```javascript
+// Always set TTL on rate limit keys
+const lua = `
+  local key = KEYS[1]
+  local limit = tonumber(ARGV[1])
+  local window = tonumber(ARGV[2])
+
+  local current = redis.call('INCR', key)
+
+  if current == 1 then
+    redis.call('EXPIRE', key, window)  -- CRITICAL: Set expiration
+  end
+
+  return {current, limit}
+`;
+
+// Aggregate by subnet instead of individual IPs
+function aggregateIP(ip) {
+  const parts = ip.split('.');
+  return `${parts[0]}.${parts[1]}.${parts[2]}.0/24`;  // /24 subnet
+}
+
+// Periodic cleanup of old keys
+setInterval(async () => {
+  const pattern = 'rate_limit:*';
+  const keys = await redis.keys(pattern);
+
+  for (const key of keys) {
+    const ttl = await redis.ttl(key);
+    if (ttl === -1) {
+      // Key exists but has no expiration (leaked)
+      console.warn(`Cleaning up key without TTL: ${key}`);
+      await redis.del(key);
+    }
+  }
+}, 3600000); // Every hour
+
+// Use HyperLogLog for memory-efficient counting
+async function efficientRateLimitCheck(identifier, limit, window) {
+  const key = `rate_limit:hll:${identifier}`;
+  const currentWindow = Math.floor(Date.now() / (window * 1000));
+  const windowKey = `${key}:${currentWindow}`;
+
+  // Add identifier to HyperLogLog
+  await redis.pfadd(windowKey, identifier);
+  await redis.expire(windowKey, window * 2);
+
+  // Estimate unique count
+  const count = await redis.pfcount(windowKey);
+
+  return {
+    allowed: count < limit,
+    count,
+    limit,
+  };
+}
+```
+
+**Debugging Tips**:
+- Monitor Redis memory: `redis-cli INFO memory | grep used_memory_human`
+- Find keys without TTL: `redis-cli --scan --pattern 'rate_limit:*' | xargs -L 1 redis-cli TTL | grep -- '-1'`
+- Check keyspace distribution: `redis-cli --bigkeys`
+- Set Redis maxmemory policy: `maxmemory-policy allkeys-lru`
+
+---
+
+### False Positives from CDN/Load Balancer
+
+**Symptoms**: All requests appear to come from same IP (load balancer), hitting limits incorrectly
+
+**Root Causes**:
+- Using `req.ip` which returns load balancer IP
+- Not trusting `X-Forwarded-For` header
+- Missing proxy configuration in Express
+- CDN not forwarding original client IP
+
+**Solutions**:
+```javascript
+// Configure Express to trust proxy
+app.set('trust proxy', true);  // Trust first proxy
+app.set('trust proxy', 2);     // Trust 2 proxy hops (CDN + LB)
+
+// Extract real client IP
+function getRealIP(req) {
+  // X-Forwarded-For format: "client, proxy1, proxy2"
+  const forwarded = req.headers['x-forwarded-for'];
+  if (forwarded) {
+    const ips = forwarded.split(',').map(ip => ip.trim());
+    return ips[0]; // First IP is real client
+  }
+
+  // Fallback headers
+  return (
+    req.headers['x-real-ip'] ||
+    req.headers['cf-connecting-ip'] ||  // Cloudflare
+    req.connection.remoteAddress ||
+    req.ip
+  );
+}
+
+// Validate IP isn't spoofed
+function isValidPublicIP(ip) {
+  // Reject private IPs (spoofed X-Forwarded-For)
+  const privateRanges = [
+    /^10\./,
+    /^172\.(1[6-9]|2[0-9]|3[0-1])\./,
+    /^192\.168\./,
+    /^127\./,
+    /^::1$/,
+  ];
+
+  return !privateRanges.some(pattern => pattern.test(ip));
+}
+
+// Rate limit with validated IP
+app.use(async (req, res, next) => {
+  const clientIP = getRealIP(req);
+
+  if (!isValidPublicIP(clientIP)) {
+    console.warn('Invalid or private IP detected', { ip: clientIP, headers: req.headers });
+    return res.status(400).json({ error: 'Invalid client IP' });
+  }
+
+  const result = await rateLimiter.checkLimit(clientIP, 100, 60);
+  // ...
+});
+```
+
+**Debugging Tips**:
+- Log all IP-related headers: `console.log(req.headers['x-forwarded-for'], req.headers['x-real-ip'], req.ip)`
+- Test with curl: `curl -H "X-Forwarded-For: 1.2.3.4" https://api.example.com`
+- Verify CDN config forwards client IP (Cloudflare: CF-Connecting-IP, AWS CloudFront: X-Forwarded-For)
+- Check load balancer preserves source IP (AWS ALB: X-Forwarded-For enabled)
+
+---
+
+### Rate Limit Headers Not Updating
+
+**Symptoms**: Clients see stale `X-RateLimit-Remaining` values, don't know when to retry
+
+**Root Causes**:
+- Headers set before rate limit check completes
+- Caching layer returning cached headers
+- Race condition in distributed counter update
+- Missing header update on successful request
+
+**Solutions**:
+```javascript
+// Always update headers AFTER rate limit check
+app.use(async (req, res, next) => {
+  const identifier = req.user?.id || getRealIP(req);
+  const result = await rateLimiter.checkLimit(identifier, 100, 60);
+
+  // Set headers based on actual result
+  res.set('X-RateLimit-Limit', result.limit.toString());
+  res.set('X-RateLimit-Remaining', result.remaining.toString());
+  res.set('X-RateLimit-Reset', Math.floor(result.resetAt.getTime() / 1000).toString());
+
+  if (!result.allowed) {
+    res.set('Retry-After', Math.ceil((result.resetAt - Date.now()) / 1000).toString());
+    return res.status(429).json({ error: 'Too many requests' });
+  }
+
+  next();
+});
+
+// Ensure headers aren't cached
+app.use((req, res, next) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  next();
+});
+
+// Atomic counter with header values
+const luaWithHeaders = `
+  local key = KEYS[1]
+  local limit = tonumber(ARGV[1])
+  local window = tonumber(ARGV[2])
+  local now = tonumber(ARGV[3])
+
+  redis.call('ZREMRANGEBYSCORE', key, 0, now - window)
+  local current = redis.call('ZCARD', key)
+
+  local allowed = 0
+  local remaining = 0
+
+  if current < limit then
+    redis.call('ZADD', key, now, now .. ':' .. redis.call('INCR', 'counter'))
+    redis.call('EXPIRE', key, window)
+    allowed = 1
+    remaining = limit - current - 1
+  else
+    remaining = 0
+  end
+
+  -- Return: allowed, remaining, current, limit
+  return {allowed, remaining, current, limit}
+`;
+```
+
+**Debugging Tips**:
+- Inspect response headers with curl: `curl -I https://api.example.com`
+- Check for caching middleware interfering with headers
+- Verify Redis counter increments: `redis-cli GET rate_limit:counter`
+- Test concurrent requests to ensure headers are consistent
+
+---
+
 ## Quick Reference
 
 ### Algorithm Comparison

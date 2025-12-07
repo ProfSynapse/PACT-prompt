@@ -499,7 +499,7 @@ The following MCP tool enhances frontend implementation decisions:
 ## Related Skills
 
 - **pact-backend-patterns**: API integration and data fetching strategies
-- **pact-database-engineer**: Data modeling for client-side state
+- **pact-database-patterns**: Data modeling for client-side state
 - **pact-architect**: Component architecture and system design
 
 ## Reference Files
@@ -517,6 +517,55 @@ Ready-to-use templates for frontend implementation:
 ## Examples
 
 (Examples to be added in future iterations)
+
+## Integration with PACT Workflow
+
+### Frontend Code Phase Inputs
+
+**From ARCHITECT Phase** (`docs/architecture/`):
+- Component hierarchy and dependencies
+- State management architecture decisions
+- API contracts and data flow specifications
+- Accessibility and UX requirements
+
+**From PREPARE Phase** (`docs/preparation/`):
+- Technology stack (React, Vue, Svelte, etc.)
+- UI library and component framework choices
+- Performance and browser support requirements
+- Third-party integrations (analytics, auth, etc.)
+
+### Frontend Code Phase Responsibilities
+
+1. **Component Implementation**: Build UI components following architectural specifications
+2. **State Management**: Implement state logic using chosen patterns (Context, Redux, etc.)
+3. **Accessibility**: Ensure WCAG 2.1 Level AA compliance minimum
+4. **Responsive Design**: Implement mobile-first layouts
+5. **Performance**: Optimize bundle size, lazy loading, and runtime performance
+6. **Testing**: Write unit tests for component logic and integration tests for user flows
+
+### Frontend Code Phase Outputs
+
+**Deliverables**:
+- Working UI components organized by feature/shared structure
+- State management implementation with clear data flow
+- Accessible markup with proper ARIA labels and keyboard navigation
+- Responsive styles supporting mobile, tablet, and desktop viewports
+- Frontend tests (unit and integration) with meaningful coverage
+- Implementation notes documenting component patterns and trade-offs
+
+**Handoff to TEST Phase**:
+- Component test identifiers (data-testid attributes)
+- Critical user workflows to validate end-to-end
+- Accessibility testing requirements (screen reader compatibility, keyboard navigation)
+- Performance baselines (bundle size, Lighthouse scores)
+- Browser compatibility matrix
+
+**Quality Gates**:
+- ✅ All components follow established patterns from architecture
+- ✅ Accessibility checklist completed (keyboard nav, ARIA labels, color contrast)
+- ✅ No console errors or warnings in development
+- ✅ Components tested in isolation with clear test cases
+- ✅ State management follows single-source-of-truth principle
 
 ## Version History
 

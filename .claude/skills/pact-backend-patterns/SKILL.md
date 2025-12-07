@@ -339,6 +339,47 @@ Middleware chain: Request → Auth → Logging → Validation → Controller →
 - Cache-aside pattern
 - Write-through cache
 
+### Observability Patterns
+
+**Structured Logging**
+```javascript
+// Include context in every log entry
+logger.info('Payment processed', {
+  correlationId: req.id,
+  userId: payment.userId,
+  amount: payment.amount,
+  currency: payment.currency,
+  duration: Date.now() - startTime
+});
+
+// Log levels: ERROR (action required), WARN (potential issue), INFO (business events), DEBUG (troubleshooting)
+```
+
+**Key Metrics to Track**
+- Request rate (requests/second by endpoint)
+- Error rate (percentage of 5xx responses)
+- Latency percentiles (p50, p95, p99 response times)
+- Active connections and connection pool utilization
+- Business metrics (signups/hour, transactions/minute)
+
+**Distributed Tracing Basics**
+```javascript
+// Propagate trace context across service boundaries
+const spanContext = tracer.extract(req.headers);
+const span = tracer.startSpan('process_payment', { childOf: spanContext });
+
+try {
+  const result = await paymentService.process(data);
+  span.setTag('payment.status', result.status);
+  return result;
+} finally {
+  span.finish();
+}
+
+// Use correlation IDs to link related log entries
+req.id = req.headers['x-correlation-id'] || generateId();
+```
+
 ### Database Optimization
 
 **Query optimization**:

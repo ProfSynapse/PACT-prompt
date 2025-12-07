@@ -311,86 +311,6 @@ What are you researching?
       3. documentation-templates.md (how to document results)
 ```
 
-## Reference Files
-
-Detailed reference documentation:
-- **references/research-workflow.md**: Complete step-by-step research methodology, detailed guidance for each phase
-- **references/source-evaluation.md**: Criteria for assessing source credibility, handling conflicting information
-- **references/documentation-templates.md**: Templates for all Prepare phase outputs (technology, API, comparison, requirements)
-
-## Templates
-
-Ready-to-use templates for research outputs:
-- **templates/research-summary.md**: Research summary template with sources, findings, recommendations
-
-## Examples
-
-(Examples to be added in future iterations)
-
-### Related Skills
-
-**pact-architecture-patterns**
-- System design patterns that inform research priorities
-- Architectural constraints that affect technology choices
-- **Use together**: Prepare research feeds into Architect patterns
-
-**pact-security-patterns**
-- Security research requirements during Prepare phase
-- Threat modeling frameworks
-- Security evaluation criteria
-- **Use together**: Reference security patterns when evaluating technology security
-
-## Integration with PACT Workflow
-
-### Inputs to Prepare Phase
-
-**From User/Project Requirements**:
-- Problem statement or feature request
-- Constraints (timeline, budget, team skills)
-- Existing tech stack and integration points
-- Performance and security requirements
-
-### Prepare Phase Research Activities
-
-1. **Technology Research**: Evaluate frameworks, libraries, tools
-2. **API Documentation**: Document third-party APIs and integrations
-3. **Dependency Analysis**: Map dependencies and version compatibility
-4. **Security Research**: Identify security requirements and best practices
-5. **Best Practices**: Research established patterns and conventions
-
-### Outputs to Architect Phase
-
-**Deliverables** (created in `docs/preparation/`):
-- `technology-research.md`: Technology choices with rationale
-- `api-documentation.md`: Third-party API integration details
-- `dependencies.md`: Dependency tree and version compatibility
-- `security-requirements.md`: Security findings and recommendations
-- `requirements-analysis.md`: Functional and non-functional requirements
-
-**Key Information for Architects**:
-- Recommended technology stack with trade-offs
-- Integration points and API contracts
-- Security constraints and compliance needs
-- Performance expectations and benchmarks
-- Version compatibility matrix
-- Known risks and mitigation strategies
-
-### Handoff to Architect
-
-The Architect phase uses Prepare phase outputs to:
-- Design system architecture aligned with technology constraints
-- Define component boundaries based on integration requirements
-- Specify API contracts informed by third-party API research
-- Incorporate security requirements into architectural design
-- Plan for version management and dependency updates
-
-**Quality Gate**: Architecture cannot begin until Prepare phase delivers comprehensive research covering:
-- ✅ All technology choices documented with rationale
-- ✅ Security requirements identified
-- ✅ Dependencies mapped with version compatibility
-- ✅ Integration points documented with examples
-- ✅ Performance and scalability requirements captured
-
 ## MCP Tools for Research
 
 This section provides guidance on WHEN and WHY to use MCP tools during the Prepare phase. See agent documentation for invocation syntax.
@@ -453,6 +373,86 @@ The following MCP tools enhance research activities:
 **See pact-preparer agent for invocation workflow.**
 
 ---
+
+### Related Skills
+
+**pact-architecture-patterns**
+- System design patterns that inform research priorities
+- Architectural constraints that affect technology choices
+- **Use together**: Prepare research feeds into Architect patterns
+
+**pact-security-patterns**
+- Security research requirements during Prepare phase
+- Threat modeling frameworks
+- Security evaluation criteria
+- **Use together**: Reference security patterns when evaluating technology security
+
+## Reference Files
+
+Detailed reference documentation:
+- **references/research-workflow.md**: Complete step-by-step research methodology, detailed guidance for each phase
+- **references/source-evaluation.md**: Criteria for assessing source credibility, handling conflicting information
+- **references/documentation-templates.md**: Templates for all Prepare phase outputs (technology, API, comparison, requirements)
+
+## Templates
+
+Ready-to-use templates for research outputs:
+- **templates/research-summary.md**: Research summary template with sources, findings, recommendations
+
+## Examples
+
+(Examples to be added in future iterations)
+
+## Integration with PACT Workflow
+
+### Inputs to Prepare Phase
+
+**From User/Project Requirements**:
+- Problem statement or feature request
+- Constraints (timeline, budget, team skills)
+- Existing tech stack and integration points
+- Performance and security requirements
+
+### Prepare Phase Research Activities
+
+1. **Technology Research**: Evaluate frameworks, libraries, tools
+2. **API Documentation**: Document third-party APIs and integrations
+3. **Dependency Analysis**: Map dependencies and version compatibility
+4. **Security Research**: Identify security requirements and best practices
+5. **Best Practices**: Research established patterns and conventions
+
+### Outputs to Architect Phase
+
+**Deliverables** (created in `docs/preparation/`):
+- `technology-research.md`: Technology choices with rationale
+- `api-documentation.md`: Third-party API integration details
+- `dependencies.md`: Dependency tree and version compatibility
+- `security-requirements.md`: Security findings and recommendations
+- `requirements-analysis.md`: Functional and non-functional requirements
+
+**Key Information for Architects**:
+- Recommended technology stack with trade-offs
+- Integration points and API contracts
+- Security constraints and compliance needs
+- Performance expectations and benchmarks
+- Version compatibility matrix
+- Known risks and mitigation strategies
+
+### Handoff to Architect
+
+The Architect phase uses Prepare phase outputs to:
+- Design system architecture aligned with technology constraints
+- Define component boundaries based on integration requirements
+- Specify API contracts informed by third-party API research
+- Incorporate security requirements into architectural design
+- Plan for version management and dependency updates
+
+**Quality Gate**: Architecture cannot begin until Prepare phase delivers comprehensive research covering:
+- ✅ All technology choices documented with rationale
+- ✅ Security requirements identified
+- ✅ Dependencies mapped with version compatibility
+- ✅ Integration points documented with examples
+- ✅ Performance and scalability requirements captured
 
 ## Self-Verification Checklist
 

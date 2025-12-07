@@ -91,7 +91,8 @@ describe('User API', () => {
   });
 
   beforeAll(() => provider.setup());
-  afterAll(() => provider.finalize());
+  afterEach(() => provider.verify());  // Verify interaction occurred
+  afterAll(() => provider.finalize()); // Write pact file
 
   it('retrieves user by ID', async () => {
     // Define expected interaction
@@ -123,11 +124,23 @@ describe('User API', () => {
 });
 ```
 
+**Test Isolation Best Practices**:
+- Each test should define its own interactions (`addInteraction`)
+- Use `afterEach(() => provider.verify())` to ensure expected calls were made
+- Create a new Pact instance per test suite (not per test)
+- Avoid shared state between tests—interactions are test-specific
+- If tests share the same mock provider, ensure `verify()` clears interactions between tests
+
 **What Happens**:
 1. Consumer test defines expected request/response
 2. Pact creates mock provider that responds as expected
 3. Consumer code runs against mock provider
-4. Pact generates contract file (`UserUI-UserAPI.json`)
+4. `provider.finalize()` writes the contract file (`UserUI-UserAPI.json`)
+
+**Important**: The consumer test lifecycle must include:
+- `provider.setup()` - Starts mock server before tests
+- `provider.verify()` - Validates interaction occurred as expected (after each test)
+- `provider.finalize()` - Writes pact file and shuts down server (after all tests)
 
 **Step 2: Publish Contract to Pact Broker**
 ```bash
@@ -144,7 +157,7 @@ pact-broker publish pacts/UserUI-UserAPI.json \
 const { Verifier } = require('@pact-foundation/pact');
 
 describe('Pact Verification', () => {
-  it('validates the expectations of UserUI', () => {
+  it('validates the expectations of UserUI', async () => {
     const opts = {
       provider: 'UserAPI',
       providerBaseUrl: 'http://localhost:3000',
@@ -159,10 +172,22 @@ describe('Pact Verification', () => {
       },
     };
 
-    return new Verifier(opts).verifyProvider();
+    try {
+      await new Verifier(opts).verifyProvider();
+    } catch (error) {
+      // Log detailed verification failures for debugging
+      console.error('Contract verification failed:', error.message);
+      throw error; // Re-throw to fail the test
+    }
   });
 });
 ```
+
+**Handling Verification Failures**:
+- Verification errors indicate the provider doesn't meet consumer expectations
+- Check error output for: missing endpoints, wrong response structure, status code mismatches
+- State handler failures can cause false negatives—ensure data setup succeeds
+- Use `enablePending: true` during development to continue despite failures
 
 **What Happens**:
 1. Provider fetches contract from Pact Broker
@@ -391,6 +416,14 @@ describe('User API Pact Verification', () => {
 - Be idempotent (running twice should produce same result)
 - Handle setup AND teardown if needed
 - Keep states descriptive and specific
+
+**Handling Conflicting States**:
+When multiple consumers require conflicting states (e.g., "user 1 exists" vs "user 1 does not exist"):
+- State handlers run per-interaction, so conflicts are resolved automatically
+- Ensure each handler fully resets state—don't assume previous state
+- Use `deleteAll()` before `insert()` to guarantee clean slate
+- For complex scenarios, use database transactions with rollback after each interaction
+- Consider using unique identifiers per consumer test to avoid collisions
 
 ---
 
@@ -1051,6 +1084,559 @@ describe('Order Service Message Provider', () => {
   });
 });
 ```
+
+**Message Queue Testing Best Practices**:
+- Test idempotency: Verify handler produces same result when processing duplicate messages
+- Test ordering: If message order matters, test out-of-order scenarios
+- Test malformed messages: Verify graceful handling of schema violations
+- Include message ID in tests for traceability and deduplication verification
+- Mock external dependencies called by message handlers
+
+---
+
+## Troubleshooting
+
+### Pact Verification Failing with "No pacts found"
+
+**Symptoms**: Provider verification can't find consumer pacts to verify
+
+**Root Causes**:
+- Pact Broker URL incorrect or inaccessible
+- Consumer hasn't published pacts yet
+- Authentication credentials missing/invalid
+- Network firewall blocking Pact Broker access
+- Consumer version selector misconfigured
+
+**Solutions**:
+```javascript
+// Debug pact retrieval
+const { Verifier } = require('@pact-foundation/pact');
+
+const opts = {
+  provider: 'UserAPI',
+  providerBaseUrl: 'http://localhost:3000',
+  pactBrokerUrl: process.env.PACT_BROKER_URL,
+  pactBrokerToken: process.env.PACT_BROKER_TOKEN,
+  // Enable verbose logging
+  logLevel: 'DEBUG',
+  consumerVersionSelectors: [
+    { tag: 'main', latest: true },
+    { deployedOrReleased: true },
+  ],
+};
+
+try {
+  await new Verifier(opts).verifyProvider();
+} catch (error) {
+  console.error('Verification failed:', error.message);
+  // Check if Pact Broker is reachable
+  const response = await fetch(process.env.PACT_BROKER_URL);
+  console.log('Pact Broker status:', response.status);
+}
+
+// Manually query Pact Broker to verify pacts exist
+const pactUrl = `${process.env.PACT_BROKER_URL}/pacts/provider/UserAPI/latest`;
+const pacts = await fetch(pactUrl, {
+  headers: { 'Authorization': `Bearer ${process.env.PACT_BROKER_TOKEN}` }
+});
+console.log('Available pacts:', await pacts.json());
+```
+
+**Debugging Tips**:
+- Verify Pact Broker URL is correct: `curl https://pact-broker.example.com`
+- Check consumer pacts exist: `pact-broker list-latest-pact-versions --broker-base-url=...`
+- Test authentication: `curl -H "Authorization: Bearer TOKEN" https://pact-broker.example.com/pacts`
+- Review consumer version selectors (ensure tags match published pacts)
+
+---
+
+### State Handler Failures Causing False Negatives
+
+**Symptoms**: Verification fails but provider implementation is correct
+
+**Root Causes**:
+- State handler doesn't set up required data
+- Database not cleaned between state handlers
+- Async state handler not awaited properly
+- State handler throws error before data setup completes
+- Test database connection issues
+
+**Solutions**:
+```javascript
+// Robust state handlers with error handling
+const stateHandlers = {
+  'user with ID 1 exists': async () => {
+    try {
+      // Clean slate: delete all users first
+      await db.users.deleteAll();
+
+      // Insert required user
+      const user = await db.users.insert({
+        id: 1,
+        name: 'Alice',
+        email: 'alice@example.com'
+      });
+
+      console.log('State setup complete:', user);
+      return user;
+    } catch (error) {
+      console.error('State handler failed:', error);
+      throw new Error(`Failed to set up state "user with ID 1 exists": ${error.message}`);
+    }
+  },
+
+  'no user with email test@example.com exists': async () => {
+    try {
+      await db.users.deleteWhere({ email: 'test@example.com' });
+      console.log('State setup complete: user removed');
+    } catch (error) {
+      console.error('State cleanup failed:', error);
+      throw error;
+    }
+  },
+};
+
+// Verify state handlers work independently
+beforeAll(async () => {
+  // Test database connection
+  await db.ping();
+
+  // Test each state handler
+  for (const [state, handler] of Object.entries(stateHandlers)) {
+    try {
+      await handler();
+      console.log(`✓ State handler "${state}" works`);
+    } catch (error) {
+      console.error(`✗ State handler "${state}" failed:`, error);
+      throw error;
+    }
+  }
+});
+```
+
+**Debugging Tips**:
+- Test state handlers in isolation before running verification
+- Check database state after handler runs: `await db.users.findAll()`
+- Verify handler is async and returns promise
+- Look for race conditions (multiple handlers modifying same data)
+- Check database transaction rollback/commit behavior
+
+---
+
+### Consumer Tests Passing but Provider Verification Failing
+
+**Symptoms**: Consumer tests generate pacts successfully, but provider can't verify them
+
+**Root Causes**:
+- Consumer mock provider differs from actual provider behavior
+- Provider changed response format without updating consumer
+- State names mismatch (consumer uses "user exists", provider expects "user with ID 1 exists")
+- Provider requires authentication not provided in verification
+- Response matchers too strict (exact value vs type matching)
+
+**Solutions**:
+```javascript
+// Ensure consumer uses flexible matchers
+const { like, eachLike, regex } = require('@pact-foundation/pact').MatchersV3;
+
+// BAD: Exact value matching
+willRespondWith: {
+  status: 200,
+  body: {
+    id: 1,
+    name: 'Alice',
+    createdAt: '2025-12-06T10:00:00Z'
+  }
+}
+
+// GOOD: Type matching with examples
+willRespondWith: {
+  status: 200,
+  body: {
+    id: like(1),  // Matches any integer
+    name: like('Alice'),  // Matches any string
+    createdAt: regex(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/, '2025-12-06T10:00:00Z')
+  }
+}
+
+// Match state names exactly
+// Consumer
+state: 'user with ID 1 exists'
+
+// Provider
+stateHandlers: {
+  'user with ID 1 exists': async () => { /* setup */ }
+  // Note: State name must match EXACTLY (case-sensitive)
+}
+
+// Add authentication in provider verification
+new Verifier({
+  provider: 'UserAPI',
+  providerBaseUrl: 'http://localhost:3000',
+  requestFilter: (req, res, next) => {
+    // Add auth header to all verification requests
+    req.headers['Authorization'] = 'Bearer test-token-12345';
+    next();
+  },
+  stateHandlers: { /* ... */ },
+}).verifyProvider();
+```
+
+**Debugging Tips**:
+- Compare consumer mock responses with actual provider responses
+- Check Pact Broker verification logs for detailed error messages
+- Run provider verification with `--verbose` flag
+- Verify state name spelling/capitalization matches exactly
+- Test provider endpoint manually with same request from pact file
+
+---
+
+### Pact Files Not Publishing to Broker
+
+**Symptoms**: Consumer tests pass but pacts don't appear in Pact Broker
+
+**Root Causes**:
+- Pact Broker URL/credentials incorrect
+- Network issues preventing upload
+- Consumer version/tag not specified correctly
+- Pact file not generated (missing `provider.finalize()`)
+- Pact Broker disk full or database down
+
+**Solutions**:
+```javascript
+// Ensure finalize() is called in consumer tests
+describe('User API', () => {
+  const provider = new Pact({ /* config */ });
+
+  beforeAll(() => provider.setup());
+  afterEach(() => provider.verify());
+  afterAll(() => provider.finalize());  // CRITICAL: Writes pact file
+
+  it('retrieves user', async () => {
+    await provider.addInteraction({ /* ... */ });
+    // Test code
+  });
+});
+
+// Verify pact file was generated locally
+afterAll(async () => {
+  await provider.finalize();
+
+  // Check pact file exists
+  const fs = require('fs');
+  const pactPath = './pacts/UserUI-UserAPI.json';
+  if (fs.existsSync(pactPath)) {
+    console.log('✓ Pact file generated:', pactPath);
+  } else {
+    console.error('✗ Pact file NOT generated');
+  }
+});
+
+// Publish with error handling
+const { Publisher } = require('@pact-foundation/pact');
+
+const opts = {
+  pactFilesOrDirs: ['./pacts'],
+  pactBroker: process.env.PACT_BROKER_URL,
+  pactBrokerToken: process.env.PACT_BROKER_TOKEN,
+  consumerVersion: process.env.GIT_COMMIT || '1.0.0',
+  tags: [process.env.GIT_BRANCH || 'main'],
+};
+
+try {
+  await new Publisher(opts).publishPacts();
+  console.log('✓ Pacts published successfully');
+} catch (error) {
+  console.error('✗ Pact publishing failed:', error.message);
+
+  // Check Pact Broker connectivity
+  const response = await fetch(process.env.PACT_BROKER_URL);
+  console.log('Pact Broker status:', response.status, response.statusText);
+}
+```
+
+**Debugging Tips**:
+- Check pact files exist in `./pacts/` directory after tests
+- Test Pact Broker upload manually: `pact-broker publish ./pacts --broker-base-url=... --consumer-app-version=1.0.0`
+- Verify Pact Broker health: `curl https://pact-broker.example.com/diagnostic/status/heartbeat`
+- Check Pact Broker logs for upload errors
+- Ensure CI environment has network access to Pact Broker
+
+---
+
+### Can-I-Deploy Blocking Deployment Incorrectly
+
+**Symptoms**: Deployment blocked even though contracts are compatible
+
+**Root Causes**:
+- Provider verification results not published
+- Consumer version selector not matching deployed versions
+- Pending pacts not enabled (provider hasn't verified new consumer contracts yet)
+- Deployment environment not recorded in broker
+- Stale verification results (old provider version)
+
+**Solutions**:
+```javascript
+// Ensure provider publishes verification results
+new Verifier({
+  provider: 'UserAPI',
+  providerBaseUrl: 'http://localhost:3000',
+  pactBrokerUrl: process.env.PACT_BROKER_URL,
+  publishVerificationResult: true,  // CRITICAL: Publish results
+  providerVersion: process.env.GIT_COMMIT,
+  providerVersionTags: [process.env.GIT_BRANCH],
+}).verifyProvider();
+
+// Record deployment in Pact Broker
+const { execSync } = require('child_process');
+
+// After successful deployment
+execSync(`
+  pact-broker record-deployment \
+    --pacticipant UserAPI \
+    --version ${process.env.GIT_COMMIT} \
+    --environment production \
+    --broker-base-url ${process.env.PACT_BROKER_URL} \
+    --broker-token ${process.env.PACT_BROKER_TOKEN}
+`);
+
+// Use pending pacts in provider verification
+new Verifier({
+  provider: 'UserAPI',
+  enablePending: true,  // Don't fail on new unverified pacts
+  includeWipPactsSince: '2025-01-01',  // Include work-in-progress pacts
+  consumerVersionSelectors: [
+    { tag: 'main', latest: true },
+    { deployedOrReleased: true },
+  ],
+}).verifyProvider();
+
+// Debug can-i-deploy decision
+execSync(`
+  pact-broker can-i-deploy \
+    --pacticipant UserAPI \
+    --version ${process.env.GIT_COMMIT} \
+    --to-environment production \
+    --broker-base-url ${process.env.PACT_BROKER_URL} \
+    --broker-token ${process.env.PACT_BROKER_TOKEN} \
+    --verbose  # Show detailed decision logic
+`, { stdio: 'inherit' });
+```
+
+**Debugging Tips**:
+- Check verification results in Pact Broker UI
+- Verify provider version matches: `pact-broker list-latest-pact-versions`
+- Review consumer version selectors (ensure they match deployed versions)
+- Check deployment records: `pact-broker list-deployed-versions`
+- Use `--retry-while-unknown` to wait for pending verifications
+
+---
+
+### Contract Tests Flaky in CI
+
+**Symptoms**: Tests pass locally but fail intermittently in CI
+
+**Root Causes**:
+- Mock provider port conflicts (multiple tests using same port)
+- Test database not isolated between test runs
+- Async timing issues (race conditions)
+- CI environment missing required dependencies
+- Network issues in CI (firewall blocking Pact Broker)
+
+**Solutions**:
+```javascript
+// Use random ports to avoid conflicts
+const getRandomPort = () => Math.floor(Math.random() * (9999 - 8000) + 8000);
+
+const provider = new Pact({
+  consumer: 'UserUI',
+  provider: 'UserAPI',
+  port: getRandomPort(),  // Random port per test suite
+  log: path.resolve(process.cwd(), 'logs', `pact-${Date.now()}.log`),
+});
+
+// Isolated test database per CI job
+beforeAll(async () => {
+  const testDbName = `test_db_${process.env.CI_JOB_ID || Date.now()}`;
+  await db.createDatabase(testDbName);
+  await db.connect(testDbName);
+});
+
+afterAll(async () => {
+  await db.dropDatabase();
+  await db.disconnect();
+});
+
+// Add retry logic for flaky network calls
+async function verifyWithRetry(verifier, maxRetries = 3) {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      await verifier.verifyProvider();
+      return; // Success
+    } catch (error) {
+      console.warn(`Verification attempt ${i + 1} failed:`, error.message);
+
+      if (i === maxRetries - 1) {
+        throw error; // Final attempt failed
+      }
+
+      // Exponential backoff
+      await new Promise(resolve => setTimeout(resolve, Math.pow(2, i) * 1000));
+    }
+  }
+}
+
+// Ensure Pact cleanup
+afterAll(async () => {
+  try {
+    await provider.finalize();
+  } catch (error) {
+    console.error('Pact cleanup failed:', error);
+  }
+});
+```
+
+**Debugging Tips**:
+- Run tests with `--verbose` to see detailed Pact logs
+- Check for port conflicts: `lsof -i :1234` (macOS/Linux) or `netstat -ano | findstr :1234` (Windows)
+- Verify CI has network access: `curl https://pact-broker.example.com`
+- Check CI logs for timing issues (add timestamps to log statements)
+- Test with same environment variables as CI: `CI_JOB_ID=test npm test`
+
+---
+
+### Message Pact Verification Failing
+
+**Symptoms**: Message-based contract tests fail during provider verification
+
+**Root Causes**:
+- Message provider not generating expected message structure
+- Message metadata mismatch (content-type, headers)
+- Message handler not processing message correctly
+- Async message handling not awaited
+- Message queue not mocked properly
+
+**Solutions**:
+```javascript
+// Ensure message provider returns correct structure
+const { MessageProviderPact } = require('@pact-foundation/pact');
+
+describe('Order Service Message Provider', () => {
+  it('verifies message contracts', () => {
+    return new MessageProviderPact({
+      messageProviders: {
+        'an order created event': () => {
+          // Return EXACT message structure consumer expects
+          return {
+            eventType: 'ORDER_CREATED',
+            orderId: 123,
+            customerId: 456,
+            total: 99.99,
+            createdAt: '2025-12-06T10:00:00Z',
+            // Include all fields from consumer contract
+          };
+        },
+      },
+      // Verify metadata if consumer specifies it
+      messageMeta: {
+        'an order created event': {
+          contentType: 'application/json',
+        },
+      },
+    }).verify();
+  });
+});
+
+// Consumer handler must return promise
+it('handles order created event', () => {
+  return messagePact
+    .expectsToReceive('an order created event')
+    .withContent({ /* ... */ })
+    .verify(async (message) => {
+      // MUST return promise
+      const handler = new OrderEventHandler();
+      await handler.handleOrderCreated(message);
+
+      // Verify handler processed message
+      const order = await db.orders.findById(message.orderId);
+      expect(order).toBeDefined();
+    });
+});
+```
+
+**Debugging Tips**:
+- Compare message structure between consumer expectation and provider generation
+- Check message metadata matches (content-type, encoding)
+- Verify message handler is async and awaited properly
+- Test message provider in isolation: call message provider function directly
+- Check for missing fields in provider message (provider must return all fields consumer expects)
+
+---
+
+### OpenAPI Schema Validation Rejecting Valid Responses
+
+**Symptoms**: API returns valid data but schema validation fails
+
+**Root Causes**:
+- OpenAPI spec out of sync with implementation
+- Schema uses strict `additionalProperties: false`
+- Type mismatches (string vs number, nullable fields)
+- Date/time format mismatch
+- Nested object schema errors
+
+**Solutions**:
+```javascript
+// Use less strict schema validation
+const userSchema = {
+  type: 'object',
+  properties: {
+    id: { type: 'integer' },
+    name: { type: 'string' },
+    email: { type: 'string', format: 'email' },
+    createdAt: { type: 'string', format: 'date-time' },
+  },
+  required: ['id', 'name', 'email'],
+  additionalProperties: true,  // Allow extra fields (less strict)
+};
+
+// Handle nullable fields correctly
+const userSchema = {
+  properties: {
+    phoneNumber: {
+      type: ['string', 'null'],  // Allow null
+      pattern: '^\\+?[0-9]{10,15}$',
+    },
+    // OR using oneOf
+    address: {
+      oneOf: [
+        { type: 'string' },
+        { type: 'null' },
+      ],
+    },
+  },
+};
+
+// Debug validation failures
+const validate = ajv.compile(userSchema);
+const valid = validate(response.body);
+
+if (!valid) {
+  console.error('Schema validation errors:');
+  validate.errors.forEach(error => {
+    console.error(`  - ${error.dataPath}: ${error.message}`, error.params);
+  });
+
+  // Show actual vs expected
+  console.log('Actual response:', JSON.stringify(response.body, null, 2));
+}
+```
+
+**Debugging Tips**:
+- Use AJV in verbose mode to see detailed validation errors
+- Compare actual response structure with schema definition
+- Check for type mismatches: `typeof response.body.id === 'number'`
+- Validate OpenAPI spec itself: `openapi-validator validate openapi.yaml`
+- Generate schema from TypeScript types to keep in sync: `typescript-json-schema`
 
 ---
 

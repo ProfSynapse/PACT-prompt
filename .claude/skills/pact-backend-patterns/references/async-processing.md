@@ -129,7 +129,7 @@ const emailWorker = new Worker<EmailJobData>(
 
 // Event listeners
 emailWorker.on('completed', (job: Job) => {
-  console.log(`Job ${job.id} completed`, job.returnvalue);
+  console.log(`Job ${job.id} completed`, job.returnValue);
 });
 
 emailWorker.on('failed', (job: Job | undefined, error: Error) => {
@@ -144,8 +144,9 @@ emailWorker.on('error', (error: Error) => {
 #### Python Queue Implementation (RQ)
 
 ```python
+from datetime import datetime
 from redis import Redis
-from rq import Queue, Worker
+from rq import Queue, Worker, Retry
 from typing import Dict, Any
 import smtplib
 
@@ -1222,6 +1223,374 @@ class OrderSummaryProjector {
   }
 }
 ```
+
+## Troubleshooting
+
+### Jobs Not Processing
+
+**Symptoms**: Jobs added to queue but workers never pick them up
+
+**Common Causes**:
+- Worker not running or crashed
+- Connection issues between worker and queue (Redis/RabbitMQ down)
+- Worker listening to wrong queue name
+- Network/firewall blocking worker connection
+
+**Solutions**:
+```javascript
+// Add health check to worker
+emailWorker.on('ready', () => {
+  console.log('Worker ready and listening for jobs');
+});
+
+emailWorker.on('error', (error) => {
+  console.error('Worker error - connection issue:', error);
+  // Alert monitoring system
+  alertOps({ type: 'worker_error', error: error.message });
+});
+
+// Verify queue connection
+const queue = new Queue('email-notifications', {
+  connection: {
+    host: 'localhost',
+    port: 6379,
+    retryStrategy: (times) => {
+      if (times > 10) {
+        console.error('Redis connection failed after 10 retries');
+        return null; // Stop retrying
+      }
+      return Math.min(times * 100, 3000); // Exponential backoff
+    }
+  }
+});
+```
+
+**Debugging Tips**:
+- Check worker logs for startup messages
+- Verify Redis/RabbitMQ is running: `redis-cli ping` or `rabbitmqctl status`
+- Test connection manually: `redis-cli -h localhost -p 6379`
+- Check queue depth: `redis-cli LLEN bull:email-notifications:wait`
+
+---
+
+### Jobs Stuck in Active State
+
+**Symptoms**: Jobs show as "active" but never complete or fail
+
+**Common Causes**:
+- Worker crashed mid-processing without acknowledging failure
+- Job timeout not configured
+- Stalled job detection disabled
+- Worker process killed without graceful shutdown
+
+**Solutions**:
+```javascript
+// Configure stalled job detection
+const worker = new Worker('email-notifications', processJob, {
+  connection: { host: 'localhost', port: 6379 },
+  stalledInterval: 30000, // Check for stalled jobs every 30s
+  maxStalledCount: 2, // Move to failed after 2 stalls
+});
+
+// Set job timeout
+await emailQueue.add('send-email', data, {
+  timeout: 60000, // Fail job if not completed in 60s
+});
+
+// Implement graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('Shutting down worker gracefully');
+  await worker.close(); // Wait for active jobs to complete
+});
+```
+
+**Debugging Tips**:
+- Inspect active jobs: `const active = await queue.getActive();`
+- Check for stalled jobs: `const stalled = await queue.getStalled();`
+- Monitor worker process health (use PM2 or systemd for auto-restart)
+
+---
+
+### Duplicate Job Processing
+
+**Symptoms**: Same job processed multiple times, causing duplicate emails/charges
+
+**Common Causes**:
+- Job not acknowledged after processing
+- Multiple workers processing same job (no concurrency control)
+- Job re-queued on worker restart
+- Missing idempotency checks
+
+**Solutions**:
+```javascript
+// Implement idempotent job handler
+async function processEmailJob(job) {
+  const { userId, emailId } = job.data;
+  const idempotencyKey = `email:${userId}:${emailId}`;
+
+  // Check if already processed
+  const alreadyProcessed = await redis.get(idempotencyKey);
+  if (alreadyProcessed) {
+    console.log(`Job ${job.id} already processed, skipping`);
+    return { status: 'duplicate', messageId: alreadyProcessed };
+  }
+
+  // Process email
+  const result = await emailService.send(job.data);
+
+  // Mark as processed (with TTL)
+  await redis.setex(idempotencyKey, 86400, result.messageId);
+
+  return result;
+}
+
+// Use job ID for deduplication when adding
+await emailQueue.add('send-email', data, {
+  jobId: `email-${userId}-${emailId}`, // Unique job ID prevents duplicates
+  removeOnComplete: true,
+});
+```
+
+**Debugging Tips**:
+- Check for duplicate job IDs in queue
+- Review job acknowledgment logic (ensure `ack()` called after success)
+- Monitor job completion events for duplicate IDs
+
+---
+
+### Dead Letter Queue Growing Rapidly
+
+**Symptoms**: DLQ fills with failed jobs, indicating systemic issue
+
+**Common Causes**:
+- Bug in job handler causing all jobs to fail
+- External dependency down (API, database, email service)
+- Invalid job data from producer
+- Incorrect retry configuration (too aggressive)
+
+**Solutions**:
+```javascript
+// Analyze DLQ for patterns
+const dlqJobs = await dlqQueue.getJobs(['failed'], 0, 100);
+const errorCounts = {};
+
+dlqJobs.forEach(job => {
+  const errorType = job.failedReason?.split(':')[0] || 'unknown';
+  errorCounts[errorType] = (errorCounts[errorType] || 0) + 1;
+});
+
+console.log('DLQ error distribution:', errorCounts);
+// Example output: { "ValidationError": 45, "TimeoutError": 12, "NetworkError": 8 }
+
+// Pause queue if DLQ growth rate exceeds threshold
+const dlqSize = await dlqQueue.count();
+if (dlqSize > 1000) {
+  console.error('DLQ overflow detected, pausing main queue');
+  await mainQueue.pause(); // Stop processing until issue resolved
+  alertOps({ type: 'dlq_overflow', size: dlqSize });
+}
+
+// Implement circuit breaker for external dependencies
+const paymentBreaker = new CircuitBreaker({
+  failureThreshold: 5,
+  timeout: 60000,
+});
+
+async function processPaymentJob(job) {
+  return await paymentBreaker.execute(async () => {
+    return await paymentService.charge(job.data);
+  });
+}
+```
+
+**Debugging Tips**:
+- Sample failed jobs to identify common error patterns
+- Check external service health (database, APIs, email provider)
+- Review retry configuration (max attempts, backoff strategy)
+- Test job handler with sample data from DLQ
+
+---
+
+### Memory Leaks in Workers
+
+**Symptoms**: Worker memory usage grows over time, eventually crashes
+
+**Common Causes**:
+- Job results not cleaned up (unbounded result storage)
+- Event listeners not removed
+- Large job payloads held in memory
+- Connection pool exhaustion
+
+**Solutions**:
+```javascript
+// Configure automatic cleanup
+const queue = new Queue('email-notifications', {
+  connection: { host: 'localhost', port: 6379 },
+  defaultJobOptions: {
+    removeOnComplete: {
+      age: 3600, // Remove completed jobs after 1 hour
+      count: 1000, // Keep max 1000 completed jobs
+    },
+    removeOnFail: {
+      age: 86400, // Keep failed jobs for 24 hours
+    },
+  },
+});
+
+// Monitor worker memory
+setInterval(() => {
+  const memUsage = process.memoryUsage();
+  console.log('Worker memory:', {
+    rss: `${(memUsage.rss / 1024 / 1024).toFixed(2)} MB`,
+    heapUsed: `${(memUsage.heapUsed / 1024 / 1024).toFixed(2)} MB`,
+  });
+
+  if (memUsage.heapUsed > 500 * 1024 * 1024) { // 500 MB threshold
+    console.warn('Memory usage high, consider restart');
+  }
+}, 60000); // Check every minute
+
+// Properly close connections in job handlers
+async function processJob(job) {
+  const dbConnection = await getDbConnection();
+  try {
+    await dbConnection.query(/* ... */);
+  } finally {
+    await dbConnection.release(); // Always release
+  }
+}
+```
+
+**Debugging Tips**:
+- Use `node --inspect` and Chrome DevTools to profile memory
+- Check for event listener leaks: `process.listeners('eventName')`
+- Monitor connection pool size: `pool.totalCount` vs `pool.idleCount`
+- Use heap snapshots to identify retained objects
+
+---
+
+### Slow Job Processing Performance
+
+**Symptoms**: Jobs taking much longer than expected to complete
+
+**Common Causes**:
+- Database query inefficiency (missing indexes, N+1 queries)
+- External API rate limiting or slow responses
+- Worker concurrency too high (resource contention)
+- Blocking I/O operations
+
+**Solutions**:
+```javascript
+// Add job timing metrics
+emailWorker.on('completed', (job) => {
+  const duration = Date.now() - job.processedOn;
+  console.log(`Job ${job.id} completed in ${duration}ms`);
+
+  if (duration > 5000) {
+    console.warn(`Slow job detected: ${job.id} took ${duration}ms`);
+    // Log to monitoring system for analysis
+    metrics.histogram('job.duration', duration, { jobType: job.name });
+  }
+});
+
+// Optimize concurrency based on resources
+const worker = new Worker('email-notifications', processJob, {
+  concurrency: 5, // Start conservative, increase based on metrics
+  limiter: {
+    max: 10, // Max 10 jobs per second
+    duration: 1000,
+  },
+});
+
+// Use batching for database operations
+async function processBatchJob(job) {
+  const userIds = job.data.userIds;
+
+  // Bad: N+1 queries
+  // for (const userId of userIds) {
+  //   const user = await db.users.findById(userId);
+  // }
+
+  // Good: Single query
+  const users = await db.users.findByIds(userIds);
+
+  // Process batch
+  return await emailService.sendBatch(users.map(u => u.email));
+}
+```
+
+**Debugging Tips**:
+- Profile job execution with timestamps at each step
+- Check database query performance with EXPLAIN ANALYZE
+- Monitor external API response times
+- Use `async_hooks` to track async operation timing
+
+---
+
+### Redis Connection Timeouts
+
+**Symptoms**: Workers intermittently fail with "Connection timeout" errors
+
+**Common Causes**:
+- Redis server overloaded (too many connections)
+- Network latency between worker and Redis
+- Redis maxmemory limit reached
+- Blocking operations in Redis (BLPOP timeout)
+
+**Solutions**:
+```javascript
+// Configure robust Redis connection
+const redis = new Redis({
+  host: process.env.REDIS_HOST,
+  port: process.env.REDIS_PORT,
+  maxRetriesPerRequest: 3,
+  enableReadyCheck: true,
+  retryStrategy: (times) => {
+    const delay = Math.min(times * 50, 2000);
+    console.log(`Redis retry attempt ${times}, waiting ${delay}ms`);
+    return delay;
+  },
+  reconnectOnError: (err) => {
+    const targetError = 'READONLY';
+    if (err.message.includes(targetError)) {
+      return true; // Reconnect on read-only errors
+    }
+    return false;
+  },
+});
+
+// Monitor Redis memory usage
+redis.info('memory', (err, info) => {
+  const usedMemory = info.match(/used_memory:(\d+)/)?.[1];
+  const maxMemory = info.match(/maxmemory:(\d+)/)?.[1];
+
+  if (usedMemory && maxMemory) {
+    const usage = (usedMemory / maxMemory) * 100;
+    if (usage > 90) {
+      console.error(`Redis memory usage critical: ${usage.toFixed(2)}%`);
+    }
+  }
+});
+
+// Connection health check
+redis.on('error', (err) => {
+  console.error('Redis connection error:', err);
+  metrics.increment('redis.connection.error');
+});
+
+redis.on('ready', () => {
+  console.log('Redis connection ready');
+  metrics.gauge('redis.connection.status', 1);
+});
+```
+
+**Debugging Tips**:
+- Check Redis server stats: `redis-cli INFO stats`
+- Monitor connection count: `redis-cli CLIENT LIST | wc -l`
+- Check for blocking operations: `redis-cli SLOWLOG GET 10`
+- Verify network latency: `redis-cli --latency`
+
+---
 
 ## Best Practices Summary
 

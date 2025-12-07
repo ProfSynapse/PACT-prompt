@@ -574,51 +574,6 @@ describe('UserService.isValidEmail', () => {
 
 ---
 
-## Integration with PACT Workflow
-
-### Test Phase Inputs
-
-**From ARCHITECT Phase** (`docs/architecture/`):
-- Component specifications (what to test)
-- API contracts (integration test requirements)
-- Data models (database test scenarios)
-- Security requirements (security test cases)
-
-**From CODE Phase** (implementation):
-- Implemented features (what's ready to test)
-- Code structure (how to organize test files)
-- Edge cases discovered during coding (additional test cases)
-- Performance characteristics (performance test baselines)
-
----
-
-### Test Phase Outputs
-
-**Test Suites and Results**:
-- Unit test suite (70% of tests, fast execution)
-- Integration test suite (20% of tests, moderate speed)
-- E2E test suite (10% of tests, slow execution)
-- Coverage reports (line, branch, function coverage)
-- Test execution logs (pass/fail status, error messages)
-
-**Quality Reports**:
-- Coverage summary (meets thresholds?)
-- Failed test analysis (root causes, fixes needed)
-- Performance test results (latency, throughput, resource usage)
-- Security test results (vulnerabilities found, severity)
-
-**Back to CODE Phase (if tests fail)**:
-- Bug reports with failing test details
-- Regression test cases for fixed bugs
-- Refactoring recommendations (if testability is poor)
-
-**To PRODUCTION (if tests pass)**:
-- Confidence level for deployment
-- Smoke test suite for production validation
-- Monitoring recommendations (what to watch post-deploy)
-
----
-
 ## Self-Validation Checklist
 
 Before completing Test phase, verify:
@@ -717,6 +672,49 @@ Ready-to-use templates for test planning:
 ## Examples
 
 (Examples to be added in future iterations)
+
+## Integration with PACT Workflow
+
+### Test Phase Inputs
+
+**From ARCHITECT Phase** (`docs/architecture/`):
+- Component specifications (what to test)
+- API contracts (integration test requirements)
+- Data models (database test scenarios)
+- Security requirements (security test cases)
+
+**From CODE Phase** (implementation):
+- Implemented features (what's ready to test)
+- Code structure (how to organize test files)
+- Edge cases discovered during coding (additional test cases)
+- Performance characteristics (performance test baselines)
+
+---
+
+### Test Phase Outputs
+
+**Test Suites and Results**:
+- Unit test suite (70% of tests, fast execution)
+- Integration test suite (20% of tests, moderate speed)
+- E2E test suite (10% of tests, slow execution)
+- Coverage reports (line, branch, function coverage)
+- Test execution logs (pass/fail status, error messages)
+
+**Quality Reports**:
+- Coverage summary (meets thresholds?)
+- Failed test analysis (root causes, fixes needed)
+- Performance test results (latency, throughput, resource usage)
+- Security test results (vulnerabilities found, severity)
+
+**Back to CODE Phase (if tests fail)**:
+- Bug reports with failing test details
+- Regression test cases for fixed bugs
+- Refactoring recommendations (if testability is poor)
+
+**To PRODUCTION (if tests pass)**:
+- Confidence level for deployment
+- Smoke test suite for production validation
+- Monitoring recommendations (what to watch post-deploy)
 
 ---
 
