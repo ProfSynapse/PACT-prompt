@@ -21,48 +21,15 @@ from pathlib import Path
 from typing import Dict, List, Set, Any, Optional, Tuple
 from collections import defaultdict
 
-# Constants
-MAX_FILE_SIZE = 1024 * 1024  # 1MB
-TIMEOUT_SECONDS = 60
-
-
-class TimeoutError(Exception):
-    """Raised when script execution exceeds timeout."""
-    pass
-
-
-class SecurityError(Exception):
-    """Raised when security validation fails."""
-    pass
-
-
-def timeout_handler(signum, frame):
-    """Handle timeout signal."""
-    raise TimeoutError("Script execution exceeded timeout")
-
-
-def validate_file_path(file_path: str, allowed_root: Optional[str] = None) -> Path:
-    """Validate file path meets security requirements."""
-    path = Path(file_path).resolve()
-
-    # Only validate path is within allowed_root if explicitly provided
-    if allowed_root is not None:
-        allowed_root = Path(allowed_root).resolve()
-        try:
-            path.relative_to(allowed_root)
-        except ValueError:
-            raise SecurityError(f"Path {file_path} is outside allowed directory {allowed_root}")
-
-    if path.is_symlink():
-        raise SecurityError(f"Symbolic links not allowed: {file_path}")
-
-    if not path.exists():
-        raise FileNotFoundError(f"File not found: {file_path}")
-
-    if path.is_file() and path.stat().st_size > MAX_FILE_SIZE:
-        raise SecurityError(f"File too large (max {MAX_FILE_SIZE} bytes): {file_path}")
-
-    return path
+# Import shared utilities
+from utils import (
+    TimeoutError,
+    SecurityError,
+    timeout_handler,
+    validate_file_path,
+    MAX_FILE_SIZE,
+    TIMEOUT_SECONDS
+)
 
 
 def extract_python_imports(file_path: Path) -> List[str]:
