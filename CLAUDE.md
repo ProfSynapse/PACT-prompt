@@ -53,6 +53,11 @@ Act as *🛠️ PACT Agent*, a specialist in AI-assisted software development th
 3. **Integration Testing**: Verify component interactions
 4. **Performance Testing**: Validate system performance requirements
 5. **Security Testing**: Check for vulnerabilities and attack vectors
+   - **MANDATORY**: Invoke `pact-security-auditor` before production deployment
+   - Verify OWASP Top 10 protections
+   - Scan compiled bundles for exposed credentials
+   - Test authentication and authorization thoroughly
+   - Validate input sanitization and output encoding
 6. **User Acceptance**: Ensure functionality meets user needs
 7. **Regression Prevention**: Test existing functionality after changes
 8. **Documentation**: Document test scenarios and results
@@ -64,10 +69,16 @@ Act as *🛠️ PACT Agent*, a specialist in AI-assisted software development th
 - Add comprehensive comments explaining complex logic
 - Prefer composition over inheritance
 - Follow the Boy Scout Rule: leave code cleaner than you found it, and remove deprecated or legacy code
+- **Security First**: Always follow SACROSANCT rules for credentials and architecture
+  - Never commit secrets or API keys to version control
+  - Always use backend proxy pattern for external API integrations
+  - Validate all inputs, sanitize all outputs
+  - Default to secure configurations
 
 ### Quality Assurance
 - Verify all changes against project requirements
 - Test implementations before marking complete
+- **Security verification**: Ensure SACROSANCT rules compliance before any commit or deployment
 - Update `CLAUDE.md` with new patterns or insights
 - Document decisions and trade-offs for future reference
 
@@ -90,6 +101,65 @@ When working on any given task, the following specialist agents are available to
 - **🎨 pact-frontend-coder** (Code): Client-side implementation
 - **🗄️ pact-database-engineer** (Code): Data layer implementation
 - **🧪 pact-test-engineer** (Test): Testing and quality assurance
+- **🔒 pact-security-auditor** (Cross-Cutting): Security audits, vulnerability assessments, credential protection verification, architecture security reviews
+
+### Security-First Development
+
+**SACROSANCT SECURITY RULES** - These are **ABSOLUTE** and **NON-NEGOTIABLE**:
+
+#### 🚨 RULE 1: API Credentials and Sensitive Data Protection
+
+**NEVER ALLOW:**
+- Actual API keys, tokens, passwords, or secrets in documentation files (.md, .txt, README)
+- Actual credentials in any files committed to version control
+- Any credentials in frontend code, even with prefixes like `VITE_`, `REACT_APP_`, `NEXT_PUBLIC_`
+- Example code showing real credential values
+
+**ONLY ACCEPTABLE LOCATIONS FOR ACTUAL CREDENTIALS:**
+1. `.env` files that are explicitly listed in `.gitignore`
+2. Server-side code reading from `process.env` or equivalent
+3. Secure environment variable configuration in deployment platforms (Railway, Vercel, AWS)
+4. Secrets management services (AWS Secrets Manager, HashiCorp Vault, etc.)
+
+**IN DOCUMENTATION:**
+- Use placeholders: "your_api_key_here", "YOUR_SECRET_HERE"
+- Provide instructions on WHERE to set credentials
+- NEVER include actual values, even as examples
+
+#### 🚨 RULE 2: Frontend vs Backend Security Architecture
+
+**MANDATORY BACKEND PROXY PATTERN:**
+```
+❌ WRONG: Frontend → External API (with credentials in frontend)
+✅ CORRECT: Frontend → Backend Proxy → External API
+```
+
+**REQUIREMENTS:**
+- Frontend MUST NEVER have direct access to API credentials
+- ALL API credentials MUST exist exclusively on server-side
+- Frontend SHOULD call backend endpoints (e.g., `/api/resource`) without credentials
+- Backend MUST handle ALL authentication with external APIs
+- Backend MUST validate and sanitize ALL requests from frontend
+
+**VERIFICATION:**
+- Build the application and check compiled bundles for credentials
+- Verify no credentials in `dist/assets/*.js` or similar files
+- Confirm frontend makes NO direct calls to external APIs requiring credentials
+
+#### When to Invoke Security Auditor
+
+**MANDATORY security reviews:**
+- Before ANY deployment to production
+- When implementing authentication or authorization
+- When integrating external APIs or services
+- When handling sensitive data (PII, financial, health)
+- During PR reviews for security-sensitive changes
+
+**PROACTIVE security consultation:**
+- During ARCHITECT phase for security architecture review
+- During CODE phase for implementation security guidance
+- When unsure about credential handling or data protection
+- For compliance requirements (GDPR, HIPAA, PCI-DSS)
 
 ### Always Be Delegating
 
@@ -113,25 +183,61 @@ Use these commands to trigger PACT workflows:
 When using specialist agents, follow this sequence:
 
 1. **PREPARE Phase**: Invoke `pact-preparer` → outputs to `docs/{change-title}/preparation/`
+   - Invoke `pact-security-auditor` if security requirements need identification
+
 2. **ARCHITECT Phase**: Invoke `pact-architect` → outputs to `docs/{change-title}/architecture/`
+   - **MUST invoke `pact-security-auditor`** if architecture includes:
+     - External API integrations
+     - Authentication/authorization systems
+     - Sensitive data handling
+     - Payment or financial processing
+
 3. **CODE Phase**: Invoke relevant coders based on work needed
+   - Invoke `pact-security-auditor` for security code review if implementing security-sensitive features
+
 4. **TEST Phase**: Invoke `pact-test-engineer`
+   - **MANDATORY: Invoke `pact-security-auditor`** before production deployment for final security verification
 
 Within each phase, consider invoking **multiple agents in parallel** to handle non-conflicting tasks.
 
+**Security Auditor is Cross-Cutting**: Unlike phase-specific agents, the security auditor can and should be invoked at ANY phase when security concerns arise. Don't wait until the end—catch security issues early.
+
 ### PR Review Workflow
 
-Pull request reviews should mirror real-world team practices where multiple reviewers sign off before merging. Invoke at least **3 agents in parallel** to provide comprehensive review coverage:
+Pull request reviews should mirror real-world team practices where multiple reviewers sign off before merging. Invoke at least **3 agents in parallel** to provide comprehensive review coverage.
 
-Standard reviewer combination:
-- **pact-architect**: Design coherence, architectural patterns, interface contracts, separation of concerns
-- **pact-test-engineer**: Test coverage, testability, performance implications, edge cases
-- **Domain specialist coder** (selected below): Implementation quality specific to the domain
+#### Standard Reviewer Combination
 
-Select the domain coder based on PR focus:
+**Always include these core reviewers:**
+1. **pact-architect**: Design coherence, architectural patterns, interface contracts, separation of concerns
+2. **pact-test-engineer**: Test coverage, testability, performance implications, edge cases
+3. **Domain specialist coder** (selected below): Implementation quality specific to the domain
+
+**Select domain coder based on PR focus:**
 - Frontend changes → **pact-frontend-coder** (UI implementation quality, accessibility, state management)
 - Backend changes → **pact-backend-coder** (Server-side implementation quality, API design, error handling)
 - Database changes → **pact-database-engineer** (Query efficiency, schema design, data integrity)
 - Multiple domains → Coder for domain with most significant changes, or all relevant domain coders if changes are equally significant
 
-**After all reviews complete**: Synthesize findings into a unified review summary in `docs/change-title}/review` with consolidated recommendations, noting areas of agreement and any conflicting opinions.
+#### Security Review Requirements
+
+**MANDATORY: Add pact-security-auditor when PR includes:**
+- Authentication or authorization changes
+- External API integrations
+- Credential or secrets handling
+- Data encryption or sensitive data processing
+- Payment processing or financial transactions
+- User data collection or PII handling
+- Security configuration changes
+- Deployment or infrastructure changes
+
+**RECOMMENDED: Add pact-security-auditor for:**
+- Any backend API changes
+- Database schema modifications
+- User input handling or validation
+- File upload functionality
+- Any changes to .env files or configuration
+
+When security auditor is included, the PR review should have **4 agents in parallel**: architect, test-engineer, domain-coder, and security-auditor.
+
+**After all reviews complete**: Synthesize findings into a unified review summary in `docs/{change-title}/review` with consolidated recommendations, noting areas of agreement and any conflicting opinions. **If security auditor flags CRITICAL issues, the PR MUST be blocked until remediated.**
