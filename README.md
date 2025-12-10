@@ -79,16 +79,6 @@ Instead of one generalist, you get a team of experts:
 - **🗄️ PACT Database Engineer** (`pact-database-engineer`): Data specialist. Designs schemas, optimizes queries, and manages data integrity.
 - **🧪 PACT Test Engineer** (`pact-test-engineer`): QA expert. Writes comprehensive test suites to verify functionality and security.
 
-### 📚 Knowledge Skills
-
-Your agents come pre-loaded with deep knowledge libraries:
-
-- **API Design**: REST/GraphQL best practices and contract definitions.
-- **Architecture Patterns**: System design templates and C4 diagrams.
-- **Security Patterns**: OWASP guidelines and secure coding practices.
-- **Testing Patterns**: Strategies for unit, integration, and E2E testing.
-- **Backend/Frontend/Database Patterns**: Language-agnostic best practices for each domain.
-
 ### 🛠️ Custom Commands
 
 - **`/pact orchestrate`**: Coordinate the workflow between different agents.
@@ -109,6 +99,6 @@ By starting with this repository, you ensure that:
 ## 📂 Project Structure
 
 ```
-.claude/           # The brain: Agents, Commands, and Skills configuration
+.claude/           # The brain: Agents and Commands configuration
 CLAUDE.md          # Main entry point and mission for Claude
 ```
