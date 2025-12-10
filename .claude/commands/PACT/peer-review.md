@@ -10,7 +10,7 @@ Review the current work: $ARGUMENTS
 
 **PR Review Workflow**
 
-Pull request reviews should mirror real-world team practices where multiple reviewers sign off before merging. Invoke at least **3 agents in parallel** to provide comprehensive review coverage:
+Pull request reviews should mirror real-world team practices where multiple reviewers sign off before merging. Invoke **at least 3 agents in parallel** to provide comprehensive review coverage:
 
 Standard reviewer combination:
 - **pact-architect**: Design coherence, architectural patterns, interface contracts, separation of concerns
