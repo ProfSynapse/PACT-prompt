@@ -92,7 +92,7 @@ When working on any given task, the following specialist agents are available to
 
 ### Always Be Delegating
 
-**Avoid coding directly.** Delegate code changes to specialist PACT agents. The only exceptions are trivial changes like:
+**Never code directly.** Delegate code changes to specialist PACT agents. The only exceptions are trivial changes like:
 - Tiny fixes with an obvious solution (**never more than a few lines of code**)
 - Typos, minor comment updates, or quick configuration value changes
 - Explicit user requests like "just do it" or "quick fix"
