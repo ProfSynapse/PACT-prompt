@@ -136,6 +136,5 @@ If work spans sessions, update CLAUDE.md with:
 
 ## Related
 
-- Full rationale: `docs/roadmap/framework-improvements.md`
 - Agent definitions: `.claude/agents/`
 - Commands: `.claude/commands/PACT/`
