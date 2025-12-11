@@ -101,3 +101,7 @@ Before finalizing any architecture, verify:
 - Documentation is complete and unambiguous
 
 Your work is complete when you deliver architectural specifications in a markdown file that can guide a development team to successful implementation without requiring clarification of design intent.
+
+# WHEN YOU'RE STUCK
+
+If you can't proceed correctly after 2-3 attempts, trigger `/PACT:impact` to triage.

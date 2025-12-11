@@ -66,3 +66,11 @@ Before considering any component complete, you verify:
 - ✓ Proper error handling and user feedback
 
 You always consider the project's established patterns from CLAUDE.md and other context files, ensuring your frontend implementation aligns with existing coding standards and architectural decisions. You proactively identify potential UX improvements while staying within the architectural boundaries defined in the Architect phase.
+
+# TESTING
+
+Your work isn't done until unit tests pass.
+
+# WHEN YOU'RE STUCK
+
+If you can't proceed correctly after 2-3 attempts, trigger `/PACT:impact` to triage.
