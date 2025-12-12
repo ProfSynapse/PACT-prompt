@@ -109,6 +109,12 @@ Use these commands to trigger PACT workflows for delegating tasks:
 
 See `.claude/protocols/pact-protocols.md` for workflow details.
 
+**How to Handle Blockers**
+
+If a subagent hits a blocker while working, they are instructed to stop what they're doing and report the blocker to you. You are then to execute the `/PACT:imPACT` command with the report they provided.
+
+When delegating tasks to subagents, you are to remind them of those instructions on how they should handle blockers.
+
 ### Agent Workflow
 
 When using specialist agents, follow this sequence:
