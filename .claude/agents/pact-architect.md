@@ -104,4 +104,4 @@ Your work is complete when you deliver architectural specifications in a markdow
 
 **STOP IF YOU'RE STUCK**
 
-If you hit a roadblock and still can't proceed after 2-3 attempts, STOP what you're doing and report the issue to the orchestrator, so they can take over and invoke `/PACT:imPACT`.
+If you run into a blocker and are still blocked after 2-3 attempts, STOP what you're doing and report the issue to the orchestrator, so they can take over and invoke `/PACT:imPACT`.
