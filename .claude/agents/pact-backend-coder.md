@@ -88,4 +88,4 @@ If you run into a blocker, STOP what you're doing and report the blocker to the 
 Examples of blockers:
 - Same error after different fix attempts
 - Missing information needed to proceed
-- Task requires work outside your specialty
+- Task goes beyond your specialty
