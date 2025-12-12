@@ -83,7 +83,7 @@ Instead of one generalist, you get a team of experts:
 
 - **`/pact orchestrate`**: Coordinate the workflow between different agents.
 - **`/pact peer-review`**: Have one agent review another's work.
-- **`/pact update-context`**: Refresh the project context and documentation.
+- **`/pact log-changes`**: Refresh the project context and documentation.
 
 ## 🎯 Why Use This?
 

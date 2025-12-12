@@ -1,6 +1,6 @@
 ---
-description: Handle work solo with phase-aware thinking (single-agent PACT)
-argument-hint: [e.g., fix login bug, update dependencies]
+description: Handle work solo with PACT phase-aware thinking (single-agent PACT)
+argument-hint: [e.g., fix typo, change wording, update dependencies]
 ---
 Handle this solo using comPACT workflow: $ARGUMENTS
 

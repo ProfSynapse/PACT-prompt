@@ -12,26 +12,26 @@
 |----------|-------------|----------|
 | **PACT** | Complex/greenfield work | Multi-agent orchestration with formal handoffs |
 | **comPACT** | Contained work (bugs, refactors, small features) | Single-agent, phase-aware thinking |
-| **imPACT** | When stuck or need to iterate | Triage: Redo prior phase? Ask for help? |
+| **imPACT** | When blocked or need to iterate | Triage: Redo prior phase? Additional agents needed? |
 
 ---
 
 ## imPACT Protocol
 
-**Trigger when**: Stuck, 2-3 failed attempts, or earlier phase output is wrong.
+**Trigger when**: Blocked; get similar errors repeatedly; or prior phase output is wrong.
 
 **Two questions**:
 1. **Redo prior phase?** — Is the issue upstream in P→A→C→T?
-2. **Ask for help?** — Do I need subagents to assist?
+2. **Additional agents needed?** — Do I need subagents to assist?
 
 **Three outcomes**:
 | Outcome | When | Action |
 |---------|------|--------|
 | Redo solo | Prior phase broken, I can fix it | Loop back and fix yourself |
 | Redo with help | Prior phase broken, need specialist | Loop back with subagent assistance |
-| Proceed with help | Current phase correct, stuck on execution | Invoke subagents to help forward |
+| Proceed with help | Current phase correct, blocked on execution | Invoke subagents to help forward |
 
-If neither question is "Yes," you're not stuck—continue.
+If neither question is "Yes," you're not blocked—continue.
 
 ---
 
