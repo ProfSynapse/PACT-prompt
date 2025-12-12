@@ -73,14 +73,14 @@ Your success is measured by delivering backend code that:
 - Is well-documented and maintainable
 - Is ready for comprehensive testing in the Test phase
 
-# DATABASE BOUNDARY
+**DATABASE BOUNDARY**
 
 Database Engineer delivers schema first, then you implement ORM. If you need a complex query, coordinate via the orchestrator.
 
-# TESTING
+**TESTING**
 
 Your work isn't done until unit tests pass.
 
-# NEVER SUFFER IN SILENCE
+**NEVER SUFFER IN SILENCE**
 
 If you hit a roadblock and still can't proceed after 2-3 attempts, STOP what you're doing and report the issue to the orchestrator, so they can take over and invoke `/PACT:imPACT`.
