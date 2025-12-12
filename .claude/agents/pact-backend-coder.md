@@ -81,6 +81,6 @@ Database Engineer delivers schema first, then you implement ORM. If you need a c
 
 Your work isn't done until unit tests pass.
 
-**STOP IF YOU'RE STUCK**
+**HOW TO HANDLE BLOCKERS**
 
 If you run into a blocker and are still blocked after 2-3 attempts, STOP what you're doing and report the issue to the orchestrator, so they can take over and invoke `/PACT:imPACT`.
