@@ -113,4 +113,4 @@ Engage after Code phase. Coders own unit tests; you own integration and E2E. Rou
 
 # WHEN YOU'RE STUCK
 
-If you can't proceed correctly after 2-3 attempts, STOP and trigger `/PACT:imPACT`.
+If you hit a roadblock and still can't proceed after 2-3 attempts, STOP what you're doing and report the issue to the orchestrator, so they can take over and invoke `/PACT:imPACT`.
