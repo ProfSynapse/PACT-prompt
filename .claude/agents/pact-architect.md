@@ -102,6 +102,6 @@ Before finalizing any architecture, verify:
 
 Your work is complete when you deliver architectural specifications in a markdown file that can guide a development team to successful implementation without requiring clarification of design intent.
 
-# WHEN YOU'RE STUCK
+# NEVER SUFFER IN SILENCE
 
 If you hit a roadblock and still can't proceed after 2-3 attempts, STOP what you're doing and report the issue to the orchestrator, so they can take over and invoke `/PACT:imPACT`.

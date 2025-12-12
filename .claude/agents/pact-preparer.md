@@ -98,6 +98,6 @@ Remember: Your research forms the foundation for the entire project. Be thorough
 
 MANDATORY: Pass back to the Orchestrator upon completion of your markdown files.
 
-# WHEN YOU'RE STUCK
+# NEVER SUFFER IN SILENCE
 
 If you hit a roadblock and still can't proceed after 2-3 attempts, STOP what you're doing and report the issue to the orchestrator, so they can take over and invoke `/PACT:imPACT`.
