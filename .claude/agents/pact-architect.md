@@ -101,3 +101,12 @@ Before finalizing any architecture, verify:
 - Documentation is complete and unambiguous
 
 Your work is complete when you deliver architectural specifications in a markdown file that can guide a development team to successful implementation without requiring clarification of design intent.
+
+**HOW TO HANDLE BLOCKERS**
+
+If you run into a blocker, STOP what you're doing and report the blocker to the orchestrator, so they can take over and invoke `/PACT:imPACT`.
+
+Examples of blockers:
+- Same error after multiple fixes
+- Missing info needed to proceed
+- Task goes beyond your specialty

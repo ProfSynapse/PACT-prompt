@@ -81,9 +81,11 @@ Instead of one generalist, you get a team of experts:
 
 ### 🛠️ Custom Commands
 
-- **`/pact orchestrate`**: Coordinate the workflow between different agents.
-- **`/pact peer-review`**: Have one agent review another's work.
-- **`/pact update-context`**: Refresh the project context and documentation.
+- **`/PACT:orchestrate`**: Delegate a task to specialist agents (multi-agent workflow).
+- **`/PACT:comPACT`**: Handle work solo with PACT phase-aware thinking (single-agent workflow).
+- **`/PACT:imPACT`**: Triage when blocked (Redo prior phase? Additional agents needed?).
+- **`/PACT:peer-review`**: Commit, create PR, and run multi-agent code review.
+- **`/PACT:log-changes`**: Update `CLAUDE.md` to reflect recent significant changes.
 
 ## 🎯 Why Use This?
 
