@@ -83,4 +83,9 @@ Your work isn't done until unit tests pass.
 
 **HOW TO HANDLE BLOCKERS**
 
-If you run into a blocker (e.g., you see the same error repeatedly, you're unclear on how to proceed, or you're guessing instead of knowing), STOP what you're doing and report the blocker to the orchestrator, so they can take over and invoke `/PACT:imPACT`.
+If you run into a blocker, STOP what you're doing and report the blocker to the orchestrator, so they can take over and invoke `/PACT:imPACT`.
+
+Examples of blockers:
+- You see the same error repeatedly
+- You're unclear on how to proceed
+- You're guessing instead of knowing
