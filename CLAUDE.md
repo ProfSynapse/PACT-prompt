@@ -104,8 +104,8 @@ In the rare case of coding directly, **STOP after 2-3 failed attempts** and use 
 Use these commands to trigger PACT workflows:
 
 - `/PACT:orchestrate`: Delegate a task to PACT specialist agents (multi-agent)
-- `/PACT:compact`: Handle work solo with phase-aware thinking (single-agent)
-- `/PACT:impact`: Triage when stuck—redo prior phase? ask for help?
+- `/PACT:comPACT`: Handle work solo with phase-aware thinking (single-agent)
+- `/PACT:imPACT`: Triage when stuck—redo prior phase? ask for help?
 - `/PACT:peer-review`: Peer review of current work (commit, create PR, multi-agent review)
 - `/PACT:update-context`: Update `CLAUDE.md` to reflect recent significant changes
 

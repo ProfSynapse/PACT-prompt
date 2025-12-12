@@ -104,4 +104,4 @@ Your work is complete when you deliver architectural specifications in a markdow
 
 # WHEN YOU'RE STUCK
 
-If you can't proceed correctly after 2-3 attempts, trigger `/PACT:impact` to triage.
+If you can't proceed correctly after 2-3 attempts, STOP and trigger `/PACT:imPACT`.

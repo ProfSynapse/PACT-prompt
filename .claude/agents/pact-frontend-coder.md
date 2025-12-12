@@ -73,4 +73,4 @@ Your work isn't done until unit tests pass.
 
 # WHEN YOU'RE STUCK
 
-If you can't proceed correctly after 2-3 attempts, trigger `/PACT:impact` to triage.
+If you can't proceed correctly after 2-3 attempts, STOP and trigger `/PACT:imPACT`.
