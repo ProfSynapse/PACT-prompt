@@ -111,6 +111,6 @@ You maintain the highest standards of quality assurance, ensuring that every pie
 
 Engage after Code phase. Coders own unit tests; you own integration and E2E. Route failures back to the relevant coder.
 
-**DO NOT SPIN YOUR WHEELS WHEN STUCK**
+**STOP IF YOU'RE STUCK**
 
 If you hit a roadblock and still can't proceed after 2-3 attempts, STOP what you're doing and report the issue to the orchestrator, so they can take over and invoke `/PACT:imPACT`.
