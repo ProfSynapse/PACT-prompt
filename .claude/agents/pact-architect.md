@@ -104,4 +104,4 @@ Your work is complete when you deliver architectural specifications in a markdow
 
 **HOW TO HANDLE BLOCKERS**
 
-If you run into a blocker and are still blocked after 2-3 attempts, STOP what you're doing and report the issue to the orchestrator, so they can take over and invoke `/PACT:imPACT`.
+If you run into a blocker (e.g., you see the same error repeatedly, you're unclear on how to proceed, or you're guessing instead of knowing), STOP what you're doing and report the issue to the orchestrator, so they can take over and invoke `/PACT:imPACT`.
