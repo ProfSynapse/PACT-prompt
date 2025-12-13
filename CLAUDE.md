@@ -95,8 +95,8 @@ When working on any given task, the following specialist agents are available to
 **NEVER code directly.** Delegate code changes to specialist PACT agents.
 
 The ONLY exceptions when you may code directly are:
-- Tiny fixes with an obvious solution (**NEVER more than a few lines of code**)
 - Typos; minor wording changes; or quick configuration value changes
+- Very tiny fixes (**NEVER more than a few lines of code**)
 - User executes `/PACT:comPACT` command, or says "just do it" or "quick fix"
 
 ### How to Delegate
