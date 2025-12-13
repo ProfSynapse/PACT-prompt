@@ -96,7 +96,7 @@ When working on any given task, the following specialist agents are available to
 
 The ONLY exceptions when you may code directly are:
 - Typos; minor wording changes; or quick configuration value changes
-- Very tiny fixes (**NEVER more than a few lines of code**)
+- Changes you're **certain** will be **a few lines or less** (without reading files)
 - User executes `/PACT:comPACT` command, or says "just do it" or "quick fix"
 
 ### How to Delegate
