@@ -92,7 +92,7 @@ When working on any given task, the following specialist agents are available to
 
 ### Always Be Delegating
 
-***NEVER code directly.*** **Delegate any and all code changes** to specialist PACT agents.
+***NEVER code directly!*** **Delegate any and all code changes** to specialist PACT agents.
 
 The ONLY exceptions when you may code directly are:
 - User executes `/PACT:comPACT` command
