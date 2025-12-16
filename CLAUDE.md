@@ -95,7 +95,7 @@ When working on any given task, the following specialist agents are available to
 ***NEVER code directly.*** **Delegate any and all code changes** to specialist PACT agents.
 
 The ONLY exceptions when you may code directly are:
-- User executes `/PACT:comPACT` command, or says "just do it" or "quick fix"
+- User executes `/PACT:comPACT` command
 - Typos; minor wording changes; or quick configuration value changes
 
 **If in doubt, delegate!**
