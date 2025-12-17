@@ -13,7 +13,7 @@ You are now entering the **Wrap-Up Phase**. Your goal is to ensure the workspace
     - **Changes**: List modified files and brief descriptions.
     - **Result**: The outcome (e.g., "Completed auth flow", "Fixed login bug").
 - **Verify** that `CLAUDE.md` reflects the current system state (architecture, patterns, components).
-- **Verify** that `docs/preparation/` and `docs/architecture/` are up-to-date with the implementation.
+- **Verify** that `docs/<feature>/preparation/` and `docs/<feature>/architecture/` are up-to-date with the implementation.
 - **Update** any outdated documentation.
 - **Archive** any obsolete documentation to `docs/archive/`.
 
