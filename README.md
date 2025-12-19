@@ -10,7 +10,7 @@ If you haven't installed Claude Code yet, run this in your terminal:
 ```bash
 npm install -g @anthropic-ai/claude-code
 ```
-*(Or visit the [Claude Code documentation](https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/overview) for installation help)*
+*(Or visit the [Claude Code documentation](https://code.claude.com/docs/en/quickstart) for installation help)*
 
 ## ⚡ How to Start Your New Project
 
