@@ -1,15 +1,26 @@
 ---
 description: Update `CLAUDE.md` to reflect recent significant changes
-argument-hint: [e.g., completed feature X]
+argument-hint: [e.g., new auth module, fixed build gotcha]
 ---
 Update `CLAUDE.md` to reflect: $ARGUMENTS
 
-- New components or modules
-- System architecture changes
-- Completed major features
-- Important patterns or constraints
-- Any other significant changes or discoveries not yet documented
+First, read existing CLAUDE.md to understand its structure.
 
-After adding updates, review and update any other outdated information.
+## What to Document
 
-Once done updating `CLAUDE.md`, commit the changes (and push if remote exists).
+Add things that:
+- Save debugging time (gotchas, non-obvious patterns)
+- Are needed every session (build commands, key files)
+- Can't be easily found in code (architectural "why")
+
+Prefer updating existing sections. Only create new sections when changes genuinely don't fit elsewhere.
+
+## What to Avoid
+
+- Full code blocks (reference source files instead)
+- Verbose explanations (keep entries to ~10 lines)
+- Content better suited for `.claude/rules/`, `docs/`, or code comments
+
+After updates, remove any outdated information.
+
+Once done, commit changes (push if remote exists).
