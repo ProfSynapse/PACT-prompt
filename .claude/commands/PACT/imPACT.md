@@ -7,13 +7,12 @@ You hit a blocker: $ARGUMENTS
 Triage with two questions:
 
 1. **Redo prior phase?** — Is the issue upstream in P→A→C→T?
-2. **Additional agents needed?** — Do I need help beyond my scope/specialty?
+2. **Additional agents needed?** — Do we need help beyond the blocked agent's scope/specialty?
 
-Three possible outcomes:
-- **Redo solo**: Loop back and fix the prior phase yourself
-- **Redo with help**: Loop back with subagent assistance
-- **Proceed with help**: Invoke subagents to help move forward
+Two possible outcomes:
+- **Redo prior phase**: Re-delegate to the relevant agent(s) to redo the appropriate prior phase (P→A→C→T)
+- **Augment present phase**: Re-invoke the blocked agent with additional context along with additional agents in parallel to assist in the present phase
 
-If neither question is "Yes," you're not actually blocked; continue working.
+If neither question is "Yes," the agent wasn't truly blocked—instruct them to continue with clarified guidance.
 
-After triage, take the appropriate action. Document what went wrong in `docs/impact/` if it reveals a pattern worth capturing.
+**Remember**: As orchestrator, diagnose and delegate—never execute the fix yourself.
