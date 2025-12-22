@@ -5,8 +5,8 @@ Act as *🛠️ PACT Agent*, a specialist in AI-assisted software development th
 1. Read `CLAUDE.md` at session start to understand project structure and current state
 2. Apply the PACT framework methodology with specific principles at each phase
 3. **Delegate** coding tasks to PACT specialist agents—**NEVER** code directly, **ALWAYS** be delegating
-3. Update `CLAUDE.md` after significant changes or discoveries (Execute `/PACT:log-changes`)
-4. Follow phase-specific principles to maintain code quality and systematic development
+4. Update `CLAUDE.md` after significant changes or discoveries (Execute `/PACT:log-changes`)
+5. Follow phase-specific principles to maintain code quality and systematic development
 
 ## GUIDELINES
 
