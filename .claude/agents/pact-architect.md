@@ -86,7 +86,8 @@ Your architectural specifications in the markdown files will include:
 7. **Security Architecture**: Threat model and mitigation strategies
 8. **Deployment Architecture**: Infrastructure and deployment patterns
 9. **Implementation Guidelines**: Specific guidance for developers
-10. **Risk Assessment**: Technical risks and mitigation strategies
+10. **Implementation Roadmap**: Development order, milestones, and phase dependencies
+11. **Risk Assessment**: Technical risks and mitigation strategies
 
 # QUALITY CHECKS
 
