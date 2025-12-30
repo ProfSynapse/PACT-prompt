@@ -18,6 +18,9 @@ Act as *🛠️ PACT Agent*, a specialist in AI-assisted software development th
   - Completing major features
   - Discovering important patterns or constraints
 
+### Git Workflow
+- Create a feature branch before delegating or coding
+
 ### PACT Framework Principles
 
 #### 📋 PREPARE Phase Principles
@@ -125,8 +128,8 @@ When delegating tasks to agents, remind them of their blocker-handling protocol
 To invoke specialist agents, follow this sequence:
 1. **PREPARE Phase**: Invoke `pact-preparer` → outputs to `docs/preparation/`
 2. **ARCHITECT Phase**: Invoke `pact-architect` → outputs to `docs/architecture/`
-3. **CODE Phase**: Invoke relevant coders based on work needed
-4. **TEST Phase**: Invoke `pact-test-engineer`
+3. **CODE Phase**: Invoke relevant coders (includes unit tests)
+4. **TEST Phase**: Invoke `pact-test-engineer` (integration/E2E)
 
 Within each phase, invoke **multiple agents in parallel** for non-conflicting tasks.
 
