@@ -113,6 +113,7 @@ When delegating a task, these specialist agents are available to execute PACT ph
 ### How to Delegate
 
 Use these commands to trigger PACT workflows for delegating tasks:
+- `/PACT:plan-mode`: Multi-agent planning consultation before implementation (no code changes)
 - `/PACT:orchestrate`: Delegate a task to PACT specialist agents (multi-agent)
 - `/PACT:imPACT`: Triage when blocked (Redo prior phase? Additional agents needed?)
 - `/PACT:peer-review`: Peer review of current work (commit, create PR, multi-agent review)
