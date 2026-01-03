@@ -130,6 +130,8 @@ When delegating tasks to agents, remind them of their blocker-handling protocol
 
 **Before starting**: Create a feature branch.
 
+**Optional**: Run `/PACT:plan-mode` first for complex tasks. Creates plan in `docs/plans/` with specialist consultation. When `/PACT:orchestrate` runs, it checks for approved plans and passes relevant sections to each phase.
+
 To invoke specialist agents, follow this sequence:
 1. **PREPARE Phase**: Invoke `pact-preparer` → outputs to `docs/preparation/`
 2. **ARCHITECT Phase**: Invoke `pact-architect` → outputs to `docs/architecture/`
