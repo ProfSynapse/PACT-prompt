@@ -11,8 +11,45 @@
 | Workflow | When to Use | Key Idea |
 |----------|-------------|----------|
 | **PACT** | Complex/greenfield work | Multi-agent orchestration with formal handoffs |
+| **plan-mode** | Before complex work, need alignment | Multi-agent planning consultation, no implementation |
 | **comPACT** | Contained work (bugs, refactors, small features) | Single-agent, phase-aware thinking |
 | **imPACT** | When blocked or need to iterate | Triage: Redo prior phase? Additional agents needed? |
+
+---
+
+## plan-mode Protocol
+
+**Purpose**: Multi-agent planning consultation before implementation. Get specialist perspectives synthesized into an actionable plan.
+
+**When to use**:
+- Complex features where upfront alignment prevents rework
+- Tasks spanning multiple specialist domains
+- When you want user approval before implementation begins
+- Greenfield work with significant architectural decisions
+
+**Four phases**:
+
+| Phase | What Happens |
+|-------|--------------|
+| 0. Analyze | Orchestrator assesses scope, selects relevant specialists |
+| 1. Consult | Specialists provide planning perspectives in parallel |
+| 2. Synthesize | Orchestrator resolves conflicts, sequences work, assesses risk |
+| 3. Present | Save plan to `docs/plans/`, present to user, await approval |
+
+**Key rules**:
+- **No implementation** — planning consultation only
+- **No git branch** — that happens when `/PACT:orchestrate` runs
+- Specialists operate in "planning-only mode" (analysis, not action)
+- Conflicts surfaced and resolved (or flagged for user decision)
+
+**Output**: `docs/plans/{feature-slug}-plan.md`
+
+**After approval**: User runs `/PACT:orchestrate {task}`, which references the plan.
+
+**When to recommend alternatives**:
+- Trivial task → `/PACT:comPACT`
+- Unclear requirements → Ask clarifying questions first
+- Need research before planning → Run preparation phase alone first
 
 ---
 
@@ -116,6 +153,7 @@ Skip for simple features or when "just build it."
 
 | Phase | Output Location |
 |-------|-----------------|
+| Plan | `docs/plans/` |
 | Prepare | `docs/preparation/` |
 | Architect | `docs/architecture/` |
 | Code | `docs/codebase/` |
