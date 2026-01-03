@@ -321,10 +321,19 @@
           <div class="detail-value" style="white-space: pre-wrap; max-height: 200px; overflow-y: auto;">${escapeHtml(task.prompt)}</div>
         </div>
         ` : ''}
-        ${task.result ? `
+        ${task.agent_id ? `
         <div class="detail-row">
-          <div class="detail-label">Result</div>
-          <div class="detail-value" style="white-space: pre-wrap; max-height: 200px; overflow-y: auto;">${escapeHtml(task.result)}</div>
+          <div class="detail-label">Agent ID</div>
+          <div class="detail-value"><code>${task.agent_id}</code></div>
+        </div>
+        ` : ''}
+        ${task.transcript_path ? `
+        <div class="detail-row">
+          <div class="detail-label">Transcript</div>
+          <div class="detail-value">
+            <code style="font-size: 0.8em; word-break: break-all;">${escapeHtml(task.transcript_path)}</code>
+            <button onclick="navigator.clipboard.writeText('${escapeHtml(task.transcript_path)}')" style="margin-left: 8px; padding: 2px 6px; font-size: 0.75em; cursor: pointer;">Copy</button>
+          </div>
         </div>
         ` : ''}
       `;

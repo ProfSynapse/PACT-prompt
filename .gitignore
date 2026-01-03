@@ -1,2 +1,5 @@
 .history/
 docs/
+
+# Kanban state (ephemeral, regenerated each session)
+.claude/kanban/state.json

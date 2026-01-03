@@ -2,18 +2,13 @@
 # Hook: SubagentStop
 # Updates kanban state when a subagent completes
 
-set -e
-
 KANBAN_DIR="${CLAUDE_PROJECT_DIR:-.}/.claude/kanban"
 STATE_FILE="$KANBAN_DIR/state.json"
 
-# Read hook input from stdin (contains subagent result)
+# Read hook input from stdin
 INPUT=$(cat)
 
 TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-
-# Extract result snippet (first 500 chars for storage)
-RESULT_SNIPPET=$(echo "$INPUT" | head -c 500 | tr '\n' ' ' | sed 's/"/\\"/g')
 
 # Ensure state file exists
 if [ ! -f "$STATE_FILE" ]; then
@@ -21,39 +16,54 @@ if [ ! -f "$STATE_FILE" ]; then
   exit 0
 fi
 
-# Update state file - mark most recent running task as done
+# Update state file
 TEMP_FILE=$(mktemp)
 
-python3 << PYTHON
+STATE_FILE="$STATE_FILE" TEMP_FILE="$TEMP_FILE" TIMESTAMP="$TIMESTAMP" INPUT="$INPUT" python3 << 'PYTHON'
 import json
+import sys
+import os
+
+state_file = os.environ['STATE_FILE']
+temp_file = os.environ['TEMP_FILE']
+timestamp = os.environ['TIMESTAMP']
+input_json = os.environ.get('INPUT', '{}')
 
 try:
-    with open("$STATE_FILE", "r") as f:
+    with open(state_file, "r") as f:
         state = json.load(f)
 except:
     print("Kanban: Could not read state")
-    exit(0)
+    sys.exit(0)
+
+# Parse the hook input to get agent info
+try:
+    hook_input = json.loads(input_json)
+    agent_id = hook_input.get("agent_id", "")
+    transcript_path = hook_input.get("agent_transcript_path", "")
+except:
+    agent_id = ""
+    transcript_path = ""
 
 # Find the most recent running task and mark it done
 running_tasks = [t for t in state["tasks"] if t["status"] == "running"]
 if running_tasks:
-    # Mark the most recent one as done
     task = running_tasks[-1]
     task["status"] = "done"
-    task["completed_at"] = "$TIMESTAMP"
-    task["result"] = """$RESULT_SNIPPET"""[:500] if """$RESULT_SNIPPET""" else None
+    task["completed_at"] = timestamp
+    task["agent_id"] = agent_id
+    task["transcript_path"] = transcript_path
 
     # Update agent status to idle
     agent = task.get("agent", "unknown")
     if agent in state["agents"]:
         state["agents"][agent] = {"status": "idle", "current_task": None}
 
-with open("$TEMP_FILE", "w") as f:
-    json.dump(state, f, indent=2)
+    print(f"Kanban: Completed task {task['id']} (agent: {agent_id})")
 
-print(f"Kanban: Completed task {task['id']}")
+with open(temp_file, "w") as f:
+    json.dump(state, f, indent=2)
 PYTHON
 
 mv "$TEMP_FILE" "$STATE_FILE"
-
 exit 0
