@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PACT Kanban</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, monospace;
+      background: #0d1117;
+      color: #c9d1d9;
+      padding: 20px;
+      min-height: 100vh;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid #30363d;
+    }
+    h1 { font-size: 1.4em; font-weight: 600; }
+    .status { font-size: 0.85em; color: #8b949e; }
+    .status.live { color: #3fb950; }
+    .status.live::before { content: '● '; }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 15px;
+      max-width: 1200px;
+    }
+    .column {
+      background: #161b22;
+      border-radius: 8px;
+      padding: 12px;
+      min-height: 400px;
+    }
+    .column-header {
+      font-size: 0.9em;
+      font-weight: 600;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .count {
+      background: #30363d;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 0.8em;
+    }
+
+    .task {
+      background: #21262d;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      padding: 10px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+    .task:hover { border-color: #58a6ff; }
+    .task.running { border-left: 3px solid #f0883e; }
+    .task.done { border-left: 3px solid #3fb950; opacity: 0.8; }
+    .task.error { border-left: 3px solid #f85149; }
+
+    .task-title {
+      font-size: 0.85em;
+      font-weight: 500;
+      margin-bottom: 6px;
+      word-break: break-word;
+    }
+    .task-meta {
+      font-size: 0.75em;
+      color: #8b949e;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .agent-badge {
+      background: #1f6feb33;
+      color: #58a6ff;
+      padding: 1px 6px;
+      border-radius: 3px;
+      font-size: 0.75em;
+    }
+
+    .detail-panel {
+      display: none;
+      position: fixed;
+      top: 0;
+      right: 0;
+      width: 400px;
+      height: 100vh;
+      background: #161b22;
+      border-left: 1px solid #30363d;
+      padding: 20px;
+      overflow-y: auto;
+    }
+    .detail-panel.open { display: block; }
+    .detail-panel h2 {
+      font-size: 1em;
+      margin-bottom: 15px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .close-btn {
+      background: none;
+      border: none;
+      color: #8b949e;
+      cursor: pointer;
+      font-size: 1.2em;
+    }
+    .detail-row {
+      margin-bottom: 12px;
+    }
+    .detail-label {
+      font-size: 0.75em;
+      color: #8b949e;
+      margin-bottom: 3px;
+    }
+    .detail-value {
+      font-size: 0.85em;
+      word-break: break-word;
+    }
+
+    .empty {
+      color: #484f58;
+      font-size: 0.8em;
+      text-align: center;
+      padding: 30px 10px;
+    }
+
+    .agents-bar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 15px;
+      flex-wrap: wrap;
+    }
+    .agent-status {
+      background: #21262d;
+      border: 1px solid #30363d;
+      border-radius: 4px;
+      padding: 6px 10px;
+      font-size: 0.8em;
+    }
+    .agent-status.busy { border-color: #f0883e; }
+    .agent-status.idle { border-color: #3fb950; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🛠️ PACT Kanban</h1>
+    <div class="status" id="status">Disconnected</div>
+  </header>
+
+  <div class="agents-bar" id="agents"></div>
+
+  <div class="board">
+    <div class="column">
+      <div class="column-header">
+        Queued <span class="count" id="queued-count">0</span>
+      </div>
+      <div id="queued"></div>
+    </div>
+    <div class="column">
+      <div class="column-header">
+        In Progress <span class="count" id="running-count">0</span>
+      </div>
+      <div id="running"></div>
+    </div>
+    <div class="column">
+      <div class="column-header">
+        Done <span class="count" id="done-count">0</span>
+      </div>
+      <div id="done"></div>
+    </div>
+  </div>
+
+  <div class="detail-panel" id="detail">
+    <h2>
+      <span>Task Details</span>
+      <button class="close-btn" onclick="closeDetail()">×</button>
+    </h2>
+    <div id="detail-content"></div>
+  </div>
+
+  <script>
+    const STATE_FILE = 'state.json';
+    let state = { agents: {}, tasks: [] };
+    let selectedTask = null;
+
+    async function loadState() {
+      try {
+        const res = await fetch(STATE_FILE + '?t=' + Date.now());
+        if (res.ok) {
+          state = await res.json();
+          render();
+          setStatus(true);
+        }
+      } catch (e) {
+        setStatus(false);
+      }
+    }
+
+    function setStatus(connected) {
+      const el = document.getElementById('status');
+      if (connected) {
+        el.textContent = 'Live';
+        el.className = 'status live';
+      } else {
+        el.textContent = 'Disconnected';
+        el.className = 'status';
+      }
+    }
+
+    function render() {
+      renderAgents();
+      renderTasks();
+      if (selectedTask) {
+        const task = state.tasks.find(t => t.id === selectedTask);
+        if (task) showDetail(task);
+      }
+    }
+
+    function renderAgents() {
+      const el = document.getElementById('agents');
+      const agents = Object.entries(state.agents || {});
+      if (agents.length === 0) {
+        el.innerHTML = '';
+        return;
+      }
+      el.innerHTML = agents.map(([name, info]) => `
+        <div class="agent-status ${info.status}">
+          ${getAgentIcon(name)} ${name}: ${info.status}
+        </div>
+      `).join('');
+    }
+
+    function getAgentIcon(name) {
+      const icons = {
+        'pact-preparer': '📚',
+        'pact-architect': '🏛️',
+        'pact-backend-coder': '💻',
+        'pact-frontend-coder': '🎨',
+        'pact-database-engineer': '🗄️',
+        'pact-test-engineer': '🧪',
+        'Explore': '🔍',
+        'general-purpose': '⚙️'
+      };
+      return icons[name] || '🤖';
+    }
+
+    function renderTasks() {
+      const queued = state.tasks.filter(t => t.status === 'queued');
+      const running = state.tasks.filter(t => t.status === 'running');
+      const done = state.tasks.filter(t => t.status === 'done' || t.status === 'error');
+
+      document.getElementById('queued-count').textContent = queued.length;
+      document.getElementById('running-count').textContent = running.length;
+      document.getElementById('done-count').textContent = done.length;
+
+      document.getElementById('queued').innerHTML = queued.length
+        ? queued.map(taskCard).join('')
+        : '<div class="empty">No queued tasks</div>';
+      document.getElementById('running').innerHTML = running.length
+        ? running.map(taskCard).join('')
+        : '<div class="empty">No running tasks</div>';
+      document.getElementById('done').innerHTML = done.length
+        ? done.reverse().slice(0, 20).map(taskCard).join('')
+        : '<div class="empty">No completed tasks</div>';
+    }
+
+    function taskCard(task) {
+      const elapsed = task.started_at ? formatElapsed(task.started_at, task.completed_at) : '';
+      return `
+        <div class="task ${task.status}" onclick="showDetail(${JSON.stringify(task).replace(/"/g, '&quot;')})">
+          <div class="task-title">${escapeHtml(task.description || task.id)}</div>
+          <div class="task-meta">
+            <span class="agent-badge">${getAgentIcon(task.agent)} ${task.agent || 'unknown'}</span>
+            ${elapsed ? `<span>${elapsed}</span>` : ''}
+          </div>
+        </div>
+      `;
+    }
+
+    function showDetail(task) {
+      selectedTask = task.id;
+      const el = document.getElementById('detail-content');
+      el.innerHTML = `
+        <div class="detail-row">
+          <div class="detail-label">ID</div>
+          <div class="detail-value">${task.id}</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">Description</div>
+          <div class="detail-value">${escapeHtml(task.description || 'N/A')}</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">Agent</div>
+          <div class="detail-value">${getAgentIcon(task.agent)} ${task.agent || 'unknown'}</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">Status</div>
+          <div class="detail-value">${task.status}</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">Started</div>
+          <div class="detail-value">${task.started_at || 'N/A'}</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">Completed</div>
+          <div class="detail-value">${task.completed_at || 'N/A'}</div>
+        </div>
+        ${task.prompt ? `
+        <div class="detail-row">
+          <div class="detail-label">Prompt</div>
+          <div class="detail-value" style="white-space: pre-wrap; max-height: 200px; overflow-y: auto;">${escapeHtml(task.prompt)}</div>
+        </div>
+        ` : ''}
+        ${task.result ? `
+        <div class="detail-row">
+          <div class="detail-label">Result</div>
+          <div class="detail-value" style="white-space: pre-wrap; max-height: 200px; overflow-y: auto;">${escapeHtml(task.result)}</div>
+        </div>
+        ` : ''}
+      `;
+      document.getElementById('detail').classList.add('open');
+    }
+
+    function closeDetail() {
+      selectedTask = null;
+      document.getElementById('detail').classList.remove('open');
+    }
+
+    function formatElapsed(start, end) {
+      const startTime = new Date(start).getTime();
+      const endTime = end ? new Date(end).getTime() : Date.now();
+      const seconds = Math.floor((endTime - startTime) / 1000);
+      if (seconds < 60) return `${seconds}s`;
+      const minutes = Math.floor(seconds / 60);
+      if (minutes < 60) return `${minutes}m ${seconds % 60}s`;
+      return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    // Poll for updates
+    loadState();
+    setInterval(loadState, 2000);
+  </script>
+</body>
+</html>

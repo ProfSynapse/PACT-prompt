@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/test_hook.sh"
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/kanban_agent_start.sh"
           }
         ]
       }
@@ -26,7 +26,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/test_subagent_stop.sh"
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/kanban_agent_complete.sh"
           }
         ]
       }
