@@ -93,7 +93,7 @@
       position: fixed;
       top: 0;
       right: 0;
-      width: 400px;
+      width: 550px;
       height: 100vh;
       background: #161b22;
       border-left: 1px solid #30363d;
@@ -149,6 +149,73 @@
     }
     .agent-status.busy { border-color: #f0883e; }
     .agent-status.idle { border-color: #3fb950; }
+
+    /* Transcript styles */
+    .transcript-section {
+      margin-top: 20px;
+      border-top: 1px solid #30363d;
+      padding-top: 15px;
+    }
+    .transcript-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .transcript-header h3 {
+      font-size: 0.9em;
+      color: #8b949e;
+    }
+    .transcript-status {
+      font-size: 0.75em;
+      color: #8b949e;
+    }
+    .transcript-status.polling { color: #f0883e; }
+    .transcript-status.polling::before { content: '↻ '; }
+    .transcript-content {
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      padding: 12px;
+      max-height: 400px;
+      overflow-y: auto;
+      font-size: 0.8em;
+    }
+    .transcript-msg {
+      margin-bottom: 12px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #21262d;
+    }
+    .transcript-msg:last-child {
+      margin-bottom: 0;
+      padding-bottom: 0;
+      border-bottom: none;
+    }
+    .transcript-msg.text {
+      white-space: pre-wrap;
+      line-height: 1.5;
+    }
+    .transcript-msg.tool {
+      background: #1f6feb15;
+      border-radius: 4px;
+      padding: 8px;
+      font-family: monospace;
+      font-size: 0.9em;
+    }
+    .tool-name {
+      color: #58a6ff;
+      font-weight: 600;
+    }
+    .tool-input {
+      color: #8b949e;
+      margin-top: 4px;
+      font-size: 0.9em;
+    }
+    .transcript-empty {
+      color: #484f58;
+      text-align: center;
+      padding: 20px;
+    }
   </style>
 </head>
 <body>
@@ -192,6 +259,7 @@
     const STATE_FILE = 'state.json';
     let state = { agents: {}, tasks: [] };
     let selectedTask = null;
+    let transcriptPollInterval = null;
 
     async function loadState() {
       try {
@@ -220,10 +288,6 @@
     function render() {
       renderAgents();
       renderTasks();
-      if (selectedTask) {
-        const task = state.tasks.find(t => t.id === selectedTask);
-        if (task) showDetail(task);
-      }
     }
 
     function renderAgents() {
@@ -249,7 +313,8 @@
         'pact-database-engineer': '🗄️',
         'pact-test-engineer': '🧪',
         'Explore': '🔍',
-        'general-purpose': '⚙️'
+        'general-purpose': '⚙️',
+        'claude-code-guide': '📖'
       };
       return icons[name] || '🤖';
     }
@@ -270,14 +335,14 @@
         ? running.map(taskCard).join('')
         : '<div class="empty">No running tasks</div>';
       document.getElementById('done').innerHTML = done.length
-        ? done.reverse().slice(0, 20).map(taskCard).join('')
+        ? done.slice().reverse().slice(0, 20).map(taskCard).join('')
         : '<div class="empty">No completed tasks</div>';
     }
 
     function taskCard(task) {
       const elapsed = task.started_at ? formatElapsed(task.started_at, task.completed_at) : '';
       return `
-        <div class="task ${task.status}" onclick="showDetail(${JSON.stringify(task).replace(/"/g, '&quot;')})">
+        <div class="task ${task.status}" onclick='showDetail(${JSON.stringify(task).replace(/'/g, "&#39;")})'>
           <div class="task-title">${escapeHtml(task.description || task.id)}</div>
           <div class="task-meta">
             <span class="agent-badge">${getAgentIcon(task.agent)} ${task.agent || 'unknown'}</span>
@@ -288,7 +353,14 @@
     }
 
     function showDetail(task) {
-      selectedTask = task.id;
+      selectedTask = task;
+
+      // Stop any existing transcript polling
+      if (transcriptPollInterval) {
+        clearInterval(transcriptPollInterval);
+        transcriptPollInterval = null;
+      }
+
       const el = document.getElementById('detail-content');
       el.innerHTML = `
         <div class="detail-row">
@@ -305,47 +377,101 @@
         </div>
         <div class="detail-row">
           <div class="detail-label">Status</div>
-          <div class="detail-value">${task.status}</div>
+          <div class="detail-value">${task.status}${task.status === 'running' ? ' ⏳' : ''}</div>
         </div>
         <div class="detail-row">
-          <div class="detail-label">Started</div>
-          <div class="detail-value">${task.started_at || 'N/A'}</div>
-        </div>
-        <div class="detail-row">
-          <div class="detail-label">Completed</div>
-          <div class="detail-value">${task.completed_at || 'N/A'}</div>
+          <div class="detail-label">Duration</div>
+          <div class="detail-value">${formatElapsed(task.started_at, task.completed_at)}</div>
         </div>
         ${task.prompt ? `
         <div class="detail-row">
           <div class="detail-label">Prompt</div>
-          <div class="detail-value" style="white-space: pre-wrap; max-height: 200px; overflow-y: auto;">${escapeHtml(task.prompt)}</div>
+          <div class="detail-value" style="white-space: pre-wrap; max-height: 150px; overflow-y: auto; background: #0d1117; padding: 8px; border-radius: 4px;">${escapeHtml(task.prompt)}</div>
         </div>
         ` : ''}
-        ${task.agent_id ? `
-        <div class="detail-row">
-          <div class="detail-label">Agent ID</div>
-          <div class="detail-value"><code>${task.agent_id}</code></div>
-        </div>
-        ` : ''}
-        ${task.transcript_path ? `
-        <div class="detail-row">
-          <div class="detail-label">Transcript</div>
-          <div class="detail-value">
-            <code style="font-size: 0.8em; word-break: break-all;">${escapeHtml(task.transcript_path)}</code>
-            <button onclick="navigator.clipboard.writeText('${escapeHtml(task.transcript_path)}')" style="margin-left: 8px; padding: 2px 6px; font-size: 0.75em; cursor: pointer;">Copy</button>
+        <div class="transcript-section">
+          <div class="transcript-header">
+            <h3>📜 Transcript</h3>
+            <span class="transcript-status" id="transcript-status"></span>
+          </div>
+          <div class="transcript-content" id="transcript-content">
+            <div class="transcript-empty">Loading...</div>
           </div>
         </div>
-        ` : ''}
       `;
       document.getElementById('detail').classList.add('open');
+
+      // Load transcript
+      loadTranscript(task);
+
+      // Poll for updates if task is running
+      if (task.status === 'running') {
+        transcriptPollInterval = setInterval(() => loadTranscript(task), 3000);
+        document.getElementById('transcript-status').textContent = 'Live';
+        document.getElementById('transcript-status').className = 'transcript-status polling';
+      }
+    }
+
+    async function loadTranscript(task) {
+      const contentEl = document.getElementById('transcript-content');
+      const statusEl = document.getElementById('transcript-status');
+
+      if (!task.transcript_path) {
+        contentEl.innerHTML = '<div class="transcript-empty">No transcript available yet</div>';
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/transcript?path=${encodeURIComponent(task.transcript_path)}&t=${Date.now()}`);
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
+
+        const data = await res.json();
+
+        if (!data.messages || data.messages.length === 0) {
+          contentEl.innerHTML = '<div class="transcript-empty">Transcript empty</div>';
+          return;
+        }
+
+        contentEl.innerHTML = data.messages.map(msg => {
+          if (msg.type === 'text') {
+            return `<div class="transcript-msg text">${escapeHtml(msg.content)}</div>`;
+          } else if (msg.type === 'tool') {
+            return `
+              <div class="transcript-msg tool">
+                <span class="tool-name">🔧 ${escapeHtml(msg.tool)}</span>
+                <div class="tool-input">${escapeHtml(msg.input)}</div>
+              </div>
+            `;
+          }
+          return '';
+        }).join('');
+
+        if (statusEl && task.status !== 'running') {
+          statusEl.textContent = `${data.raw_lines} entries`;
+          statusEl.className = 'transcript-status';
+        }
+
+        // Auto-scroll to bottom
+        contentEl.scrollTop = contentEl.scrollHeight;
+
+      } catch (e) {
+        contentEl.innerHTML = `<div class="transcript-empty">Could not load transcript: ${escapeHtml(e.message)}</div>`;
+      }
     }
 
     function closeDetail() {
       selectedTask = null;
+      if (transcriptPollInterval) {
+        clearInterval(transcriptPollInterval);
+        transcriptPollInterval = null;
+      }
       document.getElementById('detail').classList.remove('open');
     }
 
     function formatElapsed(start, end) {
+      if (!start) return 'N/A';
       const startTime = new Date(start).getTime();
       const endTime = end ? new Date(end).getTime() : Date.now();
       const seconds = Math.floor((endTime - startTime) / 1000);
@@ -357,10 +483,10 @@
 
     function escapeHtml(str) {
       if (!str) return '';
-      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
-    // Poll for updates
+    // Poll for state updates
     loadState();
     setInterval(loadState, 2000);
   </script>
