@@ -161,6 +161,12 @@ Skip for simple features or when "just build it."
 | Decisions | `docs/decisions/` |
 | Iterations | `docs/impact/` |
 
+**Plan vs. Architecture artifacts**:
+- **Plans** (`docs/plans/`): Pre-approval roadmaps created by `/PACT:plan-mode`. Multi-specialist consultation synthesized into scope estimates, sequencing, and risk assessment. Created *before* implementation begins.
+- **Architecture** (`docs/architecture/`): Formal specifications created by `pact-architect` *during* the Architect phase of `/PACT:orchestrate`. Detailed component designs, interface contracts, and technical decisions.
+
+Plans inform implementation strategy; architecture documents define the technical blueprint.
+
 ---
 
 ## Session Continuity
