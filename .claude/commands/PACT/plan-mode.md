@@ -185,7 +185,9 @@ If a plan already exists for this feature slug:
    - **IN_PROGRESS**: Implementation underway; warn user and require explicit confirmation
    - **IMPLEMENTED**: Previous version completed; create new version with date suffix
    - **SUPERSEDED**: Safe to overwrite
-2. If creating a new version, use: `{feature-slug}-plan-{YYYY-MM-DD}.md`
+2. If creating a new version:
+   - First attempt: `{feature-slug}-plan-{YYYY-MM-DD}.md`
+   - If that exists: `{feature-slug}-plan-{YYYY-MM-DD}-v2.md` (increment as needed)
 3. Update the old plan's status to SUPERSEDED if overwriting
 
 **Use this structure:**
@@ -200,11 +202,21 @@ If a plan already exists for this feature slug:
      PENDING APPROVAL → APPROVED → IN_PROGRESS → IMPLEMENTED
                     ↘ SUPERSEDED (if replaced by newer plan)
                     ↘ BLOCKED (if unresolved conflicts)
+
+     Transition Ownership:
+     - PENDING APPROVAL → APPROVED: User (explicit approval)
+     - APPROVED → IN_PROGRESS: Orchestrator (when /PACT:orchestrate starts)
+     - IN_PROGRESS → IMPLEMENTED: Orchestrator (after successful completion)
+     - Any → SUPERSEDED: plan-mode (when creating replacement plan)
+     - Any → BLOCKED: plan-mode (when unresolved blocking conflicts)
 -->
 
 ## Summary
 
 {2-3 sentence overview of what will be implemented and the high-level approach}
+
+<!-- If there are limitations or gaps, add this callout: -->
+> **Limitations**: This plan has gaps due to incomplete specialist input. See [Limitations](#limitations) section before approving.
 
 ---
 
