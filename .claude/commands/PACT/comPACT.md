@@ -61,7 +61,19 @@ Task: [user's task description]
 - Receive handoff from specialist
 - Report completion to user
 
+**Next steps** (user decides):
+- Trivial changes → commit directly
+- Behavior changes → consider `/PACT:peer-review` for review and PR
+
 **If blocker reported**:
+
+Examples of blockers:
+- Task requires a different specialist's domain
+- Missing dependencies, access, or information
+- Same error persists after multiple fix attempts
+- Scope exceeds single-specialist capability
+
+When blocker is reported:
 1. Receive blocker report from specialist
 2. Run `/PACT:imPACT` to triage
 3. May escalate to `/PACT:orchestrate` if task exceeds single-specialist scope

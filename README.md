@@ -98,7 +98,12 @@ Instead of one generalist, you get a team of experts:
 /PACT:comPACT prepare Research OAuth2 best practices for our use case
 ```
 
-comPACT auto-selects the specialist when the task is clear, or asks for clarification when ambiguous.
+comPACT auto-selects the specialist when the task is clear, or asks for clarification when ambiguous:
+
+```
+/PACT:comPACT Fix the login bug
+→ Claude asks: "Which specialist should handle this? Backend / Frontend / Database"
+```
 
 ## 🎯 Why Use This?
 
