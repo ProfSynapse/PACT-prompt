@@ -81,11 +81,24 @@ Instead of one generalist, you get a team of experts:
 
 ### 🛠️ Custom Commands
 
-- **`/PACT:orchestrate`**: Delegate a task to specialist agents (multi-agent workflow).
-- **`/PACT:comPACT`**: Handle work solo with PACT phase-aware thinking (single-agent workflow).
+- **`/PACT:orchestrate`**: Delegate a task to specialist agents (multi-agent, full ceremony).
+- **`/PACT:comPACT`**: Delegate a focused task to a single specialist (light ceremony).
 - **`/PACT:imPACT`**: Triage when blocked (Redo prior phase? Additional agents needed?).
 - **`/PACT:peer-review`**: Commit, create PR, and run multi-agent code review.
 - **`/PACT:log-changes`**: Update `CLAUDE.md` to reflect recent significant changes.
+
+#### comPACT Examples
+
+```
+/PACT:comPACT backend Fix the null pointer in auth middleware
+/PACT:comPACT frontend Add loading spinner to submit button
+/PACT:comPACT database Add index to users.email column
+/PACT:comPACT test Add unit tests for payment module
+/PACT:comPACT architect Is singleton the right pattern for this config manager?
+/PACT:comPACT prepare Research OAuth2 best practices for our use case
+```
+
+comPACT auto-selects the specialist when the task is clear, or asks for clarification when ambiguous.
 
 ## 🎯 Why Use This?
 
