@@ -82,7 +82,7 @@ comPACT invokes exactly ONE specialist based on the task domain. No doc artifact
 | Shorthand | Specialist | Use For |
 |-----------|------------|---------|
 | `backend` | pact-backend-coder | Server-side logic, APIs, middleware |
-| `frontend` | pact-frontend-coder | UI, client-side |
+| `frontend` | pact-frontend-coder | UI, React, client-side |
 | `database` | pact-database-engineer | Schema, queries, migrations |
 | `prepare` | pact-preparer | Research, requirements |
 | `test` | pact-test-engineer | Standalone test tasks |
