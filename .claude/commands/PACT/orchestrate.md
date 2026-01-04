@@ -10,18 +10,17 @@ Orchestrate specialist PACT agents through the PACT workflow to address: $ARGUME
 
 Before running full PACT orchestration, evaluate task complexity:
 
-**Simple task (auto-redirect to comPACT):**
+**Simple or borderline task (ask user):**
 - Single file or component mentioned
 - Bug fix in one domain
 - Clear single-domain keywords (React, Express, PostgreSQL, Jest, etc.)
-- → Redirect: "This is a single-specialist task. Running `/PACT:comPACT` instead..."
-
-**Borderline (ask user):**
 - Small feature with unclear scope
-- Refactor that might be contained or might spread
-- → Ask: "This could be handled by comPACT (single-specialist) or orchestrate (full PACT). Which do you prefer?"
+- Refactor that might be contained
+- → Ask: "This looks like it could be handled by a single specialist. Would you like to run `/PACT:comPACT` instead?"
+- If yes → redirect to comPACT
+- If no → proceed with orchestrate
 
-**Complex (proceed with orchestrate):**
+**Complex task (proceed with orchestrate):**
 - Multiple domains mentioned
 - "New feature" or greenfield language
 - Architectural decisions required
