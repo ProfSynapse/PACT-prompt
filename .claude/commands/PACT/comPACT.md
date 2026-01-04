@@ -31,7 +31,9 @@ If the first word isn't a recognized shorthand, treat the entire argument as the
 - Generic verbs without domain context (fix, improve, update)
 - Feature-level scope that spans domains (login, user profile, dashboard)
 - Performance/optimization without specific layer
-- Ask: "This could be [options]. Which specialist should handle it?"
+- → Use `AskUserQuestion` tool:
+  - Question: "Which specialist should handle this task?"
+  - Options: List the 2-3 most likely specialists based on context (e.g., "Backend" / "Frontend" / "Database")
 
 ---
 

@@ -16,9 +16,11 @@ Before running full PACT orchestration, evaluate task complexity:
 - Clear single-domain keywords (React, Express, PostgreSQL, Jest, etc.)
 - Small feature with unclear scope
 - Refactor that might be contained
-- → Ask: "This looks like it could be handled by a single specialist. Would you like to run `/PACT:comPACT` instead?"
-- If yes → redirect to comPACT
-- If no → proceed with orchestrate
+- → Use `AskUserQuestion` tool:
+  - Question: "This looks like it could be handled by a single specialist. Would you like to run comPACT instead?"
+  - Options: "Yes, use comPACT" / "No, proceed with full orchestration"
+- If comPACT → redirect to `/PACT:comPACT`
+- If orchestrate → proceed with full PACT phases below
 
 **Complex task (proceed with orchestrate):**
 - Multiple domains mentioned

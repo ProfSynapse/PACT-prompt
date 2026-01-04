@@ -179,12 +179,12 @@ Save the synthesized plan to `docs/plans/{feature-slug}-plan.md`.
 **Handling existing plans**:
 
 If a plan already exists for this feature slug:
-1. Check the existing plan's status:
-   - **PENDING APPROVAL**: Ask user — overwrite, rename, or cancel?
-   - **APPROVED**: This plan was approved but not yet started; ask user to confirm overwrite
-   - **IN_PROGRESS**: Implementation underway; warn user and require explicit confirmation
-   - **IMPLEMENTED**: Previous version completed; create new version with date suffix
-   - **SUPERSEDED**: Safe to overwrite
+1. Check the existing plan's status and use `AskUserQuestion` tool when user input is needed:
+   - **PENDING APPROVAL**: Ask user with options: "Overwrite existing plan" / "Rename new plan" / "Cancel"
+   - **APPROVED**: Ask user with options: "Overwrite (plan not yet started)" / "Cancel"
+   - **IN_PROGRESS**: Warn that implementation is underway, ask with options: "Overwrite anyway" / "Cancel"
+   - **IMPLEMENTED**: Previous version completed; create new version with date suffix (no question needed)
+   - **SUPERSEDED**: Safe to overwrite (no question needed)
 2. If creating a new version:
    - First attempt: `{feature-slug}-plan-{YYYY-MM-DD}.md`
    - If that exists: `{feature-slug}-plan-{YYYY-MM-DD}-v2.md` (increment as needed)
