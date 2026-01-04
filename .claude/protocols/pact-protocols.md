@@ -12,7 +12,7 @@
 |----------|-------------|----------|
 | **PACT** | Complex/greenfield work | Multi-agent orchestration with formal handoffs |
 | **plan-mode** | Before complex work, need alignment | Multi-agent planning consultation, no implementation |
-| **comPACT** | Contained work (bugs, refactors, small features) | Single-agent, phase-aware thinking |
+| **comPACT** | Focused, single-domain tasks | Single-specialist delegation with light ceremony |
 | **imPACT** | When blocked or need to iterate | Triage: Redo prior phase? Additional agents needed? |
 
 ---
@@ -74,16 +74,38 @@ If neither question is "Yes," you're not blocked—continue.
 
 ## comPACT Protocol
 
-**Core idea**: One agent, same principles, scaled ceremony.
+**Core idea**: Single-specialist delegation with light ceremony.
 
-For simple work (typo, config): Apply principles naturally—understand, consider, change, verify.
+comPACT invokes exactly ONE specialist based on the task domain. No doc artifacts, no multi-phase orchestration—just focused work.
 
-For complex-but-contained work: Explicit hat-switching through P→A→C→T.
+**Available specialists**:
+| Shorthand | Specialist | Use For |
+|-----------|------------|---------|
+| `backend` | pact-backend-coder | Server-side logic, APIs, middleware |
+| `frontend` | pact-frontend-coder | UI, React, client-side |
+| `database` | pact-database-engineer | Schema, queries, migrations |
+| `prepare` | pact-preparer | Research, requirements |
+| `test` | pact-test-engineer | Standalone test tasks |
+| `architect` | pact-architect | Design guidance, pattern selection |
 
-**Escalate to multi-agent PACT when**:
-- Work spans multiple specialist domains
-- Architectural decisions affect multiple components
-- You realize you can't handle it well solo
+**Smart specialist selection**:
+- *Clear task* → Auto-select (domain keywords, file types, single-domain action)
+- *Ambiguous task* → Ask user which specialist
+
+**Light ceremony instructions** (injected when invoking specialist):
+- Work directly from task description
+- Check docs/plans/, docs/preparation/, docs/architecture/ briefly if they exist—reference relevant context
+- Do not create new documentation artifacts
+- Unit tests: Required for logic changes; optional for trivial changes (documentation, comments, config)
+
+**Escalate to `/PACT:orchestrate` when**:
+- Task spans multiple specialist domains
+- Specialist reports a blocker (run `/PACT:imPACT` first)
+
+**If blocker reported**:
+1. Receive blocker from specialist
+2. Run `/PACT:imPACT` to triage
+3. May escalate to `/PACT:orchestrate` if task exceeds single-specialist scope
 
 ---
 

@@ -6,6 +6,30 @@ Orchestrate specialist PACT agents through the PACT workflow to address: $ARGUME
 
 ## Before Starting
 
+### Task Complexity Check
+
+Before running full PACT orchestration, evaluate task complexity:
+
+**Simple or borderline task (ask user):**
+- Single file or component mentioned
+- Bug fix in one domain
+- Clear single-domain keywords (React, Express, PostgreSQL, Jest, etc.)
+- Small feature with unclear scope
+- Refactor that might be contained
+- → Use `AskUserQuestion` tool:
+  - Question: "This looks like it could be handled by a single specialist. Would you like to run comPACT instead?"
+  - Options: "Yes, use comPACT" / "No, proceed with full orchestration"
+- If comPACT → redirect to `/PACT:comPACT`
+- If orchestrate → proceed with full PACT phases below
+
+**Complex task (proceed with orchestrate):**
+- Multiple domains mentioned
+- "New feature" or greenfield language
+- Architectural decisions required
+- → Proceed with full PACT phases
+
+---
+
 1. **Create feature branch** if not already on one
 2. **Check for plan** in `docs/plans/` matching this task
 
