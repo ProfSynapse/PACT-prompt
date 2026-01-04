@@ -81,7 +81,7 @@ comPACT invokes exactly ONE specialist based on the task domain. No doc artifact
 **Available specialists**:
 | Shorthand | Specialist | Use For |
 |-----------|------------|---------|
-| `backend` | pact-backend-coder | Server-side logic, APIs |
+| `backend` | pact-backend-coder | Server-side logic, APIs, middleware |
 | `frontend` | pact-frontend-coder | UI, client-side |
 | `database` | pact-database-engineer | Schema, queries, migrations |
 | `prepare` | pact-preparer | Research, requirements |
@@ -94,8 +94,8 @@ comPACT invokes exactly ONE specialist based on the task domain. No doc artifact
 
 **Light ceremony instructions** (injected when invoking specialist):
 - Work directly from task description
-- Skip `docs/preparation/` and `docs/architecture/` (none exist)
-- Skip creating summary documentation
+- Check docs/plans/, docs/preparation/, docs/architecture/ briefly if they exist—reference relevant context
+- Do not create new documentation artifacts
 - Unit tests: Required for logic changes; optional for trivial changes (documentation, comments, config)
 
 **Escalate to `/PACT:orchestrate` when**:

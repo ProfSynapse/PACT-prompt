@@ -17,7 +17,9 @@ Delegate this focused task to a single PACT specialist: $ARGUMENTS
 | `test` | pact-test-engineer | Standalone test tasks |
 | `architect` | pact-architect | Quick design consultations |
 
-### If specialist not specified
+### If specialist not specified or unrecognized
+
+If the first word isn't a recognized shorthand, treat the entire argument as the task and apply smart selection below.
 
 **Auto-select when clear**:
 - Task contains domain-specific keywords (React, Express, PostgreSQL, Jest, etc.)
@@ -40,8 +42,8 @@ Delegate this focused task to a single PACT specialist: $ARGUMENTS
 **Invoke the specialist with**:
 ```
 comPACT mode: Work directly from this task description.
-Skip reviewing docs/preparation/ and docs/architecture/ (none exist for this task).
-Skip creating summary documentation in docs/.
+Check docs/plans/, docs/preparation/, docs/architecture/ briefly if they exist—reference relevant context.
+Do not create new documentation artifacts in docs/.
 Focus on the task at hand.
 Unit tests: Required for logic changes; optional for trivial changes (documentation, comments, config).
 
