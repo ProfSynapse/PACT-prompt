@@ -43,7 +43,7 @@ comPACT mode: Work directly from this task description.
 Skip reviewing docs/preparation/ and docs/architecture/ (none exist for this task).
 Skip creating summary documentation in docs/.
 Focus on the task at hand.
-Unit tests: Required for logic changes; optional for documentation-only, config, or trivial changes.
+Unit tests: Required for logic changes; optional for trivial changes (documentation, comments, config).
 
 If you hit a blocker, STOP and report it so the orchestrator can run /PACT:imPACT.
 
