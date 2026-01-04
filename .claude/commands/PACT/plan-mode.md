@@ -362,14 +362,25 @@ To implement this plan after approval:
 The orchestrator should reference this plan during execution.
 ```
 
-### Phase 4: Present to User
+### Phase 4: Present and Resolve
 
 After saving the plan:
 
 1. Present a concise summary to the user
-2. Highlight any **open questions requiring user decision**
-3. Note the **overall complexity and scope**
-4. Explain that after approval, they can run `/PACT:orchestrate` to implement
+2. Note the **overall complexity and scope**
+
+**Resolve open questions before exiting plan mode:**
+
+3. If there are items under **"Open Questions > Require User Decision"**:
+   - Use `AskUserQuestion` to resolve each decision point
+   - Update the plan file with the user's decisions (move resolved items to the appropriate sections, e.g., "Key Decisions")
+   - Repeat until no "Require User Decision" items remain
+
+4. Once all decision-requiring questions are resolved:
+   - Highlight any remaining **"Require Further Research"** items (these are addressed during the Prepare phase of implementation)
+   - Explain that after approval, they can run `/PACT:orchestrate` to implement
+
+**Do NOT exit plan mode** while "Require User Decision" items remain unresolved.
 
 **Do NOT proceed to implementation** — await user approval or feedback.
 
