@@ -15,7 +15,7 @@ Delegate this focused task to a single PACT specialist: $ARGUMENTS
 | `database` | pact-database-engineer | Schema, queries, migrations |
 | `prepare` | pact-preparer | Research, requirements gathering |
 | `test` | pact-test-engineer | Standalone test tasks |
-| `architect` | pact-architect | Design patterns, structure advice, architectural questions |
+| `architect` | pact-architect | Design guidance, pattern selection |
 
 ### If specialist not specified or unrecognized
 

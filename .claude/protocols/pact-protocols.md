@@ -86,7 +86,7 @@ comPACT invokes exactly ONE specialist based on the task domain. No doc artifact
 | `database` | pact-database-engineer | Schema, queries, migrations |
 | `prepare` | pact-preparer | Research, requirements |
 | `test` | pact-test-engineer | Standalone test tasks |
-| `architect` | pact-architect | Design patterns, structure advice, architectural questions |
+| `architect` | pact-architect | Design guidance, pattern selection |
 
 **Smart specialist selection**:
 - *Clear task* → Auto-select (domain keywords, file types, single-domain action)
