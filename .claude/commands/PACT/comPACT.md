@@ -22,9 +22,14 @@ Delegate this focused task to a single PACT specialist: $ARGUMENTS
 If the first word isn't a recognized shorthand, treat the entire argument as the task and apply smart selection below.
 
 **Auto-select when clear**:
-- Task contains domain-specific keywords (React, Express, PostgreSQL, Jest, etc.)
-- Task mentions specific file types (.tsx, .sql, .py, etc.)
-- Task describes single-domain action (API endpoint, component, migration, test)
+- Task contains domain-specific keywords:
+  - Frontend: React, Vue, UI, CSS, component
+  - Backend: Express, API, endpoint, middleware, server
+  - Database: PostgreSQL, MySQL, SQL, schema, migration, index
+  - Test: Jest, test, spec, coverage
+  - Prepare: research, investigate, requirements, explore, compare
+  - Architect: pattern, singleton, factory, structure, architecture
+- Task mentions specific file types (.tsx, .jsx, .sql, .spec.ts, etc.)
 - Proceed immediately: "Delegating to [specialist]..."
 
 **Ask when ambiguous**:
