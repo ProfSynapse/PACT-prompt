@@ -36,7 +36,7 @@ Plans are roadmaps from planning-only consultation. Each phase produces its own 
 - "Preparation Phase"
 - "Open Questions > Require Further Research"
 
-**Invoke with**:
+**Invoke `pact-preparer` with**:
 - Task description
 - Plan sections above (if any)
 - "Reference the approved plan at `docs/plans/{slug}-plan.md` for full context."
@@ -55,7 +55,7 @@ Plans are roadmaps from planning-only consultation. Each phase produces its own 
 - "Key Decisions"
 - "Interface Contracts"
 
-**Invoke with**:
+**Invoke `pact-architect` with**:
 - Task description
 - PREPARE phase outputs
 - Plan sections above (if any)
@@ -82,7 +82,7 @@ Plans are roadmaps from planning-only consultation. Each phase produces its own 
 
 Invoke multiple coders in parallel for non-conflicting work.
 
-**Invoke with**:
+**Invoke coder(s) with**:
 - Task description
 - ARCHITECT phase outputs
 - Plan sections above (if any)
@@ -103,7 +103,7 @@ Invoke multiple coders in parallel for non-conflicting work.
 - "Test Scenarios"
 - "Coverage Targets"
 
-**Invoke with**:
+**Invoke `pact-test-engineer` with**:
 - Task description
 - Implementation details from CODE phase
 - Plan sections above (if any)
