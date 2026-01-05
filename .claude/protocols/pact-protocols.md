@@ -197,7 +197,8 @@ TEST phase produces its own decision log at `docs/decision-logs/{feature}-test.m
 What strategy was chosen and why.
 
 ## Areas Prioritized
-Based on CODE decision log's "areas of uncertainty" - where focus was placed.
+Referenced CODE logs: [list files read, e.g., `user-auth-backend.md`]
+Focus areas based on their "areas of uncertainty".
 
 ## Edge Cases Identified
 What boundary conditions and error scenarios were tested.

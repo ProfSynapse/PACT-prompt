@@ -141,7 +141,7 @@ Before starting tests, check for decision log(s) at `docs/decision-logs/{feature
 
 Before completing, output a test decision log to `docs/decision-logs/{feature}-test.md` containing:
 - Testing approach and rationale
-- Areas prioritized (based on CODE decision log's "areas of uncertainty")
+- Areas prioritized (reference CODE logs read; focus on their "areas of uncertainty")
 - Edge cases identified and tested
 - Coverage notes (achieved coverage, significant gaps)
 - What was NOT tested and why (scope, complexity, low risk)
