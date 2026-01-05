@@ -10,7 +10,7 @@
 
 | Workflow | When to Use | Key Idea |
 |----------|-------------|----------|
-| **PACT** | Complex/greenfield work | Multi-agent orchestration with formal handoffs |
+| **PACT** | Complex/greenfield work | Context-aware multi-agent orchestration |
 | **plan-mode** | Before complex work, need alignment | Multi-agent planning consultation, no implementation |
 | **comPACT** | Focused, single-domain tasks | Single-specialist delegation with light ceremony |
 | **imPACT** | When blocked or need to iterate | Triage: Redo prior phase? Additional agents needed? |
