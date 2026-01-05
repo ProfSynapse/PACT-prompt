@@ -137,6 +137,20 @@ Before starting tests, check for decision log(s) at `docs/decision-logs/{feature
 
 **Use the decision log as context, not prescription.** You decide what and how to test based on your expertise.
 
+**DECISION LOG OUTPUT**
+
+Before completing, output a test decision log to `docs/decision-logs/{feature}-test.md` containing:
+- Testing approach and rationale
+- Areas prioritized (based on CODE decision log's "areas of uncertainty")
+- Edge cases identified and tested
+- Coverage notes (achieved coverage, significant gaps)
+- What was NOT tested and why (scope, complexity, low risk)
+- Known issues (flaky tests, environment dependencies)
+
+Focus on the **"why"** not the "what" — test code shows what was tested, the decision log explains the reasoning.
+
+For `/PACT:comPACT` (light ceremony), this is optional.
+
 **HOW TO HANDLE BLOCKERS**
 
 If you run into a blocker, STOP what you're doing and report the blocker to the orchestrator, so they can take over and invoke `/PACT:imPACT`.

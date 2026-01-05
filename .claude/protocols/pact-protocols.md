@@ -186,6 +186,36 @@ Brief description of what was implemented.
 
 **If decision log is missing**: For `/PACT:orchestrate`, request it from the orchestrator. For `/PACT:comPACT` (light ceremony), proceed with test design based on code analysis—decision logs are optional.
 
+### TEST Decision Log
+
+TEST phase produces its own decision log at `docs/decision-logs/{feature}-test.md`:
+
+```markdown
+# Test Decision Log: {Feature Name}
+
+## Testing Approach
+What strategy was chosen and why.
+
+## Areas Prioritized
+Based on CODE decision log's "areas of uncertainty" - where focus was placed.
+
+## Edge Cases Identified
+What boundary conditions and error scenarios were tested.
+
+## Coverage Notes
+What coverage was achieved, any significant gaps.
+
+## What Was NOT Tested
+Explicit scope boundaries and rationale (complexity, time, low risk).
+
+## Known Issues
+Flaky tests, environment dependencies, or unresolved concerns.
+```
+
+Focus on the **"why"** not the "what" — test code shows what was tested, the decision log explains the reasoning.
+
+For `/PACT:comPACT` (light ceremony), this is optional.
+
 ---
 
 ## Cross-Cutting Concerns
@@ -218,7 +248,8 @@ Skip for simple features or when "just build it."
 | Prepare | `docs/preparation/` |
 | Architect | `docs/architecture/` |
 | Code (decision logs) | `docs/decision-logs/{feature}-{domain}.md` |
-| Test | `docs/testing/` |
+| Test (decision log) | `docs/decision-logs/{feature}-test.md` |
+| Test (artifacts) | `docs/testing/` |
 
 **Plan vs. Architecture artifacts**:
 - **Plans** (`docs/plans/`): Pre-approval roadmaps created by `/PACT:plan-mode`. Multi-specialist consultation synthesized into scope estimates, sequencing, and risk assessment. Created *before* implementation begins.

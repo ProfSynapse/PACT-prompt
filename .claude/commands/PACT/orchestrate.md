@@ -223,6 +223,7 @@ Each specialist should end with a structured handoff (2-4 sentences):
 **Before completing**:
 - [ ] Outputs exist in `docs/testing/`
 - [ ] All tests passing
+- [ ] Test decision log created at `docs/decision-logs/{feature}-test.md`
 - [ ] Specialist handoff received (see Handoff Format above)
 - [ ] If blocker reported → `/PACT:imPACT`
 
