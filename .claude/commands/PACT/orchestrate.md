@@ -57,15 +57,21 @@ Before executing phases, assess which are needed based on existing context:
 | **CODE** | Always run | Never skip |
 | **TEST** | Integration/E2E tests needed, complex component interactions, security/performance verification | Unit tests from coders sufficient, no integration boundaries crossed, isolated change |
 
-**Plan-aware fast path**: When an approved plan exists in `docs/plans/`, PREPARE and ARCHITECT are typically skippable—the plan already synthesized specialist perspectives. Skip unless scope has changed or plan is stale (>2 weeks old).
+**Conflict resolution**: When both "Run if" and "Skip if" criteria apply, **run the phase** (safer default). Example: A plan exists but requirements have changed—run PREPARE to validate.
 
-**State your assessment before proceeding.** Example:
+**Plan-aware fast path**: When an approved plan exists in `docs/plans/`, PREPARE and ARCHITECT are typically skippable—the plan already synthesized specialist perspectives. Skip unless scope has changed or plan appears stale (typically >2 weeks; ask user to confirm if uncertain).
 
-> "Approved plan found at `docs/plans/user-auth-jwt-plan.md`. Skipping PREPARE and ARCHITECT (plan covers both). Running CODE. Running TEST (plan specifies integration tests needed)."
+**State your assessment before proceeding.** For each skipped phase, state:
+1. Which skip criterion was met
+2. The context source (plan path, doc path, or pattern name)
+
+Example:
+
+> "Approved plan found at `docs/plans/user-auth-jwt-plan.md`. Skipping PREPARE (plan has Preparation Phase section). Skipping ARCHITECT (plan has Architecture Phase section). Running CODE. Running TEST (plan specifies integration tests needed)."
 
 Or without a plan:
 
-> "No plan found. Running PREPARE (external API needs research). Skipping ARCHITECT (following existing patterns). Running CODE. Skipping TEST (unit tests sufficient)."
+> "No plan found. Running PREPARE (external API needs research). Skipping ARCHITECT (following established repository pattern in `src/repositories/`). Running CODE. Skipping TEST (isolated change, unit tests sufficient)."
 
 The user can override your assessment if they want more or less ceremony.
 
@@ -78,8 +84,10 @@ When a phase is skipped but a coder encounters a decision that would have been h
 | Decision Scope | Examples | Action |
 |----------------|----------|--------|
 | **Minor** | Naming conventions, local file structure, error message wording | Coder decides, documents in commit message |
-| **Moderate** | Interface shape, error handling pattern, component boundaries | Coder decides and implements, but flags decision with rationale in handoff; orchestrator validates before next phase |
-| **Major** | New component needed, cross-boundary contract, architectural pattern choice | Blocker → `/PACT:imPACT` → may need to run skipped phase |
+| **Moderate** | Interface shape within your module, error handling pattern, internal component boundaries | Coder decides and implements, but flags decision with rationale in handoff; orchestrator validates before next phase |
+| **Major** | New module needed, cross-module contract, architectural pattern affecting multiple components | Blocker → `/PACT:imPACT` → may need to run skipped phase |
+
+**Boundary heuristic**: If a decision affects files outside the current specialist's scope, treat it as Major.
 
 **Coder instruction when phases were skipped**:
 
@@ -98,13 +106,14 @@ Each specialist should end with a structured handoff (2-4 sentences):
 1. Produced: [files created/modified, key artifacts]
 2. Key context for next phase: [decisions made, patterns established, constraints discovered]
 3. Open questions (if any): [uncertainties for next phase to resolve or confirm]
+4. Decisions made (if phases skipped): [moderate decisions with rationale—for orchestrator validation]
 ```
 
 **Examples**:
 
 > **Handoff**: 1. Produced: `docs/preparation/rate-limiting-research.md` covering token bucket vs sliding window algorithms. 2. Key context: Recommended Redis-based token bucket; existing `redis-client.ts` can be reused. 3. Open questions: Should rate limits be per-user or per-API-key?
 
-> **Handoff**: 1. Produced: `src/middleware/rateLimiter.ts`, `src/config/rateLimits.ts`, unit tests passing. 2. Key context: Used token bucket with Redis; added `X-RateLimit-*` headers per RFC 6585. 3. Open questions: None—ready for integration testing.
+> **Handoff**: 1. Produced: `src/middleware/rateLimiter.ts`, `src/config/rateLimits.ts`, unit tests passing. 2. Key context: Used token bucket with Redis; added `X-RateLimit-*` headers per RFC 6585. 3. Open questions: None—ready for integration testing. 4. Decisions made: Chose `X-RateLimit-Remaining` header format (moderate—affects API consumers); rationale: follows RFC 6585 standard.
 
 ---
 
