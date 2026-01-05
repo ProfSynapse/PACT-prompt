@@ -49,7 +49,7 @@ If the first word isn't a recognized shorthand, treat the entire argument as the
 **Invoke the specialist with**:
 ```
 comPACT mode: Work directly from this task description.
-Check docs/plans/, docs/preparation/, docs/architecture/, docs/progress/ briefly if they exist—reference relevant context.
+Check docs/plans/, docs/preparation/, docs/architecture/ briefly if they exist—reference relevant context.
 Do not create new documentation artifacts in docs/.
 Focus on the task at hand.
 Unit tests: Required for logic changes; optional for trivial changes (documentation, comments, config).

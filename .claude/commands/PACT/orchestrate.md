@@ -32,22 +32,6 @@ Before running full PACT orchestration, evaluate task complexity:
 
 1. **Create feature branch** if not already on one
 2. **Check for plan** in `docs/plans/` matching this task
-3. **Check for progress** in `docs/progress/` matching this task
-
-### Progress File Handling
-
-If a progress file exists, incremental orchestration was started previously:
-
-| Progress State | Action |
-|----------------|--------|
-| All sub-features ✅ Completed | Work already done—confirm with user before re-running |
-| Some sub-features 🔄 In Progress or ⏳ Pending | Ask: "Resume from sub-feature X?" or "Start fresh?" |
-| No progress file | Proceed normally |
-
-When resuming:
-- Read "Established Context" section for patterns/decisions from prior sub-features
-- Skip to the first incomplete sub-feature
-- Context from completed sub-features informs phase-skipping
 
 ### Plan Status Handling
 
@@ -59,82 +43,6 @@ When resuming:
 | IN_PROGRESS | Confirm: continue or restart? |
 | SUPERSEDED/IMPLEMENTED | Confirm with user before proceeding |
 | No plan found | Proceed—phases will do full discovery |
-
-### Large Feature Handling
-
-For features with multiple implementation phases (identified in plan or by scope):
-
-**Option 1: Single orchestration** (default)
-- Run all phases once
-- Single PR with all changes
-- Best for: cohesive features, moderate scope
-
-**Option 2: Incremental orchestration** (for large features)
-- Break into sub-features based on plan's "Implementation Sequence" or logical boundaries
-- Each sub-feature gets its own orchestration cycle:
-  1. Orchestrate sub-feature 1 → test → commit
-  2. Orchestrate sub-feature 2 → test → commit
-  3. ...continue...
-  4. Final `/PACT:peer-review` covers all commits
-- Context carries forward: later sub-features can skip PREPARE/ARCHITECT if earlier ones established patterns
-- Best for: large features, multiple independent components, risk mitigation
-
-**How to break up work**:
-1. **Present proposed breakdown** before starting: list sub-features with brief scope
-2. Each sub-feature should be:
-   - A meaningful, testable unit (not arbitrary chunks)
-   - Mappable to 1-3 logical commits
-   - Completable without depending on unfinished sub-features
-3. Suggested breakdown patterns:
-   - By layer: database → backend → frontend
-   - By component: auth module → user profile → dashboard
-   - By user flow: registration → login → password reset
-4. Get user confirmation on breakdown before proceeding
-
-**When to suggest incremental orchestration**:
-- Plan identifies 3+ distinct implementation phases
-- Feature touches 3+ separate domains
-- Estimated scope is "High" or "Very High"
-- User explicitly requests phased delivery
-
-Ask the user: "This is a large feature. Would you prefer single orchestration or incremental (sub-feature by sub-feature)?"
-
-**Tracking incremental progress**:
-
-When incremental orchestration is chosen, create a progress file at `docs/progress/{feature-slug}-progress.md`:
-
-```markdown
-# Progress: {Feature Name}
-
-> Tracking incremental orchestration for: {task description}
-> Plan: `docs/plans/{slug}-plan.md` (if exists, otherwise "None")
-> Started: {YYYY-MM-DD}
-
-## Sub-feature Breakdown
-
-| # | Sub-feature | Status | Commits | Context Established |
-|---|-------------|--------|---------|---------------------|
-| 1 | Database schema | ✅ Completed | `abc123` | User table, session table, indexes |
-| 2 | Backend auth API | 🔄 In Progress | — | — |
-| 3 | Frontend login UI | ⏳ Pending | — | — |
-
-**Current**: Sub-feature 2 of 3
-**Last updated**: {YYYY-MM-DD}
-
-## Established Context
-
-Patterns and decisions from completed sub-features that inform remaining work:
-- User table uses UUID primary keys (established in sub-feature 1)
-- Auth follows JWT pattern with refresh tokens (established in sub-feature 2)
-```
-
-**After each sub-feature completes**:
-1. Update status: ⏳ Pending → 🔄 In Progress → ✅ Completed
-2. Record commit hash(es)
-3. Add key context to "Established Context" section
-4. This context informs phase-skipping for subsequent sub-features
-
-**Cross-session continuity**: The progress file tells the next session exactly where to resume and what context has been established.
 
 ---
 
@@ -170,12 +78,12 @@ When a phase is skipped but a coder encounters a decision that would have been h
 | Decision Scope | Examples | Action |
 |----------------|----------|--------|
 | **Minor** | Naming conventions, local file structure, error message wording | Coder decides, documents in commit message |
-| **Moderate** | Interface shape, error handling pattern, component boundaries | Coder proposes in handoff; orchestrator confirms or escalates |
+| **Moderate** | Interface shape, error handling pattern, component boundaries | Coder decides and implements, but flags decision with rationale in handoff; orchestrator validates before next phase |
 | **Major** | New component needed, cross-boundary contract, architectural pattern choice | Blocker → `/PACT:imPACT` → may need to run skipped phase |
 
 **Coder instruction when phases were skipped**:
 
-> "PREPARE and/or ARCHITECT were skipped based on existing context. If you encounter a decision that feels architectural or requires research beyond your immediate scope, note it in your handoff rather than blocking. Minor decisions (naming, local structure) are yours to make. Major decisions that affect other components should be flagged."
+> "PREPARE and/or ARCHITECT were skipped based on existing context. Minor decisions (naming, local structure) are yours to make. For moderate decisions (interface shape, error patterns), decide and implement but flag the decision with your rationale in the handoff so it can be validated. Major decisions affecting other components are blockers—don't implement, escalate."
 
 This prevents excessive ping-pong for small decisions while catching real issues.
 
@@ -276,7 +184,7 @@ Each specialist should end with a structured handoff (2-4 sentences):
 - ARCHITECT phase outputs (or plan's Architecture Phase if ARCHITECT was skipped)
 - Plan sections above (if any)
 - "Reference the approved plan at `docs/plans/{slug}-plan.md` for full context."
-- If PREPARE/ARCHITECT were skipped, include: "PREPARE and/or ARCHITECT were skipped based on existing context. Minor decisions (naming, local structure) are yours to make. Moderate decisions (interface shape, error patterns) should be proposed in your handoff. Major decisions affecting other components are blockers."
+- If PREPARE/ARCHITECT were skipped, include: "PREPARE and/or ARCHITECT were skipped based on existing context. Minor decisions (naming, local structure) are yours to make. For moderate decisions (interface shape, error patterns), decide and implement but flag the decision with your rationale in the handoff so it can be validated. Major decisions affecting other components are blockers—don't implement, escalate."
 
 **Before next phase**:
 - [ ] Implementation complete

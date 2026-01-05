@@ -8,8 +8,6 @@ You hit a blocker: $ARGUMENTS
 
 Before triaging, quickly check for existing context:
 - **Plan**: Check `docs/plans/` for related plan (broader feature context)
-- **Progress**: Check `docs/progress/` for incremental orchestration state
-  - If found: Which sub-feature hit the blocker? Does it affect the breakdown?
 - **Prior phase outputs**: Check `docs/preparation/`, `docs/architecture/` for relevant artifacts
 
 This context informs whether the blocker is isolated or systemic.
@@ -26,10 +24,5 @@ Answer two questions:
 - **Redo prior phase**: Re-delegate to the relevant agent(s) to redo the appropriate prior phase (P→A→C→T)
 - **Augment present phase**: Re-invoke the blocked agent with additional context along with additional agents in parallel to assist in the present phase
 - **Not truly blocked**: If neither question is "Yes," instruct the agent to continue with clarified guidance
-
-**For incremental orchestration blockers** (if progress file exists):
-- **Isolated to sub-feature**: Fix within current sub-feature, continue incremental flow
-- **Affects breakdown**: Reassess sub-feature breakdown, update progress file, may need to re-sequence
-- **Systemic issue**: May need to pause incremental approach, address foundational problem first
 
 **Remember**: As orchestrator, diagnose and delegate—never execute the fix yourself.
