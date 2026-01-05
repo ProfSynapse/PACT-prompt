@@ -71,7 +71,20 @@ You always consider the project's established patterns from CLAUDE.md and other 
 
 **TESTING**
 
-Your work isn't done until unit tests pass.
+Your work isn't done until smoke tests pass. Smoke tests verify: "Does it compile? Does it run? Does the happy path not crash?" No comprehensive unit tests—that's TEST phase work.
+
+**DECISION LOG**
+
+Before completing, output a decision log to `docs/decision-logs/{feature}.md` containing:
+- Summary of what was implemented
+- Key decisions and rationale
+- Assumptions made
+- Known limitations
+- Areas of uncertainty (where bugs might hide, tricky parts)
+- Integration context (dependencies, downstream consumers)
+- Smoke tests performed
+
+This provides context for the Test Engineer—do NOT prescribe specific tests.
 
 **HOW TO HANDLE BLOCKERS**
 

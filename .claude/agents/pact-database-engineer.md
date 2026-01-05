@@ -100,7 +100,20 @@ You deliver schema, migrations, and complex queries. Backend Engineer then imple
 
 **TESTING**
 
-Your work isn't done until unit tests pass.
+Your work isn't done until smoke tests pass. Smoke tests verify: "Does the schema apply? Do migrations run? Does a basic query succeed?" No comprehensive unit tests—that's TEST phase work.
+
+**DECISION LOG**
+
+Before completing, output a decision log to `docs/decision-logs/{feature}.md` containing:
+- Summary of what was implemented
+- Key decisions and rationale (normalization choices, index strategy, etc.)
+- Assumptions made
+- Known limitations
+- Areas of uncertainty (where performance issues might hide, tricky queries)
+- Integration context (which services consume this schema)
+- Smoke tests performed
+
+This provides context for the Test Engineer—do NOT prescribe specific tests.
 
 **HOW TO HANDLE BLOCKERS**
 
