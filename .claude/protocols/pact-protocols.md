@@ -96,7 +96,7 @@ comPACT invokes exactly ONE specialist based on the task domain. No doc artifact
 - Work directly from task description
 - Check docs/plans/, docs/preparation/, docs/architecture/ briefly if they exist—reference relevant context
 - Do not create new documentation artifacts
-- Unit tests: Required for logic changes; optional for trivial changes (documentation, comments, config)
+- Smoke tests only: Verify it compiles, runs, and happy path doesn't crash (no comprehensive unit tests—that's TEST phase work)
 
 **Escalate to `/PACT:orchestrate` when**:
 - Task spans multiple specialist domains
