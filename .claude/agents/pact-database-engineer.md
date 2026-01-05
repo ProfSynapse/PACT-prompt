@@ -104,7 +104,7 @@ Your work isn't done until smoke tests pass. Smoke tests verify: "Does the schem
 
 **DECISION LOG**
 
-Before completing, output a decision log to `docs/decision-logs/{feature}.md` containing:
+Before completing, output a decision log to `docs/decision-logs/{feature}-database.md` containing:
 - Summary of what was implemented
 - Key decisions and rationale (normalization choices, index strategy, etc.)
 - Assumptions made

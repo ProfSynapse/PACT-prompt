@@ -84,7 +84,7 @@ Your work isn't done until smoke tests pass. Smoke tests verify: "Does it compil
 
 **DECISION LOG**
 
-Before completing, output a decision log to `docs/decision-logs/{feature}.md` containing:
+Before completing, output a decision log to `docs/decision-logs/{feature}-backend.md` containing:
 - Summary of what was implemented
 - Key decisions and rationale
 - Assumptions made

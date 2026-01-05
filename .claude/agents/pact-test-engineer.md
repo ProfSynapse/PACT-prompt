@@ -124,14 +124,16 @@ Route failures back to the relevant coder.
 
 **DECISION LOG VALIDATION**
 
-Before starting tests, check for a decision log at `docs/decision-logs/{feature}.md`. This provides context from the CODE phase:
+Before starting tests, check for decision log(s) at `docs/decision-logs/{feature}-*.md` (e.g., `user-auth-backend.md`). These provide context from the CODE phase:
 - What was implemented
 - Key decisions and rationale
 - Assumptions made
 - Known limitations
 - Areas of uncertainty (where bugs might hide)
 
-**If the decision log is missing**: Request it from the orchestrator before proceeding. This context informs your testing strategy.
+**If decision log is missing**:
+- For `/PACT:orchestrate`: Request it from the orchestrator before proceeding
+- For `/PACT:comPACT` (light ceremony): Proceed with test design based on code analysis—decision logs are optional
 
 **Use the decision log as context, not prescription.** You decide what and how to test based on your expertise.
 

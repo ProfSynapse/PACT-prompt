@@ -150,16 +150,41 @@ Keep it brief. No templates required.
 
 ### CODE → TEST Handoff
 
-CODE phase produces a decision log at `docs/decision-logs/{feature}.md` containing:
-- What was implemented
-- Key decisions and rationale
-- Assumptions made
-- Known limitations
-- Areas of uncertainty (where bugs might hide)
+CODE phase produces decision log(s) at `docs/decision-logs/{feature}-{domain}.md`:
+- `{feature}` = kebab-case feature name (match branch slug when available)
+- `{domain}` = `backend`, `frontend`, or `database`
+- Example: `user-authentication-backend.md`
+
+**Decision log contents:**
+```markdown
+# Decision Log: {Feature Name}
+
+## Summary
+Brief description of what was implemented.
+
+## Key Decisions
+- Decision: rationale
+
+## Assumptions
+- Assumption made and why
+
+## Known Limitations
+- What wasn't handled and why
+
+## Areas of Uncertainty
+- Where bugs might hide, tricky parts
+
+## Integration Context
+- Depends on: [services, modules]
+- Consumed by: [downstream code]
+
+## Smoke Tests
+- What was verified (compile, run, happy path)
+```
 
 **This is context, not prescription.** The test engineer decides what and how to test. The decision log helps inform that judgment.
 
-**If decision log is missing**: Test Engineer should request it from the orchestrator before proceeding.
+**If decision log is missing**: For `/PACT:orchestrate`, request it from the orchestrator. For `/PACT:comPACT` (light ceremony), proceed with test design based on code analysis—decision logs are optional.
 
 ---
 
@@ -192,7 +217,7 @@ Skip for simple features or when "just build it."
 | Plan | `docs/plans/` |
 | Prepare | `docs/preparation/` |
 | Architect | `docs/architecture/` |
-| Code (decision logs) | `docs/decision-logs/` |
+| Code (decision logs) | `docs/decision-logs/{feature}-{domain}.md` |
 | Test | `docs/testing/` |
 
 **Plan vs. Architecture artifacts**:
