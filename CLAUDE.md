@@ -136,8 +136,8 @@ When delegating tasks to agents, remind them of their blocker-handling protocol
 To invoke specialist agents, follow this sequence:
 1. **PREPARE Phase**: Invoke `pact-preparer` → outputs to `docs/preparation/`
 2. **ARCHITECT Phase**: Invoke `pact-architect` → outputs to `docs/architecture/`
-3. **CODE Phase**: Invoke relevant coders (includes unit tests)
-4. **TEST Phase**: Invoke `pact-test-engineer` (for integration/E2E)
+3. **CODE Phase**: Invoke relevant coders (includes smoke tests + decision log)
+4. **TEST Phase**: Invoke `pact-test-engineer` (for all substantive testing)
 
 Within each phase, invoke **multiple agents in parallel** for non-conflicting tasks.
 
