@@ -197,7 +197,8 @@ Each specialist should end with a structured handoff (2-4 sentences):
 
 **Before next phase**:
 - [ ] Implementation complete
-- [ ] Unit tests passing
+- [ ] Smoke tests passing (compile, run, happy path doesn't crash)
+- [ ] Decision log(s) created at `docs/decision-logs/{feature}-{domain}.md`
 - [ ] Specialist handoff(s) received (see Handoff Format above)
 - [ ] If blocker reported → `/PACT:imPACT`
 
@@ -214,13 +215,15 @@ Each specialist should end with a structured handoff (2-4 sentences):
 
 **Invoke `pact-test-engineer` with**:
 - Task description
-- Implementation details from CODE phase
+- Decision log(s) from CODE phase: "Read the implementation decision log(s) at `docs/decision-logs/{feature}-*.md` for context on what was built, key decisions, assumptions, and areas of uncertainty."
 - Plan sections above (if any)
 - "Reference the approved plan at `docs/plans/{slug}-plan.md` for full context."
+- "You own ALL substantive testing: unit tests, integration, E2E, edge cases. The decision log provides context—you decide what and how to test."
 
 **Before completing**:
 - [ ] Outputs exist in `docs/testing/`
 - [ ] All tests passing
+- [ ] Test decision log created at `docs/decision-logs/{feature}-test.md`
 - [ ] Specialist handoff received (see Handoff Format above)
 - [ ] If blocker reported → `/PACT:imPACT`
 
