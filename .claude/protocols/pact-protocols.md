@@ -139,13 +139,27 @@ Keep it brief. No templates required.
 
 | Test Type | Owner |
 |-----------|-------|
-| Unit tests | Coders (part of "done") |
+| Smoke tests | Coders (minimal verification) |
+| Unit tests | Test Engineer |
 | Integration tests | Test Engineer |
 | E2E tests | Test Engineer |
 
-**Coders**: Your work isn't done until unit tests pass.
+**Coders**: Your work isn't done until smoke tests pass. Smoke tests verify: "Does it compile? Does it run? Does the happy path not crash?" No comprehensive testing—that's TEST phase work.
 
-**Test Engineer**: Engage after Code phase. Route failures back to relevant coder.
+**Test Engineer**: Engage after Code phase. You own ALL substantive testing: unit tests, integration, E2E, edge cases, adversarial testing. Target 80%+ meaningful coverage of critical paths.
+
+### CODE → TEST Handoff
+
+CODE phase produces a decision log at `docs/decision-logs/{feature}.md` containing:
+- What was implemented
+- Key decisions and rationale
+- Assumptions made
+- Known limitations
+- Areas of uncertainty (where bugs might hide)
+
+**This is context, not prescription.** The test engineer decides what and how to test. The decision log helps inform that judgment.
+
+**If decision log is missing**: Test Engineer should request it from the orchestrator before proceeding.
 
 ---
 
@@ -178,10 +192,8 @@ Skip for simple features or when "just build it."
 | Plan | `docs/plans/` |
 | Prepare | `docs/preparation/` |
 | Architect | `docs/architecture/` |
-| Code | `docs/codebase/` |
+| Code (decision logs) | `docs/decision-logs/` |
 | Test | `docs/testing/` |
-| Decisions | `docs/decisions/` |
-| Iterations | `docs/impact/` |
 
 **Plan vs. Architecture artifacts**:
 - **Plans** (`docs/plans/`): Pre-approval roadmaps created by `/PACT:plan-mode`. Multi-specialist consultation synthesized into scope estimates, sequencing, and risk assessment. Created *before* implementation begins.
