@@ -137,9 +137,23 @@ Each specialist should end with a structured handoff (2-4 sentences):
 
 ---
 
+### Post-PREPARE Re-assessment
+
+If PREPARE ran and ARCHITECT was marked "Skip," compare PREPARE's recommended approach to the skip rationale:
+
+- **Approach matches rationale** → Skip holds
+- **Novel approach** (new components, interfaces, expanded scope) → Override, run ARCHITECT
+
+**Example**:
+> Skip rationale: "following established pattern in `src/utils/`"
+> PREPARE recommends "add helper to existing utils" → Skip holds
+> PREPARE recommends "new ValidationService class" → Override, run ARCHITECT
+
+---
+
 ### Phase 2: ARCHITECT → `pact-architect`
 
-**Skip criteria met?** → Proceed to Phase 3.
+**Skip criteria met (after re-assessment)?** → Proceed to Phase 3.
 
 **Plan sections to pass** (if plan exists):
 - "Architecture Phase"
