@@ -52,7 +52,10 @@ comPACT mode: Work directly from this task description.
 Check docs/plans/, docs/preparation/, docs/architecture/ briefly if they exist—reference relevant context.
 Do not create new documentation artifacts in docs/.
 Focus on the task at hand.
-Unit tests: Required for logic changes; optional for trivial changes (documentation, comments, config).
+Testing responsibilities:
+- New unit tests: Required for logic changes; optional for trivial changes (documentation, comments, config).
+- Existing tests: If your changes break existing tests, fix them.
+- Before handoff: Run the test suite and ensure all tests pass.
 
 If you hit a blocker, STOP and report it so the orchestrator can run /PACT:imPACT.
 
