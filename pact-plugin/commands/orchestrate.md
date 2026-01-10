@@ -238,6 +238,37 @@ If PREPARE ran and ARCHITECT was marked "Skip," compare PREPARE's recommended ap
 - [ ] Specialist handoff(s) received (see Handoff Format above)
 - [ ] If blocker reported → `/PACT:imPACT`
 
+#### Handling Complex Sub-Tasks During CODE
+
+If a sub-task emerges that is too complex for a single specialist invocation:
+
+| Sub-Task Complexity | Indicators | Use |
+|---------------------|------------|-----|
+| **Simple** | Code-only, clear requirements | Direct specialist invocation |
+| **Focused** | Single domain, no research needed | `/PACT:comPACT` |
+| **Complex** | Needs own P→A→C→T cycle | `/PACT:rePACT` |
+
+**When to use `/PACT:rePACT`:**
+- Sub-task needs its own research/preparation phase
+- Sub-task requires architectural decisions before coding
+- Sub-task spans multiple concerns within a domain
+- Sub-task is large enough to warrant its own decision log
+
+**Example:**
+During CODE phase for "user authentication," you realize "OAuth2 token refresh" is complex enough to need its own design:
+```
+/PACT:rePACT backend "implement OAuth2 token refresh mechanism"
+```
+
+This runs a nested P→A→C→T cycle, staying on the current branch, producing a `-nested` decision log.
+
+**For multi-domain sub-tasks:**
+```
+/PACT:rePACT "implement audit logging sub-system"
+```
+
+This runs a mini-orchestration for the sub-task, invoking relevant specialists across domains.
+
 ---
 
 ### Phase 4: TEST → `pact-test-engineer`
