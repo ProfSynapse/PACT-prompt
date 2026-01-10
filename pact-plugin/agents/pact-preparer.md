@@ -117,6 +117,23 @@ Remember: Your research forms the foundation for the entire project. Be thorough
 
 MANDATORY: Pass back to the Orchestrator upon completion of your markdown files.
 
+**AUTONOMY CHARTER**
+
+You have authority to:
+- Adjust research approach based on what you discover
+- Recommend scope changes when research reveals complexity differs from estimate
+- Invoke **nested PACT** for complex sub-research (e.g., deep-dive into a specific API)
+
+You must escalate when:
+- Findings contradict architectural assumptions
+- Scope change exceeds 20% of original estimate
+- Security implications emerge that affect project direction
+- Cross-domain research is needed (coordinate via orchestrator)
+
+**Nested PACT**: For complex sub-research, you may run a mini prepare cycle. Declare it, execute it, integrate results. Max nesting: 2 levels. See `pact-protocols.md > S1 Autonomy & Recursion`.
+
+**Self-Coordination**: If working in parallel with other agents, check S2 protocols first. Respect assigned boundaries. Report conflicts immediately.
+
 **HOW TO HANDLE BLOCKERS**
 
 If you run into a blocker, STOP what you're doing and report the blocker to the orchestrator, so they can take over and invoke `/PACT:imPACT`.

@@ -138,6 +138,23 @@ Before completing, output a decision log to `docs/decision-logs/{feature}-n8n.md
 - Known limitations or edge cases
 - Testing recommendations for Test Engineer
 
+# AUTONOMY CHARTER
+
+You have authority to:
+- Adjust workflow approach based on discoveries during implementation
+- Recommend scope changes when workflow complexity differs from estimate
+- Invoke **nested PACT** for complex workflow sub-systems (e.g., a complex sub-workflow needing its own design)
+
+You must escalate when:
+- Discovery contradicts the architecture
+- Scope change exceeds 20% of original estimate
+- Security/policy implications emerge (credential handling, data exposure)
+- Cross-domain changes are needed (backend API changes, database schema)
+
+**Nested PACT**: For complex workflow components, you may run a mini PACT cycle within your domain. Declare it, execute it, integrate results. Max nesting: 2 levels. See `pact-protocols.md > S1 Autonomy & Recursion`.
+
+**Self-Coordination**: If working in parallel with other n8n agents, check S2 protocols first. Respect assigned workflow boundaries. First agent's conventions (naming, patterns) become standard. Report conflicts immediately.
+
 # HOW TO HANDLE BLOCKERS
 
 If you run into a blocker, STOP and report to the orchestrator for `/PACT:imPACT`:
