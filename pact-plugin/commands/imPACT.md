@@ -4,6 +4,20 @@ argument-hint: [e.g., similar errors keep occurring despite attempts to fix]
 ---
 You hit a blocker: $ARGUMENTS
 
+---
+
+## VSM Context: S3 Operational Triage
+
+imPACT is **S3-level triage**—operational problem-solving within normal workflow. It is NOT S5 algedonic escalation (emergency bypass to user).
+
+**imPACT handles**: Blockers that can be resolved by redoing a phase or adding agents.
+
+**Algedonic escalation handles**: Viability threats (security, data, ethics violations). See Phase 6 when implemented.
+
+**Escalation indicator**: If you run 3+ consecutive imPACT cycles without resolution, this may indicate a systemic issue requiring user intervention (proto-algedonic signal).
+
+---
+
 ## Gather Context
 
 Before triaging, quickly check for existing context:
@@ -21,8 +35,18 @@ Answer two questions:
 
 ## Outcomes
 
-- **Redo prior phase**: Re-delegate to the relevant agent(s) to redo the appropriate prior phase (P→A→C→T)
-- **Augment present phase**: Re-invoke the blocked agent with additional context along with additional agents in parallel to assist in the present phase
-- **Not truly blocked**: If neither question is "Yes," instruct the agent to continue with clarified guidance
+| Outcome | When | Action |
+|---------|------|--------|
+| **Redo prior phase** | Issue is upstream in P→A→C→T | Re-delegate to relevant agent(s) to redo the prior phase |
+| **Augment present phase** | Need help in current phase | Re-invoke blocked agent with additional context + parallel agents |
+| **Invoke rePACT** | Sub-task needs own P→A→C→T cycle | Use `/PACT:rePACT` for nested cycle |
+| **Not truly blocked** | Neither question is "Yes" | Instruct agent to continue with clarified guidance |
+| **Escalate to user** | 3+ imPACT cycles without resolution | Proto-algedonic signal—systemic issue needs user input |
+
+**When to consider rePACT**:
+If the blocker reveals that a sub-task is more complex than expected and needs its own research/design phase, use `/PACT:rePACT` instead of just augmenting:
+```
+/PACT:rePACT backend "implement the OAuth2 token refresh that's blocking us"
+```
 
 **Remember**: As orchestrator, diagnose and delegate—never execute the fix yourself.

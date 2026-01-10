@@ -223,6 +223,27 @@ If PREPARE ran and ARCHITECT was marked "Skip," compare PREPARE's recommended ap
 
 **When in doubt**: Sequential is safer. Parallel saves time but risks rework if assumptions diverge.
 
+#### S2 Pre-Parallel Coordination Check
+
+**Before invoking parallel agents**, apply S2 Coordination:
+
+1. **Identify potential conflicts**:
+   - Shared files (merge conflict risk)
+   - Shared interfaces (API contract disagreements)
+   - Shared state (database schemas, config)
+
+2. **If conflicts exist**:
+   - Sequence those agents instead, OR
+   - Assign clear file/component boundaries to each agent
+
+3. **Establish resolution authority**:
+   - Technical disagreements → Architect arbitrates
+   - Style/convention → First agent's choice becomes standard
+
+**Include in parallel agent prompts**: "You are working in parallel with [other agent(s)]. Your scope is [specific files/components]. Do not modify files outside your scope. If you need changes outside your scope, report as a blocker."
+
+See `pact-protocols.md > S2 Coordination Layer` for full protocol.
+
 **Invoke coder(s) with**:
 - Task description
 - ARCHITECT phase outputs (or plan's Architecture Phase if ARCHITECT was skipped)
