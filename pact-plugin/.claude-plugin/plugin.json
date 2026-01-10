@@ -37,6 +37,5 @@
     "./agents/pact-n8n.md",
     "./agents/pact-test-engineer.md"
   ],
-  "skills": "./skills/",
-  "hooks": "./hooks/hooks.json"
+  "skills": "./skills/"
 }
