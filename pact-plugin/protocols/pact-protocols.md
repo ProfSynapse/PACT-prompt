@@ -49,13 +49,64 @@ The orchestrator has authority to make operational decisions within policy. It d
 
 ---
 
+## S2 Coordination Layer
+
+The coordination layer enables parallel agent operation without conflicts. Apply these protocols whenever multiple agents work concurrently.
+
+### Pre-Parallel Coordination Check
+
+Before invoking parallel agents, the orchestrator must:
+
+1. **Identify potential conflicts**:
+   - Shared files (merge conflict risk)
+   - Shared interfaces (API contract disagreements)
+   - Shared state (database schemas, config, environment)
+
+2. **Define boundaries or sequencing**:
+   - If conflicts exist, either sequence the work or assign clear file/component boundaries
+   - If no conflicts, proceed with parallel invocation
+
+3. **Establish resolution authority**:
+   - Technical disagreements → Architect arbitrates
+   - Style/convention disagreements → First agent's choice becomes standard
+   - Resource contention → Orchestrator allocates
+
+### Conflict Resolution
+
+| Conflict Type | Resolution |
+|---------------|------------|
+| Same file | Sequence agents OR assign clear section boundaries |
+| Interface disagreement | Architect arbitrates; document decision |
+| Naming/convention | First agent's choice becomes standard for the batch |
+| Resource contention | Orchestrator allocates; others wait or work on different tasks |
+
+### Shared Language
+
+All agents operating in parallel must:
+- Use project glossary and established terminology
+- Follow consistent decision log format (see CODE → TEST Handoff)
+- Use standardized handoff structure (see Phase Handoffs)
+
+### Oscillation Dampening
+
+If agents produce contradictory outputs (each "fixing" the other's work):
+
+1. **Pause** both agents immediately
+2. **Identify** the root disagreement (technical approach? requirements interpretation?)
+3. **Escalate** to appropriate authority:
+   - Technical disagreement → Architect
+   - Requirements disagreement → User (S5)
+4. **Resume** only after resolution is documented
+
+---
+
 ## The PACT Workflow Family
 
 | Workflow | When to Use | Key Idea |
 |----------|-------------|----------|
 | **PACT** | Complex/greenfield work | Context-aware multi-agent orchestration |
 | **plan-mode** | Before complex work, need alignment | Multi-agent planning consultation, no implementation |
-| **comPACT** | Focused, single-domain tasks | Single-specialist delegation with light ceremony |
+| **comPACT** | Focused, single-domain tasks | Single-domain delegation with light ceremony (parallelizable) |
 | **imPACT** | When blocked or need to iterate | Triage: Redo prior phase? Additional agents needed? |
 
 ---
@@ -117,9 +168,9 @@ If neither question is "Yes," you're not blocked—continue.
 
 ## comPACT Protocol
 
-**Core idea**: Single-specialist delegation with light ceremony.
+**Core idea**: Single-DOMAIN delegation with light ceremony.
 
-comPACT invokes exactly ONE specialist based on the task domain. No doc artifacts, no multi-phase orchestration—just focused work.
+comPACT handles tasks within ONE specialist domain. For independent sub-tasks, it can invoke MULTIPLE specialists of the same type in parallel.
 
 **Available specialists**:
 | Shorthand | Specialist | Use For |
@@ -135,7 +186,28 @@ comPACT invokes exactly ONE specialist based on the task domain. No doc artifact
 - *Clear task* → Auto-select (domain keywords, file types, single-domain action)
 - *Ambiguous task* → Ask user which specialist
 
-**Light ceremony instructions** (injected when invoking specialist):
+### When to Parallelize (Same-Domain)
+
+Invoke multiple specialists of the same type when:
+- Multiple independent items (bugs, components, endpoints)
+- No shared files between sub-tasks
+- Same patterns/conventions apply to all
+
+| Task | Agents Invoked |
+|------|----------------|
+| "Fix 3 backend bugs" | 3 backend-coders (parallel) |
+| "Add validation to 5 endpoints" | Multiple backend-coders (parallel) |
+| "Update styling on 3 components" | Multiple frontend-coders (parallel) |
+
+### S2 Light Coordination (for parallel comPACT)
+
+Before parallel invocation within a domain:
+1. **Check for conflicts** — Do any sub-tasks touch the same files?
+2. **Assign boundaries** — If conflicts exist, sequence or define clear boundaries
+3. **Set convention authority** — First agent's choices become standard for the batch
+
+### Light ceremony instructions (injected when invoking specialist)
+
 - Work directly from task description
 - Check docs/plans/, docs/preparation/, docs/architecture/ briefly if they exist—reference relevant context
 - Do not create new documentation artifacts
@@ -143,6 +215,7 @@ comPACT invokes exactly ONE specialist based on the task domain. No doc artifact
 
 **Escalate to `/PACT:orchestrate` when**:
 - Task spans multiple specialist domains
+- Complex cross-domain coordination needed
 - Specialist reports a blocker (run `/PACT:imPACT` first)
 
 **If blocker reported**:
