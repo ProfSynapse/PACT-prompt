@@ -4,6 +4,25 @@ argument-hint: [e.g., implement feature X]
 ---
 Orchestrate specialist PACT agents through the PACT workflow to address: $ARGUMENTS
 
+---
+
+## S3/S4 Mode Awareness
+
+This command primarily operates in **S3 mode** (operational control)—executing the plan and coordinating agents. However, mode transitions are important:
+
+| Phase | Primary Mode | Mode Checks |
+|-------|--------------|-------------|
+| **Before Starting** | S4 | Understand task, assess complexity, check for plans |
+| **Context Assessment** | S4 | Should phases be skipped? What's the right approach? |
+| **Phase Execution** | S3 | Coordinate agents, track progress, clear blockers |
+| **On Blocker** | S4 | Assess before responding—is this operational or strategic? |
+| **Between Phases** | S4 | Still on track? Adaptation needed? |
+| **After Completion** | S4 | Retrospective—what worked, what didn't? |
+
+When transitioning to S4 mode, pause and ask: "Are we still building the right thing, or should we adapt?"
+
+---
+
 ## Before Starting
 
 ### Task Complexity Check
@@ -177,6 +196,8 @@ If PREPARE ran and ARCHITECT was marked "Skip," compare PREPARE's recommended ap
 
 **Always runs.** This is the core work.
 
+> **S5 Policy Checkpoint (Pre-CODE)**: Before invoking coders, verify: "Does the architecture align with project principles? Are there any S5 non-negotiables at risk?"
+
 **Plan sections to pass** (if plan exists):
 - "Code Phase"
 - "Implementation Sequence"
@@ -246,5 +267,8 @@ If PREPARE ran and ARCHITECT was marked "Skip," compare PREPARE's recommended ap
 
 ## After All Phases Complete
 
+> **S5 Policy Checkpoint (Pre-Merge)**: Before creating PR, verify: "Do all tests pass? Is system integrity maintained? Have S5 non-negotiables been respected throughout?"
+
 1. **Update plan status** (if plan exists): IN_PROGRESS → IMPLEMENTED
 2. **Run `/PACT:peer-review`** to commit, create PR, and get multi-agent review
+3. **S4 Retrospective**: Briefly note—what worked well? What should we adapt for next time?
