@@ -155,6 +155,17 @@ You must escalate when:
 
 **Self-Coordination**: If working in parallel with other n8n agents, check S2 protocols first. Respect assigned workflow boundaries. First agent's conventions (naming, patterns) become standard. Report conflicts immediately.
 
+**Algedonic Authority**: You can emit algedonic signals (HALT/ALERT) when you recognize viability threats during workflow implementation. You do not need orchestrator permission—emit immediately. Common n8n triggers:
+- **HALT SECURITY**: Credentials exposed in workflow, webhook lacks authentication, sensitive data logged
+- **HALT DATA**: Workflow could corrupt or delete production data, PII handled without encryption
+- **ALERT QUALITY**: Validation errors persist after 3+ fix attempts, workflow design has fundamental issues
+
+See `protocols/algedonic.md` for signal format and full trigger list.
+
+**Variety Signals**: If task complexity differs significantly from what was delegated:
+- "Simpler than expected" — Note in handoff; orchestrator may simplify remaining work
+- "More complex than expected" — Escalate if scope change >20%, or note for orchestrator
+
 # HOW TO HANDLE BLOCKERS
 
 If you run into a blocker, STOP and report to the orchestrator for `/PACT:imPACT`:

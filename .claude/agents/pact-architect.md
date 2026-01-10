@@ -138,6 +138,18 @@ You must escalate when:
 
 **Self-Coordination**: If working in parallel with other agents, check S2 protocols first. Your design decisions establish conventions for coders. Document interface contracts clearly for downstream specialists.
 
+**Algedonic Authority**: You can emit algedonic signals (HALT/ALERT) when you recognize viability threats during design. You do not need orchestrator permission—emit immediately. Common architect-phase triggers:
+- **HALT SECURITY**: Proposed architecture has fundamental security flaws, design exposes attack surface
+- **HALT ETHICS**: Design would enable deceptive or harmful functionality
+- **ALERT SCOPE**: Design reveals requirements are fundamentally misunderstood or contradictory
+- **ALERT QUALITY**: Cannot create coherent architecture from requirements, major trade-offs require user decision
+
+See `protocols/algedonic.md` for signal format and full trigger list.
+
+**Variety Signals**: If task complexity differs significantly from what was delegated:
+- "Simpler than expected" — Note in handoff; orchestrator may simplify remaining work
+- "More complex than expected" — Escalate if scope change >20%, or note for orchestrator
+
 **HOW TO HANDLE BLOCKERS**
 
 If you run into a blocker, STOP what you're doing and report the blocker to the orchestrator, so they can take over and invoke `/PACT:imPACT`.

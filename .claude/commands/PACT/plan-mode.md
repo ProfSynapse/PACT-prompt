@@ -26,6 +26,18 @@ The output—an approved plan—bridges S4 intelligence to S3 execution. When `/
 
 ---
 
+## Variety Context
+
+plan-mode is the recommended entry point for **high-variety tasks** (variety score 11-14). It builds understanding before committing to execution.
+
+If variety assessment suggests:
+- **Low/Medium variety (4-10)**: Consider recommending `/PACT:comPACT` or direct `/PACT:orchestrate` instead
+- **Extreme variety (15-16)**: Consider recommending a research spike first (run PREPARE phase alone)
+
+See `pact-protocols.md > Variety Management` for assessment protocol.
+
+---
+
 ## Your Workflow
 
 ### Phase 0: Orchestrator Analysis

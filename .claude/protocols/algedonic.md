@@ -1,0 +1,182 @@
+# Algedonic Signals Protocol
+
+> **Purpose**: Emergency bypass for viability-threatening conditions.
+> Algedonic signals go directly to user (S5), bypassing normal orchestration triage.
+>
+> **VSM Context**: In Stafford Beer's Viable System Model, algedonic signals are "pain/pleasure" signals that bypass management hierarchy to reach policy level (S5) instantly. They exist because some conditions are too critical to wait for normal processing.
+
+---
+
+## Signal Categories
+
+### HALT Signals (Stop Everything)
+
+Immediate cessation of ALL work. User must acknowledge before ANY work resumes.
+
+| Category | Triggers | Examples |
+|----------|----------|----------|
+| **SECURITY** | Credentials exposure, injection vulnerability, auth bypass | API key in committed code, SQL injection found, JWT validation missing, hardcoded passwords |
+| **DATA** | PII exposure, data corruption risk, integrity violation | User emails in logs, DELETE without WHERE, foreign key violations, unencrypted sensitive data |
+| **ETHICS** | Deceptive output, harmful content, policy violation | Misleading user-facing text, generating harmful instructions, violating stated project values |
+
+### ALERT Signals (Immediate Attention)
+
+Orchestrator pauses current work. User notified. User may choose to continue or halt.
+
+| Category | Triggers | Examples |
+|----------|----------|----------|
+| **QUALITY** | Repeated build failures, severe coverage gaps | Build broken >2 attempts, coverage <50% on critical path, same test failing repeatedly |
+| **SCOPE** | Fundamental requirement misunderstanding | Building wrong feature, architecture contradicts user intent, major assumption invalid |
+| **META-BLOCK** | 3+ imPACT cycles without resolution | Same blocker recurring, systemic issue detected, unable to make progress |
+
+---
+
+## Signal Format
+
+When emitting an algedonic signal, use this format:
+
+```
+⚠️ ALGEDONIC [HALT|ALERT]: {Category}
+
+**Issue**: {One-line description of what was found}
+**Evidence**: {Specific details—file, line, what you observed}
+**Impact**: {Why this threatens viability—what could go wrong}
+**Recommended Action**: {What you suggest doing about it}
+```
+
+### Example HALT Signal
+
+```
+⚠️ ALGEDONIC HALT: SECURITY
+
+**Issue**: AWS credentials hardcoded in source file
+**Evidence**: Found in `src/config/aws.ts:15` - `AWS_SECRET_ACCESS_KEY = "AKIA..."`
+**Impact**: Credentials will be exposed if code is committed; potential AWS account compromise
+**Recommended Action**: Remove credentials, use environment variables, rotate the exposed key
+```
+
+### Example ALERT Signal
+
+```
+⚠️ ALGEDONIC ALERT: META-BLOCK
+
+**Issue**: Third consecutive imPACT cycle without resolution
+**Evidence**: Auth middleware failing on same error since first attempt; tried 3 different approaches
+**Impact**: May indicate fundamental misunderstanding or missing requirement
+**Recommended Action**: User review of requirements; possible need to restart from PREPARE phase
+```
+
+---
+
+## Signal Delivery Mechanism
+
+**Protocol-level, not architectural**: Agents emit algedonic signals through the same communication channel (to orchestrator), but the SIGNAL FORMAT itself demands immediate user escalation. The orchestrator is **REQUIRED** to surface algedonic signals to user immediately—it cannot triage, delay, or suppress them.
+
+### Flow
+
+```
+Agent detects trigger condition
+    ↓
+Agent emits algedonic signal (HALT or ALERT)
+    ↓
+Orchestrator receives signal
+    ↓
+Orchestrator IMMEDIATELY presents to user (no other work continues)
+    ↓
+User responds
+    ↓
+Work resumes (or stops) based on user decision
+```
+
+### Orchestrator Behavior
+
+On receiving an algedonic signal:
+
+1. **IMMEDIATELY** present signal to user (do not continue other work first)
+2. For **HALT**: Stop ALL agents, await user acknowledgment
+3. For **ALERT**: Pause current work, present options to user
+4. **Log** the signal in session record
+
+### User Response Options
+
+**For HALT signals**:
+- "Acknowledged, investigate" — Work stops, investigation begins
+- "Override, continue anyway" — Requires explicit justification; work resumes with risk noted
+
+**For ALERT signals**:
+- "Investigate" — Pause and dig deeper
+- "Continue with caution" — Proceed but with awareness
+- "Stop work" — Halt all activity
+
+---
+
+## Who Can Emit Algedonic Signals
+
+**Any agent** can emit algedonic signals when they recognize trigger conditions. This is part of the Autonomy Charter (see `pact-protocols.md > S1 Autonomy & Recursion`).
+
+Agents do **NOT** need orchestrator permission to emit—the conditions themselves authorize the signal.
+
+### Agent Responsibility
+
+Each specialist should be aware of algedonic triggers relevant to their domain:
+
+| Agent | Watch For |
+|-------|-----------|
+| **Backend Coder** | SECURITY (auth flaws, injection), DATA (query safety, PII handling) |
+| **Frontend Coder** | SECURITY (XSS, CSRF), DATA (client-side storage of sensitive data) |
+| **Database Engineer** | DATA (schema integrity, PII exposure, destructive operations) |
+| **Test Engineer** | SECURITY (discovered vulnerabilities), QUALITY (coverage gaps, repeated failures) |
+| **Architect** | SCOPE (design contradictions), ETHICS (architectural decisions with ethical implications) |
+| **Preparer** | SCOPE (requirement misunderstanding discovered during research) |
+
+---
+
+## Relationship to Other Protocols
+
+### imPACT vs Algedonic
+
+| Aspect | imPACT | Algedonic |
+|--------|--------|-----------|
+| **Level** | S3 (operational) | S5 (policy/viability) |
+| **Who decides** | Orchestrator triages | User decides |
+| **Question** | "How do we proceed?" | "Should we proceed at all?" |
+| **Examples** | Missing info, wrong approach, need help | Security breach, data risk, ethics issue |
+
+### When imPACT Becomes Algedonic
+
+- **3+ consecutive imPACT cycles without resolution** → Emit ALERT (META-BLOCK)
+- **During imPACT, discover viability threat** → Emit appropriate HALT/ALERT instead
+
+imPACT is for operational problem-solving. If you're questioning whether the work should continue at all, emit an algedonic signal instead.
+
+### Audit Signals (🔴 RED) vs Algedonic
+
+| Signal | Source | Scope | Bypass |
+|--------|--------|-------|--------|
+| 🔴 RED (Audit) | Test engineer during parallel audit | CODE phase issue | No—goes through imPACT |
+| HALT/ALERT (Algedonic) | Any agent, any time | Viability threat | Yes—goes directly to user |
+
+A 🔴 RED audit signal indicates a critical issue that needs immediate attention within the CODE phase. An algedonic signal indicates a viability threat that questions whether the work should continue at all.
+
+---
+
+## Best Practices
+
+### When in Doubt
+
+- If unsure whether something is an operational blocker or viability threat, **emit algedonic** (safer)
+- False positives are acceptable; missed viability threats are not
+- The user can always say "continue" if it's not as serious as you thought
+
+### Signal Quality
+
+- Be **specific** in evidence—vague signals are harder to act on
+- Include **file paths and line numbers** when applicable
+- Suggest **concrete actions** in recommendations
+- Don't emit both imPACT blocker and algedonic for the same issue—choose one
+
+### After Resolution
+
+- Once a HALT is resolved, **verify** the fix before resuming
+- Document what was found and how it was resolved
+- Consider whether similar issues might exist elsewhere
