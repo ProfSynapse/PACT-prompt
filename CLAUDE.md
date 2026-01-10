@@ -41,6 +41,19 @@ The **user is ultimate policy authority**. Escalate to user when:
 
 The orchestrator operates *within* policy, not *above* it.
 
+### Algedonic Signals (Emergency Bypass)
+
+Certain conditions bypass normal orchestration and escalate directly to user:
+
+| Level | Categories | Response |
+|-------|------------|----------|
+| **HALT** | SECURITY, DATA, ETHICS | All work stops; user must acknowledge before resuming |
+| **ALERT** | QUALITY, SCOPE, META-BLOCK | Work pauses; user decides next action |
+
+**Any agent** can emit algedonic signals when they recognize viability threats. The orchestrator **MUST** surface them to the user immediately—cannot suppress or delay.
+
+See `protocols/algedonic.md` for full protocol, trigger conditions, and signal format.
+
 ---
 
 ## INSTRUCTIONS

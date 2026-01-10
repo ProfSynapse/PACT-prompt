@@ -23,29 +23,84 @@ When transitioning to S4 mode, pause and ask: "Are we still building the right t
 
 ---
 
+## Responding to Algedonic Signals
+
+Algedonic signals are emergency escalations that bypass normal triage. Any agent can emit them when they recognize viability threats. You **MUST** surface them to the user immediately.
+
+### HALT Signal Response
+
+When you receive a HALT signal (SECURITY, DATA, or ETHICS category):
+
+1. **Stop ALL agents immediately** — no exceptions
+2. **Present signal to user** with full context:
+   ```
+   ⚠️ ALGEDONIC HALT: {Category}
+
+   Issue: {from signal}
+   Evidence: {from signal}
+   Impact: {from signal}
+
+   All work has stopped. Please acknowledge before we can proceed.
+   Options: [Acknowledged, investigate] / [Override, continue anyway (requires justification)]
+   ```
+3. **Do NOT resume** until user explicitly acknowledges
+4. **Log** the halt in session notes
+
+### ALERT Signal Response
+
+When you receive an ALERT signal (QUALITY, SCOPE, or META-BLOCK category):
+
+1. **Pause current phase** — don't stop everything, but pause active work
+2. **Present signal to user** with options:
+   ```
+   ⚠️ ALGEDONIC ALERT: {Category}
+
+   Issue: {from signal}
+   Evidence: {from signal}
+
+   Options: [Investigate further] / [Continue with caution] / [Stop work]
+   ```
+3. **Await user decision** before proceeding
+4. **Log** the alert and user's decision
+
+### Algedonic vs imPACT
+
+| Signal Type | Protocol | When |
+|-------------|----------|------|
+| Operational blocker | `/PACT:imPACT` | "How do we proceed?" |
+| Viability threat | Algedonic | "Should we proceed at all?" |
+
+If you're unsure whether something is an operational blocker or viability threat, err on the side of algedonic (safer).
+
+See `protocols/algedonic.md` for full protocol and trigger conditions.
+
+---
+
 ## Before Starting
 
-### Task Complexity Check
+### Task Variety Assessment
 
-Before running full PACT orchestration, evaluate task complexity:
+Before running orchestration, assess task variety using the protocol in `pact-protocols.md > Variety Management`.
 
-**Simple or borderline task (ask user):**
-- Single file or component mentioned
-- Bug fix in one domain
-- Clear single-domain keywords (React, Express, PostgreSQL, Jest, etc.)
-- Small feature with unclear scope
-- Refactor that might be contained
-- → Use `AskUserQuestion` tool:
-  - Question: "This looks like it could be handled by a single specialist. Would you like to run comPACT instead?"
-  - Options: "Yes, use comPACT" / "No, proceed with full orchestration"
-- If comPACT → redirect to `/PACT:comPACT`
-- If orchestrate → proceed with full PACT phases below
+**Quick Assessment Table**:
 
-**Complex task (proceed with orchestrate):**
-- Multiple domains mentioned
-- "New feature" or greenfield language
-- Architectural decisions required
-- → Proceed with full PACT phases
+| If task appears... | Variety Level | Action |
+|-------------------|---------------|--------|
+| Single file, one domain, routine | Low (4-6) | Offer comPACT: "This could be handled by a single specialist. Use comPACT?" |
+| Multiple files, one domain, familiar | Low-Medium | Proceed with orchestrate, consider skipping PREPARE |
+| Multiple domains, some ambiguity | Medium (7-10) | Standard orchestrate with all phases |
+| Greenfield, architectural decisions, unknowns | High (11-14) | Recommend plan-mode first |
+| Novel technology, unclear requirements, critical stakes | Extreme (15-16) | Recommend research spike before planning |
+
+**Variety Dimensions** (score 1-4 each, sum for total):
+- **Novelty**: Routine (1) → Unprecedented (4)
+- **Scope**: Single concern (1) → Cross-cutting (4)
+- **Uncertainty**: Clear (1) → Unknown (4)
+- **Risk**: Low impact (1) → Critical (4)
+
+**When uncertain**: Default to standard orchestrate. Variety can be reassessed at phase transitions.
+
+**User override**: User can always specify their preferred workflow regardless of assessment.
 
 ---
 
@@ -243,6 +298,39 @@ If PREPARE ran and ARCHITECT was marked "Skip," compare PREPARE's recommended ap
 **Include in parallel agent prompts**: "You are working in parallel with [other agent(s)]. Your scope is [specific files/components]. Do not modify files outside your scope. If you need changes outside your scope, report as a blocker."
 
 See `pact-protocols.md > S2 Coordination Layer` for full protocol.
+
+#### Optional: S3* Parallel Audit During CODE
+
+For high-risk work, invoke test engineer in parallel with coders to catch issues early.
+
+**Trigger conditions** (invoke parallel audit when ANY apply):
+- Security-sensitive code (auth, payments, PII handling)
+- Complex multi-component integration
+- Novel patterns or first-time approaches
+- User explicitly requests monitoring ("watch this closely")
+
+**Invoke test engineer in audit mode with**:
+```
+AUDIT MODE: Review {scope} for testability and early risks.
+Emit signals (🟢/🟡/🔴) as you observe. Do not block coders.
+You are READ-ONLY on source files.
+```
+
+**Handling audit signals**:
+
+| Signal | Meaning | Response |
+|--------|---------|----------|
+| 🟢 GREEN | No concerns | Continue normally |
+| 🟡 YELLOW | Concerns noted | Log for TEST phase, continue |
+| 🔴 RED | Critical issue | Pause affected coder(s), run `/PACT:imPACT` with signal |
+
+**If 🔴 RED signal received**:
+1. Immediately pause the affected coder(s)
+2. Run `/PACT:imPACT` with the RED signal details as input
+3. imPACT triages: fix now, redo phase, or escalate
+4. Resume CODE only after resolution
+
+See `pact-protocols.md > S3* Continuous Audit` for full protocol.
 
 **Invoke coder(s) with**:
 - Task description
