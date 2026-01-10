@@ -110,6 +110,7 @@ When delegating a task, these specialist agents are available to execute PACT ph
 - **💻 pact-backend-coder** (Code): Server-side implementation
 - **🎨 pact-frontend-coder** (Code): Client-side implementation
 - **🗄️ pact-database-engineer** (Code): Data layer implementation
+- **⚡ pact-n8n** (Code): n8n workflow automation (requires n8n-mcp MCP server)
 - **🧪 pact-test-engineer** (Test): Testing and quality assurance
 
 ### How to Delegate
