@@ -4,7 +4,9 @@
 >
 > **Design principle**: One-liners in prompts, details here.
 >
-> **Theoretical basis**: Structure informed by Stafford Beer's Viable System Model (VSM). See `docs/preparation/vsm-glossary.md` for terminology.
+> **Theoretical basis**: Structure informed by Stafford Beer's Viable System Model (VSM). See `docs/preparation/vsm-glossary.md` for full terminology.
+>
+> **VSM Quick Reference**: S1=Operations (specialists), S2=Coordination (conflict resolution), S3=Control (orchestrator execution), S4=Intelligence (planning/adaptation), S5=Policy (governance/user authority).
 
 ---
 
