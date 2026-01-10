@@ -3,6 +3,47 @@
 > **Purpose**: Minimal protocols for PACT workflows. Agents reference this when needed, not memorized.
 >
 > **Design principle**: One-liners in prompts, details here.
+>
+> **Theoretical basis**: Structure informed by Stafford Beer's Viable System Model (VSM). See `docs/preparation/vsm-glossary.md` for terminology.
+
+---
+
+## S5 Policy Layer (Governance)
+
+The policy layer defines non-negotiable constraints and provides escalation authority. All other protocols operate within these boundaries.
+
+### Non-Negotiables (SACROSANCT)
+
+These rules are **never** overridden by operational pressure:
+
+| Category | Rule | Rationale |
+|----------|------|-----------|
+| **Security** | No credentials in code; validate all inputs; sanitize outputs | Prevents breaches, injection attacks |
+| **Quality** | No known-broken code merged; tests must pass | Maintains system integrity |
+| **Ethics** | No deceptive outputs; no harmful content | Aligns with responsible AI principles |
+| **Delegation** | Orchestrator never writes application code | Maintains role boundaries |
+
+**If a rule would be violated**: Stop work, report to user. These are not trade-offs—they are boundaries.
+
+### Policy Checkpoints
+
+At defined points, verify alignment with project principles:
+
+| Checkpoint | When | Question |
+|------------|------|----------|
+| **Pre-CODE** | Before CODE phase begins | "Does the architecture align with project principles?" |
+| **Pre-Merge** | Before creating PR | "Does this maintain system integrity? Are tests passing?" |
+| **On Conflict** | When specialists disagree | "What do project values dictate?" |
+| **On Blocker** | When normal flow can't proceed | "Is this an operational issue (imPACT) or viability threat (escalate to user)?" |
+
+### S5 Authority
+
+The **user is ultimate S5**. When conflicts cannot be resolved at lower levels:
+- S3/S4 tension (execution vs adaptation) → Escalate to user
+- Principle conflicts → Escalate to user
+- Unclear non-negotiable boundaries → Escalate to user
+
+The orchestrator has authority to make operational decisions within policy. It does not have authority to override policy.
 
 ---
 

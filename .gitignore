@@ -2,3 +2,5 @@
 docs/
 skills-research/
 .DS_Store
+.env
+.env.*
