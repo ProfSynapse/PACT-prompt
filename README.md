@@ -133,6 +133,14 @@ By starting with this repository, you ensure that:
 ## 📂 Project Structure
 
 ```
-.claude/           # The brain: Agents and Commands configuration
-CLAUDE.md          # Main entry point and mission for Claude
+.claude/                  # Claude Code configuration (auto-loaded)
+  agents/                 # Specialist agent definitions
+  commands/PACT/          # PACT workflow commands
+  protocols/              # Coordination protocols (algedonic, pact-protocols)
+pact-plugin/              # Plugin distribution (for sharing)
+  .claude-plugin/         # Plugin manifest (plugin.json, marketplace.json)
+  reference/              # Reference docs (VSM glossary)
+  skills/                 # Dynamic knowledge skills
+docs/                     # Development documentation
+CLAUDE.md                 # Mission and orchestrator configuration
 ```
