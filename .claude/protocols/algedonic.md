@@ -187,6 +187,10 @@ If answers lean toward "potential/normal/suspicion/concerning," consider imPACT 
 
 ### After Resolution
 
-- Once a HALT is resolved, **verify** the fix before resuming
+- Once a HALT is resolved, **verify** the fix before resuming:
+  1. **Who verifies**: The agent who emitted the signal, or test engineer if security/data issue
+  2. **What to verify**: The specific issue is fixed AND the fix doesn't introduce new issues
+  3. **Scope**: Focused verification of the fix, not comprehensive testing (that comes in TEST phase)
+  4. **Report**: Confirm to orchestrator: "HALT resolved: {one-line summary of fix}"
 - Document what was found and how it was resolved
-- Consider whether similar issues might exist elsewhere
+- Consider whether similar issues might exist elsewhere (orchestrator may request targeted audit)

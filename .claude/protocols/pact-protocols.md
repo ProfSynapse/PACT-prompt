@@ -160,6 +160,7 @@ When a sub-task is complex enough to warrant its own PACT treatment:
 - **Nesting limit**: 2 levels maximum (prevent infinite recursion)
 - **Scope check**: Nested PACT must be within your domain; cross-domain needs escalate to orchestrator
 - **Documentation**: Nested cycles produce their own decision logs (append `-nested` to filename)
+- **Algedonic signals**: Algedonic signals from nested cycles still go **directly to user**—they bypass both the nested orchestration AND the parent orchestrator. Viability threats don't wait for hierarchy.
 
 **Example:**
 ```
@@ -324,6 +325,9 @@ Score each dimension 1-4 and sum:
 | "Add new CRUD endpoints following existing patterns" | 1 | 2 | 1 | 2 | **6** | comPACT |
 | "Implement OAuth with new identity provider" | 3 | 3 | 3 | 3 | **12** | plan-mode → orchestrate |
 | "Build real-time collaboration feature" | 4 | 4 | 3 | 3 | **14** | plan-mode → orchestrate |
+| "Rewrite auth system with unfamiliar framework" | 4 | 4 | 4 | 4 | **16** | Research spike → Reassess |
+
+> **Extreme (15-16) means**: Too much variety to absorb safely. The recommended action is a **research spike** (time-boxed exploration to reduce uncertainty) followed by reassessment. After the spike, the task should score lower—if it still scores 15+, decompose further or reconsider feasibility.
 
 ### Variety Strategies
 
