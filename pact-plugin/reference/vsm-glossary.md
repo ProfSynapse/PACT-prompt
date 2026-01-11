@@ -249,6 +249,90 @@ See: **Recursion**
 
 ---
 
+## Operational Terms
+
+These terms are specific to PACT's implementation of VSM concepts.
+
+### Decision Log
+
+**Definition**: Standardized documentation produced during the CODE phase that captures implementation decisions, rationale, and context for subsequent phases.
+
+**Location**: `docs/decision-logs/{feature}-{domain}.md`
+
+**Contents**:
+- What was implemented and why
+- Key decisions and trade-offs
+- Assumptions made
+- Known limitations
+- Areas of uncertainty (where bugs might hide)
+
+**Key Point**: Decision logs explain the "why" not the "what"—code shows what was done, the log explains the reasoning.
+
+---
+
+### META-BLOCK
+
+**Definition**: An ALERT-level algedonic signal category triggered when 3+ consecutive imPACT cycles fail to resolve the same blocker.
+
+**Triggers**: Same blocker recurring, systemic issue detected, unable to make progress despite multiple attempts.
+
+**Response**: User attention required—may indicate fundamental misunderstanding or need to restart from an earlier phase.
+
+**Key Point**: META-BLOCK is proto-algedonic—it starts as operational (imPACT) but escalates to viability concern (ALERT) through repetition.
+
+---
+
+### Override Protocol
+
+**Definition**: The procedure for continuing work after a HALT signal when the user explicitly chooses to proceed despite identified risks.
+
+**Requirements**:
+1. Acknowledge the **specific risk** (not just "I understand")
+2. Explain **why** proceeding is acceptable
+3. Accept **responsibility** for consequences
+
+**Documentation**: Logged in session notes and decision log with "⚠️ Overrode {category} HALT: {justification}"
+
+**Key Point**: Overrides don't carry forward—if the risk materializes later, a new HALT is required.
+
+---
+
+### Research Spike
+
+**Definition**: A time-boxed exploration activity recommended for extreme variety tasks (score 15-16) to reduce uncertainty before committing to implementation.
+
+**Purpose**: Reduce task variety by building understanding, testing assumptions, and mapping unknowns.
+
+**Outcome**: After the spike, reassess—the task should now score lower. If still 15+, decompose further or reconsider feasibility.
+
+**Key Point**: A spike is not implementation—it's reconnaissance. The goal is reducing variety, not producing code.
+
+---
+
+### Variety Score
+
+**Definition**: A 4-16 numeric assessment of task complexity used to select the appropriate workflow ceremony level.
+
+**Dimensions** (each scored 1-4):
+| Dimension | 1 (Low) | 4 (Extreme) |
+|-----------|---------|-------------|
+| Novelty | Routine | Unprecedented |
+| Scope | Single concern | Cross-cutting |
+| Uncertainty | Clear | Unknown |
+| Risk | Low impact | Critical |
+
+**Thresholds**:
+| Score | Level | Workflow |
+|-------|-------|----------|
+| 4-6 | Low | comPACT |
+| 7-10 | Medium | orchestrate |
+| 11-14 | High | plan-mode → orchestrate |
+| 15-16 | Extreme | Research spike → Reassess |
+
+**Key Point**: Variety score guides ceremony level—higher variety needs more preparation and coordination.
+
+---
+
 ## Quick Reference Table
 
 | Term | One-Line Definition | PACT Equivalent |
@@ -267,6 +351,11 @@ See: **Recursion**
 | Requisite Variety | Controller needs matching complexity | Variety budget assessment |
 | Variety | Measure of complexity/possible states | Task complexity dimensions |
 | Viability | Capacity for ongoing existence | Adaptive, resilient workflow |
+| Decision Log | Implementation documentation | `docs/decision-logs/` |
+| META-BLOCK | 3+ imPACT cycles → ALERT | Escalation to user |
+| Override Protocol | HALT continuation procedure | Justified risk acceptance |
+| Research Spike | Extreme variety exploration | Pre-implementation recon |
+| Variety Score | 4-16 complexity assessment | Workflow ceremony selector |
 
 ---
 
