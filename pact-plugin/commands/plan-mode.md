@@ -331,6 +331,9 @@ If a plan already exists for this feature slug:
 {Visual or textual representation of the workflow}
 
 ### Commit Sequence (Proposed)
+
+> **Note**: This sequence represents the intended final git history order, **not** the execution order. Independent commits may be implemented in parallel even if numbered sequentially here. The orchestrator must analyze actual dependencies to determine execution strategy.
+
 1. `{type}: {description}` — {what this commit does}
 2. `{type}: {description}` — {what this commit does}
 
