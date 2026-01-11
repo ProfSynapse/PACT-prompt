@@ -97,11 +97,40 @@ On receiving an algedonic signal:
 3. For **ALERT**: Pause current work, present options to user
 4. **Log** the signal in session record
 
+**Handling parallel agents on HALT**:
+
+When multiple agents are running and HALT is triggered:
+1. **Stop all agents immediately** — no agent continues work
+2. **Preserve work-in-progress** — do NOT discard uncommitted changes
+3. **Do NOT commit partial work** — leave changes staged/unstaged as-is
+4. **Document agent states** — note which agents were interrupted and their progress
+
+After HALT is resolved:
+- Review interrupted agents' work before resuming
+- Decide whether to continue from checkpoint or restart affected work
+- The HALT fix may invalidate some parallel work (especially for SECURITY issues)
+
 ### User Response Options
 
 **For HALT signals**:
 - "Acknowledged, investigate" — Work stops, investigation begins
-- "Override, continue anyway" — Requires explicit justification; work resumes with risk noted
+- "Override, continue anyway" — See override protocol below
+
+**Override Protocol** (for HALT signals only):
+
+User must provide **explicit justification** that:
+1. Acknowledges the **specific risk** identified (not just "I understand")
+2. Explains **why** proceeding is acceptable despite the risk
+3. Accepts **responsibility** for consequences if the risk materializes
+
+**Document the override**:
+- Log in session notes: "HALT OVERRIDE: {category} - {user's justification}"
+- If the project has a decision log, add: "⚠️ Overrode {category} HALT: {justification}"
+
+**If overridden risk materializes later**:
+- Emit a new HALT signal (the previous override doesn't carry forward)
+- The new signal should reference the prior override: "Previously overridden {category} issue has materialized"
+- User must acknowledge again—no automatic continuation
 
 **For ALERT signals**:
 - "Investigate" — Pause and dig deeper
