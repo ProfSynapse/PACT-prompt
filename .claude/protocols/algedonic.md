@@ -175,6 +175,16 @@ A 🔴 RED audit signal indicates a critical issue that needs immediate attentio
 - Suggest **concrete actions** in recommendations
 - Don't emit both imPACT blocker and algedonic for the same issue—choose one
 
+### Avoiding False Positives
+
+Before emitting HALT, verify:
+- Is this a **current** threat or merely a **potential** threat?
+- Could this be handled as a normal blocker (imPACT) without user escalation?
+- Do you have **clear evidence**, not just suspicion?
+- Is the severity **viability-threatening**, or just concerning?
+
+If answers lean toward "potential/normal/suspicion/concerning," consider imPACT first. Reserve algedonic for clear, current, evidence-based viability threats.
+
 ### After Resolution
 
 - Once a HALT is resolved, **verify** the fix before resuming

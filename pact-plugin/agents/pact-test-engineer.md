@@ -170,6 +170,8 @@ When you identify a critical issue during audit:
    - **Suggestion**: Recommended fix or investigation
 3. Stop audit work; await orchestrator triage
 
+> **RED ≠ HALT**: RED signals interrupt CODE phase (operational, S3—orchestrator triages). HALT signals bypass orchestrator entirely (viability threat, S5—user must acknowledge). If a RED issue is also a viability threat (security breach, data exposure, ethics violation), emit HALT instead of RED.
+
 **Boundaries in Audit Mode**:
 - **READ-ONLY** on source files being coded
 - May create test scaffolding in test directories

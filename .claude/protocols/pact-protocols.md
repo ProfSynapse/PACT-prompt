@@ -4,7 +4,7 @@
 >
 > **Design principle**: One-liners in prompts, details here.
 >
-> **Theoretical basis**: Structure informed by Stafford Beer's Viable System Model (VSM). See `docs/preparation/vsm-glossary.md` for full terminology.
+> **Theoretical basis**: Structure informed by Stafford Beer's Viable System Model (VSM). See `pact-plugin/reference/vsm-glossary.md` for full terminology.
 >
 > **VSM Quick Reference**: S1=Operations (specialists), S2=Coordination (conflict resolution), S3=Control (orchestrator execution), S4=Intelligence (planning/adaptation), S5=Policy (governance/user authority).
 
@@ -79,6 +79,20 @@ Before invoking parallel agents, the orchestrator must:
 | Interface disagreement | Architect arbitrates; document decision |
 | Naming/convention | First agent's choice becomes standard for the batch |
 | Resource contention | Orchestrator allocates; others wait or work on different tasks |
+
+### Convention Propagation
+
+When "first agent's choice becomes standard," subsequent agents need to discover those conventions:
+
+1. **Orchestrator responsibility**: When invoking parallel agents after the first completes:
+   - Extract key conventions from first agent's output (naming patterns, file structure, API style)
+   - Include in subsequent agents' prompts: "Follow conventions established: {list}"
+
+2. **Decision log reference**: If first agent wrote a decision log, subsequent agents should read it
+
+3. **For truly parallel invocation** (all start simultaneously):
+   - Orchestrator pre-defines conventions in all prompts
+   - Or: Run one agent first to establish conventions, then parallelize the rest
 
 ### Shared Language
 
@@ -301,6 +315,15 @@ Score each dimension 1-4 and sum:
 | **7-10** | Medium | `/PACT:orchestrate` |
 | **11-14** | High | `/PACT:plan-mode` → `/PACT:orchestrate` |
 | **15-16** | Extreme | Research spike → Reassess |
+
+**Calibration Examples**:
+
+| Task | Novelty | Scope | Uncertainty | Risk | Score | Workflow |
+|------|---------|-------|-------------|------|-------|----------|
+| "Add pagination to existing list endpoint" | 1 | 1 | 1 | 2 | **5** | comPACT |
+| "Add new CRUD endpoints following existing patterns" | 1 | 2 | 1 | 2 | **6** | comPACT |
+| "Implement OAuth with new identity provider" | 3 | 3 | 3 | 3 | **12** | plan-mode → orchestrate |
+| "Build real-time collaboration feature" | 4 | 4 | 3 | 3 | **14** | plan-mode → orchestrate |
 
 ### Variety Strategies
 
