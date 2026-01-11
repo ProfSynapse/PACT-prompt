@@ -77,6 +77,7 @@ Instead of one generalist, you get a team of experts:
 - **⚙️ PACT Backend Coder** (`pact-backend-coder`): Implementation expert. Writes clean, secure, and efficient backend code following the Architect's blueprints.
 - **🎨 PACT Frontend Coder** (`pact-frontend-coder`): UI/UX specialist. Implements responsive and accessible interfaces.
 - **🗄️ PACT Database Engineer** (`pact-database-engineer`): Data specialist. Designs schemas, optimizes queries, and manages data integrity.
+- **⚡ PACT n8n** (`pact-n8n`): Workflow automation specialist. Builds and validates n8n workflows for integrations, webhooks, and scheduled tasks.
 - **🧪 PACT Test Engineer** (`pact-test-engineer`): QA expert. Writes comprehensive test suites to verify functionality and security.
 
 ### 🎛️ VSM-Enhanced Orchestration
