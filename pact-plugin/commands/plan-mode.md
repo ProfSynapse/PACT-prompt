@@ -6,6 +6,38 @@ Create a comprehensive implementation plan for: $ARGUMENTS
 
 **This is PLANNING ONLY** — no code changes, no git branches, no implementation.
 
+---
+
+## S4 Intelligence Function
+
+This command is the primary **S4 (Intelligence)** activity in PACT. While `/PACT:orchestrate` operates mainly in S3 mode (execution), `plan-mode` operates entirely in S4 mode:
+
+- **Outside focus**: What does the environment require? What are the constraints?
+- **Future focus**: What approach will lead to long-term success?
+- **Strategic thinking**: What are the risks? What could change?
+
+The output—an approved plan—bridges S4 intelligence to S3 execution. When `/PACT:orchestrate` runs, it shifts to S3 mode while referencing the S4 plan.
+
+**S4 Questions to Hold Throughout**:
+- Are we solving the right problem?
+- What could invalidate this approach?
+- What are we assuming that might be wrong?
+- How might requirements change?
+
+---
+
+## Variety Context
+
+plan-mode is the recommended entry point for **high-variety tasks** (variety score 11-14). It builds understanding before committing to execution.
+
+If variety assessment suggests:
+- **Low/Medium variety (4-10)**: Consider recommending `/PACT:comPACT` or direct `/PACT:orchestrate` instead
+- **Extreme variety (15-16)**: Consider recommending a research spike first (run PREPARE phase alone)
+
+See `pact-protocols.md > Variety Management` for assessment protocol.
+
+---
+
 ## Your Workflow
 
 ### Phase 0: Orchestrator Analysis

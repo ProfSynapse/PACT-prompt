@@ -1,6 +1,6 @@
 # 🛠️ PACT Framework for Claude Code
 
-> **🚀 TL;DR**: This is a "starter kit" for building software with AI. It turns **Claude Code** into a team of expert developers. Download this, rename it to your project name, and you're ready to go!
+> **🚀 TL;DR**: This is a "starter kit" for building software with AI. It turns **Claude Code** into a coordinated team of expert developers using VSM-enhanced orchestration. Download this, rename it to your project name, and you're ready to go!
 
 ## ⚠️ Prerequisites
 
@@ -77,15 +77,30 @@ Instead of one generalist, you get a team of experts:
 - **⚙️ PACT Backend Coder** (`pact-backend-coder`): Implementation expert. Writes clean, secure, and efficient backend code following the Architect's blueprints.
 - **🎨 PACT Frontend Coder** (`pact-frontend-coder`): UI/UX specialist. Implements responsive and accessible interfaces.
 - **🗄️ PACT Database Engineer** (`pact-database-engineer`): Data specialist. Designs schemas, optimizes queries, and manages data integrity.
+- **⚡ PACT n8n** (`pact-n8n`): Workflow automation specialist. Builds and validates n8n workflows for integrations, webhooks, and scheduled tasks.
 - **🧪 PACT Test Engineer** (`pact-test-engineer`): QA expert. Writes comprehensive test suites to verify functionality and security.
+
+### 🎛️ VSM-Enhanced Orchestration
+
+PACT 2.0 uses principles from the **Viable System Model** (VSM) to coordinate agents intelligently:
+
+- **Variety Management**: Tasks are scored on complexity (novelty, scope, uncertainty, risk). Simple tasks get lightweight workflows; complex tasks get full ceremony with planning phases.
+- **Adaptive Workflow**: The orchestrator selects the right level of process—from quick single-agent fixes (`/PACT:comPACT`) to multi-agent orchestration (`/PACT:orchestrate`) to strategic planning (`/PACT:plan-mode`).
+- **Viability Sensing**: Agents can emit emergency signals (HALT/ALERT) that bypass normal workflow when they detect security issues, data risks, or ethical concerns—ensuring critical problems reach you immediately.
+- **Continuous Audit**: The test engineer provides parallel quality feedback during implementation, not just at the end.
+
+This means less ceremony for simple tasks, more rigor for complex ones, and automatic escalation when something goes wrong.
 
 ### 🛠️ Custom Commands
 
 - **`/PACT:orchestrate`**: Delegate a task to specialist agents (multi-agent, full ceremony).
 - **`/PACT:comPACT`**: Delegate a focused task to a single specialist (light ceremony).
+- **`/PACT:plan-mode`**: Multi-agent planning consultation before implementation (no code changes).
+- **`/PACT:rePACT`**: Recursive nested PACT cycle for complex sub-tasks.
 - **`/PACT:imPACT`**: Triage when blocked (Redo prior phase? Additional agents needed?).
 - **`/PACT:peer-review`**: Commit, create PR, and run multi-agent code review.
 - **`/PACT:log-changes`**: Update `CLAUDE.md` to reflect recent significant changes.
+- **`/PACT:wrap-up`**: End-of-session cleanup and documentation sync.
 
 #### comPACT Examples
 
@@ -119,6 +134,14 @@ By starting with this repository, you ensure that:
 ## 📂 Project Structure
 
 ```
-.claude/           # The brain: Agents and Commands configuration
-CLAUDE.md          # Main entry point and mission for Claude
+.claude/                  # Claude Code configuration (auto-loaded)
+  agents/                 # Specialist agent definitions
+  commands/PACT/          # PACT workflow commands
+  protocols/              # Coordination protocols (algedonic, pact-protocols)
+pact-plugin/              # Plugin distribution (for sharing)
+  .claude-plugin/         # Plugin manifest (plugin.json, marketplace.json)
+  reference/              # Reference docs (VSM glossary)
+  skills/                 # Dynamic knowledge skills
+docs/                     # Development documentation
+CLAUDE.md                 # Mission and orchestrator configuration
 ```
