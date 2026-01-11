@@ -263,24 +263,54 @@ If PREPARE ran and ARCHITECT was marked "Skip," compare PREPARE's recommended ap
 - `pact-frontend-coder` — UI, client-side
 - `pact-database-engineer` — schema, queries, migrations
 
-#### Parallel vs Sequential Invocation
+#### Execution Strategy Analysis
 
-**Parallel-safe** (invoke together):
-- Backend API + Frontend UI for same feature (independent implementation)
-- Multiple independent components in same domain
+Before invoking coders, analyze dependencies and justify your execution strategy.
+
+**How to analyze:**
+- Review the plan's implementation details and file paths mentioned
+- If no plan exists, analyze the task description and examine relevant files directly
+- Check if tasks reference or modify the same files/modules
+- Examine import relationships between components
+
+**Analysis steps:**
+1. **Map file-level dependencies**: Which tasks touch the same files?
+2. **Map import dependencies**: Does one task's output feed another's input?
+3. **Identify parallelizable groups**: Independent tasks with no shared files
+
+**Required**: State your execution strategy with specific reasoning:
+- "Parallel because [specific files/components are independent]"
+- "Sequential because [specific dependency or shared file]"
+- "Mixed: [A, B] in parallel, then C (depends on A's output)"
+
+> **"I'm not sure"** and **"the plan lists them in order"** are **not valid justifications**. Complete your analysis until you can make a definitive choice.
+
+**If analysis is genuinely inconclusive**: Consult the architect's outputs in `docs/architecture/`, invoke pact-architect for clarification, or escalate to user. Do not default to either strategy without articulated reasoning.
+
+#### Parallel vs Sequential Examples
+
+Use these to inform your analysis (not as complete decision criteria):
+
+**Parallel-safe** (when analysis confirms independence):
+- Backend API + Frontend UI for same feature (no shared files)
+- Multiple independent components in same domain (no shared files)
 - Backend + Frontend when API contract is already defined
 
-**Sequential required** (wait for handoff):
+**Sequential-required** (when analysis finds dependencies):
 - Database schema → Backend (backend needs schema to build models/queries)
 - Backend API → Frontend (frontend needs API contract to consume)
 - Shared utility/service → consumers of that utility
-- Any work where one coder's output is another's input
+- Any work where one task's output is another's input
+- Any tasks that modify the same file
 
-**When in doubt**: Sequential is safer. Parallel saves time but risks rework if assumptions diverge.
+**Mixed** (partial parallelization):
+- When some tasks are independent but others depend on their output
+- Group independent tasks for parallel execution, then sequence dependent groups
+- Example: "A and B in parallel, then C (depends on both outputs)"
 
 #### S2 Pre-Parallel Coordination Check
 
-**Before invoking parallel agents**, apply S2 Coordination:
+Once you've decided on parallel execution, apply S2 Coordination:
 
 1. **Identify potential conflicts**:
    - Shared files (merge conflict risk)
