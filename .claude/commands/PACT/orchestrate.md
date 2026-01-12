@@ -129,7 +129,7 @@ Before executing phases, assess which are needed based on existing context:
 | **PREPARE** | Requirements unclear, external APIs to research, dependencies unmapped | Approved plan exists with Preparation Phase section, OR requirements explicit in task, OR existing `docs/preparation/` covers scope |
 | **ARCHITECT** | New component or module, interface contracts undefined, architectural decisions required | Approved plan exists with Architecture Phase section, OR following established patterns, OR `docs/architecture/` covers design |
 | **CODE** | Always run | Never skip |
-| **TEST** | Integration/E2E tests needed, complex component interactions, security/performance verification | Unit tests from coders sufficient, no integration boundaries crossed, isolated change |
+| **TEST** | Integration/E2E tests needed, complex component interactions, security/performance verification | Trivial change (no new logic requiring tests) AND no integration boundaries crossed AND isolated change with no meaningful test scenarios |
 
 **Conflict resolution**: When both "Run if" and "Skip if" criteria apply, **run the phase** (safer default). Example: A plan exists but requirements have changed—run PREPARE to validate.
 
@@ -145,7 +145,7 @@ Example:
 
 Or without a plan:
 
-> "No plan found. Running PREPARE (external API needs research). Skipping ARCHITECT (following established repository pattern in `src/repositories/`). Running CODE. Skipping TEST (isolated change, unit tests sufficient)."
+> "No plan found. Skipping PREPARE (requirements explicit in task). Skipping ARCHITECT (following established pattern in `src/utils/`). Running CODE. Skipping TEST (trivial change, no new logic to test)."
 
 The user can override your assessment if they want more or less ceremony.
 
@@ -187,7 +187,7 @@ Each specialist should end with a structured handoff (2-4 sentences):
 
 > **Handoff**: 1. Produced: `docs/preparation/rate-limiting-research.md` covering token bucket vs sliding window algorithms. 2. Key context: Recommended Redis-based token bucket; existing `redis-client.ts` can be reused. 3. Open questions: Should rate limits be per-user or per-API-key?
 
-> **Handoff**: 1. Produced: `src/middleware/rateLimiter.ts`, `src/config/rateLimits.ts`, unit tests passing. 2. Key context: Used token bucket with Redis; added `X-RateLimit-*` headers per RFC 6585. 3. Open questions: None—ready for integration testing. 4. Decisions made: Chose `X-RateLimit-Remaining` header format (moderate—affects API consumers); rationale: follows RFC 6585 standard.
+> **Handoff**: 1. Produced: `src/middleware/rateLimiter.ts`, `src/config/rateLimits.ts`, smoke tests passing. 2. Key context: Used token bucket with Redis; added `X-RateLimit-*` headers per RFC 6585. 3. Open questions: None—ready for integration testing. 4. Decisions made: Chose `X-RateLimit-Remaining` header format (moderate—affects API consumers); rationale: follows RFC 6585 standard.
 
 ---
 
