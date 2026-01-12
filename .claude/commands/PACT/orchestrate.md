@@ -145,7 +145,7 @@ Example:
 
 Or without a plan:
 
-> "No plan found. Running PREPARE (external API needs research). Skipping ARCHITECT (following established repository pattern in `src/repositories/`). Running CODE. Skipping TEST (trivial change, no new logic to test)."
+> "No plan found. Skipping PREPARE (requirements explicit in task). Skipping ARCHITECT (following established pattern in `src/utils/`). Running CODE. Skipping TEST (trivial change, no new logic to test)."
 
 The user can override your assessment if they want more or less ceremony.
 
