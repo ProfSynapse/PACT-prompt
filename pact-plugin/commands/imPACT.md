@@ -6,6 +6,23 @@ You hit a blocker: $ARGUMENTS
 
 ---
 
+## Core Principle: Diagnose, Don't Fix
+
+**Your role is triage, not implementation.** Even if you know exactly what's wrong and how to fix it:
+
+1. **Diagnose** — Identify what went wrong (upstream issue? scope mismatch? missing context?)
+2. **Determine** — Who should fix it (which specialist?)
+3. **Delegate** — What do they need (additional context, parallel support?)
+
+> **Knowing the fix ≠ permission to implement it.**
+
+Common traps to avoid:
+- "I can see exactly what's wrong" — Great diagnosis. Now delegate the fix.
+- "Re-delegating seems wasteful" — Role boundaries matter more than perceived efficiency.
+- "It's just a small change" — Small changes are still application code. Delegate.
+
+---
+
 ## VSM Context: S3 Operational Triage
 
 imPACT is **S3-level triage**—operational problem-solving within normal workflow. It is NOT S5 algedonic escalation (emergency bypass to user).
@@ -63,5 +80,3 @@ If the blocker reveals that a sub-task is more complex than expected and needs i
 ```
 /PACT:rePACT backend "implement the OAuth2 token refresh that's blocking us"
 ```
-
-**Remember**: As orchestrator, diagnose and delegate—never execute the fix yourself.
