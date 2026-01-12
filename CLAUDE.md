@@ -195,8 +195,8 @@ The delegation rule applies to **application code**. Here's what that means:
 | Source files (`.py`, `.ts`, `.js`, `.rb`, `.go`) | AI tooling (`CLAUDE.md`, `.claude/`) |
 | Test files (`.spec.ts`, `.test.js`, `test_*.py`) | Documentation (`docs/`) |
 | Scripts (`.sh`, `Makefile`, `Dockerfile`) | Git config (`.gitignore`) |
-| Infrastructure (`.tf`, `.yaml`, `.yml`, `.json`) | IDE settings (`.vscode/`, `.idea/`) |
-| App config (`.env`, `config/`) | |
+| Infrastructure (`.tf`, `.yaml`, `.yml`) | IDE settings (`.vscode/`, `.idea/`) |
+| App config (`.env`, `.json`, `config/`) | |
 
 **When uncertain**: If a file will be executed or affects application behavior, treat it as application code and delegate.
 

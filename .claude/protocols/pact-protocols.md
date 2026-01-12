@@ -33,8 +33,8 @@ These rules are **never** overridden by operational pressure:
 - Source files (`.py`, `.ts`, `.js`, `.rb`, `.go`, etc.)
 - Test files (`.spec.ts`, `.test.js`, `test_*.py`)
 - Scripts (`.sh`, `Makefile`, `Dockerfile`)
-- Infrastructure (`.tf`, `.yaml`, `.yml`, `.json`)
-- App config (`.env`, `config/`)
+- Infrastructure (`.tf`, `.yaml`, `.yml`)
+- App config (`.env`, `.json`, `config/`)
 
 **Not application code** (orchestrator may edit):
 - AI tooling (`CLAUDE.md`, `.claude/`)
