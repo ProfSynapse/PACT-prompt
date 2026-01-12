@@ -27,6 +27,37 @@ These rules are **never** overridden by operational pressure:
 
 **If a rule would be violated**: Stop work, report to user. These are not trade-offs—they are boundaries.
 
+### Delegation Enforcement
+
+**Application code** (orchestrator must delegate):
+- Source files (`.py`, `.ts`, `.js`, `.rb`, `.go`, etc.)
+- Test files (`.spec.ts`, `.test.js`, `test_*.py`)
+- Scripts (`.sh`, `Makefile`, `Dockerfile`)
+- Infrastructure (`.tf`, `.yaml`, `.yml`)
+- App config (`.env`, `.json`, `config/`)
+
+**Not application code** (orchestrator may edit):
+- AI tooling (`CLAUDE.md`, `.claude/`)
+- Documentation (`docs/`)
+- Git config (`.gitignore`)
+- IDE settings (`.vscode/`, `.idea/`)
+
+**Tool Checkpoint**: Before `Edit`/`Write`:
+1. STOP — Is this application code?
+2. Yes → Delegate | No → Proceed | Uncertain → Delegate
+
+**Recovery Protocol** (if you catch yourself mid-violation):
+1. Stop immediately
+2. Revert uncommitted changes (`git checkout -- <file>`)
+3. Delegate to appropriate specialist
+4. Note the near-violation for learning
+
+**Why delegation matters**:
+- **Role integrity**: Orchestrators coordinate; specialists implement
+- **Accountability**: Clear ownership of code changes
+- **Quality**: Specialists apply domain expertise
+- **Auditability**: Clean separation of concerns
+
 ### Policy Checkpoints
 
 At defined points, verify alignment with project principles:
@@ -34,6 +65,7 @@ At defined points, verify alignment with project principles:
 | Checkpoint | When | Question |
 |------------|------|----------|
 | **Pre-CODE** | Before CODE phase begins | "Does the architecture align with project principles?" |
+| **Pre-Edit** | Before using Edit/Write tools | "Is this application code? If yes, delegate." |
 | **Pre-Merge** | Before creating PR | "Does this maintain system integrity? Are tests passing?" |
 | **On Conflict** | When specialists disagree | "What do project values dictate?" |
 | **On Blocker** | When normal flow can't proceed | "Is this an operational issue (imPACT) or viability threat (escalate to user)?" |

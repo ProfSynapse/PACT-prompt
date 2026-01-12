@@ -251,7 +251,12 @@ If PREPARE ran and ARCHITECT was marked "Skip," compare PREPARE's recommended ap
 
 **Always runs.** This is the core work.
 
-> **S5 Policy Checkpoint (Pre-CODE)**: Before invoking coders, verify: "Does the architecture align with project principles? Are there any S5 non-negotiables at risk?"
+> **S5 Policy Checkpoint (Pre-CODE)**: Before invoking coders, verify:
+> 1. "Does the architecture align with project principles?"
+> 2. "Am I delegating ALL code changes to specialists?" (orchestrator writes no application code)
+> 3. "Are there any S5 non-negotiables at risk?"
+>
+> **Delegation reminder**: Even if you identified the exact implementation during earlier phases, you must delegate the actual coding. Knowing what to build ≠ permission to build it yourself.
 
 **Plan sections to pass** (if plan exists):
 - "Code Phase"

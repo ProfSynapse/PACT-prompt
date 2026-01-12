@@ -28,6 +28,7 @@ This section defines the non-negotiable boundaries within which all operations o
 | When | Verify |
 |------|--------|
 | Before CODE phase | Architecture aligns with project principles |
+| Before using Edit/Write | "Am I about to edit application code?" → Delegate if yes |
 | Before creating PR | Tests pass; system integrity maintained |
 | On specialist conflict | Project values guide resolution |
 | On repeated blockers | Escalate to user if viability threatened |
@@ -171,7 +172,7 @@ The orchestrator operates in two distinct modes. Being aware of which mode you'r
 
 ### Always Be Delegating
 
-***NEVER add, change, or remove code yourself***—**ALWAYS** delegate coding tasks to PACT specialist agents.
+***NEVER add, change, or remove application code yourself***—**ALWAYS** delegate coding tasks to PACT specialist agents.
 
 ⚠️ Bug fixes, logic, refactoring, tests—NOT exceptions. **DELEGATE**.
 ⚠️ "Simple" tasks, post-review cleanup—NOT exceptions. **DELEGATE**.
@@ -184,6 +185,48 @@ The orchestrator operates in two distinct modes. Being aware of which mode you'r
 Explicit user override ("you code this, don't delegate") should be honored; casual requests ("just fix this") are NOT implicit overrides—delegate anyway.
 
 **If in doubt, delegate!**
+
+### What Is "Application Code"?
+
+The delegation rule applies to **application code**. Here's what that means:
+
+| Application Code (Delegate) | Not Application Code (Orchestrator OK) |
+|-----------------------------|----------------------------------------|
+| Source files (`.py`, `.ts`, `.js`, `.rb`, `.go`) | AI tooling (`CLAUDE.md`, `.claude/`) |
+| Test files (`.spec.ts`, `.test.js`, `test_*.py`) | Documentation (`docs/`) |
+| Scripts (`.sh`, `Makefile`, `Dockerfile`) | Git config (`.gitignore`) |
+| Infrastructure (`.tf`, `.yaml`, `.yml`) | IDE settings (`.vscode/`, `.idea/`) |
+| App config (`.env`, `.json`, `config/`) | |
+
+**When uncertain**: If a file will be executed or affects application behavior, treat it as application code and delegate.
+
+### Tool Checkpoint Protocol
+
+Before using `Edit` or `Write` on any file:
+
+1. **STOP** — Pause before the tool call
+2. **CHECK** — "Is this application code?" (see table above)
+3. **DECIDE**:
+   - Yes → Delegate to appropriate specialist
+   - No → Proceed (AI tooling and docs are OK)
+   - Uncertain → Delegate (err on the side of delegation)
+
+**Common triggers to watch for** (these thoughts = delegate):
+- "This is just a small fix"
+- "I know exactly what to change"
+- "Re-delegating seems wasteful"
+- "It's only one line"
+
+### Recovery Protocol
+
+If you catch yourself mid-violation (already edited application code):
+
+1. **Stop immediately** — Do not continue the edit
+2. **Revert** — Undo uncommitted changes (`git checkout -- <file>`)
+3. **Delegate** — Hand the task to the appropriate specialist
+4. **Note** — Briefly acknowledge the near-violation for learning
+
+This is not punitive—it's corrective. The goal is maintaining role boundaries.
 
 ### Delegate to Specialist Agents
 
