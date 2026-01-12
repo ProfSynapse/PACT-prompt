@@ -129,7 +129,7 @@ Before executing phases, assess which are needed based on existing context:
 | **PREPARE** | Requirements unclear, external APIs to research, dependencies unmapped | Approved plan exists with Preparation Phase section, OR requirements explicit in task, OR existing `docs/preparation/` covers scope |
 | **ARCHITECT** | New component or module, interface contracts undefined, architectural decisions required | Approved plan exists with Architecture Phase section, OR following established patterns, OR `docs/architecture/` covers design |
 | **CODE** | Always run | Never skip |
-| **TEST** | Integration/E2E tests needed, complex component interactions, security/performance verification | Unit tests from coders sufficient, no integration boundaries crossed, isolated change |
+| **TEST** | Integration/E2E tests needed, complex component interactions, security/performance verification | Trivial change (no new logic requiring tests), no integration boundaries crossed, isolated change with no meaningful test scenarios |
 
 **Conflict resolution**: When both "Run if" and "Skip if" criteria apply, **run the phase** (safer default). Example: A plan exists but requirements have changed—run PREPARE to validate.
 
@@ -145,7 +145,7 @@ Example:
 
 Or without a plan:
 
-> "No plan found. Running PREPARE (external API needs research). Skipping ARCHITECT (following established repository pattern in `src/repositories/`). Running CODE. Skipping TEST (isolated change, unit tests sufficient)."
+> "No plan found. Running PREPARE (external API needs research). Skipping ARCHITECT (following established repository pattern in `src/repositories/`). Running CODE. Skipping TEST (trivial change, no new logic to test)."
 
 The user can override your assessment if they want more or less ceremony.
 
