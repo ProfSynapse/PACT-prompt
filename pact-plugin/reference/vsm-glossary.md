@@ -253,6 +253,28 @@ See: **Recursion**
 
 These terms are specific to PACT's implementation of VSM concepts.
 
+### Environment Model
+
+**Definition**: An explicit documentation of the assumptions, constraints, and context that inform S4's assessment of plan validity. Created during PREPARE phase, referenced during S4 checkpoints.
+
+**Location**: `docs/preparation/environment-model-{feature}.md`
+
+**Contents**:
+- Tech stack assumptions (language, framework, dependencies)
+- External dependencies (APIs, services, data sources)
+- Constraints (performance, security, time, resources)
+- Unknowns (acknowledged gaps, questions needing answers)
+- Invalidation triggers (what would force approach changes)
+
+**When Required**:
+- Variety 11+: Required (high complexity demands explicit tracking)
+- Variety 7-10: Recommended (document key assumptions)
+- Variety 4-6: Optional (implicit model often sufficient)
+
+**Key Point**: The Environment Model makes implicit assumptions explicit. S4 checkpoints compare current reality against this baseline to detect divergence.
+
+---
+
 ### Decision Log
 
 **Definition**: Standardized documentation produced during the CODE phase that captures implementation decisions, rationale, and context for subsequent phases.
@@ -267,6 +289,25 @@ These terms are specific to PACT's implementation of VSM concepts.
 - Areas of uncertainty (where bugs might hide)
 
 **Key Point**: Decision logs explain the "why" not the "what"—code shows what was done, the log explains the reasoning.
+
+---
+
+### Orchestration Decision Log
+
+**Definition**: S3-level audit trail maintained by the orchestrator during `/PACT:orchestrate` runs. Captures orchestration decisions (variety assessment, agent selection, phase outcomes, S4 checkpoints) for retrospective analysis and pattern recognition.
+
+**Location**: `docs/decision-logs/orchestration-{feature}.md`
+
+**Distinction from Decision Log**:
+- **Decision Log**: Created by *agents* during CODE phase, documenting *implementation* decisions
+- **Orchestration Decision Log**: Created by *orchestrator*, documenting *orchestration* decisions (what agents to invoke, how to coordinate, when to adapt)
+
+**Format Tiers**:
+- Variety 7-9: Lightweight (key decisions only)
+- Variety 10+: Full format (complete audit trail with S3/S4 tensions, algedonic signals, retrospective)
+- Variety 4-6: None (comPACT territory—too simple for orchestration log)
+
+**Key Point**: The orchestration log provides meta-level visibility into how the orchestration was conducted, separate from what was implemented.
 
 ---
 
@@ -294,6 +335,25 @@ These terms are specific to PACT's implementation of VSM concepts.
 **Documentation**: Logged in session notes and decision log with "⚠️ Overrode {category} HALT: {justification}"
 
 **Key Point**: Overrides don't carry forward—if the risk materializes later, a new HALT is required.
+
+---
+
+### S3/S4 Tension
+
+**Definition**: The inherent conflict between S3 (operational control: "execute now") and S4 (strategic intelligence: "are we doing the right thing?"). This tension is natural and healthy, but unrecognized tension leads to poor decisions.
+
+**Common Manifestations**:
+- Schedule vs Quality (skip phases vs thorough work)
+- Execute vs Investigate (code now vs understand first)
+- Commit vs Adapt (stay course vs change approach)
+- Efficiency vs Safety (speed vs coordination overhead)
+
+**In PACT**: When tension is detected:
+1. Name it explicitly
+2. Articulate trade-offs for each path
+3. Resolve based on project values or escalate to user (S5)
+
+**Key Point**: S5 is the arbiter of S3/S4 tension when values alone don't resolve it. The user decides which trade-off is acceptable.
 
 ---
 
@@ -364,11 +424,14 @@ These terms are specific to PACT's implementation of VSM concepts.
 | Autonomy | Local adaptation authority | Agent autonomy charter |
 | Cohesion | System unity despite autonomy | Shared protocols, policy |
 | Homeostasis | Dynamic equilibrium | S3/S4 balance via S5 |
+| S3/S4 Tension | Operational vs strategic conflict | Name, trade-off, resolve/escalate |
 | Recursion | Viable systems within viable systems | Nested PACT cycles |
 | Requisite Variety | Controller needs matching complexity | Variety budget assessment |
 | Variety | Measure of complexity/possible states | Task complexity dimensions |
 | Viability | Capacity for ongoing existence | Adaptive, resilient workflow |
+| Environment Model | Explicit assumptions and constraints | `docs/preparation/environment-model-*` |
 | Decision Log | Implementation documentation | `docs/decision-logs/` |
+| Orchestration Decision Log | S3-level orchestration audit trail | `docs/decision-logs/orchestration-*` |
 | META-BLOCK | 3+ imPACT cycles → ALERT | Escalation to user |
 | Override Protocol | HALT continuation procedure | Justified risk acceptance |
 | Research Spike | Extreme variety exploration | Pre-implementation recon |

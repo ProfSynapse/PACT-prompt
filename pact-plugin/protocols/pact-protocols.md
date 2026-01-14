@@ -79,11 +79,294 @@ The **user is ultimate S5**. When conflicts cannot be resolved at lower levels:
 
 The orchestrator has authority to make operational decisions within policy. It does not have authority to override policy.
 
+### S5 Decision Framing Protocol
+
+When escalating any decision to user, apply variety attenuation to present decision-ready options rather than raw information.
+
+#### Framing Template
+
+```
+{ICON} {DECISION_TYPE}: {One-line summary}
+
+**Context**: [2-3 sentences max — what happened, why escalation needed]
+
+**Options**:
+A) {Option label}
+   - Action: [What happens]
+   - Trade-off: [Gain vs cost]
+
+B) {Option label}
+   - Action: [What happens]
+   - Trade-off: [Gain vs cost]
+
+C) Other (specify)
+
+**Recommendation**: {Option} — [Brief rationale if you have a recommendation]
+```
+
+#### Decision Types and Icons
+
+| Type | Icon | When |
+|------|------|------|
+| S3/S4 Tension | ⚖️ | Operational vs strategic conflict |
+| Scope Change | 📐 | Task boundaries shifting |
+| Technical Choice | 🔧 | Multiple valid approaches |
+| Risk Assessment | ⚠️ | Uncertainty requiring judgment |
+| Principle Conflict | 🎯 | Values in tension |
+| Algedonic (HALT) | 🛑 | Viability threat — stops work |
+| Algedonic (ALERT) | ⚡ | Attention needed — pauses work |
+
+#### Example: Good Framing
+
+> ⚖️ **S3/S4 Tension**: Skip PREPARE phase for faster delivery?
+>
+> **Context**: Task appears routine based on description, but touches auth code which has been problematic before.
+>
+> **Options**:
+> A) **Skip PREPARE** — Start coding now, handle issues as they arise
+>    - Trade-off: Faster start, but may hit avoidable blockers
+>
+> B) **Run PREPARE** — Research auth patterns first (~30 min)
+>    - Trade-off: Slower start, but informed approach
+>
+> **Recommendation**: B — Auth code has caused issues; small investment reduces risk.
+
+#### Example: Poor Framing (Avoid)
+
+> "I'm not sure whether to skip the prepare phase. On one hand we could save time but on the other hand there might be issues. The auth code has been problematic. What do you think we should do? Also there are some other considerations like..."
+
+#### Attenuation Guidelines
+
+1. **Limit options to 2-3** — More creates decision paralysis
+2. **Lead with recommendation** if you have one
+3. **Quantify when possible** — "~30 min" beats "some time"
+4. **State trade-offs explicitly** — Don't hide costs
+5. **Keep context brief** — User can ask for more
+
+---
+
+## S4 Checkpoint Protocol
+
+At phase boundaries, the orchestrator performs an S4 checkpoint to assess whether the current approach remains valid.
+
+### Trigger Points
+
+- After PREPARE phase completes
+- After ARCHITECT phase completes
+- After CODE phase completes (before TEST)
+- When any agent reports unexpected complexity
+- On user-initiated "pause and assess"
+
+### Checkpoint Questions
+
+1. **Environment Change**: Has external context shifted?
+   - New requirements discovered?
+   - Constraints invalidated?
+   - Dependencies changed?
+
+2. **Model Divergence**: Does our understanding match reality?
+   - Assumptions proven wrong?
+   - Estimates significantly off?
+   - Risks materialized or emerged?
+
+3. **Plan Viability**: Is current approach still optimal?
+   - Should we continue as planned?
+   - Adapt the approach?
+   - Escalate to user for direction?
+
+### Checkpoint Outcomes
+
+| Finding | Action |
+|---------|--------|
+| All clear | Continue to next phase |
+| Minor drift | Note in decision log, continue |
+| Significant change | Pause, assess, may re-run prior phase |
+| Fundamental shift | Escalate to user (S5) |
+
+### Checkpoint Format (Brief)
+
+> **S4 Checkpoint** [Phase→Phase]:
+> - Environment: [stable / shifted: {what}]
+> - Model: [aligned / diverged: {what}]
+> - Plan: [viable / adapt: {how} / escalate: {why}]
+
+### Output Behavior
+
+**Default**: Silent-unless-issue — checkpoint runs internally; only surfaces to user when drift or issues detected.
+
+**Examples**:
+
+*Silent (all clear)*:
+> (Internal) S4 Checkpoint Post-PREPARE: Environment stable, model aligned, plan viable → continue
+
+*Surfaces to user (issue detected)*:
+> **S4 Checkpoint** [PREPARE→ARCHITECT]:
+> - Environment: Shifted — API v2 deprecated, v3 has breaking changes
+> - Model: Diverged — Assumed backwards compatibility, now false
+> - Plan: Adapt — Need PREPARE extension to research v3 migration path
+
+### Relationship to Variety Checkpoints
+
+S4 Checkpoints complement Variety Checkpoints (see Variety Management):
+- **Variety Checkpoints**: "Do we have enough response capacity for this complexity?"
+- **S4 Checkpoints**: "Is our understanding of the situation still valid?"
+
+Both occur at phase transitions but ask different questions.
+
+---
+
+## S4 Environment Model
+
+S4 checkpoints assess whether our mental model matches reality. The **Environment Model** makes this model explicit—documenting assumptions, constraints, and context that inform decision-making.
+
+### Purpose
+
+- **Make implicit assumptions explicit** — What do we assume about the tech stack, APIs, constraints?
+- **Enable divergence detection** — When reality contradicts the model, we notice faster
+- **Provide checkpoint reference** — S4 checkpoints compare current state against this baseline
+
+### When to Create
+
+| Trigger | Action |
+|---------|--------|
+| Start of PREPARE phase | Create initial environment model |
+| High-variety tasks (11+) | Required — model complexity demands explicit tracking |
+| Medium-variety tasks (7-10) | Recommended — document key assumptions |
+| Low-variety tasks (4-6) | Optional — implicit model often sufficient |
+
+### Model Contents
+
+```markdown
+# Environment Model: {Feature/Project}
+
+## Tech Stack Assumptions
+- Language: {language/version}
+- Framework: {framework/version}
+- Key dependencies: {list with version expectations}
+
+## External Dependencies
+- APIs: {list with version/availability assumptions}
+- Services: {list with status assumptions}
+- Data sources: {list with schema/format assumptions}
+
+## Constraints
+- Performance: {expected loads, latency requirements}
+- Security: {compliance requirements, auth constraints}
+- Time: {deadlines, phase durations}
+- Resources: {team capacity, compute limits}
+
+## Unknowns (Acknowledged Gaps)
+- {List areas of uncertainty}
+- {Questions that need answers}
+- {Risks that need monitoring}
+
+## Invalidation Triggers
+- If {assumption X} proves false → {response}
+- If {constraint Y} changes → {response}
+```
+
+### Location
+
+`docs/preparation/environment-model-{feature}.md`
+
+Created during PREPARE phase, referenced during S4 checkpoints.
+
+### Update Protocol
+
+| Event | Action |
+|-------|--------|
+| Assumption invalidated | Update model, note in S4 checkpoint |
+| New constraint discovered | Add to model, assess impact |
+| Unknown resolved | Move from Unknowns to appropriate section |
+| Model significantly outdated | Consider returning to PREPARE |
+
+### Relationship to S4 Checkpoints
+
+The Environment Model is the baseline against which S4 checkpoints assess:
+- "Environment shifted" → Compare current state to Environment Model
+- "Model diverged" → Assumptions in model no longer hold
+- "Plan viable" → Constraints in model still valid for current approach
+
+---
+
+## S3/S4 Tension Detection and Resolution
+
+S3 (operational control) and S4 (strategic intelligence) are in constant tension. This is healthy—but unrecognized tension leads to poor decisions.
+
+### Tension Indicators
+
+S3/S4 tension exists when:
+- **Schedule vs Quality**: Pressure to skip phases vs need for thorough work
+- **Execute vs Investigate**: Urge to code vs need to understand
+- **Commit vs Adapt**: Investment in current approach vs signals to change
+- **Efficiency vs Safety**: Speed of parallel execution vs coordination overhead
+
+### Detection Phrases
+
+When you find yourself thinking:
+- "We're behind, let's skip PREPARE" → S3 pushing
+- "Requirements seem unclear, we should dig deeper" → S4 pulling
+- "Let's just code it and see" → S3 shortcutting
+- "This feels risky, we should plan more" → S4 cautioning
+
+### Resolution Protocol
+
+1. **Name the tension explicitly**:
+   > "S3/S4 tension detected: [specific tension]"
+
+2. **Articulate trade-offs**:
+   > "S3 path: [action] — gains: [X], risks: [Y]"
+   > "S4 path: [action] — gains: [X], risks: [Y]"
+
+3. **Assess against project values**:
+   - Does CLAUDE.md favor speed or quality for this project?
+   - Is this a high-risk area requiring caution?
+   - What has the user expressed preference for?
+
+4. **If resolution is clear**: Decide and document
+5. **If resolution is unclear**: Escalate to user (S5)
+
+### Escalation Format
+
+When escalating S3/S4 tension to user, use S5 Decision Framing:
+
+> ⚖️ **S3/S4 Tension**: {One-line summary}
+>
+> **Context**: [What's happening, why tension exists]
+>
+> **Option A (S3 — Operational)**: [Action]
+> - Gains: [Benefits]
+> - Risks: [Costs]
+>
+> **Option B (S4 — Strategic)**: [Action]
+> - Gains: [Benefits]
+> - Risks: [Costs]
+>
+> **Recommendation**: [If you have one, with rationale]
+
+### Integration with S4 Checkpoints
+
+S4 Checkpoints are natural points to assess S3/S4 tension:
+- Checkpoint finds drift → S3 wants to continue, S4 wants to adapt → Tension
+- Checkpoint finds all-clear but behind schedule → S3 wants to skip phases, S4 wants thoroughness → Tension
+
+When a checkpoint surfaces tension, apply the Resolution Protocol above.
+
 ---
 
 ## S2 Coordination Layer
 
-The coordination layer enables parallel agent operation without conflicts. Apply these protocols whenever multiple agents work concurrently.
+The coordination layer enables parallel agent operation without conflicts. S2 is **proactive** (prevents conflicts) not just **reactive** (resolves conflicts). Apply these protocols whenever multiple agents work concurrently.
+
+### Information Flows
+
+S2 manages information flow between agents:
+
+| From | To | Information |
+|------|-----|-------------|
+| Earlier agent | Later agents | Conventions established, interfaces defined |
+| Orchestrator | All agents | Shared context, boundary assignments |
+| Any agent | Orchestrator → All others | Resource claims, conflict warnings |
 
 ### Pre-Parallel Coordination Check
 
@@ -102,6 +385,23 @@ Before invoking parallel agents, the orchestrator must:
    - Technical disagreements → Architect arbitrates
    - Style/convention disagreements → First agent's choice becomes standard
    - Resource contention → Orchestrator allocates
+
+### S2 Pre-Parallel Checkpoint Format
+
+When analyzing parallel work, emit proactive coordination signals:
+
+> **S2 Pre-Parallel Check**:
+> - Shared files: [none / list with mitigation]
+> - Shared interfaces: [none / contract defined by X]
+> - Conventions: [pre-defined / first agent establishes]
+> - Anticipated conflicts: [none / sequencing X before Y]
+
+**Example**:
+> **S2 Pre-Parallel Check**:
+> - Shared files: `src/types/api.ts` — Backend defines, Frontend consumes (read-only)
+> - Shared interfaces: API contract defined in architecture doc
+> - Conventions: Follow existing patterns in `src/utils/`
+> - Anticipated conflicts: None
 
 ### Conflict Resolution
 
@@ -133,16 +433,33 @@ All agents operating in parallel must:
 - Follow consistent decision log format (see CODE → TEST Handoff)
 - Use standardized handoff structure (see Phase Handoffs)
 
-### Oscillation Dampening
+### Anti-Oscillation Protocol
 
 If agents produce contradictory outputs (each "fixing" the other's work):
 
-1. **Pause** both agents immediately
-2. **Identify** the root disagreement (technical approach? requirements interpretation?)
-3. **Escalate** to appropriate authority:
-   - Technical disagreement → Architect
-   - Requirements disagreement → User (S5)
-4. **Resume** only after resolution is documented
+1. **Detect**: Outputs conflict OR agents undo each other's work
+2. **Pause**: Stop both agents immediately
+3. **Diagnose**: Root cause—technical disagreement or requirements ambiguity?
+4. **Resolve**:
+   - Technical disagreement → Architect arbitrates
+   - Requirements ambiguity → User (S5) clarifies
+5. **Document**: Record resolution in decision log for future reference
+6. **Resume**: Only after documented resolution
+
+**Detection Signals**:
+- Agent A modifies what Agent B just created
+- Both agents claim ownership of same interface
+- Output contradicts established convention
+- Repeated "fix" cycles in same file/component
+
+### Routine Information Sharing
+
+After each specialist completes work:
+1. **Extract** key decisions, conventions, interfaces established
+2. **Propagate** to subsequent agents in their prompts
+3. **Update** shared context for any agents still running in parallel
+
+This transforms implicit knowledge into explicit coordination, reducing "surprise" conflicts.
 
 ---
 
@@ -653,16 +970,101 @@ Skip for simple features or when "just build it."
 |-------|-----------------|
 | Plan | `docs/plans/` |
 | Prepare | `docs/preparation/` |
+| Prepare (environment model) | `docs/preparation/environment-model-{feature}.md` |
 | Architect | `docs/architecture/` |
 | Code (decision logs) | `docs/decision-logs/{feature}-{domain}.md` |
 | Test (decision log) | `docs/decision-logs/{feature}-test.md` |
 | Test (artifacts) | `docs/testing/` |
+| Orchestration (decision log) | `docs/decision-logs/orchestration-{feature}.md` |
 
 **Plan vs. Architecture artifacts**:
 - **Plans** (`docs/plans/`): Pre-approval roadmaps created by `/PACT:plan-mode`. Multi-specialist consultation synthesized into scope estimates, sequencing, and risk assessment. Created *before* implementation begins.
 - **Architecture** (`docs/architecture/`): Formal specifications created by `pact-architect` *during* the Architect phase of `/PACT:orchestrate`. Detailed component designs, interface contracts, and technical decisions.
 
 Plans inform implementation strategy; architecture documents define the technical blueprint.
+
+### Orchestration Decision Log
+
+For `/PACT:orchestrate` runs, the orchestrator maintains a decision log providing an S3-level audit trail. This log captures key orchestration decisions for retrospective analysis and pattern recognition.
+
+**Location**: `docs/decision-logs/orchestration-{feature}.md`
+
+**When to create**:
+- Variety score 7-9: Lightweight log (key decisions only)
+- Variety score 10+: Full log (complete audit trail)
+- Variety 4-6 (comPACT): No orchestration log (task too simple)
+
+**Lightweight format** (Variety 7-9):
+```markdown
+# Orchestration Log: {Feature}
+Date: {YYYY-MM-DD}
+Variety Score: {score} ({N/S/U/R})
+
+## Key Decisions
+| Phase | Decision | Rationale |
+|-------|----------|-----------|
+| ... | ... | ... |
+
+## Outcome
+- Result: [success / partial / blocked]
+- Follow-up: [none / items]
+```
+
+**Full format** (Variety 10+):
+```markdown
+# Orchestration Log: {Feature}
+Date: {YYYY-MM-DD}
+Variety Score: {score} ({Novelty}/{Scope}/{Uncertainty}/{Risk})
+
+## Variety Assessment
+- Novelty: {1-4} — {rationale}
+- Scope: {1-4} — {rationale}
+- Uncertainty: {1-4} — {rationale}
+- Risk: {1-4} — {rationale}
+- Response: {attenuators/amplifiers applied}
+
+## Phase Log
+
+### PREPARE
+- Agent(s): {list}
+- Duration: {approx}
+- S4 Checkpoint: {outcome}
+- Key findings: {list}
+
+### ARCHITECT
+- Agent(s): {list}
+- S2 Coordination: {pre-parallel check if applicable}
+- S4 Checkpoint: {outcome}
+- Key decisions: {list}
+
+### CODE
+- Agent(s): {list}
+- Parallelization: {yes/no — rationale}
+- S2 Coordination: {conflict prevention measures}
+- S4 Checkpoint: {outcome}
+- Blockers: {none / handled via imPACT}
+
+### TEST
+- Agent(s): {list}
+- Coverage: {summary}
+- Issues found: {list}
+
+## S3/S4 Tensions
+{Record any detected tensions and resolutions, or "None detected"}
+
+## Algedonic Signals
+{Record any HALT/ALERT signals, or "None"}
+
+## Retrospective
+- What worked: {list}
+- What to improve: {list}
+- Patterns to note: {list}
+```
+
+**Update cadence**:
+- Create log at orchestration start (after variety assessment)
+- Update after each phase completion
+- Finalize after TEST phase or on early termination
 
 ---
 

@@ -117,6 +117,8 @@ The orchestrator operates in two distinct modes. Being aware of which mode you'r
 
 When making decisions, consider which horizon applies. Misalignment indicates mode confusion (e.g., in S3 mode worrying about next month's features → that's an S4-horizon question).
 
+**S3/S4 Tension**: When you detect conflict between operational pressure (S3: "execute now") and strategic caution (S4: "investigate first"), name it explicitly, articulate trade-offs, and resolve based on project values or escalate to user. See `protocols/pact-protocols.md > S3/S4 Tension Detection and Resolution` for the full protocol.
+
 ### PACT Framework Principles
 
 #### 📋 PREPARE Phase Principles
