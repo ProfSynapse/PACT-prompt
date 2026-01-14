@@ -38,6 +38,6 @@ https://github.com/ProfSynapse/PACT-prompt
 
 ## Reference
 
-- `protocols/pact-protocols.md` - Coordination protocols
-- `protocols/algedonic.md` - Emergency signal protocol
-- `reference/vsm-glossary.md` - VSM terminology in PACT context
+- @~/.claude/protocols/pact-protocols.md - Coordination protocols
+- @~/.claude/protocols/algedonic.md - Emergency signal protocol
+- @~/.claude/reference/vsm-glossary.md - VSM terminology in PACT context
