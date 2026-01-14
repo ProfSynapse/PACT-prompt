@@ -779,7 +779,10 @@ For comprehensive guides on specific topics:
 - **Validation-driven**: Let validation guide configuration
 
 **Related Skills**:
-- **n8n MCP Tools Expert** - How to use discovery tools correctly
+- **n8n Workflow Builder** - Build workflow JSON with node configs
 - **n8n Validation Expert** - Interpret validation errors
 - **n8n Expression Syntax** - Configure expression fields
 - **n8n Workflow Patterns** - Apply patterns with proper configuration
+
+**MCP Integration** (Optional):
+If n8n-mcp is configured, you can use get_node for real-time node discovery. Without MCP, use the node configurations in the Workflow Builder skill.

@@ -1,7 +1,7 @@
 {
   "name": "pact-framework",
-  "version": "1.0.0",
-  "description": "PACT Framework - Prepare, Architect, Code, Test methodology with specialist agents for systematic AI-assisted development",
+  "version": "1.1.0",
+  "description": "PACT Framework - Prepare, Architect, Code, Test methodology with specialist agents for systematic AI-assisted development. Includes n8n workflow automation (no MCP required).",
   "author": {
     "name": "ProfSynapse",
     "url": "https://github.com/ProfSynapse/PACT-prompt"
@@ -17,7 +17,8 @@
     "testing",
     "multi-agent",
     "n8n",
-    "workflow"
+    "workflow",
+    "automation"
   ],
   "commands": [
     "./commands/orchestrate.md",

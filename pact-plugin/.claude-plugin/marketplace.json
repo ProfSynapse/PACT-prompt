@@ -11,13 +11,13 @@
     {
       "name": "pact-framework",
       "source": "./",
-      "description": "PACT Framework - Prepare, Architect, Code, Test methodology with specialist agents",
-      "version": "1.0.0",
+      "description": "PACT Framework - Prepare, Architect, Code, Test methodology with specialist agents. Includes n8n workflow automation (no MCP required).",
+      "version": "1.1.0",
       "author": {
         "name": "ProfSynapse"
       },
       "category": "development",
-      "keywords": ["pact", "agents", "development", "architecture", "testing", "n8n"],
+      "keywords": ["pact", "agents", "development", "architecture", "testing", "n8n", "workflow", "automation"],
       "license": "MIT",
       "repository": "https://github.com/ProfSynapse/PACT-prompt"
     }

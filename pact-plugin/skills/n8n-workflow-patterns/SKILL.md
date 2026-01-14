@@ -113,27 +113,28 @@ When building ANY workflow, follow this checklist:
 
 ### Planning Phase
 - [ ] Identify the pattern (webhook, API, database, AI, scheduled)
-- [ ] List required nodes (use search_nodes)
+- [ ] List required nodes (see n8n Workflow Builder for node reference)
 - [ ] Understand data flow (input → transform → output)
 - [ ] Plan error handling strategy
 
 ### Implementation Phase
-- [ ] Create workflow with appropriate trigger
+- [ ] Create workflow JSON with appropriate trigger
 - [ ] Add data source nodes
-- [ ] Configure authentication/credentials
+- [ ] Configure authentication/credentials references
 - [ ] Add transformation nodes (Set, Code, IF)
 - [ ] Add output/action nodes
 - [ ] Configure error handling
 
 ### Validation Phase
-- [ ] Validate each node configuration (validate_node)
-- [ ] Validate complete workflow (validate_workflow)
-- [ ] Test with sample data
+- [ ] Validate JSON syntax
+- [ ] Validate node configurations
+- [ ] Test with sample data after import
 - [ ] Handle edge cases (empty data, errors)
 
 ### Deployment Phase
-- [ ] Review workflow settings (execution order, timeout, error handling)
-- [ ] Activate workflow using `activateWorkflow` operation
+- [ ] Import workflow to n8n (or deploy via API if MCP available)
+- [ ] Configure credentials in n8n
+- [ ] Activate workflow
 - [ ] Monitor first executions
 - [ ] Document workflow purpose and data flow
 
@@ -223,17 +224,16 @@ See: n8n Expression Syntax skill
 
 These skills work together with Workflow Patterns:
 
-**n8n MCP Tools Expert** - Use to:
-- Find nodes for your pattern (search_nodes)
-- Understand node operations (get_node)
-- Create workflows (n8n_create_workflow)
-- Deploy templates (n8n_deploy_template)
-- Use ai_agents_guide for AI pattern guidance
+**n8n Workflow Builder** - Use to:
+- Build workflow JSON files
+- Find node configurations and examples
+- Validate JSON before import
+- Complete workflow examples
 
 **n8n Expression Syntax** - Use to:
 - Write expressions in transformation nodes
-- Access webhook data correctly ({{$json.body.field}})
-- Reference previous nodes ({{$node["Node Name"].json.field}})
+- Access webhook data correctly (={{$json.body.field}})
+- Reference previous nodes (={{$node["Node Name"].json.field}})
 
 **n8n Node Configuration** - Use to:
 - Configure specific operations for pattern nodes
@@ -242,7 +242,7 @@ These skills work together with Workflow Patterns:
 **n8n Validation Expert** - Use to:
 - Validate workflow structure
 - Fix validation errors
-- Ensure workflow correctness before deployment
+- Ensure workflow correctness before import
 
 ---
 
@@ -358,7 +358,7 @@ From n8n template library:
 **AI Agents**: Growing in usage
 - Most common: Chatbots, content generation, data analysis
 
-Use `search_templates` and `get_template` from n8n-mcp tools to find examples!
+Browse templates at https://n8n.io/workflows/ for examples!
 
 ---
 

@@ -58,13 +58,13 @@ The plugin includes 14 skills that auto-activate based on context:
 - `pact-testing-strategies` - Test pyramid, integration patterns
 
 **n8n Workflow Skills:**
+- `n8n-workflow-builder` - Build n8n workflow JSON files (no MCP required)
 - `n8n-workflow-patterns` - Common workflow architectures
 - `n8n-code-javascript` - Code node JavaScript patterns
 - `n8n-code-python` - Code node Python patterns
 - `n8n-expression-syntax` - n8n expression language
 - `n8n-node-configuration` - Node setup and dependencies
 - `n8n-validation-expert` - Error diagnosis and fixes
-- `n8n-mcp-tools-expert` - MCP server integration
 
 **Context Engineering Skills:**
 - `context-compression` - Session summarization techniques

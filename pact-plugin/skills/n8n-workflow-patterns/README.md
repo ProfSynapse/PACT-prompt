@@ -33,14 +33,15 @@ Teaches architectural patterns for building n8n workflows. Provides structure, b
 
 ## Dependencies
 
-**n8n-mcp tools**:
+**No MCP required!** Pattern guidance works with JSON workflow files.
+
+**Optional MCP tools** (if n8n-mcp is configured):
 - search_nodes (find nodes for patterns)
-- get_node (understand node operations)
 - search_templates (find example workflows)
 - ai_agents_guide (AI pattern guidance)
 
 **Related skills**:
-- n8n MCP Tools Expert (find and configure nodes)
+- n8n Workflow Builder (build workflow JSON files)
 - n8n Expression Syntax (write expressions in patterns)
 - n8n Node Configuration (configure pattern nodes)
 - n8n Validation Expert (validate pattern implementations)
@@ -184,7 +185,7 @@ Every pattern follows this checklist:
 
 ### Planning Phase
 - [ ] Identify the pattern (webhook, API, database, AI, scheduled)
-- [ ] List required nodes (use search_nodes)
+- [ ] List required nodes (see n8n Workflow Builder)
 - [ ] Understand data flow (input → transform → output)
 - [ ] Plan error handling strategy
 
@@ -220,7 +221,7 @@ Schedule (daily 8 AM) → HTTP Request (weather) → Set → Slack
 **Database Operations**: 456 templates
 **AI Workflows**: 234 templates
 
-Use `search_templates` to find examples for your use case!
+Browse templates at https://n8n.io/workflows/ for examples!
 
 ## Integration with Other Skills
 
@@ -229,17 +230,17 @@ Use `search_templates` to find examples for your use case!
 2. Select appropriate pattern
 3. Follow pattern structure
 
-**Node Discovery** (n8n MCP Tools Expert):
-4. Find nodes for pattern (search_nodes)
-5. Understand node operations (get_node)
+**Workflow Building** (n8n Workflow Builder):
+4. Find node configurations
+5. Build workflow JSON
 
 **Implementation** (n8n Expression Syntax + Node Configuration):
-6. Write expressions ({{$json.body.field}})
+6. Write expressions (={{$json.body.field}})
 7. Configure nodes properly
 
 **Validation** (n8n Validation Expert):
-8. Validate workflow structure
-9. Fix validation errors
+8. Validate workflow JSON
+9. Fix validation errors before import
 
 ## Last Updated
 

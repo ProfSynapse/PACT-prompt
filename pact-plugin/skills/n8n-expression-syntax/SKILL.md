@@ -486,7 +486,7 @@ Hello {{$json.name}}!
 
 ## Related Skills
 
-- **n8n MCP Tools Expert**: Learn how to validate expressions using MCP tools
+- **n8n Workflow Builder**: Build workflows with expression examples
 - **n8n Workflow Patterns**: See expressions in real workflow examples
 - **n8n Node Configuration**: Understand when expressions are needed
 
@@ -513,4 +513,4 @@ For more details, see:
 
 ---
 
-**Need Help?** Reference the n8n expression documentation or use n8n-mcp validation tools to check your expressions.
+**Need Help?** Reference the n8n expression documentation or the Workflow Builder skill for more expression examples.

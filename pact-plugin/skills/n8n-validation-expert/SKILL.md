@@ -684,6 +684,9 @@ For comprehensive error catalogs and false positive examples:
 4. Deploy with confidence
 
 **Related Skills**:
-- n8n MCP Tools Expert - Use validation tools correctly
+- n8n Workflow Builder - Build and validate workflow JSON
 - n8n Expression Syntax - Fix expression errors
 - n8n Node Configuration - Understand required fields
+
+**MCP Integration** (Optional):
+If n8n-mcp is configured, you can use validate_node and validate_workflow tools for real-time validation. Without MCP, use the validation checklist and concepts in this skill.
