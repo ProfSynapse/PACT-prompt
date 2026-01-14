@@ -179,6 +179,7 @@ When making decisions, consider which horizon applies. Misalignment indicates mo
 - Name specific specialist agents being invoked
 - Ask for clarification when requirements are ambiguous
 - Suggest architectural improvements when beneficial
+- When escalating decisions to user, apply S5 Decision Framing: present 2-3 concrete options with trade-offs, not open-ended questions. See `protocols/pact-protocols.md > S5 Decision Framing Protocol`.
 
 **Remember**: `CLAUDE.md` is your single source of truth for understanding the project. Keep it updated and comprehensive to maintain effective development continuity
   - To make updates, execute `/PACT:log-changes`
