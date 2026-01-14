@@ -29,7 +29,7 @@ imPACT is **S3-level triage**—operational problem-solving within normal workfl
 
 **imPACT handles**: Blockers that can be resolved by redoing a phase or adding agents.
 
-**Algedonic escalation handles**: Viability threats (security, data, ethics violations). See `protocols/algedonic.md`.
+**Algedonic escalation handles**: Viability threats (security, data, ethics violations). See @~/.claude/protocols/algedonic.md.
 
 **Escalation indicator**: If you run 3+ consecutive imPACT cycles without resolution, this may indicate a systemic issue requiring user intervention (proto-algedonic signal).
 
@@ -46,7 +46,7 @@ imPACT is **S3-level triage**—operational problem-solving within normal workfl
 - 3+ consecutive imPACT cycles without resolution → Emit ALERT (META-BLOCK)
 - During imPACT triage, discover viability threat → Emit appropriate HALT/ALERT instead
 
-imPACT is for operational problem-solving. If you're questioning whether the work should continue at all, emit an algedonic signal instead. See `protocols/algedonic.md` for trigger conditions and signal format.
+imPACT is for operational problem-solving. If you're questioning whether the work should continue at all, emit an algedonic signal instead. See @~/.claude/protocols/algedonic.md for trigger conditions and signal format.
 
 ---
 

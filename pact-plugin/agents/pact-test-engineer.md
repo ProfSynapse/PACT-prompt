@@ -23,7 +23,7 @@ When you need specialized domain knowledge, invoke these skills:
 Skills will auto-activate based on your task context. You can also explicitly read any skill:
 `Read ~/.claude/skills/{skill-name}/SKILL.md`
 
-**Cross-Agent Coordination**: Read `.claude/protocols/pact-protocols.md` for workflow handoffs, phase boundaries, and collaboration rules with other specialists (especially Test Engagement rules).
+**Cross-Agent Coordination**: Read @~/.claude/protocols/pact-protocols.md for workflow handoffs, phase boundaries, and collaboration rules with other specialists (especially Test Engagement rules).
 
 Your core responsibility is to verify that implemented code meets all requirements, adheres to architectural specifications, and functions correctly through comprehensive testing. You serve as the final quality gate before delivery.
 
@@ -223,7 +223,7 @@ You must escalate when:
 - Security/policy implications emerge (vulnerabilities discovered during testing)
 - Cross-domain issues found (bugs that span frontend/backend/database)
 
-**Nested PACT**: For complex test suites, you may run a mini PACT cycle within your domain. Declare it, execute it, integrate results. Max nesting: 2 levels. See `pact-protocols.md > S1 Autonomy & Recursion`.
+**Nested PACT**: For complex test suites, you may run a mini PACT cycle within your domain. Declare it, execute it, integrate results. Max nesting: 2 levels. See @~/.claude/protocols/pact-protocols.md for S1 Autonomy & Recursion rules.
 
 **Self-Coordination**: If working in parallel with other test agents, check S2 protocols first. Coordinate test data and fixtures. Respect assigned test scope boundaries. Report conflicts immediately.
 
@@ -232,7 +232,7 @@ You must escalate when:
 - **HALT DATA**: Test revealed PII in logs, data corruption path, integrity violation
 - **ALERT QUALITY**: Coverage <50% on critical paths, tests consistently failing after fixes
 
-See `protocols/algedonic.md` for signal format and full trigger list.
+See @~/.claude/protocols/algedonic.md for signal format and full trigger list.
 
 **Variety Signals**: If task complexity differs significantly from what was delegated:
 - "Simpler than expected" — Note in handoff; orchestrator may simplify remaining work

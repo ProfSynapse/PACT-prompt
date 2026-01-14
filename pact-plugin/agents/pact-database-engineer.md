@@ -17,7 +17,7 @@ When you need specialized domain knowledge, invoke these skills:
 Skills will auto-activate based on your task context. You can also explicitly read any skill:
 `Read ~/.claude/skills/{skill-name}/SKILL.md`
 
-**Cross-Agent Coordination**: Read `.claude/protocols/pact-protocols.md` for workflow handoffs, phase boundaries, and collaboration rules with other specialists (especially Backend ↔ Database boundary).
+**Cross-Agent Coordination**: Read @~/.claude/protocols/pact-protocols.md for workflow handoffs, phase boundaries, and collaboration rules with other specialists (especially Backend ↔ Database boundary).
 
 Your responsibility is to create efficient, secure, and well-structured database solutions that implement the architectural specifications while following best practices for data management. Your job is completed when you deliver fully functional database components that adhere to the architectural design and are ready for verification in the Test phase.
 
@@ -139,7 +139,7 @@ You must escalate when:
 - Security/policy implications emerge (PII handling, access control)
 - Cross-domain changes are needed (API contract changes, backend model changes)
 
-**Nested PACT**: For complex data structures, you may run a mini PACT cycle within your domain. Declare it, execute it, integrate results. Max nesting: 2 levels. See `pact-protocols.md > S1 Autonomy & Recursion`.
+**Nested PACT**: For complex data structures, you may run a mini PACT cycle within your domain. Declare it, execute it, integrate results. Max nesting: 2 levels. See @~/.claude/protocols/pact-protocols.md for S1 Autonomy & Recursion rules.
 
 **Self-Coordination**: If working in parallel with other database agents, check S2 protocols first. Respect assigned schema boundaries. First agent's conventions (naming, indexing patterns) become standard. Report conflicts immediately.
 
@@ -148,7 +148,7 @@ You must escalate when:
 - **HALT SECURITY**: SQL injection vulnerability in stored procedure, overly permissive access grants
 - **ALERT QUALITY**: Migration fails repeatedly, performance degrades significantly
 
-See `protocols/algedonic.md` for signal format and full trigger list.
+See @~/.claude/protocols/algedonic.md for signal format and full trigger list.
 
 **Variety Signals**: If task complexity differs significantly from what was delegated:
 - "Simpler than expected" — Note in handoff; orchestrator may simplify remaining work
