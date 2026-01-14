@@ -149,6 +149,8 @@ C) Other (specify)
 
 At phase boundaries, the orchestrator performs an S4 checkpoint to assess whether the current approach remains valid.
 
+> **Temporal Horizon**: S4 operates at a **days** horizon—asking questions about the current milestone or sprint, not minute-level implementation details. See `CLAUDE.md > Temporal Horizons` for the full horizon model.
+
 ### Trigger Points
 
 - After PREPARE phase completes
