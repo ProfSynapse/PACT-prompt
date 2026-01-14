@@ -208,6 +208,7 @@ Each specialist should end with a structured handoff (2-4 sentences):
 - [ ] Outputs exist in `docs/preparation/`
 - [ ] Specialist handoff received (see Handoff Format below)
 - [ ] If blocker reported → `/PACT:imPACT`
+- [ ] **S4 Checkpoint** (see `pact-protocols.md > S4 Checkpoint Protocol`): Environment stable? Model aligned? Plan viable?
 
 ---
 
@@ -244,6 +245,7 @@ If PREPARE ran and ARCHITECT was marked "Skip," compare PREPARE's recommended ap
 - [ ] Outputs exist in `docs/architecture/`
 - [ ] Specialist handoff received (see Handoff Format above)
 - [ ] If blocker reported → `/PACT:imPACT`
+- [ ] **S4 Checkpoint**: Environment stable? Model aligned? Plan viable?
 
 ---
 
@@ -381,6 +383,7 @@ See `pact-protocols.md > S3* Continuous Audit` for full protocol.
 - [ ] Decision log(s) created at `docs/decision-logs/{feature}-{domain}.md`
 - [ ] Specialist handoff(s) received (see Handoff Format above)
 - [ ] If blocker reported → `/PACT:imPACT`
+- [ ] **S4 Checkpoint**: Environment stable? Model aligned? Plan viable?
 
 #### Handling Complex Sub-Tasks During CODE
 

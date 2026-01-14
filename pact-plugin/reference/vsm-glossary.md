@@ -309,6 +309,23 @@ These terms are specific to PACT's implementation of VSM concepts.
 
 ---
 
+### Temporal Horizon
+
+**Definition**: The characteristic time scale at which each VSM system operates. Different systems naturally focus on different planning and decision horizons.
+
+**In PACT**:
+
+| System | Horizon | Focus |
+|--------|---------|-------|
+| **S1** | Minutes | Current subtask (agent implementation) |
+| **S3** | Hours | Current task/phase (orchestrator coordination) |
+| **S4** | Days | Current milestone/sprint (planning, adaptation) |
+| **S5** | Persistent | Project identity (values, non-negotiables) |
+
+**Key Point**: When you find yourself in S3 mode asking S4-horizon questions ("will this scale next quarter?"), you're experiencing mode/horizon misalignment. Recognize it and either transition modes or note the question for later.
+
+---
+
 ### Variety Score
 
 **Definition**: A 4-16 numeric assessment of task complexity used to select the appropriate workflow ceremony level.
@@ -355,6 +372,7 @@ These terms are specific to PACT's implementation of VSM concepts.
 | META-BLOCK | 3+ imPACT cycles → ALERT | Escalation to user |
 | Override Protocol | HALT continuation procedure | Justified risk acceptance |
 | Research Spike | Extreme variety exploration | Pre-implementation recon |
+| Temporal Horizon | Time scale for each VSM system | S1=min, S3=hrs, S4=days, S5=persistent |
 | Variety Score | 4-16 complexity assessment | Workflow ceremony selector |
 
 ---

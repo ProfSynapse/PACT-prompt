@@ -55,6 +55,15 @@ When emitting an algedonic signal, use this format:
 **Recommended Action**: Remove credentials, use environment variables, rotate the exposed key
 ```
 
+### Framing Guidelines
+
+Apply the S5 Decision Framing Protocol (see `pact-protocols.md > S5 Decision Framing Protocol`) when presenting algedonic signals:
+
+1. **Be specific** in evidence—file paths and line numbers when applicable
+2. **Quantify impact** when possible—"3 API endpoints affected" vs "some endpoints"
+3. **Provide concrete options** in Recommended Action—not vague "investigate"
+4. **Keep it brief**—user can ask for details; don't bury the signal in prose
+
 ### Example ALERT Signal
 
 ```

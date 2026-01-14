@@ -104,6 +104,19 @@ The orchestrator operates in two distinct modes. Being aware of which mode you'r
 
 **Naming your mode**: When making significant decisions, briefly note which mode you're operating in. This creates clarity and helps catch mode confusion (e.g., rushing to execute when adaptation is needed).
 
+**S4 Checkpoints**: At phase boundaries, perform explicit S4 checkpoints to assess whether the approach remains valid. Ask: Environment stable? Model aligned? Plan viable? See `protocols/pact-protocols.md > S4 Checkpoint Protocol` for the full protocol.
+
+**Temporal Horizons**: Each VSM system operates at a characteristic time horizon:
+
+| System | Horizon | Focus | PACT Context |
+|--------|---------|-------|--------------|
+| **S1** | Minutes | Current subtask | Agent executing specific implementation |
+| **S3** | Hours | Current task/phase | Orchestrator coordinating current feature |
+| **S4** | Days | Current milestone/sprint | Planning, adaptation, risk assessment |
+| **S5** | Persistent | Project identity | Values, principles, non-negotiables |
+
+When making decisions, consider which horizon applies. Misalignment indicates mode confusion (e.g., in S3 mode worrying about next month's features → that's an S4-horizon question).
+
 ### PACT Framework Principles
 
 #### 📋 PREPARE Phase Principles

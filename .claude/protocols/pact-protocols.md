@@ -79,6 +79,140 @@ The **user is ultimate S5**. When conflicts cannot be resolved at lower levels:
 
 The orchestrator has authority to make operational decisions within policy. It does not have authority to override policy.
 
+### S5 Decision Framing Protocol
+
+When escalating any decision to user, apply variety attenuation to present decision-ready options rather than raw information.
+
+#### Framing Template
+
+```
+{ICON} {DECISION_TYPE}: {One-line summary}
+
+**Context**: [2-3 sentences max — what happened, why escalation needed]
+
+**Options**:
+A) {Option label}
+   - Action: [What happens]
+   - Trade-off: [Gain vs cost]
+
+B) {Option label}
+   - Action: [What happens]
+   - Trade-off: [Gain vs cost]
+
+C) Other (specify)
+
+**Recommendation**: {Option} — [Brief rationale if you have a recommendation]
+```
+
+#### Decision Types and Icons
+
+| Type | Icon | When |
+|------|------|------|
+| S3/S4 Tension | ⚖️ | Operational vs strategic conflict |
+| Scope Change | 📐 | Task boundaries shifting |
+| Technical Choice | 🔧 | Multiple valid approaches |
+| Risk Assessment | ⚠️ | Uncertainty requiring judgment |
+| Principle Conflict | 🎯 | Values in tension |
+| Algedonic (HALT) | 🛑 | Viability threat — stops work |
+| Algedonic (ALERT) | ⚡ | Attention needed — pauses work |
+
+#### Example: Good Framing
+
+> ⚖️ **S3/S4 Tension**: Skip PREPARE phase for faster delivery?
+>
+> **Context**: Task appears routine based on description, but touches auth code which has been problematic before.
+>
+> **Options**:
+> A) **Skip PREPARE** — Start coding now, handle issues as they arise
+>    - Trade-off: Faster start, but may hit avoidable blockers
+>
+> B) **Run PREPARE** — Research auth patterns first (~30 min)
+>    - Trade-off: Slower start, but informed approach
+>
+> **Recommendation**: B — Auth code has caused issues; small investment reduces risk.
+
+#### Example: Poor Framing (Avoid)
+
+> "I'm not sure whether to skip the prepare phase. On one hand we could save time but on the other hand there might be issues. The auth code has been problematic. What do you think we should do? Also there are some other considerations like..."
+
+#### Attenuation Guidelines
+
+1. **Limit options to 2-3** — More creates decision paralysis
+2. **Lead with recommendation** if you have one
+3. **Quantify when possible** — "~30 min" beats "some time"
+4. **State trade-offs explicitly** — Don't hide costs
+5. **Keep context brief** — User can ask for more
+
+---
+
+## S4 Checkpoint Protocol
+
+At phase boundaries, the orchestrator performs an S4 checkpoint to assess whether the current approach remains valid.
+
+### Trigger Points
+
+- After PREPARE phase completes
+- After ARCHITECT phase completes
+- After CODE phase completes (before TEST)
+- When any agent reports unexpected complexity
+- On user-initiated "pause and assess"
+
+### Checkpoint Questions
+
+1. **Environment Change**: Has external context shifted?
+   - New requirements discovered?
+   - Constraints invalidated?
+   - Dependencies changed?
+
+2. **Model Divergence**: Does our understanding match reality?
+   - Assumptions proven wrong?
+   - Estimates significantly off?
+   - Risks materialized or emerged?
+
+3. **Plan Viability**: Is current approach still optimal?
+   - Should we continue as planned?
+   - Adapt the approach?
+   - Escalate to user for direction?
+
+### Checkpoint Outcomes
+
+| Finding | Action |
+|---------|--------|
+| All clear | Continue to next phase |
+| Minor drift | Note in decision log, continue |
+| Significant change | Pause, assess, may re-run prior phase |
+| Fundamental shift | Escalate to user (S5) |
+
+### Checkpoint Format (Brief)
+
+> **S4 Checkpoint** [Phase→Phase]:
+> - Environment: [stable / shifted: {what}]
+> - Model: [aligned / diverged: {what}]
+> - Plan: [viable / adapt: {how} / escalate: {why}]
+
+### Output Behavior
+
+**Default**: Silent-unless-issue — checkpoint runs internally; only surfaces to user when drift or issues detected.
+
+**Examples**:
+
+*Silent (all clear)*:
+> (Internal) S4 Checkpoint Post-PREPARE: Environment stable, model aligned, plan viable → continue
+
+*Surfaces to user (issue detected)*:
+> **S4 Checkpoint** [PREPARE→ARCHITECT]:
+> - Environment: Shifted — API v2 deprecated, v3 has breaking changes
+> - Model: Diverged — Assumed backwards compatibility, now false
+> - Plan: Adapt — Need PREPARE extension to research v3 migration path
+
+### Relationship to Variety Checkpoints
+
+S4 Checkpoints complement Variety Checkpoints (see Variety Management):
+- **Variety Checkpoints**: "Do we have enough response capacity for this complexity?"
+- **S4 Checkpoints**: "Is our understanding of the situation still valid?"
+
+Both occur at phase transitions but ask different questions.
+
 ---
 
 ## S2 Coordination Layer
