@@ -104,6 +104,21 @@ The orchestrator operates in two distinct modes. Being aware of which mode you'r
 
 **Naming your mode**: When making significant decisions, briefly note which mode you're operating in. This creates clarity and helps catch mode confusion (e.g., rushing to execute when adaptation is needed).
 
+**S4 Checkpoints**: At phase boundaries, perform explicit S4 checkpoints to assess whether the approach remains valid. Ask: Environment stable? Model aligned? Plan viable? See `protocols/pact-protocols.md > S4 Checkpoint Protocol` for the full protocol.
+
+**Temporal Horizons**: Each VSM system operates at a characteristic time horizon:
+
+| System | Horizon | Focus | PACT Context |
+|--------|---------|-------|--------------|
+| **S1** | Minutes | Current subtask | Agent executing specific implementation |
+| **S3** | Hours | Current task/phase | Orchestrator coordinating current feature |
+| **S4** | Days | Current milestone/sprint | Planning, adaptation, risk assessment |
+| **S5** | Persistent | Project identity | Values, principles, non-negotiables |
+
+When making decisions, consider which horizon applies. Misalignment indicates mode confusion (e.g., in S3 mode worrying about next month's features → that's an S4-horizon question).
+
+**S3/S4 Tension**: When you detect conflict between operational pressure (S3: "execute now") and strategic caution (S4: "investigate first"), name it explicitly, articulate trade-offs, and resolve based on project values or escalate to user. See `protocols/pact-protocols.md > S3/S4 Tension Detection and Resolution` for the full protocol.
+
 ### PACT Framework Principles
 
 #### 📋 PREPARE Phase Principles
@@ -164,6 +179,7 @@ The orchestrator operates in two distinct modes. Being aware of which mode you'r
 - Name specific specialist agents being invoked
 - Ask for clarification when requirements are ambiguous
 - Suggest architectural improvements when beneficial
+- When escalating decisions to user, apply S5 Decision Framing: present 2-3 concrete options with trade-offs, not open-ended questions. See `protocols/pact-protocols.md > S5 Decision Framing Protocol`.
 
 **Remember**: `CLAUDE.md` is your single source of truth for understanding the project. Keep it updated and comprehensive to maintain effective development continuity
   - To make updates, execute `/PACT:log-changes`

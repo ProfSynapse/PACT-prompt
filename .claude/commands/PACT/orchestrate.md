@@ -118,6 +118,22 @@ Before running orchestration, assess task variety using the protocol in `pact-pr
 | SUPERSEDED/IMPLEMENTED | Confirm with user before proceeding |
 | No plan found | Proceed—phases will do full discovery |
 
+### Orchestration Decision Log
+
+Based on variety assessment, create decision log at `docs/decision-logs/orchestration-{feature}.md`:
+
+| Variety Score | Log Type |
+|---------------|----------|
+| 4-6 | None (comPACT territory) |
+| 7-9 | Lightweight format |
+| 10+ | Full format |
+
+See `pact-protocols.md > Orchestration Decision Log` for format templates.
+
+**Initial entry**: Record variety assessment rationale and response (attenuators/amplifiers to apply).
+
+**Update cadence**: Add phase outcomes after each S4 checkpoint.
+
 ---
 
 ## Context Assessment
@@ -208,6 +224,7 @@ Each specialist should end with a structured handoff (2-4 sentences):
 - [ ] Outputs exist in `docs/preparation/`
 - [ ] Specialist handoff received (see Handoff Format below)
 - [ ] If blocker reported → `/PACT:imPACT`
+- [ ] **S4 Checkpoint** (see `pact-protocols.md > S4 Checkpoint Protocol`): Environment stable? Model aligned? Plan viable?
 
 ---
 
@@ -244,6 +261,7 @@ If PREPARE ran and ARCHITECT was marked "Skip," compare PREPARE's recommended ap
 - [ ] Outputs exist in `docs/architecture/`
 - [ ] Specialist handoff received (see Handoff Format above)
 - [ ] If blocker reported → `/PACT:imPACT`
+- [ ] **S4 Checkpoint**: Environment stable? Model aligned? Plan viable?
 
 ---
 
@@ -315,22 +333,33 @@ Use these to inform your analysis (not as complete decision criteria):
 
 #### S2 Pre-Parallel Coordination Check
 
-Once you've decided on parallel execution, apply S2 Coordination:
+Once you've decided on parallel execution, apply S2 Coordination. S2 is **proactive** (prevents conflicts) not just reactive (resolves conflicts).
 
-1. **Identify potential conflicts**:
-   - Shared files (merge conflict risk)
-   - Shared interfaces (API contract disagreements)
-   - Shared state (database schemas, config)
+**Emit the S2 Pre-Parallel Checkpoint**:
 
-2. **If conflicts exist**:
-   - Sequence those agents instead, OR
-   - Assign clear file/component boundaries to each agent
+> **S2 Pre-Parallel Check**:
+> - Shared files: [none / list with mitigation]
+> - Shared interfaces: [none / contract defined by X]
+> - Conventions: [pre-defined / first agent establishes]
+> - Anticipated conflicts: [none / sequencing X before Y]
 
-3. **Establish resolution authority**:
-   - Technical disagreements → Architect arbitrates
-   - Style/convention → First agent's choice becomes standard
+**If shared files identified**:
+- Sequence those agents, OR
+- Assign clear boundaries: "You may READ `types.ts`, backend WRITES it"
+
+**If shared interfaces identified**:
+- Reference architecture doc for contract
+- If no contract exists, sequence: define interface first, then consume
+
+**Establish resolution authority**:
+- Technical disagreements → Architect arbitrates
+- Style/convention → First agent's choice becomes standard
 
 **Include in parallel agent prompts**: "You are working in parallel with [other agent(s)]. Your scope is [specific files/components]. Do not modify files outside your scope. If you need changes outside your scope, report as a blocker."
+
+**After any agent completes** (while others still running):
+- Extract key decisions and conventions from their output
+- Propagate to remaining agents if relevant: "Agent X established: [conventions]"
 
 See `pact-protocols.md > S2 Coordination Layer` for full protocol.
 
@@ -381,6 +410,7 @@ See `pact-protocols.md > S3* Continuous Audit` for full protocol.
 - [ ] Decision log(s) created at `docs/decision-logs/{feature}-{domain}.md`
 - [ ] Specialist handoff(s) received (see Handoff Format above)
 - [ ] If blocker reported → `/PACT:imPACT`
+- [ ] **S4 Checkpoint**: Environment stable? Model aligned? Plan viable?
 
 #### Handling Complex Sub-Tasks During CODE
 
@@ -445,5 +475,6 @@ This runs a mini-orchestration for the sub-task, invoking relevant specialists a
 > **S5 Policy Checkpoint (Pre-Merge)**: Before creating PR, verify: "Do all tests pass? Is system integrity maintained? Have S5 non-negotiables been respected throughout?"
 
 1. **Update plan status** (if plan exists): IN_PROGRESS → IMPLEMENTED
-2. **Run `/PACT:peer-review`** to commit, create PR, and get multi-agent review
-3. **S4 Retrospective**: Briefly note—what worked well? What should we adapt for next time?
+2. **Finalize orchestration log** (if created): Add S3/S4 tensions, algedonic signals (if any), and retrospective notes
+3. **Run `/PACT:peer-review`** to commit, create PR, and get multi-agent review
+4. **S4 Retrospective**: Briefly note—what worked well? What should we adapt for next time?
