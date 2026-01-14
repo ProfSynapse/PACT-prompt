@@ -72,7 +72,7 @@ When you receive an ALERT signal (QUALITY, SCOPE, or META-BLOCK category):
 
 If you're unsure whether something is an operational blocker or viability threat, err on the side of algedonic (safer).
 
-See `protocols/algedonic.md` for full protocol and trigger conditions.
+See @~/.claude/protocols/algedonic.md for full protocol and trigger conditions.
 
 ---
 
@@ -80,7 +80,7 @@ See `protocols/algedonic.md` for full protocol and trigger conditions.
 
 ### Task Variety Assessment
 
-Before running orchestration, assess task variety using the protocol in `pact-protocols.md > Variety Management`.
+Before running orchestration, assess task variety using the protocol in @~/.claude/protocols/pact-protocols.md.
 
 **Quick Assessment Table**:
 
@@ -128,7 +128,7 @@ Based on variety assessment, create decision log at `docs/decision-logs/orchestr
 | 7-9 | Lightweight format |
 | 10+ | Full format |
 
-See `pact-protocols.md > Orchestration Decision Log` for format templates.
+See @~/.claude/protocols/pact-protocols.md for Orchestration Decision Log format templates.
 
 **Initial entry**: Record variety assessment rationale and response (attenuators/amplifiers to apply).
 
@@ -224,7 +224,7 @@ Each specialist should end with a structured handoff (2-4 sentences):
 - [ ] Outputs exist in `docs/preparation/`
 - [ ] Specialist handoff received (see Handoff Format below)
 - [ ] If blocker reported → `/PACT:imPACT`
-- [ ] **S4 Checkpoint** (see `pact-protocols.md > S4 Checkpoint Protocol`): Environment stable? Model aligned? Plan viable?
+- [ ] **S4 Checkpoint** (see @~/.claude/protocols/pact-protocols.md): Environment stable? Model aligned? Plan viable?
 
 ---
 
@@ -361,7 +361,7 @@ Once you've decided on parallel execution, apply S2 Coordination. S2 is **proact
 - Extract key decisions and conventions from their output
 - Propagate to remaining agents if relevant: "Agent X established: [conventions]"
 
-See `pact-protocols.md > S2 Coordination Layer` for full protocol.
+See @~/.claude/protocols/pact-protocols.md for S2 Coordination Layer protocol.
 
 #### Optional: S3* Parallel Audit During CODE
 
@@ -394,7 +394,7 @@ You are READ-ONLY on source files.
 3. imPACT triages: fix now, redo phase, or escalate
 4. Resume CODE only after resolution
 
-See `pact-protocols.md > S3* Continuous Audit` for full protocol.
+See @~/.claude/protocols/pact-protocols.md for S3* Continuous Audit protocol.
 
 **Invoke coder(s) with**:
 - Task description

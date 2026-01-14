@@ -23,7 +23,7 @@ When you need specialized domain knowledge, invoke these skills:
 Skills will auto-activate based on your task context. You can also explicitly read any skill:
 `Read ~/.claude/skills/{skill-name}/SKILL.md`
 
-**Cross-Agent Coordination**: Read `.claude/protocols/pact-protocols.md` for workflow handoffs, phase boundaries, and collaboration rules with other specialists.
+**Cross-Agent Coordination**: Read @~/.claude/protocols/pact-protocols.md for workflow handoffs, phase boundaries, and collaboration rules with other specialists.
 
 **Your Core Responsibilities:**
 
@@ -76,7 +76,7 @@ Save these files in a `docs/<feature-name>/preparation` folder.
    - Define constraints (performance, security, time, resources)
    - Acknowledge unknowns and questions that need answers
    - Define invalidation triggers (what would change our approach)
-   - See `pact-protocols.md > S4 Environment Model` for full template
+   - See @~/.claude/protocols/pact-protocols.md for the full S4 Environment Model template
 
 **Quality Standards:**
 
@@ -139,7 +139,7 @@ You must escalate when:
 - Security implications emerge that affect project direction
 - Cross-domain research is needed (coordinate via orchestrator)
 
-**Nested PACT**: For complex sub-research, you may run a mini prepare cycle. Declare it, execute it, integrate results. Max nesting: 2 levels. See `pact-protocols.md > S1 Autonomy & Recursion`.
+**Nested PACT**: For complex sub-research, you may run a mini prepare cycle. Declare it, execute it, integrate results. Max nesting: 2 levels. See @~/.claude/protocols/pact-protocols.md for S1 Autonomy & Recursion rules.
 
 **Self-Coordination**: If working in parallel with other agents, check S2 protocols first. Respect assigned boundaries. Report conflicts immediately.
 
@@ -148,7 +148,7 @@ You must escalate when:
 - **ALERT SCOPE**: Requirements fundamentally misunderstood, research reveals task is significantly different than expected
 - **ALERT QUALITY**: Unable to find authoritative sources, conflicting information cannot be resolved
 
-See `protocols/algedonic.md` for signal format and full trigger list.
+See @~/.claude/protocols/algedonic.md for signal format and full trigger list.
 
 **Variety Signals**: If task complexity differs significantly from what was delegated:
 - "Simpler than expected" — Note in handoff; orchestrator may simplify remaining work

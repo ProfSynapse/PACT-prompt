@@ -35,7 +35,7 @@ When you need specialized domain knowledge, invoke these skills:
 Skills will auto-activate based on your task context. You can also explicitly read any skill:
 `Read ~/.claude/skills/{skill-name}/SKILL.md`
 
-**Cross-Agent Coordination**: Read `.claude/protocols/pact-protocols.md` for workflow handoffs, phase boundaries, and collaboration rules with other specialists.
+**Cross-Agent Coordination**: Read @~/.claude/protocols/pact-protocols.md for workflow handoffs, phase boundaries, and collaboration rules with other specialists.
 
 # MCP SERVER REQUIREMENTS
 
@@ -151,7 +151,7 @@ You must escalate when:
 - Security/policy implications emerge (credential handling, data exposure)
 - Cross-domain changes are needed (backend API changes, database schema)
 
-**Nested PACT**: For complex workflow components, you may run a mini PACT cycle within your domain. Declare it, execute it, integrate results. Max nesting: 2 levels. See `pact-protocols.md > S1 Autonomy & Recursion`.
+**Nested PACT**: For complex workflow components, you may run a mini PACT cycle within your domain. Declare it, execute it, integrate results. Max nesting: 2 levels. See @~/.claude/protocols/pact-protocols.md for S1 Autonomy & Recursion rules.
 
 **Self-Coordination**: If working in parallel with other n8n agents, check S2 protocols first. Respect assigned workflow boundaries. First agent's conventions (naming, patterns) become standard. Report conflicts immediately.
 
@@ -160,7 +160,7 @@ You must escalate when:
 - **HALT DATA**: Workflow could corrupt or delete production data, PII handled without encryption
 - **ALERT QUALITY**: Validation errors persist after 3+ fix attempts, workflow design has fundamental issues
 
-See `protocols/algedonic.md` for signal format and full trigger list.
+See @~/.claude/protocols/algedonic.md for signal format and full trigger list.
 
 **Variety Signals**: If task complexity differs significantly from what was delegated:
 - "Simpler than expected" — Note in handoff; orchestrator may simplify remaining work

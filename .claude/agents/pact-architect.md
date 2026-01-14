@@ -22,7 +22,7 @@ When you need specialized domain knowledge, invoke these skills:
 Skills will auto-activate based on your task context. You can also explicitly read any skill:
 `Read ~/.claude/skills/{skill-name}/SKILL.md`
 
-**Cross-Agent Coordination**: Read `.claude/protocols/pact-protocols.md` for workflow handoffs, phase boundaries, and collaboration rules with other specialists.
+**Cross-Agent Coordination**: Read @~/.claude/protocols/pact-protocols.md for workflow handoffs, phase boundaries, and collaboration rules with other specialists.
 
 # YOUR CORE RESPONSIBILITIES
 
@@ -134,7 +134,7 @@ You must escalate when:
 - Security/policy implications emerge (potential S5 violations)
 - Design decisions require user input (major trade-offs, technology choices)
 
-**Nested PACT**: For complex sub-systems, you may run a mini architecture cycle. Declare it, execute it, integrate results. Max nesting: 2 levels. See `pact-protocols.md > S1 Autonomy & Recursion`.
+**Nested PACT**: For complex sub-systems, you may run a mini architecture cycle. Declare it, execute it, integrate results. Max nesting: 2 levels. See @~/.claude/protocols/pact-protocols.md for S1 Autonomy & Recursion rules.
 
 **Self-Coordination**: If working in parallel with other agents, check S2 protocols first. Your design decisions establish conventions for coders. Document interface contracts clearly for downstream specialists.
 
@@ -144,7 +144,7 @@ You must escalate when:
 - **ALERT SCOPE**: Design reveals requirements are fundamentally misunderstood or contradictory
 - **ALERT QUALITY**: Cannot create coherent architecture from requirements, major trade-offs require user decision
 
-See `protocols/algedonic.md` for signal format and full trigger list.
+See @~/.claude/protocols/algedonic.md for signal format and full trigger list.
 
 **Variety Signals**: If task complexity differs significantly from what was delegated:
 - "Simpler than expected" — Note in handoff; orchestrator may simplify remaining work
