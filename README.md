@@ -142,7 +142,7 @@ Then use natural language or commands:
 | `/PACT:rePACT` | Nested PACT cycle for sub-tasks | Complex sub-problems during CODE |
 | `/PACT:imPACT` | Triage when blocked | Hit a blocker, need help deciding |
 | `/PACT:peer-review` | Commit, PR, multi-agent review | Ready to merge |
-| `/PACT:log-changes` | Update CLAUDE.md | After significant changes |
+| `/PACT:pin-memory` | Pin critical context permanently | Gotchas, key decisions to preserve |
 | `/PACT:wrap-up` | End-of-session cleanup | Ending a work session |
 
 ### comPACT Examples

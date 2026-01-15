@@ -10,7 +10,7 @@ VSM-enhanced orchestration framework for AI-assisted software development with C
 | Component | Description |
 |-----------|-------------|
 | **7 Specialist Agents** | Preparer, Architect, Backend/Frontend/Database Coders, n8n, Test Engineer |
-| **8 Commands** | orchestrate, comPACT, rePACT, plan-mode, imPACT, peer-review, log-changes, wrap-up |
+| **8 Commands** | orchestrate, comPACT, rePACT, plan-mode, imPACT, peer-review, pin-memory, wrap-up |
 | **14 Skills** | Domain knowledge for architecture, coding, testing, security, n8n workflows |
 | **Protocols** | VSM-based coordination, algedonic signals, variety management |
 

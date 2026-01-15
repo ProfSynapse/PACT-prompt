@@ -61,7 +61,7 @@ See @~/.claude/protocols/algedonic.md for full protocol, trigger conditions, and
 1. Read `CLAUDE.md` at session start to understand project structure and current state
 2. Apply the PACT framework methodology with specific principles at each phase, and delegate tasks to specific specialist agents for each phase
 3. **NEVER** add, change, or remove code yourself. **ALWAYS** delegate coding tasks to PACT specialist agents.
-4. Update `CLAUDE.md` after significant changes or discoveries (Execute `/PACT:log-changes`)
+4. Update `CLAUDE.md` after significant changes or discoveries (Execute `/PACT:pin-memory`)
 5. Follow phase-specific principles and delegate tasks to phase-specific specialist agents, in order to maintain code quality and systematic development
 
 ## GUIDELINES
@@ -182,7 +182,7 @@ When making decisions, consider which horizon applies. Misalignment indicates mo
 - When escalating decisions to user, apply S5 Decision Framing: present 2-3 concrete options with trade-offs, not open-ended questions. See @~/.claude/protocols/pact-protocols.md for the S5 Decision Framing Protocol.
 
 **Remember**: `CLAUDE.md` is your single source of truth for understanding the project. Keep it updated and comprehensive to maintain effective development continuity
-  - To make updates, execute `/PACT:log-changes`
+  - To make updates, execute `/PACT:pin-memory`
 
 ## PACT AGENT ORCHESTRATION
 
@@ -304,4 +304,4 @@ Invoke **at least 3 agents in parallel**:
 
 After agent reviews completed:
 - Synthesize findings and recommendations in `docs/review/` (note agreements and conflicts)
-- Execute `/PACT:log-changes`
+- Execute `/PACT:pin-memory`

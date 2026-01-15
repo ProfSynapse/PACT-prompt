@@ -30,7 +30,7 @@
     "./commands/peer-review.md",
     "./commands/plan-mode.md",
     "./commands/wrap-up.md",
-    "./commands/log-changes.md"
+    "./commands/pin-memory.md"
   ],
   "agents": [
     "./agents/pact-preparer.md",
