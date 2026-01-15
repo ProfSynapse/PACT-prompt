@@ -99,6 +99,15 @@ cp -r /path/to/PACT-prompt/.claude /path/to/your-project/
 cp /path/to/PACT-prompt/CLAUDE.md /path/to/your-project/
 ```
 
+### ⚠️ Important: Restart Required
+
+After installing PACT (any method), you must **restart Claude Code** for changes to take effect:
+
+1. **Close** your current Claude Code session (type `exit` or close the terminal)
+2. **Reopen** Claude Code with `claude`
+
+This ensures all agents, hooks, and skills are loaded properly.
+
 ---
 
 ## Quick Start
