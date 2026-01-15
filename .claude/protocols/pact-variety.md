@@ -2,7 +2,7 @@
 
 > **Purpose**: Task complexity assessment and workflow selection guidance.
 > **Referenced by**: orchestrate.md, plan-mode.md
-> **See also**: @~/.claude/protocols/pact-protocols.md for full orchestration protocols
+> **See also**: `pact-protocols.md` for full orchestration protocols
 
 ---
 

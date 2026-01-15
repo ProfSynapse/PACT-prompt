@@ -2,7 +2,7 @@
 
 > **Purpose**: Protocols for specialist agents operating within the PACT framework.
 > **Referenced by**: All PACT specialist agents (pact-architect, pact-backend-coder, pact-frontend-coder, pact-database-engineer, pact-test-engineer, pact-preparer, pact-n8n)
-> **See also**: @~/.claude/protocols/pact-protocols.md for full orchestration protocols
+> **See also**: `pact-protocols.md` for full orchestration protocols
 
 ---
 
