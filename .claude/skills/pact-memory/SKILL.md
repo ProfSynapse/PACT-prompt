@@ -190,6 +190,83 @@ Memories are stored in `~/.claude/memory/memory.db` using SQLite with:
 - Vector extensions for semantic search
 - Graph tables for file relationships
 
+## Command Line Usage
+
+When invoked via `/pact-memory <command> "<args>"`:
+
+### Save Command
+```
+/pact-memory save "<description>"
+```
+
+**IMPORTANT**: The description argument is just a hint. You MUST construct a comprehensive memory object with ALL relevant fields. Never just save the raw string. Think of each memory as a detailed journal entry that your future self (or another agent) needs to fully understand what happened, why it mattered, and what was learned.
+
+**Required fields for every save:**
+
+| Field | Minimum Length | What to Include |
+|-------|----------------|-----------------|
+| `context` | 3-5 sentences (paragraph) | Full background: what you were working on, why, what led to this point, relevant history, the state of things when this memory was created |
+| `goal` | 1-2 sentences | The specific objective, including success criteria if applicable |
+| `lessons_learned` | 3-5 items | Specific, actionable insights with enough detail to be useful months later. Each lesson should explain the "why" not just the "what" |
+
+**Recommended fields:**
+- `decisions`: Key decisions made with full rationale, alternatives considered, and why they were rejected
+- `entities`: Components, files, services, APIs involved (enables graph-based retrieval)
+
+**Writing comprehensive context:**
+
+BAD (too sparse):
+> "Debugging auth bug"
+
+STILL BAD (single sentence):
+> "Debugging authentication failure in the login flow where users were getting 401 errors."
+
+GOOD (comprehensive):
+> "Working on the fix/auth-refresh branch to resolve issue #234 where users reported intermittent 401 errors after being logged in for extended periods. The bug was reported by 3 enterprise customers last week and is blocking the v2.1 release. Initial investigation pointed to the token refresh mechanism, specifically a race condition between concurrent API requests. The authentication system uses JWT tokens with 15-minute expiry and a refresh token rotation pattern. This session focused on reproducing the bug locally by simulating high-latency conditions."
+
+**Example transformation:**
+```
+# User invokes:
+/pact-memory save "figured out the auth bug"
+
+# You should construct:
+{
+    "context": "Working on the fix/auth-refresh branch to resolve issue #234 where users reported intermittent 401 errors after being logged in for extended periods. The bug was reported by 3 enterprise customers last week and is blocking the v2.1 release. Initial investigation pointed to the token refresh mechanism, specifically a race condition between concurrent API requests. The authentication system uses JWT tokens with 15-minute expiry and a refresh token rotation pattern. This session focused on reproducing the bug locally by simulating high-latency conditions and tracing through the token refresh flow.",
+    "goal": "Identify and fix the root cause of intermittent authentication failures that occur after extended user sessions, ensuring the fix doesn't introduce performance regressions.",
+    "lessons_learned": [
+        "The token refresh mechanism had a race condition: when multiple API requests detected an expired token simultaneously, each would trigger its own refresh, causing token rotation conflicts where subsequent requests used invalidated tokens",
+        "Adding a mutex/lock around the token refresh operation prevents concurrent refresh attempts - the first request refreshes while others wait and then use the new token",
+        "The bug only manifests under high latency conditions (>500ms API response time) because faster responses complete before the token expiry window, making it hard to reproduce in development",
+        "Our existing retry logic actually made the problem worse by immediately retrying with the same stale token instead of waiting for the refresh to complete",
+        "Integration tests should include latency simulation to catch timing-dependent bugs like this"
+    ],
+    "decisions": [
+        {
+            "decision": "Use mutex pattern for token refresh instead of request queuing",
+            "rationale": "Simpler implementation with less state to manage. A mutex ensures only one refresh happens at a time while other requests wait. Our concurrency level (typically <10 concurrent requests) doesn't warrant the complexity of a full request queue.",
+            "alternatives": ["Request queue with single refresh - more complex, better for high concurrency", "Optimistic token prefetch - would require predicting refresh timing", "Retry with backoff - doesn't solve the root cause, just masks it"]
+        }
+    ],
+    "entities": [
+        {"name": "AuthService", "type": "service", "notes": "Central authentication service handling login, logout, and token management"},
+        {"name": "TokenManager", "type": "class", "notes": "Manages JWT token lifecycle including refresh logic"},
+        {"name": "src/auth/refresh.ts", "type": "file", "notes": "Contains the token refresh implementation where the bug was fixed"}
+    ]
+}
+```
+
+### Search Command
+```
+/pact-memory search "<query>"
+```
+Returns semantically similar memories. Use natural language queries.
+
+### List Command
+```
+/pact-memory list [limit]
+```
+Shows recent memories (default: 10).
+
 ## Best Practices
 
 1. **Save at Phase Completion**: Save memories after completing PACT phases
@@ -197,6 +274,8 @@ Memories are stored in `~/.claude/memory/memory.db` using SQLite with:
 3. **Document Decisions**: Record rationale and alternatives considered
 4. **Link Entities**: Reference components for better graph connectivity
 5. **Search Before Acting**: Check for relevant past context before starting work
+6. **Write Complete Sentences**: Context should be a full description, not a fragment
+7. **Be Specific in Lessons**: "X didn't work because Y" is better than "X didn't work"
 
 ## Integration with PACT
 
