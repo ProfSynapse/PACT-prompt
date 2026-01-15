@@ -36,7 +36,7 @@ Break up the 1,085-line `pact-protocols.md` into targeted files so agents and co
 
 #### Research Completed
 - [x] File sizes measured (pact-protocols.md = 1,085 lines)
-- [x] Reference patterns analyzed (**21 @-references across 11 files**)
+- [x] Reference patterns analyzed (**24 @-references across 11 files** in `.claude/`; 49 total including `pact-plugin/` mirrors)
 - [x] Agent-specific sections identified (S1 Autonomy, Self-Coordination, Algedonic pointer)
 - [x] Existing patterns confirmed (algedonic.md already extracted—proves pattern works)
 
@@ -46,10 +46,11 @@ Break up the 1,085-line `pact-protocols.md` into targeted files so agents and co
 |------|-----------------|-------|
 | 7 agent files | 14 total (2 each) | Cross-Agent Coordination + Nested PACT |
 | `pact-preparer.md` | 3 refs (exception) | Has additional S4 Environment Model ref → **stays pointing to main file** |
-| `orchestrate.md` | 6 refs | Only Variety Management ref changes; S4/S2/S3* refs stay |
+| `orchestrate.md` | 5 refs | Only Variety Management ref changes; S4/S2/S3* refs stay |
 | `plan-mode.md` | 1 ref | Variety Management |
-| `algedonic.md` | 1 ref | S5 Decision Framing → stays pointing to main file |
+| `algedonic.md` | 2 refs | S5 Decision Framing refs → stay pointing to main file |
 | `vsm-glossary.md` | 1 ref | General reference → stays pointing to main file |
+| `pact-plugin/README.md` | 1 ref | General reference → stays pointing to main file |
 | `pact-plugin/` | mirrors | Must mirror all changes to protocols/ and agents/ |
 
 **Total edits required**: ~32 files (14 agent edits + 2 command edits + 2 protocol files + pact-plugin mirrors)
@@ -73,9 +74,11 @@ Break up the 1,085-line `pact-protocols.md` into targeted files so agents and co
 
 | File | Content | Lines | Consumers |
 |------|---------|-------|-----------|
-| **pact-agent-protocols.md** (NEW) | S1 Autonomy & Recursion (full), Self-Coordination (from S2), Phase Handoffs, Algedonic quick-ref | ~100 | All 7 agents |
+| **pact-agent-protocols.md** (NEW) | S1 Autonomy & Recursion (full), Self-Coordination (from S2), Phase Handoffs, Algedonic pointer (summary + link to `algedonic.md`, NOT duplicated content) | ~100 | All 7 agents |
 | **pact-variety.md** (NEW) | Variety Management (full), PACT Workflow Family table | ~80 | orchestrate.md, plan-mode.md |
-| **pact-protocols.md** (refactored) | S5 Policy, S4 Checkpoints, S3/S4 Tension, S2 Coordination (minus Self-Coordination), S3* Audit, Workflow protocols, Decision logs, Documentation locations | ~950 | Orchestrator only |
+| **pact-protocols.md** (refactored) | S5 Policy, S4 Checkpoints, S3/S4 Tension, S2 Coordination (minus Self-Coordination + pointer to agent file), S3* Audit, Workflow protocols, Decision logs, Documentation locations | ~950 | Orchestrator only |
+
+**Implementation note**: When extracting Self-Coordination from S2, add a one-line pointer in the main file's S2 section: "For agent-specific self-coordination protocols, see `pact-agent-protocols.md`."
 
 #### Design Approach
 
@@ -174,6 +177,7 @@ This bidirectional referencing ensures discoverability from either direction.
 | orchestrate.md S4/S2/S3* refs still work (unchanged) | Smoke | P0 |
 | No duplicate content across files | Validation | P1 |
 | pact-plugin/ mirrors match .claude/ | Validation | P1 |
+| Rollback restores working state | Validation | P1 |
 
 #### Coverage Targets
 - Reference resolution: 100%
@@ -194,18 +198,22 @@ grep -r "@~/.claude/protocols" .claude/ pact-plugin/ > baseline-refs.txt
 # Post-change validation with proper exit codes
 broken=0
 
-# Check file-level references
+# Check file-level references (existence + non-empty)
 for ref in $(grep -roh "@~/.claude/protocols/[^)\" ]*" .claude/ pact-plugin/); do
   filepath="${ref#@}"
   filepath="${filepath/#\~/$HOME}"
   if [[ ! -f "$filepath" ]]; then
     echo "BROKEN FILE: $ref"
     broken=1
+  elif [[ ! -s "$filepath" ]]; then
+    echo "EMPTY FILE: $ref"
+    broken=1
   fi
 done
 
 # Check section-level references (verify section headers exist in target files)
-# Pattern matches: "for S1 Autonomy" or "for the Variety Management"
+# NOTE: This regex matches common patterns like "for S1 Autonomy rules" but may miss
+# other phrasings. Manual spot-check recommended for edge cases.
 for file in .claude/**/*.md pact-plugin/**/*.md; do
   [[ -f "$file" ]] || continue
   while IFS= read -r line; do
@@ -230,6 +238,30 @@ exit $broken
 - Uses `globstar` for recursive file matching
 - Returns proper exit code for CI integration
 - Validates section-level references (not just file existence)
+- Checks for empty files (not just existence)
+
+**Content preservation verification** (run before/after extraction):
+```bash
+# Before extraction: capture section inventory
+grep -E "^## " .claude/protocols/pact-protocols.md > sections-before.txt
+
+# After extraction: verify all sections exist across files
+cat .claude/protocols/pact-protocols.md \
+    .claude/protocols/pact-agent-protocols.md \
+    .claude/protocols/pact-variety.md | grep -E "^## " > sections-after.txt
+
+# Compare (should show only expected moves, no losses)
+diff sections-before.txt sections-after.txt
+```
+
+**Rollback procedure** (if validation fails at any phase):
+```bash
+# Revert all protocol and agent changes
+git checkout HEAD -- .claude/protocols/ .claude/agents/ pact-plugin/protocols/ pact-plugin/agents/
+
+# Or revert entire working tree to last commit
+git checkout HEAD -- .
+```
 
 ---
 
@@ -380,4 +412,5 @@ The orchestrator should reference this plan during execution.
 | Date | Change |
 |------|--------|
 | 2026-01-15 | Initial plan created via `/PACT:plan-mode` |
-| 2026-01-15 | Peer review feedback incorporated: fixed reference count (21 across 11 files), added missing dependencies, documented pact-preparer special case, enhanced validation script, added forward/back reference requirements, documented total edit count |
+| 2026-01-15 | Round 1 peer review: fixed reference count, added missing dependencies, documented special cases, enhanced validation script |
+| 2026-01-15 | Round 2 peer review: corrected counts (24 refs, orchestrate=5, algedonic=2), added pact-plugin/README.md, added empty file check, content preservation verification, rollback procedure, clarified Algedonic pointer vs duplication, added S2 extraction note |
