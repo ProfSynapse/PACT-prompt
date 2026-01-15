@@ -14,15 +14,21 @@ Used by:
 """
 
 import logging
-import sqlite3
 import struct
 from typing import Any, Dict, List, Optional, Set, Tuple
+
+# Use the same sqlite3 module as database.py for type consistency
+try:
+    import pysqlite3 as sqlite3
+except ImportError:
+    import sqlite3
 
 from .database import (
     db_connection,
     ensure_initialized,
     get_memory,
-    search_memories_by_text
+    search_memories_by_text,
+    SQLITE_EXTENSIONS_ENABLED
 )
 from .embeddings import (
     generate_embedding,
@@ -57,7 +63,9 @@ def vector_search(
     """
     Perform semantic vector search on memories.
 
-    Uses sqlite-vec for efficient similarity search.
+    Uses sqlite-vec for efficient similarity search. Requires:
+    1. pysqlite3-binary (for extension loading)
+    2. sqlite-vec (for vector operations)
 
     Args:
         conn: Active database connection.
@@ -67,7 +75,13 @@ def vector_search(
 
     Returns:
         List of (memory_id, distance) tuples, sorted by similarity.
+        Returns empty list if vector search unavailable (falls back to keyword).
     """
+    # Check if SQLite extension loading is available
+    if not SQLITE_EXTENSIONS_ENABLED:
+        logger.debug("Vector search unavailable - SQLite extensions not enabled")
+        return []
+
     # Generate query embedding
     query_embedding = generate_embedding(query)
     if query_embedding is None:
@@ -75,7 +89,7 @@ def vector_search(
         return []
 
     try:
-        # Ensure sqlite-vec is loaded
+        # Enable extension loading (safe because SQLITE_EXTENSIONS_ENABLED is True)
         conn.enable_load_extension(True)
         try:
             import sqlite_vec
@@ -413,16 +427,38 @@ def get_search_capabilities() -> Dict[str, Any]:
     """
     Get information about available search capabilities.
 
+    Vector storage requires both:
+    1. SQLITE_EXTENSIONS_ENABLED (pysqlite3-binary installed)
+    2. Embedding generation available (model + backend)
+
     Returns:
         Dictionary describing search features and their availability.
     """
     embedding_status = check_embedding_availability()
 
+    # Vector storage requires extension loading AND embedding generation
+    vector_storage_available = (
+        SQLITE_EXTENSIONS_ENABLED and embedding_status["available"]
+    )
+
+    # Determine active search mode for clear status reporting
+    if vector_storage_available:
+        search_mode = "semantic"
+    else:
+        search_mode = "keyword"
+
     return {
-        "semantic_search": embedding_status["available"],
+        "semantic_search": vector_storage_available,
         "keyword_search": True,  # Always available
         "graph_boosting": True,  # Always available
+        "search_mode": search_mode,
+        "sqlite_extensions_enabled": SQLITE_EXTENSIONS_ENABLED,
         "embedding_backend": embedding_status.get("active_backend"),
         "model_path": embedding_status.get("model_path"),
-        "model_exists": embedding_status.get("model_exists", False)
+        "model_exists": embedding_status.get("model_exists", False),
+        "details": {
+            "pysqlite3_available": SQLITE_EXTENSIONS_ENABLED,
+            "embeddings_available": embedding_status["available"],
+            "backends": embedding_status.get("backends", {})
+        }
     }

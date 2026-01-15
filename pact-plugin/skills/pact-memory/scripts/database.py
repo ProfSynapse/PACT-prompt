@@ -7,16 +7,29 @@ for rich memory objects.
 
 Storage Location: ~/.claude/pact-memory/memory.db
 Uses WAL mode for corruption prevention and concurrent access safety.
+
+Note: Uses pysqlite3-binary when available for SQLite extension loading support.
+Standard library sqlite3 has enable_load_extension disabled by default.
+Falls back gracefully to keyword-only search when extensions unavailable.
 """
 
 import json
 import logging
 import os
-import sqlite3
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
+
+# Try to import pysqlite3 which has extension loading enabled.
+# Standard library sqlite3 has enable_load_extension disabled for security.
+# Fall back to standard sqlite3 if pysqlite3 is not installed.
+try:
+    import pysqlite3 as sqlite3
+    SQLITE_EXTENSIONS_ENABLED = True
+except ImportError:
+    import sqlite3
+    SQLITE_EXTENSIONS_ENABLED = False
 
 from .config import DB_PATH, PACT_MEMORY_DIR
 
@@ -151,7 +164,12 @@ def _init_vector_table(conn: sqlite3.Connection) -> bool:
     """
     Attempt to create the vector table for semantic search.
 
-    Requires sqlite-vec extension. Gracefully fails if not installed.
+    Requires:
+    1. pysqlite3-binary package (for extension loading support)
+    2. sqlite-vec extension (for vector storage)
+
+    Standard library sqlite3 has enable_load_extension disabled by default,
+    so we check SQLITE_EXTENSIONS_ENABLED before attempting.
 
     Args:
         conn: Active database connection.
@@ -159,8 +177,17 @@ def _init_vector_table(conn: sqlite3.Connection) -> bool:
     Returns:
         True if vector table was created, False otherwise.
     """
+    # Check if extension loading is possible
+    if not SQLITE_EXTENSIONS_ENABLED:
+        logger.info(
+            "SQLite extension loading unavailable (using standard sqlite3). "
+            "Vector storage disabled - semantic search will fall back to keyword search. "
+            "Install pysqlite3-binary for full vector support: pip install pysqlite3-binary"
+        )
+        return False
+
     try:
-        # Try to load sqlite-vec extension
+        # Enable extension loading (safe because we're using pysqlite3)
         conn.enable_load_extension(True)
         try:
             import sqlite_vec
@@ -180,7 +207,7 @@ def _init_vector_table(conn: sqlite3.Connection) -> bool:
                 embedding float[384]
             )
         """)
-        logger.info("Vector table created successfully")
+        logger.info("Vector table created successfully (semantic search enabled)")
         return True
 
     except Exception as e:
