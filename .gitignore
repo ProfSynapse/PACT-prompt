@@ -4,7 +4,7 @@ skills-research/
 .DS_Store
 .env
 .env.*
-settings.local.json
+**/settings.local.json
 
 # Test files
 pact-plugin/skills/pact-memory/tests/
