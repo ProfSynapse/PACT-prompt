@@ -10,6 +10,18 @@
 
 ---
 
+## Extracted Protocols (For Specific Consumers)
+
+Some protocols are maintained in separate files for context efficiency:
+
+| Protocol | File | Primary Consumer |
+|----------|------|------------------|
+| Agent Autonomy & Coordination | `pact-agent-protocols.md` | All specialist agents |
+| Variety Management | `pact-variety.md` | orchestrate.md, plan-mode.md |
+| Emergency Signals | `algedonic.md` | All agents + orchestrator |
+
+---
+
 ## S5 Policy Layer (Governance)
 
 The policy layer defines non-negotiable constraints and provides escalation authority. All other protocols operate within these boundaries.
