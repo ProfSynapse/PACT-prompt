@@ -34,7 +34,7 @@ If variety assessment suggests:
 - **Low/Medium variety (4-10)**: Consider recommending `/PACT:comPACT` or direct `/PACT:orchestrate` instead
 - **Extreme variety (15-16)**: Consider recommending a research spike first (run PREPARE phase alone)
 
-See @~/.claude/protocols/pact-protocols.md for the Variety Management assessment protocol.
+See @~/.claude/protocols/pact-variety.md for the Variety Management assessment protocol.
 
 ---
 

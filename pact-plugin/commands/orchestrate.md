@@ -80,7 +80,7 @@ See @~/.claude/protocols/algedonic.md for full protocol and trigger conditions.
 
 ### Task Variety Assessment
 
-Before running orchestration, assess task variety using the protocol in @~/.claude/protocols/pact-protocols.md.
+Before running orchestration, assess task variety using the protocol in @~/.claude/protocols/pact-variety.md.
 
 **Quick Assessment Table**:
 
