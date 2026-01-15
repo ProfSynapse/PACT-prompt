@@ -18,12 +18,17 @@ Used by:
 import logging
 import os
 import re
-import sqlite3
 import struct
 import threading
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+
+# Use the same sqlite3 module as database.py for type consistency
+try:
+    import pysqlite3 as sqlite3
+except ImportError:
+    import sqlite3
 
 from .database import (
     db_connection,
@@ -34,7 +39,8 @@ from .database import (
     list_memories,
     ensure_initialized,
     get_db_path,
-    generate_id
+    generate_id,
+    SQLITE_EXTENSIONS_ENABLED
 )
 from .embeddings import (
     generate_embedding,
@@ -449,6 +455,10 @@ class PACTMemory:
         """
         Generate and store embedding for a memory.
 
+        Requires SQLITE_EXTENSIONS_ENABLED (pysqlite3-binary) and sqlite-vec.
+        If extensions are unavailable, skips embedding storage silently -
+        search will fall back to keyword-only mode.
+
         Args:
             conn: Active database connection.
             memory_id: Memory ID to associate embedding with.
@@ -457,6 +467,14 @@ class PACTMemory:
         Returns:
             True if embedding was stored, False otherwise.
         """
+        # Check if SQLite extension loading is available
+        if not SQLITE_EXTENSIONS_ENABLED:
+            logger.debug(
+                "Skipping embedding storage - SQLite extensions unavailable. "
+                "Search will use keyword mode."
+            )
+            return False
+
         # Generate text for embedding
         text = generate_embedding_text(memory)
         if not text:
@@ -469,12 +487,13 @@ class PACTMemory:
             return False
 
         try:
-            # Ensure sqlite-vec is loaded
+            # Enable extension loading (safe because SQLITE_EXTENSIONS_ENABLED is True)
             conn.enable_load_extension(True)
             try:
                 import sqlite_vec
                 sqlite_vec.load(conn)
             except ImportError:
+                logger.debug("sqlite-vec not installed, skipping embedding storage")
                 return False
 
             # Convert to blob

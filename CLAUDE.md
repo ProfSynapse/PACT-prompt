@@ -305,3 +305,16 @@ Invoke **at least 3 agents in parallel**:
 After agent reviews completed:
 - Synthesize findings and recommendations in `docs/review/` (note agreements and conflicts)
 - Execute `/PACT:pin-memory`
+
+## Working Memory
+<!-- Auto-managed by pact-memory skill. Last 5 memories shown. Full history searchable via pact-memory skill. -->
+
+### 2026-01-15 | Hook activation test
+**Context**: Testing Edit tool hook behavior
+**Goal**: Verify hooks trigger on file modifications
+**Lessons**: Pending - awaiting hook response
+
+### 2026-01-15 | Testing memory hook activation
+**Context**: Testing memory hook activation
+**Goal**: Verify pact-memory skill triggers correctly
+**Lessons**: Memory skill invoked via /pact-memory command

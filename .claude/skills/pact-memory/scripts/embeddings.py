@@ -5,9 +5,12 @@ Location: pact-plugin/skills/pact-memory/scripts/embeddings.py
 
 Embedding generation for semantic search in the PACT Memory skill.
 Supports multiple backends with graceful fallbacks:
-1. sqlite-lembed with GGUF model (preferred - local, fast)
+1. sqlite-lembed with GGUF model (preferred - local, fast, requires pysqlite3-binary)
 2. sentence-transformers (fallback - requires more deps)
 3. None (ultimate fallback - search degrades to keyword-only)
+
+Note: sqlite-lembed backend requires pysqlite3-binary because standard library
+sqlite3 has enable_load_extension disabled by default for security.
 
 Used by:
 - search.py: Generates query embeddings for semantic search
@@ -16,10 +19,18 @@ Used by:
 
 import logging
 import os
-import sqlite3
 import threading
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
+
+# Use the same sqlite3 module as database.py for consistency.
+# pysqlite3 has extension loading enabled, standard sqlite3 does not.
+try:
+    import pysqlite3 as sqlite3
+    _PYSQLITE3_AVAILABLE = True
+except ImportError:
+    import sqlite3
+    _PYSQLITE3_AVAILABLE = False
 
 from .config import (
     DEFAULT_MODEL_PATH,
@@ -62,6 +73,9 @@ class SqliteLembedBackend(EmbeddingBackend):
     - Works locally without API calls
     - Is fast and efficient
     - Uses the same SQLite connection as the database
+
+    Requires pysqlite3-binary because standard library sqlite3 has
+    enable_load_extension disabled by default for security.
     """
 
     def __init__(self, model_path: Optional[Path] = None):
@@ -75,9 +89,18 @@ class SqliteLembedBackend(EmbeddingBackend):
         return "sqlite-lembed"
 
     def is_available(self) -> bool:
-        """Check if sqlite-lembed and model are available."""
+        """Check if sqlite-lembed, pysqlite3, and model are available."""
         if self._available is not None:
             return self._available
+
+        # Check if pysqlite3 is available (required for extension loading)
+        if not _PYSQLITE3_AVAILABLE:
+            logger.debug(
+                "pysqlite3-binary not installed - sqlite-lembed backend unavailable. "
+                "Install with: pip install pysqlite3-binary"
+            )
+            self._available = False
+            return False
 
         # Check if model file exists
         if not self._model_path.exists():
@@ -107,6 +130,7 @@ class SqliteLembedBackend(EmbeddingBackend):
             import sqlite_lembed
 
             # Create in-memory connection for embedding generation
+            # (using pysqlite3 which has extension loading enabled)
             self._conn = sqlite3.connect(":memory:")
             self._conn.enable_load_extension(True)
             sqlite_lembed.load(self._conn)
@@ -372,6 +396,7 @@ def check_embedding_availability() -> Dict[str, Any]:
         "active_backend": service.backend_name,
         "model_path": str(DEFAULT_MODEL_PATH),
         "model_exists": DEFAULT_MODEL_PATH.exists(),
+        "pysqlite3_available": _PYSQLITE3_AVAILABLE,
         "backends": {
             "sqlite-lembed": SqliteLembedBackend().is_available(),
             "sentence-transformers": SentenceTransformersBackend().is_available()

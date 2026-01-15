@@ -19,6 +19,9 @@ import subprocess
 import re
 from pathlib import Path
 
+# Hook version for tracking updates
+HOOK_VERSION = "1.1.0"
+
 
 def get_staged_files():
     """Returns a list of staged files."""
