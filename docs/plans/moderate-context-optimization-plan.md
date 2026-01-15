@@ -36,15 +36,23 @@ Break up the 1,085-line `pact-protocols.md` into targeted files so agents and co
 
 #### Research Completed
 - [x] File sizes measured (pact-protocols.md = 1,085 lines)
-- [x] Reference patterns analyzed (24+ @-references across 10 files)
+- [x] Reference patterns analyzed (**21 @-references across 11 files**)
 - [x] Agent-specific sections identified (S1 Autonomy, Self-Coordination, Algedonic pointer)
 - [x] Existing patterns confirmed (algedonic.md already extracted—proves pattern works)
 
 #### Dependencies to Map
-- All 7 agent files reference `@~/.claude/protocols/pact-protocols.md`
-- orchestrate.md has 6 references to specific sections
-- plan-mode.md has 1 reference (variety management)
-- pact-plugin/ must mirror all changes
+
+| File | Reference Count | Notes |
+|------|-----------------|-------|
+| 7 agent files | 14 total (2 each) | Cross-Agent Coordination + Nested PACT |
+| `pact-preparer.md` | 3 refs (exception) | Has additional S4 Environment Model ref → **stays pointing to main file** |
+| `orchestrate.md` | 6 refs | Only Variety Management ref changes; S4/S2/S3* refs stay |
+| `plan-mode.md` | 1 ref | Variety Management |
+| `algedonic.md` | 1 ref | S5 Decision Framing → stays pointing to main file |
+| `vsm-glossary.md` | 1 ref | General reference → stays pointing to main file |
+| `pact-plugin/` | mirrors | Must mirror all changes to protocols/ and agents/ |
+
+**Total edits required**: ~32 files (14 agent edits + 2 command edits + 2 protocol files + pact-plugin mirrors)
 
 ---
 
@@ -86,7 +94,7 @@ Break up the 1,085-line `pact-protocols.md` into targeted files so agents and co
 
 #### Interface Contracts
 
-Each new file includes:
+**Each new file includes back-reference header:**
 ```markdown
 # {Title}
 
@@ -94,6 +102,21 @@ Each new file includes:
 > **Referenced by**: {Consumer list}
 > **See also**: @~/.claude/protocols/pact-protocols.md for full orchestration protocols
 ```
+
+**Main file includes forward reference table** (add to `pact-protocols.md` header):
+```markdown
+## Extracted Protocols (For Specific Consumers)
+
+Some protocols are maintained in separate files for context efficiency:
+
+| Protocol | File | Primary Consumer |
+|----------|------|------------------|
+| Agent Autonomy & Coordination | `pact-agent-protocols.md` | All specialist agents |
+| Variety Management | `pact-variety.md` | orchestrate.md, plan-mode.md |
+| Emergency Signals | `algedonic.md` | All agents + orchestrator |
+```
+
+This bidirectional referencing ensures discoverability from either direction.
 
 ---
 
@@ -117,7 +140,7 @@ Each new file includes:
 | `.claude/agents/pact-frontend-coder.md` | Update refs: `pact-protocols.md` → `pact-agent-protocols.md` |
 | `.claude/agents/pact-database-engineer.md` | Update refs: `pact-protocols.md` → `pact-agent-protocols.md` |
 | `.claude/agents/pact-test-engineer.md` | Update refs: `pact-protocols.md` → `pact-agent-protocols.md` |
-| `.claude/agents/pact-preparer.md` | Update refs: `pact-protocols.md` → `pact-agent-protocols.md` |
+| `.claude/agents/pact-preparer.md` | Update 2 of 3 refs → `pact-agent-protocols.md`; S4 Environment Model ref stays pointing to main file |
 | `.claude/agents/pact-n8n.md` | Update refs: `pact-protocols.md` → `pact-agent-protocols.md` |
 | `.claude/commands/PACT/orchestrate.md` | Update variety refs → `pact-variety.md` |
 | `.claude/commands/PACT/plan-mode.md` | Update variety refs → `pact-variety.md` |
@@ -143,10 +166,14 @@ Each new file includes:
 | Scenario | Type | Priority |
 |----------|------|----------|
 | All @-references resolve to existing files | Validation | P0 |
+| All section-level references find target sections | Validation | P0 |
 | No content lost during extraction | Validation | P0 |
 | Agent can read `pact-agent-protocols.md` | Smoke | P0 |
 | orchestrate.md can read `pact-variety.md` | Smoke | P0 |
+| pact-preparer S4 Environment Model ref still works | Smoke | P0 |
+| orchestrate.md S4/S2/S3* refs still work (unchanged) | Smoke | P0 |
 | No duplicate content across files | Validation | P1 |
+| pact-plugin/ mirrors match .claude/ | Validation | P1 |
 
 #### Coverage Targets
 - Reference resolution: 100%
@@ -157,16 +184,52 @@ Each new file includes:
 **Hybrid**: Automated grep for reference inventory + manual spot-check of key consumers
 
 ```bash
-# Pre-change baseline
-grep -r "@~/.claude/protocols" .claude/ > baseline-refs.txt
+#!/bin/bash
+set -euo pipefail
+shopt -s globstar  # Required for **/*.md pattern
 
-# Post-change validation
-for ref in $(grep -oh "@~/.claude/protocols/[^)\" ]*" .claude/**/*.md); do
+# Pre-change baseline
+grep -r "@~/.claude/protocols" .claude/ pact-plugin/ > baseline-refs.txt
+
+# Post-change validation with proper exit codes
+broken=0
+
+# Check file-level references
+for ref in $(grep -roh "@~/.claude/protocols/[^)\" ]*" .claude/ pact-plugin/); do
   filepath="${ref#@}"
   filepath="${filepath/#\~/$HOME}"
-  [[ ! -f "$filepath" ]] && echo "BROKEN: $ref"
+  if [[ ! -f "$filepath" ]]; then
+    echo "BROKEN FILE: $ref"
+    broken=1
+  fi
 done
+
+# Check section-level references (verify section headers exist in target files)
+# Pattern matches: "for S1 Autonomy" or "for the Variety Management"
+for file in .claude/**/*.md pact-plugin/**/*.md; do
+  [[ -f "$file" ]] || continue
+  while IFS= read -r line; do
+    section=$(echo "$line" | grep -oP 'for (the )?\K[A-Z][^.]*(?= (rules|protocol|section|assessment))' || true)
+    target=$(echo "$line" | grep -oP '@~/.claude/protocols/[^)\" ]*' | head -1 || true)
+    if [[ -n "$section" && -n "$target" ]]; then
+      target_path="${target#@}"
+      target_path="${target_path/#\~/$HOME}"
+      if [[ -f "$target_path" ]] && ! grep -q "## .*$section" "$target_path" 2>/dev/null; then
+        echo "MISSING SECTION: '$section' not found in $target_path (from $file)"
+        broken=1
+      fi
+    fi
+  done < <(grep "@~/.claude/protocols" "$file" 2>/dev/null || true)
+done
+
+exit $broken
 ```
+
+**Key validation improvements**:
+- Includes both `.claude/` and `pact-plugin/` directories
+- Uses `globstar` for recursive file matching
+- Returns proper exit code for CI integration
+- Validates section-level references (not just file existence)
 
 ---
 
@@ -274,7 +337,10 @@ None — straightforward moderate optimization with clear scope.
 ## Scope Assessment
 
 - **Overall Complexity**: Low-Medium
-- **Estimated Files**: 2 new, 12 modified (7 agents + 2 commands + pact-protocols + plugin mirrors)
+- **New Files**: 2 protocol files + 2 plugin mirrors = 4 files
+- **Modified Files**: 7 agents (14 ref edits) + 2 commands + 1 pact-protocols.md + 7 plugin agent mirrors + 1 plugin pact-protocols = ~18 files
+- **Total File Touches**: ~22 files (some with multiple edits)
+- **Total Edits**: ~32 (14 agent refs + 2 command refs + headers/content extraction + plugin mirrors)
 - **Specialists Required**: pact-preparer (minimal), orchestrator for file edits
 - **External Dependencies**: None
 - **Estimated Time**: 2-3 hours implementation + 1 hour validation
@@ -306,3 +372,12 @@ To implement this plan after approval:
 ```
 
 The orchestrator should reference this plan during execution.
+
+---
+
+## Revision History
+
+| Date | Change |
+|------|--------|
+| 2026-01-15 | Initial plan created via `/PACT:plan-mode` |
+| 2026-01-15 | Peer review feedback incorporated: fixed reference count (21 across 11 files), added missing dependencies, documented pact-preparer special case, enhanced validation script, added forward/back reference requirements, documented total edit count |
