@@ -26,7 +26,7 @@ All specialists must escalate when:
 
 ### Self-Coordination
 
-When working in parallel (see @~/.claude/protocols/pact-protocols.md for S2 Coordination Layer):
+When working in parallel (S2 Coordination Layer):
 - Check S2 protocols before starting if multiple agents are active
 - Respect assigned file/component boundaries
 - First agent's conventions become standard for the batch
@@ -77,7 +77,7 @@ While specialists can invoke nested cycles autonomously, the orchestrator can al
 - Single-domain: `/PACT:rePACT backend "implement rate limiting"`
 - Multi-domain: `/PACT:rePACT "implement audit logging sub-system"`
 
-See @~/.claude/commands/PACT/rePACT.md for full command documentation.
+See `/PACT:rePACT` command for full documentation.
 
 ---
 
@@ -98,7 +98,7 @@ Algedonic signals handle viability-threatening conditions that require immediate
 
 > **VSM Context**: In Beer's VSM, algedonic signals are "pain/pleasure" signals that bypass management hierarchy to reach policy level (S5) instantly.
 
-For full protocol details, see @~/.claude/protocols/algedonic.md.
+For full protocol details, see `algedonic.md`.
 
 ### Quick Reference
 
