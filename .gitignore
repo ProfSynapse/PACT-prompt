@@ -4,3 +4,10 @@ skills-research/
 .DS_Store
 .env
 .env.*
+settings.local.json
+
+# Test files
+pact-plugin/skills/pact-memory/tests/
+__pycache__/
+.pytest_cache/
+*.pyc
