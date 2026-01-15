@@ -11,23 +11,26 @@ Save context after completing each PACT phase to preserve learnings.
 
 ```python
 memory.save({
-    "context": "Researching authentication approaches for API gateway",
-    "goal": "Evaluate OAuth2 vs JWT for microservices auth",
+    "context": "Completed research phase for the API gateway authentication system on the feature/api-auth branch. The project requires securing 15+ microservices that communicate both internally and with external third-party clients. Current architecture has no centralized auth - each service handles its own validation, leading to inconsistent security policies and duplicated code. Stakeholders require SSO capability for enterprise customers and API key support for developer integrations. Evaluated three main approaches: OAuth2 with dedicated auth server, JWT tokens with shared secret, and a hybrid approach. Reviewed documentation for Auth0, Keycloak, and custom implementations.",
+    "goal": "Determine the optimal authentication strategy for the API gateway that balances security requirements, implementation complexity, and support for both internal services and external third-party integrations.",
     "lessons_learned": [
-        "OAuth2 adds complexity but better for third-party integrations",
-        "JWT works well for internal service-to-service auth",
-        "Need to consider token revocation strategy early"
+        "OAuth2 adds significant complexity (auth server, token endpoints, refresh flows) but provides robust third-party integration with standard scopes and consent flows",
+        "JWT works well for internal service-to-service auth because services can validate tokens independently without network calls, reducing latency",
+        "Token revocation is the critical differentiator - JWTs are stateless so revocation requires either short expiry times or a distributed blacklist",
+        "Auth0 pricing becomes prohibitive at our scale (50k+ MAU), making self-hosted Keycloak or custom solution more viable",
+        "Existing services already use a shared Redis cluster, which could serve as a token blacklist store"
     ],
     "decisions": [
         {
-            "decision": "Use JWT for internal services, OAuth2 for external",
-            "rationale": "Balances simplicity with flexibility",
-            "alternatives": ["OAuth2 everywhere", "Custom token system"]
+            "decision": "Use JWT for internal services, OAuth2 for external third-party clients",
+            "rationale": "Hybrid approach provides the best of both worlds. Internal services get low-latency validation with JWTs (signed with RS256 for security). External clients get standard OAuth2 flows they expect, with proper scope management. Both can share the same identity database.",
+            "alternatives": ["OAuth2 everywhere - rejected due to latency impact on internal service mesh", "Custom token system - rejected due to maintenance burden and security risk of non-standard approach"]
         }
     ],
     "entities": [
-        {"name": "APIGateway", "type": "component"},
-        {"name": "AuthService", "type": "service"}
+        {"name": "APIGateway", "type": "component", "notes": "Kong-based gateway, will handle OAuth2 token exchange"},
+        {"name": "AuthService", "type": "service", "notes": "New service to be created for identity management"},
+        {"name": "Redis Cluster", "type": "infrastructure", "notes": "Existing cluster to be used for token blacklist"}
     ]
 })
 ```
@@ -230,28 +233,34 @@ Save comprehensive session summary before ending.
 tracked_files = memory.get_tracked_files()
 
 memory.save({
-    "context": "Session wrap-up: Authentication feature implementation",
-    "goal": "Complete JWT auth with refresh tokens",
+    "context": "Wrapping up a 4-hour session on the feature/jwt-auth branch implementing the JWT authentication system with refresh token support. Started the session by reviewing the architecture docs from the previous phase, then implemented the core TokenManager class and RateLimiter middleware. Hit a blocker mid-session when Redis connection pooling caused memory leaks under load testing - resolved by switching from redis-py's default connection handling to explicit pool management with max_connections=50. The implementation now passes all unit tests (47 tests) and integration tests (12 tests). Deferred chaos testing based on discussion with tech lead who wants to review the core implementation first. PR #234 is ready for review with all CI checks passing.",
+    "goal": "Complete the JWT authentication implementation with refresh token rotation, including rate limiting middleware, ready for code review and stakeholder demo scheduled for tomorrow.",
     "active_tasks": [
         {"task": "Add unit tests for TokenManager", "status": "completed"},
         {"task": "Implement rate limiting middleware", "status": "completed"},
-        {"task": "Add chaos tests", "status": "pending", "priority": "medium"}
+        {"task": "Fix Redis connection pooling memory leak", "status": "completed"},
+        {"task": "Add chaos tests for Redis failures", "status": "pending", "priority": "medium"}
     ],
     "lessons_learned": [
-        "Token rotation requires careful state management",
-        "Redis connection pooling essential for performance",
-        "Always log auth failures with correlation IDs"
+        "Token rotation requires careful state management - we track the previous token hash to allow a 30-second grace period for in-flight requests using the old token",
+        "Redis connection pooling is essential for performance, but redis-py's default lazy connection creation causes memory issues under burst load. Explicit pool with max_connections and socket_timeout prevents resource exhaustion",
+        "Always log auth failures with correlation IDs - debugging token issues in production is nearly impossible without request tracing. Added X-Correlation-ID header propagation through the middleware chain",
+        "Rate limiting at the gateway level catches most abuse, but service-level limits are still needed for internal service-to-service calls that bypass the gateway",
+        "PyJWT's decode() method silently accepts expired tokens unless you explicitly pass options={'verify_exp': True} - this default is dangerous and should be overridden"
     ],
     "decisions": [
         {
             "decision": "Defer chaos testing to next sprint",
-            "rationale": "Core functionality complete, need stakeholder review"
+            "rationale": "Core functionality is complete and tested. Tech lead wants to review the implementation before we invest in chaos testing. This also gives the team time to set up the chaos engineering infrastructure (Chaos Monkey integration). Stakeholder demo is tomorrow and chaos tests aren't required for that milestone.",
+            "alternatives": ["Complete chaos tests now - rejected due to time constraints and missing infrastructure", "Skip chaos tests entirely - rejected as auth service is critical path"]
         }
     ],
     "entities": [
-        {"name": "TokenManager", "type": "class", "notes": "Core JWT handling"},
-        {"name": "RateLimiter", "type": "middleware", "notes": "Uses sliding window"},
-        {"name": "AuthService", "type": "service", "notes": "Main entry point"}
+        {"name": "TokenManager", "type": "class", "notes": "Core JWT handling with RS256 signing, refresh rotation, and 30-second grace period"},
+        {"name": "RateLimiter", "type": "middleware", "notes": "Sliding window algorithm, 100 req/min default, configurable per-route"},
+        {"name": "AuthService", "type": "service", "notes": "Main entry point, exposes /login, /logout, /refresh, /validate endpoints"},
+        {"name": "src/auth/token_manager.py", "type": "file", "notes": "Primary implementation file, 340 lines"},
+        {"name": "src/middleware/rate_limit.py", "type": "file", "notes": "Rate limiting middleware, 180 lines"}
     ]
 },
 files=tracked_files,
@@ -287,30 +296,61 @@ memory.update("abc123", {
 ### Too Vague
 
 ```python
-# BAD - no actionable information
+# BAD - no actionable information, future you learns nothing
 memory.save({
     "context": "Working on auth",
     "lessons_learned": ["Things were hard"]
+})
+
+# GOOD - comprehensive and actionable
+memory.save({
+    "context": "Debugging JWT token validation failures on the feature/auth-fixes branch. Users reported 401 errors after ~15 minutes of activity. Investigation revealed the issue was in the token refresh logic where concurrent requests could trigger multiple refresh attempts, causing token rotation conflicts. The auth system uses access tokens (15min TTL) with refresh tokens (7 day TTL, single-use with rotation).",
+    "goal": "Identify and fix the root cause of intermittent 401 errors occurring after extended user sessions.",
+    "lessons_learned": [
+        "Concurrent API requests detecting expired tokens simultaneously each triggered their own refresh, causing the server to invalidate the 'old' refresh token before all requests could use it",
+        "Added a mutex pattern around token refresh - first request to detect expiry acquires lock and refreshes, others wait for the new token",
+        "The bug was hard to reproduce locally because it requires high latency (>500ms) to create the race window"
+    ]
 })
 ```
 
 ### Too Granular
 
 ```python
-# BAD - noise in the memory system
+# BAD - noise in the memory system, not worth persisting
 memory.save({
     "context": "Fixed typo in variable name",
     "lessons_learned": ["Check spelling"]
 })
+
+# Note: Small fixes don't warrant memories. Save memories for:
+# - Phase completions
+# - Significant decisions with rationale
+# - Non-obvious lessons that would help future work
+# - Blockers and their resolutions
 ```
 
 ### Missing Rationale
 
 ```python
-# BAD - decision without context
+# BAD - decision without context is useless for future reference
 memory.save({
     "decisions": [
-        {"decision": "Use Redis"}  # Why? What alternatives?
+        {"decision": "Use Redis"}  # Why? What alternatives? When does this apply?
+    ]
+})
+
+# GOOD - decision with full context
+memory.save({
+    "decisions": [
+        {
+            "decision": "Use Redis for token blacklist instead of PostgreSQL",
+            "rationale": "Token blacklist requires fast writes (every logout/refresh) and automatic TTL-based cleanup. Redis provides O(1) writes, native TTL expiry, and we already have a cluster deployed. PostgreSQL would require manual cleanup jobs and adds latency.",
+            "alternatives": [
+                "PostgreSQL with TTL column - rejected due to need for cleanup cron job and slower writes",
+                "In-memory cache per service - rejected because tokens would remain valid on other instances after logout"
+            ]
+        }
     ]
 })
 ```
@@ -318,10 +358,21 @@ memory.save({
 ### No Entity Links
 
 ```python
-# BAD - hard to connect to related work
+# BAD - hard to connect to related work, won't surface in graph search
 memory.save({
     "context": "Refactored the authentication service",
     # Missing: which components? what files?
+})
+
+# GOOD - entities enable graph-based retrieval
+memory.save({
+    "context": "Refactored the authentication service to extract token management into a dedicated TokenManager class. This improves testability and separates concerns between identity validation and token lifecycle management.",
+    "entities": [
+        {"name": "AuthService", "type": "service", "notes": "Now delegates token ops to TokenManager"},
+        {"name": "TokenManager", "type": "class", "notes": "New class extracted from AuthService"},
+        {"name": "src/auth/auth_service.py", "type": "file", "notes": "Reduced from 450 to 280 lines"},
+        {"name": "src/auth/token_manager.py", "type": "file", "notes": "New file, 200 lines"}
+    ]
 })
 ```
 
