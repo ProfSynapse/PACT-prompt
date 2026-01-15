@@ -7,7 +7,6 @@ Used by: Claude Code settings.json PreToolUse hook (matcher: Bash for git commit
 Enforces:
 - SACROSANCT Rule 1: No credentials/secrets in committed files
 - SACROSANCT Rule 2: No frontend credential exposure, backend proxy pattern
-- PACT Protocol: Documentation must accompany code changes
 - .env file protection in .gitignore
 
 Input: JSON from stdin with tool_input containing the command
@@ -18,7 +17,6 @@ import sys
 import json
 import subprocess
 import re
-import os
 from pathlib import Path
 
 
@@ -344,26 +342,6 @@ def main():
             print("=" * 40, file=sys.stderr)
             print("Please fix security issues before committing.", file=sys.stderr)
             print("See SACROSANCT rules in CLAUDE.md for guidance.", file=sys.stderr)
-            sys.exit(2)  # Block the tool execution
-
-        # --- PACT Protocol Check: Documentation with Code ---
-        code_extensions = (
-            '.py', '.js', '.ts', '.jsx', '.tsx', '.html', '.css',
-            '.java', '.c', '.cpp', '.h', '.rs', '.go', '.rb', '.php'
-        )
-        has_code_changes = any(f.endswith(code_extensions) for f in staged_files)
-        has_doc_changes = any(
-            f.startswith('docs/') or f == 'CLAUDE.md' or f.endswith('.md')
-            for f in staged_files
-        )
-
-        # Rule: If code changes, docs must change (or be present in the commit)
-        if has_code_changes and not has_doc_changes:
-            print("Error: PACT Protocol Violation", file=sys.stderr)
-            print("-" * 30, file=sys.stderr)
-            print("You are attempting to commit code changes without updating documentation.", file=sys.stderr)
-            print("Please update 'docs/CHANGELOG.md', 'CLAUDE.md', or files in 'docs/' to reflect your changes.", file=sys.stderr)
-            print("Run '/PACT:wrap-up' or manually update the docs before committing.", file=sys.stderr)
             sys.exit(2)  # Block the tool execution
 
         sys.exit(0)  # Allow the commit

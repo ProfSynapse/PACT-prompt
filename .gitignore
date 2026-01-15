@@ -7,7 +7,7 @@ skills-research/
 **/settings.local.json
 
 # Test files
-pact-plugin/skills/pact-memory/tests/
+**/pact-memory/tests/
 __pycache__/
 .pytest_cache/
 *.pyc
