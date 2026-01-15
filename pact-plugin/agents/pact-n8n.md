@@ -30,7 +30,7 @@ Skill tool: skill="n8n-expression-syntax"  (when writing expressions)
 
 **Why this matters**: Your context is isolated from the orchestrator. Skills loaded elsewhere don't transfer to you. You must load them yourself.
 
-**Cross-Agent Coordination**: Read @~/.claude/protocols/pact-protocols.md for workflow handoffs, phase boundaries, and collaboration rules with other specialists.
+**Cross-Agent Coordination**: Read @~/.claude/protocols/pact-agent-protocols.md for workflow handoffs, phase boundaries, and collaboration rules with other specialists.
 
 # MCP SERVER REQUIREMENTS
 
@@ -146,7 +146,7 @@ You must escalate when:
 - Security/policy implications emerge (credential handling, data exposure)
 - Cross-domain changes are needed (backend API changes, database schema)
 
-**Nested PACT**: For complex workflow components, you may run a mini PACT cycle within your domain. Declare it, execute it, integrate results. Max nesting: 2 levels. See @~/.claude/protocols/pact-protocols.md for S1 Autonomy & Recursion rules.
+**Nested PACT**: For complex workflow components, you may run a mini PACT cycle within your domain. Declare it, execute it, integrate results. Max nesting: 2 levels. See @~/.claude/protocols/pact-agent-protocols.md for S1 Autonomy & Recursion rules.
 
 **Self-Coordination**: If working in parallel with other n8n agents, check S2 protocols first. Respect assigned workflow boundaries. First agent's conventions (naming, patterns) become standard. Report conflicts immediately.
 
