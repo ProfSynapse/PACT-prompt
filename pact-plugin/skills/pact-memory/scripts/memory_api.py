@@ -20,7 +20,8 @@ import os
 import re
 import sqlite3
 import struct
-from datetime import datetime
+import threading
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -96,7 +97,7 @@ def _format_memory_entry(memory: Dict[str, Any], files: Optional[List[str]] = No
         Formatted markdown string for the memory entry.
     """
     # Get date and create brief context for header
-    now = datetime.now()
+    now = datetime.now(timezone.utc)
     date_str = now.strftime("%Y-%m-%d")
 
     # Create brief context from context or goal field
@@ -675,6 +676,7 @@ class PACTMemory:
 
 
 # Module-level singleton for convenience
+_lock = threading.Lock()
 _instance: Optional[PACTMemory] = None
 
 
@@ -693,15 +695,17 @@ def get_memory_instance(
         PACTMemory instance.
     """
     global _instance
-    if _instance is None:
-        _instance = PACTMemory(project_id, session_id)
+    with _lock:
+        if _instance is None:
+            _instance = PACTMemory(project_id, session_id)
     return _instance
 
 
 def reset_memory_instance() -> None:
     """Reset the singleton instance (useful for testing)."""
     global _instance
-    _instance = None
+    with _lock:
+        _instance = None
 
 
 # Convenience functions for simple usage

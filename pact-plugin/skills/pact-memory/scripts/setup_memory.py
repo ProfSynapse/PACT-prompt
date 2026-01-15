@@ -21,26 +21,21 @@ import urllib.request
 from pathlib import Path
 from typing import Any, Callable, Dict, Optional
 
+from .config import (
+    DEFAULT_MODEL_PATH,
+    MODEL_SIZE_MB,
+    MODEL_URL,
+    MODELS_DIR,
+    PACT_MEMORY_DIR,
+)
+
 # Configure logging
 logger = logging.getLogger(__name__)
-
-# Storage configuration
-MEMORY_DIR = Path.home() / ".claude" / "memory"
-MODELS_DIR = MEMORY_DIR / "models"
-DEFAULT_MODEL_NAME = "all-MiniLM-L6-v2-Q8_0.gguf"
-DEFAULT_MODEL_PATH = MODELS_DIR / DEFAULT_MODEL_NAME
-
-# Model download configuration
-MODEL_URL = (
-    "https://huggingface.co/second-state/All-MiniLM-L6-v2-Embedding-GGUF/"
-    "resolve/main/all-MiniLM-L6-v2-Q8_0.gguf"
-)
-MODEL_SIZE_MB = 24  # Approximate size for progress reporting
 
 
 def ensure_directories() -> None:
     """Create required directories if they don't exist."""
-    MEMORY_DIR.mkdir(parents=True, exist_ok=True)
+    PACT_MEMORY_DIR.mkdir(parents=True, exist_ok=True)
     MODELS_DIR.mkdir(parents=True, exist_ok=True)
 
 
@@ -272,11 +267,11 @@ def get_setup_status() -> Dict[str, Any]:
     )
 
     return {
-        "initialized": MEMORY_DIR.exists(),
+        "initialized": PACT_MEMORY_DIR.exists(),
         "dependencies": deps,
         "can_use_semantic_search": can_use_semantic,
         "paths": {
-            "memory_dir": str(MEMORY_DIR),
+            "memory_dir": str(PACT_MEMORY_DIR),
             "models_dir": str(MODELS_DIR),
             "model_path": str(DEFAULT_MODEL_PATH)
         },

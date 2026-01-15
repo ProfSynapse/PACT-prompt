@@ -41,6 +41,12 @@ from .models import MemoryObject, memory_from_db_row
 # Configure logging
 logger = logging.getLogger(__name__)
 
+# Search tuning parameters
+DISTANCE_NORMALIZATION_FACTOR = 2.0  # Normalize vector distance to 0-1 score
+KEYWORD_POSITION_DECAY = 0.05  # Score reduction per position in keyword results
+GRAPH_BOOST_FACTOR = 0.3  # Boost factor for graph-related memories
+GRAPH_BASE_SCORE = 0.3  # Base relevance score for graph-connected memories
+
 
 def vector_search(
     conn: sqlite3.Connection,
@@ -198,7 +204,7 @@ def graph_boosted_search(
     memory_scores: Dict[str, float] = {}
     for memory_id, distance in vector_results:
         # Convert distance to similarity score (0-1 range)
-        score = max(0, 1 - (distance / 2))
+        score = max(0, 1 - (distance / DISTANCE_NORMALIZATION_FACTOR))
         memory_scores[memory_id] = score
 
     # If no vector results, fall back to keyword search
@@ -206,7 +212,7 @@ def graph_boosted_search(
         keyword_results = keyword_search(conn, query, project_id, limit * 2)
         for i, memory_id in enumerate(keyword_results):
             # Give decreasing scores based on position
-            memory_scores[memory_id] = 1.0 - (i * 0.05)
+            memory_scores[memory_id] = 1.0 - (i * KEYWORD_POSITION_DECAY)
 
     # Apply graph boosting if we have a current file
     if current_file:
@@ -215,14 +221,13 @@ def graph_boosted_search(
         )
 
         # Boost scores for graph-related memories
-        boost_factor = 0.3  # 30% boost for graph relevance
         for memory_id in graph_memory_ids:
             if memory_id in memory_scores:
                 # Boost existing score
-                memory_scores[memory_id] *= (1 + boost_factor)
+                memory_scores[memory_id] *= (1 + GRAPH_BOOST_FACTOR)
             else:
                 # Add with base graph relevance score
-                memory_scores[memory_id] = 0.3
+                memory_scores[memory_id] = GRAPH_BASE_SCORE
 
     # Sort by score (descending) and return top results
     sorted_results = sorted(

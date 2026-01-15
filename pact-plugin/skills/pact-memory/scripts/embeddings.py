@@ -17,24 +17,20 @@ Used by:
 import logging
 import os
 import sqlite3
+import threading
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
+from .config import (
+    DEFAULT_MODEL_PATH,
+    EMBEDDING_DIMENSION,
+    MODEL_URL,
+    MODELS_DIR,
+    PACT_MEMORY_DIR,
+)
+
 # Configure logging
 logger = logging.getLogger(__name__)
-
-# Storage configuration
-MEMORY_DIR = Path.home() / ".claude" / "memory"
-MODELS_DIR = MEMORY_DIR / "models"
-DEFAULT_MODEL_NAME = "all-MiniLM-L6-v2-Q8_0.gguf"
-DEFAULT_MODEL_PATH = MODELS_DIR / DEFAULT_MODEL_NAME
-EMBEDDING_DIMENSION = 384
-
-# Model download URL
-MODEL_URL = (
-    "https://huggingface.co/second-state/All-MiniLM-L6-v2-Embedding-GGUF/"
-    "resolve/main/all-MiniLM-L6-v2-Q8_0.gguf"
-)
 
 
 class EmbeddingBackend:
@@ -152,6 +148,13 @@ class SqliteLembedBackend(EmbeddingBackend):
         except Exception as e:
             logger.warning(f"Embedding generation failed: {e}")
             return None
+
+    def close(self) -> None:
+        """Close the in-memory connection."""
+        if self._conn:
+            self._conn.close()
+            self._conn = None
+        self._initialized = False
 
 
 class SentenceTransformersBackend(EmbeddingBackend):
@@ -287,6 +290,7 @@ class EmbeddingService:
 
 
 # Module-level singleton for convenience
+_lock = threading.Lock()
 _service: Optional[EmbeddingService] = None
 
 
@@ -301,9 +305,22 @@ def get_embedding_service(model_path: Optional[Path] = None) -> EmbeddingService
         EmbeddingService instance.
     """
     global _service
-    if _service is None:
-        _service = EmbeddingService(model_path)
+    with _lock:
+        if _service is None:
+            _service = EmbeddingService(model_path)
     return _service
+
+
+def reset_embedding_service() -> None:
+    """Reset the singleton instance. Useful for testing."""
+    global _service
+    with _lock:
+        if _service is not None:
+            # Close any open connections
+            for backend in _service._backends:
+                if hasattr(backend, 'close'):
+                    backend.close()
+        _service = None
 
 
 def generate_embedding(text: str) -> Optional[List[float]]:
@@ -328,83 +345,17 @@ def generate_embedding_text(memory: Dict[str, Any]) -> str:
     Combines context, goal, lessons, and decisions into a single
     text block optimized for semantic similarity search.
 
+    Uses MemoryObject.get_searchable_text() as the single source of truth.
+
     Args:
         memory: Memory dictionary with context, goal, lessons_learned, etc.
 
     Returns:
         Combined text suitable for embedding generation.
     """
-    parts = []
-
-    # Context and goal are most important
-    if memory.get("context"):
-        parts.append(f"Context: {memory['context']}")
-
-    if memory.get("goal"):
-        parts.append(f"Goal: {memory['goal']}")
-
-    # Tasks provide additional context
-    tasks = memory.get("active_tasks") or []
-    if tasks:
-        if isinstance(tasks, str):
-            parts.append(f"Tasks: {tasks}")
-        else:
-            task_texts = []
-            for t in tasks:
-                if isinstance(t, str):
-                    task_texts.append(t)
-                elif isinstance(t, dict):
-                    task_texts.append(t.get("task", ""))
-            if task_texts:
-                parts.append(f"Tasks: {'; '.join(task_texts)}")
-
-    # Lessons learned are valuable for search
-    lessons = memory.get("lessons_learned") or []
-    if lessons:
-        if isinstance(lessons, str):
-            parts.append(f"Lessons: {lessons}")
-        else:
-            parts.append(f"Lessons: {'; '.join(str(l) for l in lessons)}")
-
-    # Decisions capture important choices
-    decisions = memory.get("decisions") or []
-    if decisions:
-        if isinstance(decisions, str):
-            parts.append(f"Decisions: {decisions}")
-        else:
-            decision_texts = []
-            for d in decisions:
-                if isinstance(d, str):
-                    decision_texts.append(d)
-                elif isinstance(d, dict):
-                    text = d.get("decision", "")
-                    if d.get("rationale"):
-                        text += f" ({d['rationale']})"
-                    decision_texts.append(text)
-            if decision_texts:
-                parts.append(f"Decisions: {'; '.join(decision_texts)}")
-
-    # Entities provide additional keywords
-    entities = memory.get("entities") or []
-    if entities:
-        if isinstance(entities, str):
-            parts.append(f"Entities: {entities}")
-        else:
-            entity_texts = []
-            for e in entities:
-                if isinstance(e, str):
-                    entity_texts.append(e)
-                elif isinstance(e, dict):
-                    name = e.get("name", "")
-                    entity_type = e.get("type", "")
-                    if entity_type:
-                        entity_texts.append(f"{name} ({entity_type})")
-                    else:
-                        entity_texts.append(name)
-            if entity_texts:
-                parts.append(f"Entities: {', '.join(entity_texts)}")
-
-    return "\n".join(parts)
+    from .models import MemoryObject
+    memory_obj = MemoryObject.from_dict(memory)
+    return memory_obj.get_searchable_text()
 
 
 def check_embedding_availability() -> Dict[str, Any]:

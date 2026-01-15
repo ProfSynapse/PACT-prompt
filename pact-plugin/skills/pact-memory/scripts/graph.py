@@ -14,7 +14,7 @@ Graph Structure:
 
 import logging
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
@@ -68,7 +68,7 @@ def track_file(
         # Update last_modified timestamp
         conn.execute(
             "UPDATE files SET last_modified = ? WHERE id = ?",
-            (datetime.utcnow().isoformat(), row["id"])
+            (datetime.now(timezone.utc).isoformat(), row["id"])
         )
         conn.commit()
         return row["id"]
@@ -80,7 +80,7 @@ def track_file(
         INSERT INTO files (id, path, project_id, last_modified)
         VALUES (?, ?, ?, ?)
         """,
-        (file_id, normalized_path, project_id, datetime.utcnow().isoformat())
+        (file_id, normalized_path, project_id, datetime.now(timezone.utc).isoformat())
     )
     conn.commit()
 

@@ -254,6 +254,7 @@ When delegating a task, these specialist agents are available to execute PACT ph
 - **🗄️ pact-database-engineer** (Code): Data layer implementation
 - **⚡ pact-n8n** (Code): n8n workflow automation (requires n8n-mcp MCP server)
 - **🧪 pact-test-engineer** (Test): Testing and quality assurance
+- **🧠 pact-memory** (Skill): Persistent memory with SQLite, local embeddings, and semantic search
 
 ### How to Delegate
 

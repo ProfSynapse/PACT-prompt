@@ -14,22 +14,20 @@ import logging
 import os
 import sqlite3
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
+
+from .config import DB_PATH, PACT_MEMORY_DIR
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
-# Database configuration
-DEFAULT_DB_PATH = Path.home() / ".claude" / "pact-memory" / "memory.db"
-MEMORY_DIR = Path.home() / ".claude" / "pact-memory"
-
 
 def get_db_path() -> Path:
     """Get the database file path, creating parent directories if needed."""
-    MEMORY_DIR.mkdir(parents=True, exist_ok=True)
-    return DEFAULT_DB_PATH
+    PACT_MEMORY_DIR.mkdir(parents=True, exist_ok=True)
+    return DB_PATH
 
 
 def get_connection(db_path: Optional[Path] = None) -> sqlite3.Connection:
@@ -298,7 +296,7 @@ def create_memory(
     data = _serialize_json_fields(memory)
 
     # Set timestamps
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
 
     conn.execute("""
         INSERT INTO memories (
@@ -384,7 +382,7 @@ def update_memory(
     data.pop("created_at", None)
 
     # Always update updated_at
-    data["updated_at"] = datetime.utcnow().isoformat()
+    data["updated_at"] = datetime.now(timezone.utc).isoformat()
 
     if not data:
         return True  # Nothing to update

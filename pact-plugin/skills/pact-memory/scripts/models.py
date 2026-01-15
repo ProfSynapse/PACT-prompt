@@ -162,7 +162,8 @@ class MemoryObject:
         Create a MemoryObject from a dictionary.
 
         Handles conversion of nested structures (tasks, decisions, entities)
-        and datetime parsing.
+        and datetime parsing. Also handles edge cases like string values
+        for list fields and None values in lists.
 
         Args:
             data: Dictionary with memory fields.
@@ -170,46 +171,55 @@ class MemoryObject:
         Returns:
             MemoryObject instance.
         """
+        import json
+
         # Parse active_tasks
         raw_tasks = data.get("active_tasks") or []
         if isinstance(raw_tasks, str):
-            # Handle JSON string (shouldn't happen if coming from DB layer, but be safe)
-            import json
+            # Handle JSON string or plain string
             try:
-                raw_tasks = json.loads(raw_tasks)
+                parsed = json.loads(raw_tasks)
+                raw_tasks = parsed if isinstance(parsed, list) else [{"task": raw_tasks}]
             except json.JSONDecodeError:
-                raw_tasks = []
-        active_tasks = [TaskItem.from_dict(t) for t in raw_tasks]
+                # Plain string - treat as a single task
+                raw_tasks = [{"task": raw_tasks}] if raw_tasks else []
+        # Filter out None values in the list
+        active_tasks = [TaskItem.from_dict(t) for t in raw_tasks if t is not None]
 
         # Parse lessons_learned (should be list of strings)
         raw_lessons = data.get("lessons_learned") or []
         if isinstance(raw_lessons, str):
-            import json
             try:
-                raw_lessons = json.loads(raw_lessons)
+                parsed = json.loads(raw_lessons)
+                raw_lessons = parsed if isinstance(parsed, list) else [raw_lessons]
             except json.JSONDecodeError:
                 raw_lessons = [raw_lessons] if raw_lessons else []
-        lessons_learned = list(raw_lessons) if raw_lessons else []
+        # Filter out None values
+        lessons_learned = [str(l) for l in raw_lessons if l is not None] if raw_lessons else []
 
         # Parse decisions
         raw_decisions = data.get("decisions") or []
         if isinstance(raw_decisions, str):
-            import json
             try:
-                raw_decisions = json.loads(raw_decisions)
+                parsed = json.loads(raw_decisions)
+                raw_decisions = parsed if isinstance(parsed, list) else [{"decision": raw_decisions}]
             except json.JSONDecodeError:
-                raw_decisions = []
-        decisions = [Decision.from_dict(d) for d in raw_decisions]
+                # Plain string - treat as a single decision
+                raw_decisions = [{"decision": raw_decisions}] if raw_decisions else []
+        # Filter out None values
+        decisions = [Decision.from_dict(d) for d in raw_decisions if d is not None]
 
         # Parse entities
         raw_entities = data.get("entities") or []
         if isinstance(raw_entities, str):
-            import json
             try:
-                raw_entities = json.loads(raw_entities)
+                parsed = json.loads(raw_entities)
+                raw_entities = parsed if isinstance(parsed, list) else [{"name": raw_entities}]
             except json.JSONDecodeError:
-                raw_entities = []
-        entities = [Entity.from_dict(e) for e in raw_entities]
+                # Plain string - treat as a single entity
+                raw_entities = [{"name": raw_entities}] if raw_entities else []
+        # Filter out None values
+        entities = [Entity.from_dict(e) for e in raw_entities if e is not None]
 
         # Parse files (simple string list)
         files = data.get("files") or []
@@ -313,8 +323,13 @@ class MemoryObject:
             parts.append(f"Lessons: {lessons_text}")
 
         if self.decisions:
-            decision_text = "; ".join(d.decision for d in self.decisions)
-            parts.append(f"Decisions: {decision_text}")
+            decision_texts = []
+            for d in self.decisions:
+                text = d.decision
+                if d.rationale:
+                    text += f" ({d.rationale})"
+                decision_texts.append(text)
+            parts.append(f"Decisions: {'; '.join(decision_texts)}")
 
         if self.entities:
             entity_text = ", ".join(
