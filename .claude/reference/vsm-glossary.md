@@ -32,7 +32,7 @@
 **VSM Definition**: The coordination function that resolves conflicts between S1 units, establishes shared language, and dampens oscillations. Acts as a communication conduit between S1 and S3.
 
 **In PACT**: Coordination mechanisms including:
-- @~/.claude/protocols/pact-protocols.md — Shared protocols and handoff formats
+- `pact-s2-coordination.md` — Shared coordination protocols
 - Decision logs — Standardized documentation
 - Pre-parallel conflict detection — Identifying shared resources before parallel execution
 - Resolution authority — Who decides when agents disagree

@@ -142,7 +142,7 @@ The orchestrator operates in two distinct modes. Being aware of which mode you'r
 
 **Naming your mode**: When making significant decisions, briefly note which mode you're operating in. This creates clarity and helps catch mode confusion (e.g., rushing to execute when adaptation is needed).
 
-**S4 Checkpoints**: At phase boundaries, perform explicit S4 checkpoints to assess whether the approach remains valid. Ask: Environment stable? Model aligned? Plan viable? See @~/.claude/protocols/pact-protocols.md for the full S4 Checkpoint Protocol.
+**S4 Checkpoints**: At phase boundaries, perform explicit S4 checkpoints to assess whether the approach remains valid. Ask: Environment stable? Model aligned? Plan viable? See @~/.claude/protocols/pact-s4-checkpoints.md for the full S4 Checkpoint Protocol.
 
 **Temporal Horizons**: Each VSM system operates at a characteristic time horizon:
 
@@ -155,7 +155,7 @@ The orchestrator operates in two distinct modes. Being aware of which mode you'r
 
 When making decisions, consider which horizon applies. Misalignment indicates mode confusion (e.g., in S3 mode worrying about next month's features → that's an S4-horizon question).
 
-**S3/S4 Tension**: When you detect conflict between operational pressure (S3: "execute now") and strategic caution (S4: "investigate first"), name it explicitly, articulate trade-offs, and resolve based on project values or escalate to user. See @~/.claude/protocols/pact-protocols.md for the full S3/S4 Tension Detection and Resolution protocol.
+**S3/S4 Tension**: When you detect conflict between operational pressure (S3: "execute now") and strategic caution (S4: "investigate first"), name it explicitly, articulate trade-offs, and resolve based on project values or escalate to user. See @~/.claude/protocols/pact-s4-tension.md for the full S3/S4 Tension Detection and Resolution protocol.
 
 ### PACT Framework Principles
 
@@ -217,7 +217,7 @@ When making decisions, consider which horizon applies. Misalignment indicates mo
 - Name specific specialist agents being invoked
 - Ask for clarification when requirements are ambiguous
 - Suggest architectural improvements when beneficial
-- When escalating decisions to user, apply S5 Decision Framing: present 2-3 concrete options with trade-offs, not open-ended questions. See @~/.claude/protocols/pact-protocols.md for the S5 Decision Framing Protocol.
+- When escalating decisions to user, apply S5 Decision Framing: present 2-3 concrete options with trade-offs, not open-ended questions. See @~/.claude/protocols/pact-s5-policy.md for the S5 Decision Framing Protocol.
 
 **Remember**: `CLAUDE.md` is your single source of truth for understanding the project. Keep it updated and comprehensive to maintain effective development continuity
   - To make updates, execute `/PACT:pin-memory`
@@ -334,7 +334,7 @@ Use these commands to trigger PACT workflows for delegating tasks:
 - `/PACT:imPACT`: Triage when blocked (Redo prior phase? Additional agents needed?)
 - `/PACT:peer-review`: Peer review of current work (commit, create PR, multi-agent review)
 
-See @~/.claude/protocols/pact-protocols.md for workflow details.
+See @~/.claude/protocols/pact-workflows.md for workflow details.
 
 **How to Handle Blockers**
 - If an agent hits a blocker, they are instructed to stop working and report the blocker to you
