@@ -377,54 +377,5 @@ After agent reviews completed:
 ## Retrieved Context
 <!-- Auto-managed by pact-memory skill. Last 5 retrieved memories shown. -->
 
-### 2026-01-16 13:44
-**Query**: "test spacing"
-**Context**: Final cleanup test
-**Goal**: Verify simplified model2vec works
-**Memory ID**: 371e54eb283772473c15fddb4d7520b2
-
-### 2026-01-16 13:43
-**Query**: "authentication tokens"
-**Context**: Debugging and fixing the pact-memory skill's Working Memory auto-sync to CLAUDE.md. The user reported that saving memories via the API was not updating the Working Memory section in CLAUDE.md with ...
-**Goal**: Fix the automatic CLAUDE.md sync mechanism so that when memories are saved via the Python API, they automatically appear in the Working Memory section with proper LRU behavior (keeping only the last 5 entries), including memory_id references.
-**Memory ID**: cc770aaa3f98be4fbbe029950ad59b9b
-
-### 2026-01-16 13:43
-**Query**: "model2vec embedding"
-**Context**: Final test of Model2Vec integration
-**Goal**: Confirm stable embeddings work
-**Memory ID**: 5f08bc06dcc8bc82ecb76aa3be956641
-
 ## Working Memory
 <!-- Auto-managed by pact-memory skill. Last 7 memories shown. Full history searchable via pact-memory skill. -->
-
-### 2026-01-16 13:39
-**Context**: Completed a significant cleanup of the PACT memory skill embedding infrastructure. The codebase previously supported three embedding backends: sqlite-lembed (using GGUF models), sentence-transformers (PyTorch-based), and model2vec (lightweight, numpy-based). The sqlite-lembed backend was crashing with NULL pointer dereference errors, and sentence-transformers required heavy PyTorch dependencies. After analysis, model2vec emerged as the clear winner: it auto-downloads its model from HuggingFace (no manual GGUF download needed), has minimal dependencies (just numpy), and provides reliable embeddings. This cleanup removed all deprecated code paths, simplifying the embedding system to a single, well-tested backend.
-**Goal**: Simplify the codebase by removing deprecated embedding backends (sqlite-lembed and sentence-transformers), keeping only model2vec as the single embedding solution. This reduces complexity, eliminates crash-prone code, and makes the system easier to maintain.
-**Decisions**: Removed SqliteLembedBackend class entirely, Removed SentenceTransformersBackend class, Removed GGUF model download functions from setup_memory.py, Removed download_model exports from __init__.py, Kept migration logic in session_init.py
-**Lessons**: embeddings.py went from 502 lines to 192 lines (62% reduction) - removing multiple backend classes and their fallback logic dramatically simplified the code, setup_memory.py went from 438 lines to 193 lines (56% reduction) - the GGUF model download logic was a significant portion of complexity that is no longer needed, model2vec auto-downloads its model from HuggingFace on first use - this eliminates the need for manual model download steps and the associated error handling, session_init.py was simplified by removing GGUF model download logic that ran at session start - model2vec handles its own initialization transparently, Simpler code means fewer bugs: the sqlite-lembed NULL pointer crash and sentence-transformers import failures are now impossible since that code no longer exists, Migration logic was intentionally preserved in session_init.py to handle users upgrading from old backends - this ensures a smooth transition without breaking existing setups
-**Memory ID**: 25215118ba518d7f5d797e1340936736
-
-### 2026-01-16 13:38
-**Context**: Final cleanup test
-**Goal**: Verify simplified model2vec works
-**Memory ID**: 371e54eb283772473c15fddb4d7520b2
-
-### 2026-01-16 13:35
-**Context**: Replaced the crashy sqlite-lembed embedding backend with stable Model2Vec for the PACT memory system. The sqlite-lembed library was causing Python crashes with SIGSEGV (NULL pointer dereference at address 0x0) in its native embed_single function within lembed0.dylib. This was a critical bug in the native library that made the memory system unusable. After researching alternatives, identified Model2Vec (specifically the minishlab/potion-base-8M model) as a pure-Python solution that eliminates the native code crash risk entirely. The migration required updating multiple files including embeddings.py, session_init.py, and setup_memory.py to support the new backend while keeping sqlite-lembed as a deprecated fallback.
-**Goal**: Fix the Python crashes caused by NULL pointer dereference in sqlite-lembed native code (lembed0.dylib) by migrating to a stable, pure-Python embedding solution that maintains semantic search quality for the PACT memory system.
-**Decisions**: Use potion-base-8M model (59MB, 256-dim) instead of the larger 32M variant, Added automatic migration in session_init.py to handle dimension changes transparently, Kept sqlite-lembed as deprecated fallback while making model2vec the primary backend, Updated session_init.py to install model2vec package instead of sqlite-lembed
-**Lessons**: sqlite-lembed crashes with SIGSEGV at address 0x0 in the embed_single function - this is a fundamental bug in the native library (lembed0.dylib) that cannot be worked around from Python, Model2Vec (minishlab/potion-base-8M) is a stable pure-Python alternative that completely avoids native code crash risks while providing high-quality embeddings, Model2Vec generates 256-dimensional embeddings compared to 384-dimensional from the old backends - this dimension change is important for vector database compatibility, Model2Vec is extremely fast: benchmarked at 85K sentences/second with model load time of only 0.4 seconds, making it suitable for interactive use, Model2Vec auto-downloads the model from HuggingFace on first use, so no manual model file management is needed unlike sqlite-lembed which required GGUF downloads, Embedding dimension changes require database migration: must drop the old vec_memories virtual table and re-embed all existing memories with the new dimension size
-**Memory ID**: e6d618385eab4452126560c3994a866b
-
-### 2026-01-16 13:34
-**Context**: Final test of Model2Vec integration
-**Goal**: Confirm stable embeddings work
-**Lessons**: model2vec replaces sqlite-lembed, 256-dim embeddings
-**Memory ID**: 5f08bc06dcc8bc82ecb76aa3be956641
-
-### 2026-01-16 13:32
-**Context**: Model2Vec integration complete
-**Goal**: Replace crashy sqlite-lembed with stable model2vec
-**Lessons**: Model2Vec is fast and stable, 256-dim embeddings work well
-**Memory ID**: e60dd209c21c01a91d737b52895f2893
