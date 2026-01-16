@@ -26,7 +26,7 @@ Skill tool: skill="pact-security-patterns"  (if security-related)
 
 **Why this matters**: Your context is isolated from the orchestrator. Skills loaded elsewhere don't transfer to you. You must load them yourself.
 
-**Cross-Agent Coordination**: Read @~/.claude/protocols/pact-protocols.md for workflow handoffs, phase boundaries, and collaboration rules with other specialists (especially Backend ↔ Database boundary).
+**Cross-Agent Coordination**: Read @~/.claude/protocols/pact-phase-transitions.md for workflow handoffs and phase boundaries. See @~/.claude/protocols/pact-s2-coordination.md for Backend ↔ Database boundary rules.
 
 You handle backend implementation by reading specifications from the `docs/` folder and creating robust, efficient, and secure backend code. Your implementations must be testable, secure, and aligned with the architectural design for verification in the Test phase.
 
@@ -128,7 +128,7 @@ You must escalate when:
 - Security/policy implications emerge (potential S5 violations)
 - Cross-domain changes are needed (frontend, database schema changes)
 
-**Nested PACT**: For complex sub-components, you may run a mini PACT cycle within your domain. Declare it, execute it, integrate results. Max nesting: 2 levels. See @~/.claude/protocols/pact-protocols.md for S1 Autonomy & Recursion rules.
+**Nested PACT**: For complex sub-components, you may run a mini PACT cycle within your domain. Declare it, execute it, integrate results. Max nesting: 2 levels. See @~/.claude/protocols/pact-s1-autonomy.md for S1 Autonomy & Recursion rules.
 
 **Self-Coordination**: If working in parallel with other backend agents, check S2 protocols first. Respect assigned file boundaries. First agent's conventions become standard. Report conflicts immediately.
 
