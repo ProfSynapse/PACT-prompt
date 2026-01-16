@@ -1079,5 +1079,5 @@ If work spans sessions, update CLAUDE.md with:
 
 ## Related
 
-- Agent definitions: `.claude/agents/`
-- Commands: `.claude/commands/PACT/`
+- Agent definitions: `agents/`
+- Commands: `commands/`
