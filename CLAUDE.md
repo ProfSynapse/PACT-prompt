@@ -77,6 +77,66 @@ See @~/.claude/protocols/algedonic.md for full protocol, trigger conditions, and
 ### Git Workflow
 - Create a feature branch before any new workstream begins
 
+### Memory Management
+
+Memory is **critical** for maintaining continuity across sessions and compaction events. Use the `pact-memory` skill or delegate to the `pact-memory-agent` for memory operations.
+
+#### When to Save Memories
+
+| Trigger | What to Save |
+|---------|--------------|
+| **Phase completion** | Context, goal, lessons learned, decisions made, entities involved |
+| **Significant decision** | Decision with full rationale and alternatives considered |
+| **Blocker resolution** | What blocked you, how it was resolved, what to avoid next time |
+| **Session wrap-up** | Comprehensive summary of work done, state of tasks, next steps |
+| **Discovery** | Non-obvious insight that would help future work |
+
+**Save threshold**: If you'd be frustrated to lose this context, save it.
+
+#### When to Search Memories
+
+| Trigger | Search For |
+|---------|------------|
+| **Session start** | Recent context for current project/feature |
+| **Post-compaction** | **CRITICAL**: Always search after compaction to recover lost context |
+| **New task** | Related past work, decisions, lessons learned |
+| **Before architecture decisions** | Past decisions on similar problems |
+| **Hitting a blocker** | Similar blockers and their resolutions |
+
+**⚠️ POST-COMPACTION PROTOCOL** (MANDATORY): When context is compacted (summarized due to token limits), you lose detailed conversation history. **You MUST immediately delegate to `pact-memory-agent`** to recover:
+1. Recent memories for current task/feature
+2. Working Memory section in CLAUDE.md
+3. Any entities or files you were working on
+
+**Failure to do this = working blind. This is non-negotiable.**
+
+#### Memory Integration with PACT
+
+| Phase | Memory Action |
+|-------|---------------|
+| **Start of cycle** | Search for relevant past context |
+| **Prepare** | Save research findings, API discoveries |
+| **Architect** | Save design decisions with rationale |
+| **Code** | Save implementation lessons, gotchas |
+| **Test** | Save test strategies, edge cases found |
+| **End of cycle** | Comprehensive session wrap-up |
+
+#### Mandatory Memory Delegation
+
+**You MUST delegate to `pact-memory-agent`** after:
+- Completing a PACT phase or significant milestone
+- Making architectural or implementation decisions
+- Resolving a blocker
+- End of any substantial work session
+
+This is **NOT optional**. Memory preservation is as critical as the work itself. Lost context = repeated work.
+
+The memory agent handles:
+- Comprehensive memory saves with proper structure
+- Memory searches with synthesis of results
+- Working Memory sync to CLAUDE.md
+- Post-compaction context recovery
+
 ### S3/S4 Operational Modes
 
 The orchestrator operates in two distinct modes. Being aware of which mode you're in improves decision-making.
@@ -265,7 +325,7 @@ When delegating a task, these specialist agents are available to execute PACT ph
 - **🗄️ pact-database-engineer** (Code): Data layer implementation
 - **⚡ pact-n8n** (Code): n8n workflow automation (requires n8n-mcp MCP server)
 - **🧪 pact-test-engineer** (Test): Testing and quality assurance
-- **🧠 pact-memory** (Skill): Persistent memory with SQLite, local embeddings, and semantic search
+- **🧠 pact-memory-agent** (Memory): Memory management, context preservation, post-compaction recovery
 
 ### How to Delegate
 

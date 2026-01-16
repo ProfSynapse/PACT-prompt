@@ -29,6 +29,7 @@ PACT_AGENTS = [
     "pact-database-engineer",
     "pact-test-engineer",
     "pact-n8n",
+    "pact-memory-agent",
 ]
 
 # Patterns indicating decisions were made
@@ -93,23 +94,23 @@ def should_prompt_memory(analysis: Dict) -> bool:
 
 def format_prompt(analysis: Dict) -> str:
     """Format the memory save prompt message."""
-    lines = ["Consider saving to memory:"]
+    lines = ["⚠️ MANDATORY: You MUST delegate to pact-memory-agent NOW to save session context:"]
 
     if analysis["agents"]:
         agent_list = ", ".join(analysis["agents"])
-        lines.append(f"- Context: PACT work with {agent_list}")
+        lines.append(f"- PACT work completed with: {agent_list}")
 
     if analysis["has_decisions"]:
-        lines.append("- Decisions: Key decisions were made this session")
+        lines.append("- Decisions made (MUST capture rationale + alternatives)")
 
     if analysis["has_lessons"]:
-        lines.append("- Lessons: Learnings detected worth preserving")
+        lines.append("- Lessons learned (MUST preserve for future sessions)")
 
     if analysis["has_blockers"]:
-        lines.append("- Blockers: Issues encountered (worth documenting)")
+        lines.append("- Blockers resolved (MUST document for next time)")
 
     lines.append("")
-    lines.append("Use the pact-memory skill to save these learnings.")
+    lines.append("This is NOT optional. Failure to save = lost context = repeated work.")
 
     return "\n".join(lines)
 
