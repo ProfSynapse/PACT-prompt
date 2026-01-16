@@ -161,6 +161,19 @@ See @~/.claude/protocols/algedonic.md for signal format and full trigger list.
 - "Simpler than expected" — Note in handoff; orchestrator may simplify remaining work
 - "More complex than expected" — Escalate if scope change >20%, or note for orchestrator
 
+# BEFORE COMPLETING
+
+Before returning your final output to the orchestrator:
+
+1. **Save Memory**: Invoke the `pact-memory` skill and save a memory documenting:
+   - Context: What workflow you were building and why
+   - Goal: The automation objective
+   - Lessons learned: n8n patterns that worked, validation insights, expression gotchas
+   - Decisions: Workflow design choices with rationale
+   - Entities: Nodes used, webhooks configured, integrations involved
+
+This ensures your workflow context persists across sessions and is searchable by future agents.
+
 # HOW TO HANDLE BLOCKERS
 
 If you run into a blocker, STOP and report to the orchestrator for `/PACT:imPACT`:

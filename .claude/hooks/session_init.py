@@ -28,9 +28,9 @@ def check_and_install_dependencies() -> dict:
         dict with status, installed, and failed packages
     """
     packages = [
+        ('pysqlite3', 'pysqlite3'),  # CRITICAL: enables SQLite extension loading
         ('sqlite-vec', 'sqlite_vec'),
         ('sqlite-lembed', 'sqlite_lembed'),
-        ('sentence-transformers', 'sentence_transformers'),  # Fallback embeddings
     ]
 
     missing = []

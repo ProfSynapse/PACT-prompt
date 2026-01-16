@@ -106,12 +106,31 @@ See @~/.claude/protocols/algedonic.md for full protocol, trigger conditions, and
 
 #### How to Delegate
 
-```
-Task tool: subagent_type="pact-memory-agent", run_in_background=true
-Prompt: "Save memory: [brief description of what to save]"
+> ⚠️ **MANDATORY**: Every `pact-memory-agent` Task call MUST include `run_in_background=true`. No exceptions.
+
+```python
+# Saving memory
+Task(
+    subagent_type="pact-memory-agent",
+    run_in_background=true,  # ← REQUIRED - never omit or set to false
+    prompt="Save memory: [context of what was done, decisions, lessons]"
+)
+
+# Searching memory
+Task(
+    subagent_type="pact-memory-agent",
+    run_in_background=true,  # ← REQUIRED - never omit or set to false
+    prompt="Search memories for: [query]"
+)
 ```
 
-The memory agent handles structure, entities, and CLAUDE.md sync. You just need to trigger it.
+**Why always background?**
+- Memory operations should never block the user conversation
+- Saves don't need immediate confirmation
+- Searches report back when ready
+- Memory agent handles its own syncing to CLAUDE.md
+
+The memory agent handles structure, entities, and CLAUDE.md sync. You just trigger it and continue working.
 
 ### S3/S4 Operational Modes
 
@@ -355,3 +374,19 @@ After agent reviews completed:
 
 ## Working Memory
 <!-- Auto-managed by pact-memory skill. Last 5 memories shown. Full history searchable via pact-memory skill. -->
+
+### 2026-01-16 12:44
+**Context**: Debugging and fixing the pact-memory skill Working Memory auto-sync to CLAUDE.md. The user reported that saving memories via the API was not updating the Working Memory section in CLAUDE.md with proper LRU (last 5) behavior. Investigation revealed the memory_api.py already had a sync_to_claude_md() function that was being called from save(), but the memory_id parameter was not being passed through the chain, so entries in CLAUDE.md could not reference back to the database. Additionally, the pact-memory-agent.md documentation was instructing the agent to manually edit CLAUDE.md after saving, which bypassed the automatic sync mechanism entirely.
+**Goal**: Fix the automatic CLAUDE.md sync mechanism so that when memories are saved via the Python API, they automatically appear in the Working Memory section with proper LRU behavior (keeping only the last 5 entries), including memory_id references.
+**Decisions**: Pass memory_id through save() to sync_to_claude_md() to _format_memory_entry(), Update agent docs to remove manual sync instructions and clarify auto-sync behavior, Simplify header format to just date/time, Identified need for deterministic enforcement of workflows via hooks
+**Lessons**: The memory_api.py already had sync_to_claude_md() function but memory_id was not being passed through save() to sync_to_claude_md() to _format_memory_entry() chain so entries could not reference back to the database, The pact-memory-agent.md documentation was telling the agent to manually edit CLAUDE.md after saving which completely bypassed the automatic sync that was already built into the API - documentation drift caused user confusion, Header format in Working Memory was truncating context redundantly - simplified to just YYYY-MM-DD HH:MM since the full context is already shown in the Context field below, Delegated edits via the Task tool do not trigger the orchestrator memory_posttool hook - the hook fires in the sub-agent context not the parent orchestrator context, Need enforcement mechanisms for critical processes like create feature branch before work - instructions in CLAUDE.md can be forgotten during long sessions or after compaction
+**Files**: .claude/skills/pact-memory/scripts/memory_api.py, pact-plugin/skills/pact-memory/scripts/memory_api.py, .claude/agents/pact-memory-agent.md, pact-plugin/agents/pact-memory-agent.md, .claude/skills/pact-memory/tests/test_working_memory.py, CLAUDE.md
+**Memory ID**: 1418e1802d0d2c3c0107fe681582d72a
+
+### 2026-01-16 | Skill cleanup: removed context-compression and filesystem-context...
+**Context**: Session focused on reviewing and cleaning up legacy skills in the PACT framework. Removed context-compression (superseded by pact-memory) and filesystem-context (patterns agents do naturally). Updated memory_posttool.py hook to use edit counter instead of restrictive per-file exclusions.
+**Goal**: Determine if context-compression and filesystem-context skills were still needed, and if not, remove them cleanly from the codebase.
+**Decisions**: Remove both context-compression and filesystem-context skills entirely, Update memory_posttool.py to use edit counter instead of per-file prompts, Soften prompt language in memory hook
+**Lessons**: Memory hooks were too restrictive - excluded .claude/, docs/, .md files; Background agents change the memory calculus - bias toward saving more; Skill consolidation requires thorough reference cleanup; Legacy patterns get absorbed into better systems; Edit counters work better than per-file triggers
+**Files**: README.md, CLAUDE.md, memory_posttool.py, wrap-up.md, pact-preparer.md, pact-protocols.md
+**Memory ID**: 37999d608c6951f1ddabc974d4c2ee06

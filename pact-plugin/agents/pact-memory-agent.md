@@ -91,22 +91,12 @@ When context has been compacted (lost to summarization):
 
 ## 4. Working Memory Sync
 
-Sync the most recent/relevant memories to the Working Memory section in CLAUDE.md:
+**AUTOMATIC**: When you save a memory using the Python API, it automatically:
+- Syncs to the Working Memory section in CLAUDE.md
+- Maintains a rolling window of the last 5 entries (LRU)
+- Includes the Memory ID for reference back to the database
 
-1. **Read** current Working Memory section
-2. **Query** for recent memories (last 5-10)
-3. **Select** most relevant for current work
-4. **Update** CLAUDE.md Working Memory section
-5. **Maintain** the rolling window (keep last 5)
-
-Format for Working Memory entries:
-```markdown
-### [Date] - [Brief Title]
-**Context**: [1-2 sentences]
-**Goal**: [Current objective]
-**Key Lessons**: [Most important 2-3 bullets]
-**Memory ID**: [For reference]
-```
+You do NOT need to manually edit CLAUDE.md. Just call `memory.save({...})` and the sync happens automatically.
 
 ## 5. Memory Cleanup
 

@@ -153,6 +153,19 @@ See @~/.claude/protocols/algedonic.md for signal format and full trigger list.
 - "Simpler than expected" — Note in handoff; orchestrator may simplify remaining work
 - "More complex than expected" — Escalate if scope change >20%, or note for orchestrator
 
+**BEFORE COMPLETING**
+
+Before returning your final output to the orchestrator:
+
+1. **Save Memory**: Invoke the `pact-memory` skill and save a memory documenting:
+   - Context: What you were researching and why
+   - Goal: The research objective
+   - Lessons learned: Key findings, surprising discoveries, research dead-ends
+   - Decisions: Technology/approach recommendations with rationale
+   - Entities: APIs, libraries, services researched
+
+This ensures your research context persists across sessions and is searchable by future agents.
+
 **HOW TO HANDLE BLOCKERS**
 
 If you run into a blocker, STOP what you're doing and report the blocker to the orchestrator, so they can take over and invoke `/PACT:imPACT`.

@@ -91,34 +91,23 @@ def _get_claude_md_path() -> Optional[Path]:
     return None
 
 
-def _format_memory_entry(memory: Dict[str, Any], files: Optional[List[str]] = None) -> str:
+def _format_memory_entry(memory: Dict[str, Any], files: Optional[List[str]] = None, memory_id: Optional[str] = None) -> str:
     """
     Format a memory as a markdown entry for CLAUDE.md.
 
     Args:
         memory: Memory dictionary with context, goal, decisions, etc.
         files: Optional list of file paths associated with this memory.
+        memory_id: Optional memory ID to include for database reference.
 
     Returns:
         Formatted markdown string for the memory entry.
     """
-    # Get date and create brief context for header
+    # Get date and time for header
     now = datetime.now(timezone.utc)
-    date_str = now.strftime("%Y-%m-%d")
+    date_str = now.strftime("%Y-%m-%d %H:%M")
 
-    # Create brief context from context or goal field
-    brief_context = ""
-    if memory.get("context"):
-        # Take first 50 chars of context as brief
-        ctx = memory["context"]
-        brief_context = ctx[:50] + "..." if len(ctx) > 50 else ctx
-    elif memory.get("goal"):
-        goal = memory["goal"]
-        brief_context = goal[:50] + "..." if len(goal) > 50 else goal
-    else:
-        brief_context = "Session memory"
-
-    lines = [f"### {date_str} | {brief_context}"]
+    lines = [f"### {date_str}"]
 
     # Add context if present
     if memory.get("context"):
@@ -155,6 +144,10 @@ def _format_memory_entry(memory: Dict[str, Any], files: Optional[List[str]] = No
     # Add files if present
     if files:
         lines.append(f"**Files**: {', '.join(files)}")
+
+    # Add memory ID if provided
+    if memory_id:
+        lines.append(f"**Memory ID**: {memory_id}")
 
     return "\n".join(lines)
 
@@ -215,7 +208,7 @@ def _parse_working_memory_section(content: str) -> tuple[str, str, str, List[str
     return before_section, WORKING_MEMORY_HEADER, after_section, existing_entries
 
 
-def sync_to_claude_md(memory: Dict[str, Any], files: Optional[List[str]] = None) -> bool:
+def sync_to_claude_md(memory: Dict[str, Any], files: Optional[List[str]] = None, memory_id: Optional[str] = None) -> bool:
     """
     Sync a memory entry to the Working Memory section of CLAUDE.md.
 
@@ -229,6 +222,7 @@ def sync_to_claude_md(memory: Dict[str, Any], files: Optional[List[str]] = None)
     Args:
         memory: Memory dictionary with context, goal, decisions, lessons_learned, etc.
         files: Optional list of file paths associated with this memory.
+        memory_id: Optional memory ID to include for database reference.
 
     Returns:
         True if sync succeeded, False otherwise.
@@ -248,7 +242,7 @@ def sync_to_claude_md(memory: Dict[str, Any], files: Optional[List[str]] = None)
             _parse_working_memory_section(content)
 
         # Format new memory entry
-        new_entry = _format_memory_entry(memory, files)
+        new_entry = _format_memory_entry(memory, files, memory_id)
 
         # Build new entries list: new entry first, then existing (up to max - 1)
         all_entries = [new_entry] + existing_entries
@@ -440,7 +434,7 @@ class PACTMemory:
         # Sync to CLAUDE.md working memory (outside db connection context)
         # This is non-critical - failures are logged but don't fail the save
         try:
-            sync_to_claude_md(memory, files_to_link if files_to_link else None)
+            sync_to_claude_md(memory, files_to_link if files_to_link else None, memory_id)
         except Exception as e:
             logger.warning(f"Failed to sync to CLAUDE.md: {e}")
 

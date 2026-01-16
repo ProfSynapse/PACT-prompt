@@ -81,9 +81,9 @@ def is_significant_edit(file_path: str) -> bool:
 def format_prompt(edit_count: int) -> str:
     """Format the memory prompt message."""
     return (
-        f"📝 Memory checkpoint: {edit_count} files edited this session. "
-        f"Consider delegating to pact-memory-agent (run in background) to save "
-        f"context, decisions, and lessons learned. The agent runs async - no workflow interruption."
+        f"📝 Memory checkpoint: {edit_count}+ files edited. "
+        f"Delegate to pact-memory-agent with run_in_background=true to save context. "
+        f"Example: Task(subagent_type='pact-memory-agent', run_in_background=true, prompt='Save memory: ...')"
     )
 
 
