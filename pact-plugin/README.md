@@ -7,50 +7,47 @@ VSM-enhanced orchestration framework for AI-assisted software development with C
 
 ## Installation
 
-### Option 1: Local Marketplace (Recommended for Development)
-
-If you've cloned the PACT-prompt repository:
+### Option 1: GitHub (Recommended - Auto-Updates)
 
 ```bash
-# Add the plugin directory as a local marketplace
-/plugin marketplace add /path/to/PACT-prompt/pact-plugin
+# Add the marketplace from GitHub
+/plugin marketplace add ProfSynapse/PACT-prompt
 
-# Install the plugin (user scope = available in all projects)
+# Install the plugin
 /plugin install pact-framework@pact-marketplace
 ```
 
-### Option 2: Let Claude Set It Up
+Enable auto-updates via `/plugin` → **Marketplaces** → select marketplace → **Enable auto-update**
 
-Give Claude this prompt in any project:
+### Option 2: Local Clone
+
+If you've cloned the repository locally:
+
+```bash
+# Add from local path
+/plugin marketplace add /path/to/PACT-prompt
+
+# Install the plugin
+/plugin install pact-framework@pact-marketplace
+```
+
+### Option 3: Let Claude Set It Up
+
+Give Claude this prompt:
 
 ```
-Set up the PACT plugin from my local clone. The plugin is located at:
-/path/to/PACT-prompt/pact-plugin
-
-Add it as a marketplace and install pact-framework to user scope so it's
-available in all my projects.
+Set up the PACT plugin from GitHub. Add ProfSynapse/PACT-prompt as a
+marketplace and install pact-framework to user scope so it's available
+in all my projects. Enable auto-updates.
 ```
-
-### Option 3: Interactive UI
-
-```
-/plugin
-```
-1. Go to **Marketplaces** tab → **Add** → paste the path to `pact-plugin/`
-2. Go to **Discover** tab → find `pact-framework` → **Install**
 
 ### Updating the Plugin
 
-After pulling updates to the repo:
+**With auto-update enabled**: Updates happen automatically on Claude Code startup.
 
+**Manual update**:
 ```
 /plugin marketplace update pact-marketplace
-```
-
-Or reinstall:
-```
-/plugin uninstall pact-framework@pact-marketplace
-/plugin install pact-framework@pact-marketplace
 ```
 
 ---
