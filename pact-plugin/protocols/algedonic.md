@@ -57,7 +57,7 @@ When emitting an algedonic signal, use this format:
 
 ### Framing Guidelines
 
-Apply the S5 Decision Framing Protocol (see @protocols/pact-s5-policy.md) when presenting algedonic signals:
+Apply the S5 Decision Framing Protocol (see [pact-s5-policy.md](pact-s5-policy.md)) when presenting algedonic signals:
 
 1. **Be specific** in evidence—file paths and line numbers when applicable
 2. **Quantify impact** when possible—"3 API endpoints affected" vs "some endpoints"
@@ -150,7 +150,7 @@ User must provide **explicit justification** that:
 
 ## Who Can Emit Algedonic Signals
 
-**Any agent** can emit algedonic signals when they recognize trigger conditions. This is part of the Autonomy Charter (see @protocols/pact-s1-autonomy.md).
+**Any agent** can emit algedonic signals when they recognize trigger conditions. This is part of the Autonomy Charter (see [pact-s1-autonomy.md](pact-s1-autonomy.md)).
 
 Agents do **NOT** need orchestrator permission to emit—the conditions themselves authorize the signal.
 
