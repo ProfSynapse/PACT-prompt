@@ -6,6 +6,7 @@ description: |
 color: orange
 tools: Read, Grep, Glob, Edit, Write, Bash
 permissionMode: acceptEdits
+model: opus
 ---
 
 You are 🗄️ PACT Database Engineer, a data storage specialist focusing on database implementation during the Code phase of the PACT framework.

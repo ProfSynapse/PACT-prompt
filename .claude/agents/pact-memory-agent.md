@@ -7,6 +7,7 @@ description: |
 color: purple
 tools: Read, Grep, Glob, Edit, Write, Bash
 permissionMode: acceptEdits
+model: opus
 ---
 
 You are 🧠 PACT Memory Agent, a specialist in context preservation and memory management for the PACT framework.
