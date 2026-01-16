@@ -4,13 +4,7 @@ PACT Memory Embedding Service
 Location: pact-plugin/skills/pact-memory/scripts/embeddings.py
 
 Embedding generation for semantic search in the PACT Memory skill.
-Supports multiple backends with graceful fallbacks:
-1. sqlite-lembed with GGUF model (preferred - local, fast, requires pysqlite3-binary)
-2. sentence-transformers (fallback - requires more deps)
-3. None (ultimate fallback - search degrades to keyword-only)
-
-Note: sqlite-lembed backend requires pysqlite3-binary because standard library
-sqlite3 has enable_load_extension disabled by default for security.
+Uses Model2Vec for fast, stable, pure-Python embeddings.
 
 Used by:
 - search.py: Generates query embeddings for semantic search
@@ -18,270 +12,58 @@ Used by:
 """
 
 import logging
-import os
 import threading
-from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple
-
-# Use the same sqlite3 module as database.py for consistency.
-# pysqlite3 has extension loading enabled, standard sqlite3 does not.
-try:
-    import pysqlite3 as sqlite3
-    _PYSQLITE3_AVAILABLE = True
-except ImportError:
-    import sqlite3
-    _PYSQLITE3_AVAILABLE = False
-
-from .config import (
-    DEFAULT_MODEL_PATH,
-    EMBEDDING_DIMENSION,
-    MODEL_URL,
-    MODELS_DIR,
-    PACT_MEMORY_DIR,
-)
+from typing import Any, Dict, List, Optional
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
-
-class EmbeddingBackend:
-    """
-    Abstract interface for embedding backends.
-
-    Implementations provide generate() method to convert text to vectors.
-    """
-
-    def generate(self, text: str) -> Optional[List[float]]:
-        """Generate embedding for text."""
-        raise NotImplementedError
-
-    def is_available(self) -> bool:
-        """Check if this backend is ready to use."""
-        raise NotImplementedError
-
-    @property
-    def name(self) -> str:
-        """Backend name for logging."""
-        raise NotImplementedError
-
-
-class SqliteLembedBackend(EmbeddingBackend):
-    """
-    Embedding backend using sqlite-lembed with GGUF model.
-
-    This is the preferred backend as it:
-    - Works locally without API calls
-    - Is fast and efficient
-    - Uses the same SQLite connection as the database
-
-    Requires pysqlite3-binary because standard library sqlite3 has
-    enable_load_extension disabled by default for security.
-    """
-
-    def __init__(self, model_path: Optional[Path] = None):
-        self._model_path = model_path or DEFAULT_MODEL_PATH
-        self._conn: Optional[sqlite3.Connection] = None
-        self._initialized = False
-        self._available: Optional[bool] = None
-
-    @property
-    def name(self) -> str:
-        return "sqlite-lembed"
-
-    def is_available(self) -> bool:
-        """Check if sqlite-lembed, pysqlite3, and model are available."""
-        if self._available is not None:
-            return self._available
-
-        # Check if pysqlite3 is available (required for extension loading)
-        if not _PYSQLITE3_AVAILABLE:
-            logger.debug(
-                "pysqlite3-binary not installed - sqlite-lembed backend unavailable. "
-                "Install with: pip install pysqlite3-binary"
-            )
-            self._available = False
-            return False
-
-        # Check if model file exists
-        if not self._model_path.exists():
-            logger.debug(f"Model file not found: {self._model_path}")
-            self._available = False
-            return False
-
-        # Try to load sqlite-lembed
-        try:
-            import sqlite_lembed
-            self._available = True
-            return True
-        except ImportError:
-            logger.debug("sqlite-lembed not installed")
-            self._available = False
-            return False
-
-    def _ensure_initialized(self) -> bool:
-        """Initialize the embedding connection if needed."""
-        if self._initialized:
-            return True
-
-        if not self.is_available():
-            return False
-
-        try:
-            import sqlite_lembed
-
-            # Create in-memory connection for embedding generation
-            # (using pysqlite3 which has extension loading enabled)
-            self._conn = sqlite3.connect(":memory:")
-            self._conn.enable_load_extension(True)
-            sqlite_lembed.load(self._conn)
-
-            # Register the model
-            self._conn.execute(
-                "INSERT INTO temp.lembed_models(name, model) VALUES (?, lembed_model_from_file(?))",
-                ("embed", str(self._model_path))
-            )
-
-            self._initialized = True
-            logger.info(f"Initialized sqlite-lembed with model: {self._model_path.name}")
-            return True
-
-        except Exception as e:
-            logger.warning(f"Failed to initialize sqlite-lembed: {e}")
-            self._available = False
-            return False
-
-    def generate(self, text: str) -> Optional[List[float]]:
-        """Generate embedding using sqlite-lembed."""
-        if not self._ensure_initialized():
-            return None
-
-        try:
-            cursor = self._conn.execute(
-                "SELECT lembed('embed', ?)",
-                (text,)
-            )
-            result = cursor.fetchone()
-            if result and result[0]:
-                # sqlite-lembed returns a blob, convert to list of floats
-                import struct
-                blob = result[0]
-                num_floats = len(blob) // 4
-                embedding = list(struct.unpack(f'{num_floats}f', blob))
-                return embedding
-            return None
-        except Exception as e:
-            logger.warning(f"Embedding generation failed: {e}")
-            return None
-
-    def close(self) -> None:
-        """Close the in-memory connection."""
-        if self._conn:
-            self._conn.close()
-            self._conn = None
-        self._initialized = False
-
-
-class SentenceTransformersBackend(EmbeddingBackend):
-    """
-    Fallback embedding backend using sentence-transformers.
-
-    Uses the same MiniLM model but through the Hugging Face library.
-    Requires more dependencies but works without sqlite-lembed.
-    """
-
-    def __init__(self, model_name: str = "all-MiniLM-L6-v2"):
-        self._model_name = model_name
-        self._model = None
-        self._available: Optional[bool] = None
-
-    @property
-    def name(self) -> str:
-        return "sentence-transformers"
-
-    def is_available(self) -> bool:
-        """Check if sentence-transformers is installed."""
-        if self._available is not None:
-            return self._available
-
-        try:
-            from sentence_transformers import SentenceTransformer
-            self._available = True
-            return True
-        except ImportError:
-            logger.debug("sentence-transformers not installed")
-            self._available = False
-            return False
-
-    def _ensure_initialized(self) -> bool:
-        """Load the model if needed."""
-        if self._model is not None:
-            return True
-
-        if not self.is_available():
-            return False
-
-        try:
-            from sentence_transformers import SentenceTransformer
-            self._model = SentenceTransformer(self._model_name)
-            logger.info(f"Loaded sentence-transformers model: {self._model_name}")
-            return True
-        except Exception as e:
-            logger.warning(f"Failed to load sentence-transformers model: {e}")
-            self._available = False
-            return False
-
-    def generate(self, text: str) -> Optional[List[float]]:
-        """Generate embedding using sentence-transformers."""
-        if not self._ensure_initialized():
-            return None
-
-        try:
-            embedding = self._model.encode(text, convert_to_numpy=True)
-            return embedding.tolist()
-        except Exception as e:
-            logger.warning(f"Embedding generation failed: {e}")
-            return None
+# Model2Vec configuration
+MODEL_NAME = "minishlab/potion-base-8M"
+EMBEDDING_DIM = 256
 
 
 class EmbeddingService:
     """
-    High-level embedding service with automatic backend selection.
+    Embedding service using Model2Vec.
 
-    Tries backends in order of preference:
-    1. sqlite-lembed (local GGUF model)
-    2. sentence-transformers (Hugging Face model)
-    3. Returns None (keyword search fallback)
+    Model2Vec provides:
+    - Pure Python (no native code crashes)
+    - Fast: 85K sentences/sec
+    - Small: 59MB model, 256-dim embeddings
+    - Auto-downloads from HuggingFace on first use
     """
 
-    def __init__(self, model_path: Optional[Path] = None):
-        """
-        Initialize the embedding service.
+    def __init__(self):
+        """Initialize the embedding service."""
+        self._model = None
+        self._available: Optional[bool] = None
 
-        Args:
-            model_path: Optional custom path to GGUF model file.
-        """
-        self._backends: List[EmbeddingBackend] = [
-            SqliteLembedBackend(model_path),
-            SentenceTransformersBackend()
-        ]
-        self._active_backend: Optional[EmbeddingBackend] = None
+    def _ensure_initialized(self) -> bool:
+        """Load the model if needed (lazy initialization)."""
+        if self._model is not None:
+            return True
 
-    def _get_backend(self) -> Optional[EmbeddingBackend]:
-        """Find the first available backend."""
-        if self._active_backend is not None:
-            return self._active_backend
+        if self._available is False:
+            return False
 
-        for backend in self._backends:
-            if backend.is_available():
-                logger.info(f"Using embedding backend: {backend.name}")
-                self._active_backend = backend
-                return backend
-
-        logger.warning(
-            "No embedding backend available. "
-            "Install sqlite-lembed or sentence-transformers for semantic search."
-        )
-        return None
+        try:
+            from model2vec import StaticModel
+            self._model = StaticModel.from_pretrained(MODEL_NAME)
+            self._available = True
+            logger.info(f"Loaded model2vec model: {MODEL_NAME}")
+            return True
+        except ImportError:
+            logger.warning(
+                "model2vec not installed. "
+                "Install for semantic search: pip install model2vec"
+            )
+            self._available = False
+            return False
+        except Exception as e:
+            logger.warning(f"Failed to load model2vec: {e}")
+            self._available = False
+            return False
 
     def generate(self, text: str) -> Optional[List[float]]:
         """
@@ -296,21 +78,39 @@ class EmbeddingService:
         if not text or not text.strip():
             return None
 
-        backend = self._get_backend()
-        if backend is None:
+        if not self._ensure_initialized():
             return None
 
-        return backend.generate(text)
+        try:
+            # model2vec.encode returns numpy array of shape (n_texts, dim)
+            embeddings = self._model.encode([text])
+            return embeddings[0].tolist()
+        except Exception as e:
+            logger.warning(f"Embedding generation failed: {e}")
+            return None
 
     def is_available(self) -> bool:
-        """Check if any embedding backend is available."""
-        return self._get_backend() is not None
+        """Check if model2vec is available."""
+        if self._available is not None:
+            return self._available
+
+        try:
+            from model2vec import StaticModel
+            self._available = True
+            return True
+        except ImportError:
+            self._available = False
+            return False
 
     @property
-    def backend_name(self) -> Optional[str]:
-        """Get the name of the active backend."""
-        backend = self._get_backend()
-        return backend.name if backend else None
+    def backend_name(self) -> str:
+        """Get the backend name."""
+        return "model2vec"
+
+    @property
+    def embedding_dimension(self) -> int:
+        """Get the embedding dimension (256 for model2vec)."""
+        return EMBEDDING_DIM
 
 
 # Module-level singleton for convenience
@@ -318,12 +118,9 @@ _lock = threading.Lock()
 _service: Optional[EmbeddingService] = None
 
 
-def get_embedding_service(model_path: Optional[Path] = None) -> EmbeddingService:
+def get_embedding_service() -> EmbeddingService:
     """
     Get the embedding service singleton.
-
-    Args:
-        model_path: Optional custom path to GGUF model.
 
     Returns:
         EmbeddingService instance.
@@ -331,7 +128,7 @@ def get_embedding_service(model_path: Optional[Path] = None) -> EmbeddingService
     global _service
     with _lock:
         if _service is None:
-            _service = EmbeddingService(model_path)
+            _service = EmbeddingService()
     return _service
 
 
@@ -339,11 +136,6 @@ def reset_embedding_service() -> None:
     """Reset the singleton instance. Useful for testing."""
     global _service
     with _lock:
-        if _service is not None:
-            # Close any open connections
-            for backend in _service._backends:
-                if hasattr(backend, 'close'):
-                    backend.close()
         _service = None
 
 
@@ -384,21 +176,16 @@ def generate_embedding_text(memory: Dict[str, Any]) -> str:
 
 def check_embedding_availability() -> Dict[str, Any]:
     """
-    Check the status of embedding backends.
+    Check the status of embedding service.
 
     Returns:
-        Dictionary with availability info for each backend.
+        Dictionary with availability info.
     """
     service = get_embedding_service()
 
     return {
         "available": service.is_available(),
-        "active_backend": service.backend_name,
-        "model_path": str(DEFAULT_MODEL_PATH),
-        "model_exists": DEFAULT_MODEL_PATH.exists(),
-        "pysqlite3_available": _PYSQLITE3_AVAILABLE,
-        "backends": {
-            "sqlite-lembed": SqliteLembedBackend().is_available(),
-            "sentence-transformers": SentenceTransformersBackend().is_available()
-        }
+        "backend": "model2vec",
+        "model": MODEL_NAME,
+        "embedding_dimension": EMBEDDING_DIM,
     }

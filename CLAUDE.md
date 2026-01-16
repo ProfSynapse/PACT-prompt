@@ -88,8 +88,9 @@ See @~/.claude/protocols/algedonic.md for full protocol, trigger conditions, and
 - You made decisions (technical, architectural, or process)
 - You learned something (gotchas, patterns, insights)
 - You resolved a problem (blockers, bugs, confusion)
-- The hook prompts you (after 3+ file edits)
 - You're unsure whether to save → **save anyway**
+
+The hook fires after every edit with contextual guidance. If you're mid-task with more edits coming, continue working. If you just completed a unit of work, save it.
 
 **The agent runs async** — it won't interrupt your workflow. When in doubt, spawn it.
 
@@ -106,31 +107,13 @@ See @~/.claude/protocols/algedonic.md for full protocol, trigger conditions, and
 
 #### How to Delegate
 
-> ⚠️ **MANDATORY**: Every `pact-memory-agent` Task call MUST include `run_in_background=true`. No exceptions.
-
-```python
-# Saving memory
-Task(
-    subagent_type="pact-memory-agent",
-    run_in_background=true,  # ← REQUIRED - never omit or set to false
-    prompt="Save memory: [context of what was done, decisions, lessons]"
-)
-
-# Searching memory
-Task(
-    subagent_type="pact-memory-agent",
-    run_in_background=true,  # ← REQUIRED - never omit or set to false
-    prompt="Search memories for: [query]"
-)
-```
-
-**Why always background?**
-- Memory operations should never block the user conversation
-- Saves don't need immediate confirmation
-- Searches report back when ready
-- Memory agent handles its own syncing to CLAUDE.md
+Delegate to `pact-memory-agent` with a clear prompt describing the operation:
+- **Save**: `"Save memory: [context of what was done, decisions, lessons]"`
+- **Search**: `"Search memories for: [query]"`
 
 The memory agent handles structure, entities, and CLAUDE.md sync. You just trigger it and continue working.
+
+See **Always Run Agents in Background** for the mandatory `run_in_background=true` requirement.
 
 ### S3/S4 Operational Modes
 
@@ -322,6 +305,25 @@ When delegating a task, these specialist agents are available to execute PACT ph
 - **🧪 pact-test-engineer** (Test): Testing and quality assurance
 - **🧠 pact-memory-agent** (Memory): Memory management, context preservation, post-compaction recovery
 
+### Always Run Agents in Background
+
+> ⚠️ **MANDATORY**: Every `Task` call to a specialist agent MUST include `run_in_background=true`. No exceptions.
+
+**Why always background?**
+- Agent work should never block the user conversation
+- The orchestrator can continue coordinating while agents execute
+- Multiple agents can run in parallel
+- Results are reported back when ready
+
+```python
+# Correct - always use run_in_background=true
+Task(
+    subagent_type="pact-backend-coder",
+    run_in_background=true,  # ← REQUIRED - never omit or set to false
+    prompt="Implement the user authentication endpoint..."
+)
+```
+
 ### How to Delegate
 
 Use these commands to trigger PACT workflows for delegating tasks:
@@ -372,21 +374,57 @@ After agent reviews completed:
 - Synthesize findings and recommendations in `docs/review/` (note agreements and conflicts)
 - Execute `/PACT:pin-memory`
 
-## Working Memory
-<!-- Auto-managed by pact-memory skill. Last 5 memories shown. Full history searchable via pact-memory skill. -->
+## Retrieved Context
+<!-- Auto-managed by pact-memory skill. Last 5 retrieved memories shown. -->
 
-### 2026-01-16 12:44
-**Context**: Debugging and fixing the pact-memory skill Working Memory auto-sync to CLAUDE.md. The user reported that saving memories via the API was not updating the Working Memory section in CLAUDE.md with proper LRU (last 5) behavior. Investigation revealed the memory_api.py already had a sync_to_claude_md() function that was being called from save(), but the memory_id parameter was not being passed through the chain, so entries in CLAUDE.md could not reference back to the database. Additionally, the pact-memory-agent.md documentation was instructing the agent to manually edit CLAUDE.md after saving, which bypassed the automatic sync mechanism entirely.
+### 2026-01-16 13:44
+**Query**: "test spacing"
+**Context**: Final cleanup test
+**Goal**: Verify simplified model2vec works
+**Memory ID**: 371e54eb283772473c15fddb4d7520b2
+
+### 2026-01-16 13:43
+**Query**: "authentication tokens"
+**Context**: Debugging and fixing the pact-memory skill's Working Memory auto-sync to CLAUDE.md. The user reported that saving memories via the API was not updating the Working Memory section in CLAUDE.md with ...
 **Goal**: Fix the automatic CLAUDE.md sync mechanism so that when memories are saved via the Python API, they automatically appear in the Working Memory section with proper LRU behavior (keeping only the last 5 entries), including memory_id references.
-**Decisions**: Pass memory_id through save() to sync_to_claude_md() to _format_memory_entry(), Update agent docs to remove manual sync instructions and clarify auto-sync behavior, Simplify header format to just date/time, Identified need for deterministic enforcement of workflows via hooks
-**Lessons**: The memory_api.py already had sync_to_claude_md() function but memory_id was not being passed through save() to sync_to_claude_md() to _format_memory_entry() chain so entries could not reference back to the database, The pact-memory-agent.md documentation was telling the agent to manually edit CLAUDE.md after saving which completely bypassed the automatic sync that was already built into the API - documentation drift caused user confusion, Header format in Working Memory was truncating context redundantly - simplified to just YYYY-MM-DD HH:MM since the full context is already shown in the Context field below, Delegated edits via the Task tool do not trigger the orchestrator memory_posttool hook - the hook fires in the sub-agent context not the parent orchestrator context, Need enforcement mechanisms for critical processes like create feature branch before work - instructions in CLAUDE.md can be forgotten during long sessions or after compaction
-**Files**: .claude/skills/pact-memory/scripts/memory_api.py, pact-plugin/skills/pact-memory/scripts/memory_api.py, .claude/agents/pact-memory-agent.md, pact-plugin/agents/pact-memory-agent.md, .claude/skills/pact-memory/tests/test_working_memory.py, CLAUDE.md
-**Memory ID**: 1418e1802d0d2c3c0107fe681582d72a
+**Memory ID**: cc770aaa3f98be4fbbe029950ad59b9b
 
-### 2026-01-16 | Skill cleanup: removed context-compression and filesystem-context...
-**Context**: Session focused on reviewing and cleaning up legacy skills in the PACT framework. Removed context-compression (superseded by pact-memory) and filesystem-context (patterns agents do naturally). Updated memory_posttool.py hook to use edit counter instead of restrictive per-file exclusions.
-**Goal**: Determine if context-compression and filesystem-context skills were still needed, and if not, remove them cleanly from the codebase.
-**Decisions**: Remove both context-compression and filesystem-context skills entirely, Update memory_posttool.py to use edit counter instead of per-file prompts, Soften prompt language in memory hook
-**Lessons**: Memory hooks were too restrictive - excluded .claude/, docs/, .md files; Background agents change the memory calculus - bias toward saving more; Skill consolidation requires thorough reference cleanup; Legacy patterns get absorbed into better systems; Edit counters work better than per-file triggers
-**Files**: README.md, CLAUDE.md, memory_posttool.py, wrap-up.md, pact-preparer.md, pact-protocols.md
-**Memory ID**: 37999d608c6951f1ddabc974d4c2ee06
+### 2026-01-16 13:43
+**Query**: "model2vec embedding"
+**Context**: Final test of Model2Vec integration
+**Goal**: Confirm stable embeddings work
+**Memory ID**: 5f08bc06dcc8bc82ecb76aa3be956641
+
+## Working Memory
+<!-- Auto-managed by pact-memory skill. Last 7 memories shown. Full history searchable via pact-memory skill. -->
+
+### 2026-01-16 13:39
+**Context**: Completed a significant cleanup of the PACT memory skill embedding infrastructure. The codebase previously supported three embedding backends: sqlite-lembed (using GGUF models), sentence-transformers (PyTorch-based), and model2vec (lightweight, numpy-based). The sqlite-lembed backend was crashing with NULL pointer dereference errors, and sentence-transformers required heavy PyTorch dependencies. After analysis, model2vec emerged as the clear winner: it auto-downloads its model from HuggingFace (no manual GGUF download needed), has minimal dependencies (just numpy), and provides reliable embeddings. This cleanup removed all deprecated code paths, simplifying the embedding system to a single, well-tested backend.
+**Goal**: Simplify the codebase by removing deprecated embedding backends (sqlite-lembed and sentence-transformers), keeping only model2vec as the single embedding solution. This reduces complexity, eliminates crash-prone code, and makes the system easier to maintain.
+**Decisions**: Removed SqliteLembedBackend class entirely, Removed SentenceTransformersBackend class, Removed GGUF model download functions from setup_memory.py, Removed download_model exports from __init__.py, Kept migration logic in session_init.py
+**Lessons**: embeddings.py went from 502 lines to 192 lines (62% reduction) - removing multiple backend classes and their fallback logic dramatically simplified the code, setup_memory.py went from 438 lines to 193 lines (56% reduction) - the GGUF model download logic was a significant portion of complexity that is no longer needed, model2vec auto-downloads its model from HuggingFace on first use - this eliminates the need for manual model download steps and the associated error handling, session_init.py was simplified by removing GGUF model download logic that ran at session start - model2vec handles its own initialization transparently, Simpler code means fewer bugs: the sqlite-lembed NULL pointer crash and sentence-transformers import failures are now impossible since that code no longer exists, Migration logic was intentionally preserved in session_init.py to handle users upgrading from old backends - this ensures a smooth transition without breaking existing setups
+**Memory ID**: 25215118ba518d7f5d797e1340936736
+
+### 2026-01-16 13:38
+**Context**: Final cleanup test
+**Goal**: Verify simplified model2vec works
+**Memory ID**: 371e54eb283772473c15fddb4d7520b2
+
+### 2026-01-16 13:35
+**Context**: Replaced the crashy sqlite-lembed embedding backend with stable Model2Vec for the PACT memory system. The sqlite-lembed library was causing Python crashes with SIGSEGV (NULL pointer dereference at address 0x0) in its native embed_single function within lembed0.dylib. This was a critical bug in the native library that made the memory system unusable. After researching alternatives, identified Model2Vec (specifically the minishlab/potion-base-8M model) as a pure-Python solution that eliminates the native code crash risk entirely. The migration required updating multiple files including embeddings.py, session_init.py, and setup_memory.py to support the new backend while keeping sqlite-lembed as a deprecated fallback.
+**Goal**: Fix the Python crashes caused by NULL pointer dereference in sqlite-lembed native code (lembed0.dylib) by migrating to a stable, pure-Python embedding solution that maintains semantic search quality for the PACT memory system.
+**Decisions**: Use potion-base-8M model (59MB, 256-dim) instead of the larger 32M variant, Added automatic migration in session_init.py to handle dimension changes transparently, Kept sqlite-lembed as deprecated fallback while making model2vec the primary backend, Updated session_init.py to install model2vec package instead of sqlite-lembed
+**Lessons**: sqlite-lembed crashes with SIGSEGV at address 0x0 in the embed_single function - this is a fundamental bug in the native library (lembed0.dylib) that cannot be worked around from Python, Model2Vec (minishlab/potion-base-8M) is a stable pure-Python alternative that completely avoids native code crash risks while providing high-quality embeddings, Model2Vec generates 256-dimensional embeddings compared to 384-dimensional from the old backends - this dimension change is important for vector database compatibility, Model2Vec is extremely fast: benchmarked at 85K sentences/second with model load time of only 0.4 seconds, making it suitable for interactive use, Model2Vec auto-downloads the model from HuggingFace on first use, so no manual model file management is needed unlike sqlite-lembed which required GGUF downloads, Embedding dimension changes require database migration: must drop the old vec_memories virtual table and re-embed all existing memories with the new dimension size
+**Memory ID**: e6d618385eab4452126560c3994a866b
+
+### 2026-01-16 13:34
+**Context**: Final test of Model2Vec integration
+**Goal**: Confirm stable embeddings work
+**Lessons**: model2vec replaces sqlite-lembed, 256-dim embeddings
+**Memory ID**: 5f08bc06dcc8bc82ecb76aa3be956641
+
+### 2026-01-16 13:32
+**Context**: Model2Vec integration complete
+**Goal**: Replace crashy sqlite-lembed with stable model2vec
+**Lessons**: Model2Vec is fast and stable, 256-dim embeddings work well
+**Memory ID**: e60dd209c21c01a91d737b52895f2893

@@ -36,5 +36,8 @@ MODEL_URL = (
 )
 
 # Embedding configuration
-EMBEDDING_DIMENSION = 384
-MODEL_SIZE_MB = 24  # Approximate size for progress reporting
+# Model2Vec (primary backend) uses 256-dim embeddings
+# sentence-transformers/sqlite-lembed use 384-dim embeddings
+# The active backend determines the actual dimension used
+EMBEDDING_DIMENSION = 256  # Default to model2vec dimension
+MODEL_SIZE_MB = 24  # Approximate size for GGUF model (sqlite-lembed fallback)

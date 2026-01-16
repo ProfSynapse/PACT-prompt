@@ -109,11 +109,29 @@ from .memory_api import (
     list_memories_simple,
 )
 
+# Working Memory (CLAUDE.md sync)
+from .working_memory import (
+    sync_to_claude_md,
+    sync_retrieved_to_claude_md,
+    WORKING_MEMORY_HEADER,
+    WORKING_MEMORY_COMMENT,
+    MAX_WORKING_MEMORIES,
+    RETRIEVED_CONTEXT_HEADER,
+    RETRIEVED_CONTEXT_COMMENT,
+    MAX_RETRIEVED_MEMORIES,
+)
+
+# Embedding Catch-up
+from .embedding_catchup import (
+    get_available_ram_mb,
+    get_unembedded_memories,
+    embed_single_memory,
+    embed_pending_memories,
+)
+
 # Setup utilities
 from .setup_memory import (
     check_dependencies,
-    download_model,
-    download_model_with_progress,
     ensure_initialized as ensure_system_initialized,
     get_setup_status,
     print_setup_status,
@@ -202,10 +220,24 @@ __all__ = [
     "search_memory",
     "list_memories_simple",
 
+    # Working Memory (CLAUDE.md sync)
+    "sync_to_claude_md",
+    "sync_retrieved_to_claude_md",
+    "WORKING_MEMORY_HEADER",
+    "WORKING_MEMORY_COMMENT",
+    "MAX_WORKING_MEMORIES",
+    "RETRIEVED_CONTEXT_HEADER",
+    "RETRIEVED_CONTEXT_COMMENT",
+    "MAX_RETRIEVED_MEMORIES",
+
+    # Embedding Catch-up
+    "get_available_ram_mb",
+    "get_unembedded_memories",
+    "embed_single_memory",
+    "embed_pending_memories",
+
     # Setup
     "check_dependencies",
-    "download_model",
-    "download_model_with_progress",
     "ensure_system_initialized",
     "get_setup_status",
     "print_setup_status",

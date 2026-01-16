@@ -1,30 +1,22 @@
 #!/usr/bin/env python3
 """
 Location: .claude/hooks/memory_posttool.py
-Summary: PostToolUse hook that prompts agent to save memory after edits.
+Summary: PostToolUse hook that reminds agent to consider saving memory after edits.
 Used by: Claude Code settings.json PostToolUse hook (Edit, Write tools)
 
 PHILOSOPHY: Bias toward saving memories. Since pact-memory-agent runs in
 background, there's no workflow interruption cost. Better to save too much
 than lose context.
 
-Tracks file edits and prompts for memory save after significant work.
-The agent decides what's worth preserving - our job is just to remind.
+Always fires after Edit/Write to provide contextual guidance. The agent
+decides based on whether they've completed a unit of work or are mid-task.
 
 Input: JSON from stdin with tool_name, tool_input, tool_output
-Output: JSON with `hookSpecificOutput.additionalContext` when threshold met
+Output: JSON with `hookSpecificOutput.additionalContext` on every edit
 """
 
 import json
-import os
 import sys
-from pathlib import Path
-
-# Track edits across hook invocations via temp file
-EDIT_COUNTER_FILE = "/tmp/pact_edit_counter.txt"
-
-# How many edits before prompting (low threshold - bias toward saving)
-EDIT_THRESHOLD = 3
 
 # Paths to truly exclude (only transient/generated files)
 EXCLUDED_PATHS = [
@@ -47,43 +39,13 @@ def is_excluded_path(file_path: str) -> bool:
     return False
 
 
-def get_edit_count() -> int:
-    """Get current edit count from temp file."""
-    try:
-        if os.path.exists(EDIT_COUNTER_FILE):
-            with open(EDIT_COUNTER_FILE, "r") as f:
-                return int(f.read().strip())
-    except (ValueError, IOError):
-        pass
-    return 0
-
-
-def set_edit_count(count: int) -> None:
-    """Set edit count in temp file."""
-    try:
-        with open(EDIT_COUNTER_FILE, "w") as f:
-            f.write(str(count))
-    except IOError:
-        pass
-
-
-def reset_edit_count() -> None:
-    """Reset edit count after prompting."""
-    set_edit_count(0)
-
-
-def is_significant_edit(file_path: str) -> bool:
-    """Determine if an edit should count toward the threshold."""
-    # Only skip truly transient files
-    return not is_excluded_path(file_path)
-
-
-def format_prompt(edit_count: int) -> str:
-    """Format the memory prompt message."""
+def format_prompt() -> str:
+    """Format the memory prompt message with contextual guidance."""
     return (
-        f"📝 Memory checkpoint: {edit_count}+ files edited. "
-        f"Delegate to pact-memory-agent with run_in_background=true to save context. "
-        f"Example: Task(subagent_type='pact-memory-agent', run_in_background=true, prompt='Save memory: ...')"
+        "📝 Memory check: If you just completed a unit of work (finished a task, "
+        "made a decision, learned something, resolved a problem), save it now. "
+        "If you're mid-task with more edits coming, continue working. "
+        "Bias: when in doubt, save."
     )
 
 
@@ -106,24 +68,18 @@ def main():
         if not file_path:
             sys.exit(0)
 
-        # Count significant edits
-        if is_significant_edit(file_path):
-            current_count = get_edit_count() + 1
-            set_edit_count(current_count)
+        # Skip transient/generated files
+        if is_excluded_path(file_path):
+            sys.exit(0)
 
-            # Prompt when threshold reached
-            if current_count >= EDIT_THRESHOLD:
-                prompt = format_prompt(current_count)
-                output = {
-                    "hookSpecificOutput": {
-                        "hookEventName": "PostToolUse",
-                        "additionalContext": prompt
-                    }
-                }
-                print(json.dumps(output))
-                # Reset counter after prompting
-                reset_edit_count()
-
+        # Always output the prompt with contextual guidance
+        output = {
+            "hookSpecificOutput": {
+                "hookEventName": "PostToolUse",
+                "additionalContext": format_prompt()
+            }
+        }
+        print(json.dumps(output))
         sys.exit(0)
 
     except Exception as e:

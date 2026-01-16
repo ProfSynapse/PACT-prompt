@@ -171,6 +171,13 @@ def _init_vector_table(conn: sqlite3.Connection) -> bool:
     Standard library sqlite3 has enable_load_extension disabled by default,
     so we check SQLITE_EXTENSIONS_ENABLED before attempting.
 
+    Note: The embedding dimension depends on the active backend:
+    - model2vec: 256 dimensions
+    - sentence-transformers/sqlite-lembed: 384 dimensions
+
+    If the dimension changes (e.g., switching backends), existing embeddings
+    will need to be regenerated. The table will be recreated with the new dimension.
+
     Args:
         conn: Active database connection.
 
@@ -199,20 +206,78 @@ def _init_vector_table(conn: sqlite3.Connection) -> bool:
             )
             return False
 
-        # Create vector table
-        conn.execute("""
+        # Get the embedding dimension from the embedding service
+        # Import here to avoid circular imports
+        from .embeddings import get_embedding_service
+        embedding_dim = get_embedding_service().embedding_dimension
+
+        # Check if table exists with different dimension and needs recreation
+        _check_and_migrate_vector_table(conn, embedding_dim)
+
+        # Create vector table with dynamic dimension
+        conn.execute(f"""
             CREATE VIRTUAL TABLE IF NOT EXISTS vec_memories USING vec0(
                 memory_id TEXT PRIMARY KEY,
                 project_id TEXT PARTITION KEY,
-                embedding float[384]
+                embedding float[{embedding_dim}]
             )
         """)
-        logger.info("Vector table created successfully (semantic search enabled)")
+        logger.info(f"Vector table ready (dimension={embedding_dim}, semantic search enabled)")
         return True
 
     except Exception as e:
         logger.warning(f"Could not create vector table: {e}. Semantic search will be unavailable.")
         return False
+
+
+def _check_and_migrate_vector_table(conn: sqlite3.Connection, new_dim: int) -> None:
+    """
+    Check if vec_memories table exists with different dimension and handle migration.
+
+    If the dimension has changed (e.g., from 384 to 256 when switching backends),
+    drop the old table so it can be recreated with the correct dimension.
+    Embeddings will need to be regenerated.
+
+    Args:
+        conn: Active database connection.
+        new_dim: The new embedding dimension to use.
+    """
+    try:
+        # Check if table exists
+        cursor = conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='vec_memories'"
+        )
+        if cursor.fetchone() is None:
+            return  # Table doesn't exist, nothing to migrate
+
+        # Try to get current dimension by checking table info
+        # sqlite-vec virtual tables don't support pragma table_info
+        # Instead, try inserting a test embedding and check for dimension mismatch
+        import struct
+        test_embedding = struct.pack(f'{new_dim}f', *([0.0] * new_dim))
+
+        try:
+            # Try a test query that would fail if dimensions don't match
+            conn.execute(
+                "SELECT memory_id FROM vec_memories WHERE embedding MATCH ? LIMIT 0",
+                (test_embedding,)
+            )
+            # If we get here, dimensions match
+            return
+        except Exception as dim_error:
+            error_str = str(dim_error).lower()
+            if "dimension" in error_str or "mismatch" in error_str or "invalid" in error_str:
+                logger.warning(
+                    f"Vector table dimension mismatch detected. "
+                    f"Dropping old table and recreating with dimension={new_dim}. "
+                    f"Existing embeddings will need to be regenerated."
+                )
+                conn.execute("DROP TABLE IF EXISTS vec_memories")
+                conn.commit()
+            # If it's a different error (e.g., empty table), just continue
+
+    except Exception as e:
+        logger.debug(f"Could not check vector table dimension: {e}")
 
 
 def ensure_initialized(conn: sqlite3.Connection) -> None:
