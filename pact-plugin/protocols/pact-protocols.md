@@ -4,7 +4,7 @@
 >
 > **Design principle**: One-liners in prompts, details here.
 >
-> **Theoretical basis**: Structure informed by Stafford Beer's Viable System Model (VSM). See @~/.claude/reference/vsm-glossary.md for full terminology.
+> **Theoretical basis**: Structure informed by Stafford Beer's Viable System Model (VSM). See @reference/vsm-glossary.md for full terminology.
 >
 > **VSM Quick Reference**: S1=Operations (specialists), S2=Coordination (conflict resolution), S3=Control (orchestrator execution), S4=Intelligence (planning/adaptation), S5=Policy (governance/user authority).
 
@@ -536,7 +536,7 @@ While specialists can invoke nested cycles autonomously, the orchestrator can al
 - Single-domain: `/PACT:rePACT backend "implement rate limiting"`
 - Multi-domain: `/PACT:rePACT "implement audit logging sub-system"`
 
-See @~/.claude/commands/PACT/rePACT.md for full command documentation.
+See @commands/PACT/rePACT.md for full command documentation.
 
 ---
 
@@ -607,7 +607,7 @@ Algedonic signals handle viability-threatening conditions that require immediate
 
 > **VSM Context**: In Beer's VSM, algedonic signals are "pain/pleasure" signals that bypass management hierarchy to reach policy level (S5) instantly.
 
-For full protocol details, see @~/.claude/protocols/algedonic.md.
+For full protocol details, see @protocols/algedonic.md.
 
 ### Quick Reference
 
