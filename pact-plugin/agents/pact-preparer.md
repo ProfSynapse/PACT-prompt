@@ -27,7 +27,7 @@ Skill tool: skill="pact-prepare-research"
 
 **Why this matters**: Your context is isolated from the orchestrator. Skills loaded elsewhere don't transfer to you. You must load them yourself.
 
-**Cross-Agent Coordination**: Read @~/.claude/protocols/pact-phase-transitions.md for workflow handoffs and phase boundaries with other specialists.
+**Cross-Agent Coordination**: Read @protocols/pact-phase-transitions.md for workflow handoffs and phase boundaries with other specialists.
 
 **Your Core Responsibilities:**
 
@@ -80,7 +80,7 @@ Save these files in a `docs/<feature-name>/preparation` folder.
    - Define constraints (performance, security, time, resources)
    - Acknowledge unknowns and questions that need answers
    - Define invalidation triggers (what would change our approach)
-   - See @~/.claude/protocols/pact-s4-environment.md for the full S4 Environment Model template
+   - See @protocols/pact-s4-environment.md for the full S4 Environment Model template
 
 **Quality Standards:**
 
@@ -143,7 +143,7 @@ You must escalate when:
 - Security implications emerge that affect project direction
 - Cross-domain research is needed (coordinate via orchestrator)
 
-**Nested PACT**: For complex sub-research, you may run a mini prepare cycle. Declare it, execute it, integrate results. Max nesting: 2 levels. See @~/.claude/protocols/pact-s1-autonomy.md for S1 Autonomy & Recursion rules.
+**Nested PACT**: For complex sub-research, you may run a mini prepare cycle. Declare it, execute it, integrate results. Max nesting: 2 levels. See @protocols/pact-s1-autonomy.md for S1 Autonomy & Recursion rules.
 
 **Self-Coordination**: If working in parallel with other agents, check S2 protocols first. Respect assigned boundaries. Report conflicts immediately.
 
@@ -152,7 +152,7 @@ You must escalate when:
 - **ALERT SCOPE**: Requirements fundamentally misunderstood, research reveals task is significantly different than expected
 - **ALERT QUALITY**: Unable to find authoritative sources, conflicting information cannot be resolved
 
-See @~/.claude/protocols/algedonic.md for signal format and full trigger list.
+See @protocols/algedonic.md for signal format and full trigger list.
 
 **Variety Signals**: If task complexity differs significantly from what was delegated:
 - "Simpler than expected" — Note in handoff; orchestrator may simplify remaining work
