@@ -536,7 +536,7 @@ While specialists can invoke nested cycles autonomously, the orchestrator can al
 - Single-domain: `/PACT:rePACT backend "implement rate limiting"`
 - Multi-domain: `/PACT:rePACT "implement audit logging sub-system"`
 
-See @commands/PACT/rePACT.md for full command documentation.
+See @commands/rePACT.md for full command documentation.
 
 ---
 
