@@ -158,7 +158,7 @@ Then use natural language or commands:
 
 ---
 
-## Skills (15 Domain Knowledge Modules)
+## Skills (13 Domain Knowledge Modules)
 
 Skills provide specialized knowledge that loads on-demand:
 
@@ -185,8 +185,6 @@ Skills provide specialized knowledge that loads on-demand:
 ### Context Management Skills
 | Skill | Triggers On |
 |-------|-------------|
-| `context-compression` | Long sessions, summarization |
-| `filesystem-context` | File-based context patterns |
 | `pact-memory` | Save/search memories, lessons learned |
 
 ---
@@ -226,7 +224,7 @@ your-project/
 ├── .claude/                    # Claude Code configuration
 │   ├── agents/                 # 7 specialist agents
 │   ├── commands/               # 8 PACT workflow commands
-│   ├── skills/                 # 15 domain knowledge skills
+│   ├── skills/                 # 13 domain knowledge skills
 │   ├── hooks/                  # Automation hooks
 │   └── protocols/              # Coordination protocols
 ├── CLAUDE.md                   # Orchestrator configuration

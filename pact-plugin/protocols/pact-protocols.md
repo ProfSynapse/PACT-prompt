@@ -966,8 +966,6 @@ Skip for simple features or when "just build it."
 
 ## Documentation Locations
 
-> **Reference Skill**: For advanced filesystem-based context patterns (scratch pads, tool output offloading, sub-agent communication via files), invoke `filesystem-context` skill.
-
 | Phase | Output Location |
 |-------|-----------------|
 | Plan | `docs/plans/` |

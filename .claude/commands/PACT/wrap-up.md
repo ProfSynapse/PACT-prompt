@@ -5,9 +5,6 @@ description: Perform end-of-session cleanup and documentation synchronization
 
 You are now entering the **Wrap-Up Phase**. Your goal is to ensure the workspace is clean and documentation is synchronized before the session ends or code is committed.
 
-> **Reference Skill**: For structured session summarization techniques, invoke `context-compression` skill.
-> Key pattern: Use "Anchored Iterative Summarization" with explicit sections for files modified, decisions made, and next steps.
-
 ## 1. Documentation Synchronization
 - **Scan** the workspace for recent code changes.
 - **Update** `docs/CHANGELOG.md` with a new entry for this session:

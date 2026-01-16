@@ -39,10 +39,6 @@ EXCLUDED_PATHS = [
     "*.tmp",
 ]
 
-# Minimum lines changed to be considered "substantial"
-MIN_LINES_THRESHOLD = 5
-
-
 def is_excluded_path(file_path: str) -> bool:
     """Check if the file path should be excluded from memory prompts."""
     for pattern in EXCLUDED_PATHS:
@@ -57,37 +53,14 @@ def is_significant_extension(file_path: str) -> bool:
     return ext in SIGNIFICANT_EXTENSIONS
 
 
-def estimate_change_size(tool_input: dict, tool_name: str) -> int:
-    """Estimate the size of the change in lines."""
-    if tool_name == "Write":
-        content = tool_input.get("content", "")
-        return content.count("\n") + 1
-    elif tool_name == "Edit":
-        new_string = tool_input.get("new_string", "")
-        old_string = tool_input.get("old_string", "")
-        # Estimate change as the difference in lines
-        new_lines = new_string.count("\n") + 1
-        old_lines = old_string.count("\n") + 1
-        return abs(new_lines - old_lines) + min(new_lines, old_lines)
-    return 0
-
-
-def is_significant_edit(file_path: str, tool_input: dict, tool_name: str) -> bool:
+def is_significant_edit(file_path: str) -> bool:
     """Determine if an edit is significant enough to prompt for memory."""
     # Skip excluded paths
     if is_excluded_path(file_path):
         return False
 
-    # Check for significant file type
-    if not is_significant_extension(file_path):
-        return False
-
-    # Check change size
-    change_size = estimate_change_size(tool_input, tool_name)
-    if change_size < MIN_LINES_THRESHOLD:
-        return False
-
-    return True
+    # Any application code edit is significant - memory agent decides what to save
+    return is_significant_extension(file_path)
 
 
 def format_prompt(file_path: str, tool_name: str) -> str:
@@ -121,7 +94,7 @@ def main():
             sys.exit(0)
 
         # Check if this edit is significant
-        if is_significant_edit(file_path, tool_input, tool_name):
+        if is_significant_edit(file_path):
             prompt = format_prompt(file_path, tool_name)
             output = {
                 "hookSpecificOutput": {
