@@ -9,7 +9,7 @@
   },
   "plugins": [
     {
-      "name": "pact-framework",
+      "name": "PACT",
       "source": "./",
       "description": "PACT Framework - VSM-enhanced orchestration with specialist agents and viability sensing",
       "version": "2.0.0",

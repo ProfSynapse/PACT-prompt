@@ -456,11 +456,11 @@ Before completing CODE phase:
 A helper script is available at `scripts/lint-check.sh` to run project linters.
 
 ```bash
-# Make executable
-chmod +x ~/.claude/skills/pact-coding-standards/scripts/lint-check.sh
+# From within the skill directory:
+chmod +x scripts/lint-check.sh
 
 # Run
-~/.claude/skills/pact-coding-standards/scripts/lint-check.sh
+./scripts/lint-check.sh
 ```
 
 ---
