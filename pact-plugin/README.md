@@ -14,7 +14,7 @@ VSM-enhanced orchestration framework for AI-assisted software development with C
 /plugin marketplace add ProfSynapse/PACT-prompt
 
 # Install the plugin
-/plugin install pact-framework@pact-marketplace
+/plugin install PACT@pact-marketplace
 ```
 
 Enable auto-updates via `/plugin` → **Marketplaces** → select marketplace → **Enable auto-update**
@@ -28,7 +28,7 @@ If you've cloned the repository locally:
 /plugin marketplace add /path/to/PACT-prompt
 
 # Install the plugin
-/plugin install pact-framework@pact-marketplace
+/plugin install PACT@pact-marketplace
 ```
 
 ### Option 3: Let Claude Set It Up
@@ -37,7 +37,7 @@ Give Claude this prompt:
 
 ```
 Set up the PACT plugin from GitHub. Add ProfSynapse/PACT-prompt as a
-marketplace and install pact-framework to user scope so it's available
+marketplace and install PACT to user scope so it's available
 in all my projects. Enable auto-updates.
 ```
 

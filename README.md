@@ -76,10 +76,10 @@ Add PACT capabilities to an existing project:
 cd your-existing-project
 
 # Install PACT as a plugin (when available on plugin store)
-claude plugins install pact-framework
+claude plugins install PACT
 
 # Or manually: clone and link
-git clone https://github.com/ProfSynapse/PACT-prompt.git ~/.claude/plugins/pact-framework
+git clone https://github.com/ProfSynapse/PACT-prompt.git ~/.claude/plugins/PACT
 ```
 
 **What you get:**
@@ -240,7 +240,7 @@ your-project/
 ```
 ~/.claude/
 ├── plugins/
-│   └── pact-framework/         # Plugin location
+│   └── PACT/         # Plugin location
 │       ├── agents/
 │       ├── commands/
 │       ├── skills/
