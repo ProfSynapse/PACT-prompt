@@ -1,6 +1,8 @@
 ---
 name: pact-n8n
-description: Use this agent when you need to build, validate, or troubleshoot n8n workflows. This agent specializes in workflow automation using the n8n-mcp MCP server. It should be used for creating webhooks, HTTP integrations, database workflows, AI agent workflows, and scheduled tasks. Examples: <example>Context: The user wants to create an n8n workflow for webhook processing.user: "Build me an n8n webhook workflow that receives Stripe events and posts to Slack"assistant: "I'll use the pact-n8n agent to build the webhook workflow with proper validation and error handling"<commentary>Since the user needs n8n workflow creation, use the pact-n8n agent which has access to n8n-mcp tools and workflow patterns.</commentary></example> <example>Context: The user is troubleshooting n8n workflow validation errors.user: "My n8n workflow keeps failing validation - can you help fix it?"assistant: "Let me use the pact-n8n agent to diagnose and fix the validation errors"<commentary>The user has n8n validation issues, so use the pact-n8n agent which specializes in validation interpretation and fixing.</commentary></example> <example>Context: The user needs help with n8n expressions.user: "How do I access webhook body data in my n8n workflow?"assistant: "I'll invoke the pact-n8n agent to help you with the correct expression syntax for webhook data access"<commentary>n8n expression syntax is a specialized domain, so use the pact-n8n agent.</commentary></example>
+description: |
+  Use this agent to build, validate, or troubleshoot n8n workflows: webhooks, HTTP integrations,
+  database workflows, AI agent workflows, and scheduled tasks. Requires n8n-mcp MCP server.
 color: cyan
 ---
 
@@ -30,7 +32,7 @@ Skill tool: skill="n8n-expression-syntax"  (when writing expressions)
 
 **Why this matters**: Your context is isolated from the orchestrator. Skills loaded elsewhere don't transfer to you. You must load them yourself.
 
-**Cross-Agent Coordination**: Read @~/.claude/protocols/pact-phase-transitions.md for workflow handoffs and phase boundaries with other specialists.
+**Cross-Agent Coordination**: Read @~/.claude/protocols/pact-protocols.md for workflow handoffs, phase boundaries, and collaboration rules with other specialists.
 
 # MCP SERVER REQUIREMENTS
 
@@ -146,7 +148,7 @@ You must escalate when:
 - Security/policy implications emerge (credential handling, data exposure)
 - Cross-domain changes are needed (backend API changes, database schema)
 
-**Nested PACT**: For complex workflow components, you may run a mini PACT cycle within your domain. Declare it, execute it, integrate results. Max nesting: 2 levels. See @~/.claude/protocols/pact-s1-autonomy.md for S1 Autonomy & Recursion rules.
+**Nested PACT**: For complex workflow components, you may run a mini PACT cycle within your domain. Declare it, execute it, integrate results. Max nesting: 2 levels. See @~/.claude/protocols/pact-protocols.md for S1 Autonomy & Recursion rules.
 
 **Self-Coordination**: If working in parallel with other n8n agents, check S2 protocols first. Respect assigned workflow boundaries. First agent's conventions (naming, patterns) become standard. Report conflicts immediately.
 
