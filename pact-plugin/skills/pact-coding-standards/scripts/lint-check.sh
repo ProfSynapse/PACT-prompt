@@ -2,7 +2,7 @@
 # ============================================================================
 # PACT Coding Standards - Lint Check Script
 # ============================================================================
-# Location: ~/.claude/skills/pact-coding-standards/scripts/lint-check.sh
+# Location: pact-coding-standards/scripts/lint-check.sh
 # Purpose: Run appropriate linter based on detected project type
 # Usage: ./lint-check.sh [directory]
 # ============================================================================
