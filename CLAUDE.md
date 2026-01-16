@@ -79,63 +79,39 @@ See @~/.claude/protocols/algedonic.md for full protocol, trigger conditions, and
 
 ### Memory Management
 
-Memory is **critical** for maintaining continuity across sessions and compaction events. Use the `pact-memory` skill or delegate to the `pact-memory-agent` for memory operations.
+**Philosophy**: Bias toward saving. The `pact-memory-agent` runs in background—no workflow interruption. Better to save too much than lose context.
 
-#### When to Save Memories
+#### When to Save (Bias: YES)
 
-| Trigger | What to Save |
-|---------|--------------|
-| **Phase completion** | Context, goal, lessons learned, decisions made, entities involved |
-| **Significant decision** | Decision with full rationale and alternatives considered |
-| **Blocker resolution** | What blocked you, how it was resolved, what to avoid next time |
-| **Session wrap-up** | Comprehensive summary of work done, state of tasks, next steps |
-| **Discovery** | Non-obvious insight that would help future work |
+**Default answer is YES.** Delegate to `pact-memory-agent` (run in background) when:
+- You completed work (any work, not just PACT phases)
+- You made decisions (technical, architectural, or process)
+- You learned something (gotchas, patterns, insights)
+- You resolved a problem (blockers, bugs, confusion)
+- The hook prompts you (after 3+ file edits)
+- You're unsure whether to save → **save anyway**
 
-**Save threshold**: If you'd be frustrated to lose this context, save it.
+**The agent runs async** — it won't interrupt your workflow. When in doubt, spawn it.
 
-#### When to Search Memories
+#### When to Search
 
-| Trigger | Search For |
-|---------|------------|
-| **Session start** | Recent context for current project/feature |
-| **Post-compaction** | **CRITICAL**: Always search after compaction to recover lost context |
-| **New task** | Related past work, decisions, lessons learned |
-| **Before architecture decisions** | Past decisions on similar problems |
-| **Hitting a blocker** | Similar blockers and their resolutions |
+| Trigger | Action |
+|---------|--------|
+| **Session start** | Search for recent context |
+| **Post-compaction** | **CRITICAL** — search immediately to recover lost context |
+| **New task** | Search for related past work |
+| **Hitting a blocker** | Search for similar issues |
 
-**⚠️ POST-COMPACTION PROTOCOL** (MANDATORY): When context is compacted (summarized due to token limits), you lose detailed conversation history. **You MUST immediately delegate to `pact-memory-agent`** to recover:
-1. Recent memories for current task/feature
-2. Working Memory section in CLAUDE.md
-3. Any entities or files you were working on
+**⚠️ POST-COMPACTION**: When context compacts, delegate to `pact-memory-agent` immediately to recover. This is non-negotiable.
 
-**Failure to do this = working blind. This is non-negotiable.**
+#### How to Delegate
 
-#### Memory Integration with PACT
+```
+Task tool: subagent_type="pact-memory-agent", run_in_background=true
+Prompt: "Save memory: [brief description of what to save]"
+```
 
-| Phase | Memory Action |
-|-------|---------------|
-| **Start of cycle** | Search for relevant past context |
-| **Prepare** | Save research findings, API discoveries |
-| **Architect** | Save design decisions with rationale |
-| **Code** | Save implementation lessons, gotchas |
-| **Test** | Save test strategies, edge cases found |
-| **End of cycle** | Comprehensive session wrap-up |
-
-#### Mandatory Memory Delegation
-
-**You MUST delegate to `pact-memory-agent`** after:
-- Completing a PACT phase or significant milestone
-- Making architectural or implementation decisions
-- Resolving a blocker
-- End of any substantial work session
-
-This is **NOT optional**. Memory preservation is as critical as the work itself. Lost context = repeated work.
-
-The memory agent handles:
-- Comprehensive memory saves with proper structure
-- Memory searches with synthesis of results
-- Working Memory sync to CLAUDE.md
-- Post-compaction context recovery
+The memory agent handles structure, entities, and CLAUDE.md sync. You just need to trigger it.
 
 ### S3/S4 Operational Modes
 

@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
 """
-Location: .claude/hooks/memory_posttool.py
-Summary: PostToolUse hook that prompts agent to save memory after significant edits.
+Location: pact-plugin/hooks/memory_posttool.py
+Summary: PostToolUse hook that prompts agent to save memory after edits.
 Used by: Claude Code settings.json PostToolUse hook (Edit, Write tools)
 
-Analyzes file edits and prompts the agent to consider saving to pact-memory
-when significant application code changes are detected.
+PHILOSOPHY: Bias toward saving memories. Since pact-memory-agent runs in
+background, there's no workflow interruption cost. Better to save too much
+than lose context.
+
+Tracks file edits and prompts for memory save after significant work.
+The agent decides what's worth preserving - our job is just to remind.
 
 Input: JSON from stdin with tool_name, tool_input, tool_output
-Output: JSON with `hookSpecificOutput.additionalContext` if edit is significant
+Output: JSON with `hookSpecificOutput.additionalContext` when threshold met
 """
 
 import json
@@ -16,28 +20,24 @@ import os
 import sys
 from pathlib import Path
 
+# Track edits across hook invocations via temp file
+EDIT_COUNTER_FILE = "/tmp/pact_edit_counter.txt"
 
-# File extensions considered "application code" (worth remembering)
-SIGNIFICANT_EXTENSIONS = {
-    ".py", ".ts", ".tsx", ".js", ".jsx",
-    ".go", ".rs", ".rb", ".java", ".kt",
-    ".c", ".cpp", ".h", ".hpp",
-    ".sh", ".bash",
-    ".sql",
-    ".tf", ".yaml", ".yml",  # Infrastructure
-}
+# How many edits before prompting (low threshold - bias toward saving)
+EDIT_THRESHOLD = 3
 
-# Paths to exclude (not worth prompting for)
+# Paths to truly exclude (only transient/generated files)
 EXCLUDED_PATHS = [
-    "CLAUDE.md",
-    "/docs/",
-    "/.claude/",
     "__pycache__",
     "node_modules",
     ".git/",
     "*.log",
     "*.tmp",
+    ".pyc",
+    "dist/",
+    "build/",
 ]
+
 
 def is_excluded_path(file_path: str) -> bool:
     """Check if the file path should be excluded from memory prompts."""
@@ -47,30 +47,43 @@ def is_excluded_path(file_path: str) -> bool:
     return False
 
 
-def is_significant_extension(file_path: str) -> bool:
-    """Check if the file has a significant extension."""
-    ext = Path(file_path).suffix.lower()
-    return ext in SIGNIFICANT_EXTENSIONS
+def get_edit_count() -> int:
+    """Get current edit count from temp file."""
+    try:
+        if os.path.exists(EDIT_COUNTER_FILE):
+            with open(EDIT_COUNTER_FILE, "r") as f:
+                return int(f.read().strip())
+    except (ValueError, IOError):
+        pass
+    return 0
+
+
+def set_edit_count(count: int) -> None:
+    """Set edit count in temp file."""
+    try:
+        with open(EDIT_COUNTER_FILE, "w") as f:
+            f.write(str(count))
+    except IOError:
+        pass
+
+
+def reset_edit_count() -> None:
+    """Reset edit count after prompting."""
+    set_edit_count(0)
 
 
 def is_significant_edit(file_path: str) -> bool:
-    """Determine if an edit is significant enough to prompt for memory."""
-    # Skip excluded paths
-    if is_excluded_path(file_path):
-        return False
-
-    # Any application code edit is significant - memory agent decides what to save
-    return is_significant_extension(file_path)
+    """Determine if an edit should count toward the threshold."""
+    # Only skip truly transient files
+    return not is_excluded_path(file_path)
 
 
-def format_prompt(file_path: str, tool_name: str) -> str:
+def format_prompt(edit_count: int) -> str:
     """Format the memory prompt message."""
-    filename = Path(file_path).name
-    action = "created" if tool_name == "Write" else "modified"
     return (
-        f"MANDATORY: Significant file {action}: {filename}. "
-        f"You MUST delegate to pact-memory-agent after completing this task to save "
-        f"context, lessons learned, and decisions. This is NOT optional."
+        f"📝 Memory checkpoint: {edit_count} files edited this session. "
+        f"Consider delegating to pact-memory-agent (run in background) to save "
+        f"context, decisions, and lessons learned. The agent runs async - no workflow interruption."
     )
 
 
@@ -93,16 +106,23 @@ def main():
         if not file_path:
             sys.exit(0)
 
-        # Check if this edit is significant
+        # Count significant edits
         if is_significant_edit(file_path):
-            prompt = format_prompt(file_path, tool_name)
-            output = {
-                "hookSpecificOutput": {
-                    "hookEventName": "PostToolUse",
-                    "additionalContext": prompt
+            current_count = get_edit_count() + 1
+            set_edit_count(current_count)
+
+            # Prompt when threshold reached
+            if current_count >= EDIT_THRESHOLD:
+                prompt = format_prompt(current_count)
+                output = {
+                    "hookSpecificOutput": {
+                        "hookEventName": "PostToolUse",
+                        "additionalContext": prompt
+                    }
                 }
-            }
-            print(json.dumps(output))
+                print(json.dumps(output))
+                # Reset counter after prompting
+                reset_edit_count()
 
         sys.exit(0)
 
