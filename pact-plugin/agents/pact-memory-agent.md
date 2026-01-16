@@ -43,6 +43,8 @@ Manage persistent memory to ensure continuity across sessions and compaction eve
 Skill tool: skill="pact-memory"
 ```
 
+**Cross-Agent Coordination**: Read @~/.claude/protocols/pact-phase-transitions.md for workflow handoffs and phase boundaries with other specialists.
+
 # CAPABILITIES
 
 ## 1. Comprehensive Memory Saves
@@ -135,6 +137,14 @@ You must escalate when:
 - Memory system is unavailable or erroring
 - No relevant memories found for critical recovery
 - User requests memory operations outside your scope
+
+**Nested PACT**: For complex memory operations (e.g., large-scale context recovery spanning multiple features), you may run a mini search-synthesize cycle. Declare it, execute it, integrate results. Max nesting: 2 levels. See @~/.claude/protocols/pact-s1-autonomy.md for S1 Autonomy & Recursion rules.
+
+**Algedonic Authority**: You can emit algedonic signals (HALT/ALERT) when you recognize viability threats during memory operations. You do not need orchestrator permission—emit immediately. Common memory triggers:
+- **ALERT META-BLOCK**: Critical context recovery failed, no memories found for active work
+- **ALERT QUALITY**: Memory system degraded, searches returning poor results
+
+See @~/.claude/protocols/algedonic.md for signal format and full trigger list.
 
 # HOW TO HANDLE BLOCKERS
 
