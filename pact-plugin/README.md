@@ -5,6 +5,56 @@
 
 VSM-enhanced orchestration framework for AI-assisted software development with Claude Code.
 
+## Installation
+
+### Option 1: Local Marketplace (Recommended for Development)
+
+If you've cloned the PACT-prompt repository:
+
+```bash
+# Add the plugin directory as a local marketplace
+/plugin marketplace add /path/to/PACT-prompt/pact-plugin
+
+# Install the plugin (user scope = available in all projects)
+/plugin install pact-framework@pact-marketplace
+```
+
+### Option 2: Let Claude Set It Up
+
+Give Claude this prompt in any project:
+
+```
+Set up the PACT plugin from my local clone. The plugin is located at:
+/path/to/PACT-prompt/pact-plugin
+
+Add it as a marketplace and install pact-framework to user scope so it's
+available in all my projects.
+```
+
+### Option 3: Interactive UI
+
+```
+/plugin
+```
+1. Go to **Marketplaces** tab → **Add** → paste the path to `pact-plugin/`
+2. Go to **Discover** tab → find `pact-framework` → **Install**
+
+### Updating the Plugin
+
+After pulling updates to the repo:
+
+```
+/plugin marketplace update pact-marketplace
+```
+
+Or reinstall:
+```
+/plugin uninstall pact-framework@pact-marketplace
+/plugin install pact-framework@pact-marketplace
+```
+
+---
+
 ## What's Included
 
 | Component | Description |
