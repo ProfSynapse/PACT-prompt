@@ -39,7 +39,8 @@
     "./agents/pact-frontend-coder.md",
     "./agents/pact-database-engineer.md",
     "./agents/pact-n8n.md",
-    "./agents/pact-test-engineer.md"
+    "./agents/pact-test-engineer.md",
+    "./agents/pact-memory-agent.md"
   ],
   "skills": "./skills/",
   "hooks": "./hooks/hooks.json"

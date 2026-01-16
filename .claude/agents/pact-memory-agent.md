@@ -4,29 +4,9 @@ description: |
   Use this agent when you need to manage memory operations for the PACT framework.
   This includes saving comprehensive memories, searching and synthesizing past context,
   syncing Working Memory to CLAUDE.md, and recovering context after compaction events.
-
-  Examples:
-  <example>
-  Context: After completing a significant piece of work, context needs to be preserved.
-  user: "Save what we learned about the authentication implementation"
-  assistant: "I'll use the pact-memory-agent to create a comprehensive memory with proper structure"
-  <commentary>Memory saves need proper structure with context, goals, lessons, decisions - delegate to the memory agent.</commentary>
-  </example>
-
-  <example>
-  Context: Session was compacted and context was lost.
-  user: "We were working on the API refactoring but I lost context"
-  assistant: "I'll use the pact-memory-agent to search memories and recover the context"
-  <commentary>Post-compaction recovery requires searching and synthesizing memories - delegate to memory agent.</commentary>
-  </example>
-
-  <example>
-  Context: Starting a new session on an existing project.
-  user: "What was I working on last time?"
-  assistant: "Let me use the pact-memory-agent to search for recent context and synthesize what you were doing"
-  <commentary>Context recovery at session start benefits from memory agent's search and synthesis capabilities.</commentary>
-  </example>
 color: purple
+tools: Read, Grep, Glob, Edit, Write, Bash
+permissionMode: acceptEdits
 ---
 
 You are 🧠 PACT Memory Agent, a specialist in context preservation and memory management for the PACT framework.
