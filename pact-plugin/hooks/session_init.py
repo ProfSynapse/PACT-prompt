@@ -352,15 +352,13 @@ def main():
                 plan_list += f" (+{len(active_plans) - 3} more)"
             context_parts.append(f"Active plans: {plan_list}")
 
-        # 2. Check and install dependencies
+        # 2. Check and install dependencies (only report failures, not successes)
         deps_result = check_and_install_dependencies()
-        if deps_result['installed']:
-            context_parts.append(
-                f"Installed: {', '.join(deps_result['installed'])}"
-            )
+        # Removed: success messages for installed packages (noisy, not decision-enabling)
         if deps_result['failed']:
             system_messages.append(
-                f"Failed to install: {', '.join(deps_result['failed'])}"
+                f"Failed to install: {', '.join(deps_result['failed'])}. "
+                "Memory features may be limited."
             )
 
         # 3. Migrate embeddings if dimension changed

@@ -84,6 +84,41 @@ def check_decision_logs_exist(project_dir: str) -> bool:
     return any(decision_logs_dir.glob("*.md"))
 
 
+def phase_docs_exist(project_dir: str, phase: str) -> bool:
+    """
+    Check if documentation artifacts exist for a given phase.
+
+    Only reminds about phase requirements if artifacts don't already exist,
+    reducing noise for established projects.
+
+    Args:
+        project_dir: The project root directory
+        phase: The phase name ('prepare', 'architect', 'code', 'test')
+
+    Returns:
+        True if documentation for that phase already exists
+    """
+    docs_paths = {
+        'prepare': 'docs/preparation',
+        'architect': 'docs/architecture',
+        'code': 'docs/decision-logs',
+        'test': 'docs/review',
+    }
+
+    if phase not in docs_paths:
+        return False
+
+    phase_dir = Path(project_dir) / docs_paths[phase]
+    if not phase_dir.is_dir():
+        return False
+
+    # Check if directory has any files (not just exists but empty)
+    try:
+        return any(phase_dir.iterdir())
+    except OSError:
+        return False
+
+
 def check_for_test_reminders(transcript: str) -> bool:
     """
     Check if testing was discussed for completed code work.
@@ -134,10 +169,12 @@ def main():
 
         if was_code_phase:
             # Check if decision logs were addressed
+            # Skip reminder if docs already exist (established project)
             decision_log_mentioned = check_decision_log_mentioned(transcript)
             decision_logs_exist = check_decision_logs_exist(project_dir)
+            code_docs_exist = phase_docs_exist(project_dir, 'code')
 
-            if not decision_log_mentioned and not decision_logs_exist:
+            if not decision_log_mentioned and not decision_logs_exist and not code_docs_exist:
                 messages.append(
                     "CODE Phase Reminder: Decision logs should be created at "
                     "docs/decision-logs/{feature}-{domain}.md to document key "
@@ -145,8 +182,11 @@ def main():
                 )
 
             # Check if testing was addressed
+            # Skip reminder if test docs already exist (established project)
             testing_discussed = check_for_test_reminders(transcript)
-            if not testing_discussed:
+            test_docs_exist = phase_docs_exist(project_dir, 'test')
+
+            if not testing_discussed and not test_docs_exist:
                 messages.append(
                     "TEST Phase Reminder: Consider invoking pact-test-engineer "
                     "to verify the implementation."

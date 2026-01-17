@@ -83,13 +83,25 @@ def analyze_transcript(transcript: str) -> Dict:
 
 
 def should_prompt_memory(analysis: Dict) -> bool:
-    """Determine if we should prompt for memory save."""
-    return bool(
-        analysis["agents"] or
-        analysis["has_decisions"] or
-        analysis["has_lessons"] or
+    """
+    Determine if we should prompt for memory save.
+
+    Logic: PACT agent work always triggers (clear signal of phase work).
+    For non-agent sessions, require 2+ signals to avoid noise from
+    single pattern matches like "because:" appearing in casual text.
+    """
+    # PACT agent invocation = always prompt (clear phase work)
+    pact_work = bool(analysis["agents"])
+    if pact_work:
+        return True
+
+    # For non-agent work, require 2+ signals to reduce false positives
+    other_signals = sum([
+        analysis["has_decisions"],
+        analysis["has_lessons"],
         analysis["has_blockers"]
-    )
+    ])
+    return other_signals >= 2
 
 
 def format_prompt(analysis: Dict) -> str:

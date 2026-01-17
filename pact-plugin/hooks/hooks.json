@@ -10,16 +10,6 @@
         ]
       }
     ],
-    "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "echo \"Current date/time: $(date '+%Y-%m-%d %H:%M:%S %Z')\""
-          }
-        ]
-      }
-    ],
     "PreToolUse": [
       {
         "matcher": "Bash",
@@ -27,6 +17,19 @@
           {
             "type": "command",
             "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/git_commit_check.py\""
+          },
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/s5-security-policy.sh\""
+          }
+        ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/s5-credential-scan.sh\""
           }
         ]
       }
@@ -41,6 +44,11 @@
           {
             "type": "command",
             "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/memory_enforce.py\""
+          },
+          {
+            "type": "prompt",
+            "prompt": "S3 Completion Check.\n\nEvaluate the agent's work:\n1. Did agent complete the assigned task?\n2. Any blockers reported needing orchestrator attention?\n3. Any algedonic signals (HALT/ALERT) that must surface?\n\nIf incomplete or blocked, return with reason.",
+            "timeout": 30000
           }
         ]
       }
