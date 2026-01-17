@@ -3,7 +3,7 @@ name: pact-templates
 description: |
   Documentation templates and formats for PACT artifacts.
   Use when: Creating decision logs, architecture docs, preparation docs, review docs.
-  Triggers on: decision log, documentation template, architecture doc, preparation doc, test report, review document
+  Triggers on: decision log, documentation template, architecture doc, preparation doc, test report, review document, orchestration log
 ---
 
 # PACT Documentation Templates
