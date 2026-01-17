@@ -14,7 +14,7 @@ Output: None (writes to tracking file for later memory association)
 import json
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 
@@ -75,7 +75,7 @@ def track_file(file_path: str, tool_name: str):
         # Update timestamp
         for f in data["files"]:
             if f["path"] == file_path:
-                f["last_modified"] = datetime.utcnow().isoformat()
+                f["last_modified"] = datetime.now(timezone.utc).isoformat()
                 f["tool"] = tool_name
                 break
     else:
@@ -83,8 +83,8 @@ def track_file(file_path: str, tool_name: str):
         data["files"].append({
             "path": file_path,
             "tool": tool_name,
-            "first_seen": datetime.utcnow().isoformat(),
-            "last_modified": datetime.utcnow().isoformat(),
+            "first_seen": datetime.now(timezone.utc).isoformat(),
+            "last_modified": datetime.now(timezone.utc).isoformat(),
         })
 
     save_tracked_files(data)
