@@ -7,7 +7,8 @@
 # Used by: hooks.json PreToolUse Write and Edit matchers
 #
 # False Positive Mitigation:
-# - Excludes docs/, test fixtures, and .md files
+# - Excludes docs/examples/, docs/templates/, docs/tutorials/, test fixtures, and .md files
+# - Does NOT exclude docs/config/, docs/deployment/ etc. (real config should be scanned)
 # - Skips credentials in comments or near example/mock indicators
 
 # Read JSON input from stdin
@@ -26,13 +27,20 @@ fi
 
 # Extract file_path and content from JSON
 # Use python3 for reliable JSON parsing (available on macOS/Linux)
-file_path=$(echo "$json_input" | python3 -c "import sys, json; data=json.load(sys.stdin); print(data.get('tool_input', {}).get('file_path', ''))" 2>/dev/null)
-content=$(echo "$json_input" | python3 -c "import sys, json; data=json.load(sys.stdin); print(data.get('tool_input', {}).get('content', '') or data.get('tool_input', {}).get('new_string', ''))" 2>/dev/null)
-
-# Fallback: if JSON parsing failed, treat entire input as content (backward compatibility)
-if [ -z "$content" ] && [ -n "$json_input" ]; then
+if ! command -v python3 &> /dev/null; then
+    echo "Warning: python3 not found, treating input as raw content for credential scanning" >&2
     content="$json_input"
     file_path=""
+else
+    file_path=$(echo "$json_input" | python3 -c "import sys, json; data=json.load(sys.stdin); print(data.get('tool_input', {}).get('file_path', ''))" 2>/dev/null)
+    content=$(echo "$json_input" | python3 -c "import sys, json; data=json.load(sys.stdin); print(data.get('tool_input', {}).get('content', '') or data.get('tool_input', {}).get('new_string', ''))" 2>/dev/null)
+
+    # Fallback: if JSON parsing failed, treat entire input as content (backward compatibility)
+    if [ -z "$content" ] && [ -n "$json_input" ]; then
+        echo "Warning: JSON parsing failed, treating input as raw content for credential scanning" >&2
+        content="$json_input"
+        file_path=""
+    fi
 fi
 
 # Exit early if no content
@@ -49,8 +57,11 @@ should_skip_path() {
     # Skip if no path provided
     [ -z "$path" ] && return 1
 
-    # Skip docs/ directory
-    if [[ "$path" == */docs/* ]] || [[ "$path" == docs/* ]]; then
+    # Skip documentation examples/templates (but NOT docs/config or docs/deployment)
+    # Rationale: Real config in docs/ directories should still be scanned for credentials
+    if [[ "$path" == */docs/examples/* ]] || [[ "$path" == docs/examples/* ]] || \
+       [[ "$path" == */docs/templates/* ]] || [[ "$path" == docs/templates/* ]] || \
+       [[ "$path" == */docs/tutorials/* ]] || [[ "$path" == docs/tutorials/* ]]; then
         return 0
     fi
 
@@ -99,20 +110,9 @@ is_example_or_comment() {
     fi
 
     # Check for example/mock/placeholder indicators (case-insensitive)
-    local lower_line
-    lower_line=$(echo "$line" | tr '[:upper:]' '[:lower:]')
-
-    if [[ "$lower_line" == *"example"* ]] || \
-       [[ "$lower_line" == *"fake"* ]] || \
-       [[ "$lower_line" == *"mock"* ]] || \
-       [[ "$lower_line" == *"test"* ]] || \
-       [[ "$lower_line" == *"placeholder"* ]] || \
-       [[ "$lower_line" == *"dummy"* ]] || \
-       [[ "$lower_line" == *"sample"* ]] || \
-       [[ "$lower_line" == *"your-"* ]] || \
-       [[ "$lower_line" == *"your_"* ]] || \
-       [[ "$lower_line" == *"xxx"* ]] || \
-       [[ "$lower_line" == *"replace"* ]]; then
+    # Use word boundaries (\b) to avoid partial matches like "contest" matching "test"
+    # Note: your- and your_ are prefixes so they don't need trailing boundary
+    if echo "$line" | grep -qiE '\b(example|fake|mock|test|placeholder|dummy|sample|xxx|replace)\b|your[-_]'; then
         return 0
     fi
 
