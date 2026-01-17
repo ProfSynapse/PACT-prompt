@@ -5,13 +5,22 @@
 # Location: pact-plugin/hooks/s5-security-policy.sh
 # Purpose: PreToolUse hook that blocks dangerous/destructive Bash commands
 # Used by: hooks.json PreToolUse Bash matcher
+#
+# Known Limitations:
+# - Pattern matching is static and cannot detect:
+#   - Commands constructed via variable interpolation (e.g., cmd="git push"; $cmd --force)
+#   - Commands split across lines in heredocs
+#   - Commands executed through eval or indirect invocation
+# - This provides defense-in-depth, not absolute prevention
+# - Users with malicious intent can bypass these checks
 
 # Read the command from tool input (passed via environment or stdin)
 # Claude passes tool arguments in TOOL_INPUT environment variable
 if [ -n "$TOOL_INPUT" ]; then
     command_text="$TOOL_INPUT"
 else
-    command_text=$(cat)
+    # Read stdin with timeout (5 seconds max) to prevent hanging
+    command_text=$(timeout 5 cat 2>/dev/null || echo "")
 fi
 
 # Exit early if no command
@@ -51,7 +60,8 @@ fi
 # === DISK/DEVICE COMMANDS ===
 
 # Block dd to system devices
-if echo "$command_text" | grep -qE 'dd\s+.*of=\s*(/dev/(sd[a-z]|hd[a-z]|nvme|vd[a-z]|loop[0-9]*))\b'; then
+# Covers: SATA/SCSI (sd*), IDE (hd*), NVMe, virtio (vd*), Xen (xvd*), SD/eMMC (mmcblk*), device mapper (dm-*), loop devices
+if echo "$command_text" | grep -qE 'dd\s+.*of=\s*/dev/(sd[a-z]|hd[a-z]|nvme[0-9]*n[0-9]*|vd[a-z]|xvd[a-z]|mmcblk[0-9]*|dm-[0-9]+|loop[0-9]*)\b'; then
     block_command "dd to system device is forbidden"
 fi
 
