@@ -70,16 +70,21 @@ fi
 # === GIT FORCE PUSH TO PROTECTED BRANCHES ===
 
 # Block force push to main/master
-if echo "$command_text" | grep -qE 'git\s+push\s+.*--force.*\s+(origin\s+)?(main|master)\b'; then
+# Pattern 1: --force flag anywhere in push command targeting main/master
+# Handles: git push --force origin main, git push origin main --force, git push origin --force main
+if echo "$command_text" | grep -qE 'git\s+push\s+.*--force' && echo "$command_text" | grep -qE 'git\s+push\s+.*(main|master)\b'; then
     block_command "Force push to main/master is forbidden"
 fi
 
-if echo "$command_text" | grep -qE 'git\s+push\s+.*-f\s+.*\s+(origin\s+)?(main|master)\b'; then
+# Pattern 2: -f short flag anywhere in push command targeting main/master
+# Handles: git push -f origin main, git push origin main -f, git push origin -f main
+if echo "$command_text" | grep -qE 'git\s+push\s+.*\s-f(\s|$)' && echo "$command_text" | grep -qE 'git\s+push\s+.*(main|master)\b'; then
     block_command "Force push to main/master is forbidden"
 fi
 
 # Block git push --force-with-lease to main/master (still dangerous)
-if echo "$command_text" | grep -qE 'git\s+push\s+.*--force-with-lease.*\s+(origin\s+)?(main|master)\b'; then
+# Handles: git push --force-with-lease origin main, git push origin main --force-with-lease
+if echo "$command_text" | grep -qE 'git\s+push\s+.*--force-with-lease' && echo "$command_text" | grep -qE 'git\s+push\s+.*(main|master)\b'; then
     block_command "Force push (with-lease) to main/master is forbidden"
 fi
 
