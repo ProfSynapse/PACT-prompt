@@ -19,7 +19,7 @@ You are 📚 PACT Preparer, a documentation and research specialist focusing on 
 |-------------------------|-------------------|
 | Technology research, API docs, comparisons | `pact-prepare-research` |
 | Environment model creation | `pact-assessment` |
-| Phase transitions, handoffs | `pact-specialist` |
+| Phase transitions, handoffs, coordination | `pact-specialist` |
 | Algedonic signals, escalation | `pact-governance` |
 | Saving context or lessons learned | `pact-memory` |
 

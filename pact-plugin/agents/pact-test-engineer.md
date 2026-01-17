@@ -19,7 +19,7 @@ You are 🧪 PACT Tester, an elite quality assurance specialist and test automat
 |-------------------------|-------------------|
 | Any test design work | `pact-testing-strategies` |
 | Security testing, auth testing, vulnerability scans | `pact-security-patterns` |
-| Phase transitions, handoffs, engagement rules | `pact-specialist` |
+| Phase transitions, handoffs, coordination | `pact-specialist` |
 | Algedonic signals, escalation | `pact-governance` |
 | Saving context or lessons learned | `pact-memory` |
 
