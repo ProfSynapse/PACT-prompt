@@ -4,7 +4,7 @@ description: |
   S1 Operations layer: Specialist autonomy, phase transitions, and blocker handling.
   Use when: Questions about agent authority, phase handoffs, nested PACT, or blockers.
   Triggers on: specialist autonomy, agent authority, nested PACT, rePACT, phase handoff,
-  test engagement, blocker protocol, scope change, S4 checkpoint
+  test engagement, blocker protocol, scope change
 ---
 
 # PACT Specialist Operations
@@ -44,19 +44,9 @@ Scope change > 20%?
 
 > **Do NOT proceed to next phase without S4 checkpoint.**
 
-At every phase boundary, verify:
-- **Environment**: Context shifted? (requirements, constraints, dependencies)
-- **Model**: Understanding valid? (assumptions, estimates)
-- **Plan**: Approach optimal? (continue / adapt / escalate)
+S4 checkpoints are required at phase boundaries. For full checkpoint procedure, format, and decision table, invoke the `pact-assessment` skill.
 
-**Format**: `S4 Checkpoint [Phase→Phase]: Environment: {stable|shifted}, Model: {aligned|diverged}, Plan: {viable|adapt|escalate}`
-
-| Finding | Action |
-|---------|--------|
-| All clear | Continue |
-| Minor drift | Note in log, continue |
-| Significant | Pause, may re-run prior phase |
-| Fundamental | Escalate to user (S5) |
+**Quick reference**: Verify Environment (context shifted?), Model (assumptions valid?), Plan (approach optimal?).
 
 ---
 
