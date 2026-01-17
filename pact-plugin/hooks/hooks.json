@@ -32,6 +32,15 @@
             "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/s5-credential-scan.sh\""
           }
         ]
+      },
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/s5-credential-scan.sh\""
+          }
+        ]
       }
     ],
     "SubagentStop": [

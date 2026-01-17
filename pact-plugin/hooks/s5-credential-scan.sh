@@ -1,17 +1,18 @@
 #!/bin/bash
-# S5 Credential Scan - Detect credentials in Write operations
+# S5 Credential Scan - Detect credentials in Write/Edit operations
 # VSM Layer: S5 (Policy)
 #
 # Location: pact-plugin/hooks/s5-credential-scan.sh
-# Purpose: PreToolUse hook that detects credentials before file writes
-# Used by: hooks.json PreToolUse Write matcher
+# Purpose: PreToolUse hook that detects credentials before file writes/edits
+# Used by: hooks.json PreToolUse Write and Edit matchers
 #
 # False Positive Mitigation:
 # - Excludes docs/, test fixtures, and .md files
 # - Skips credentials in comments or near example/mock indicators
 
 # Read JSON input from stdin
-# Format: {"tool_name": "Write", "tool_input": {"file_path": "...", "content": "..."}}
+# Format (Write): {"tool_name": "Write", "tool_input": {"file_path": "...", "content": "..."}}
+# Format (Edit):  {"tool_name": "Edit", "tool_input": {"file_path": "...", "new_string": "..."}}
 if [ -n "$TOOL_INPUT" ]; then
     json_input="$TOOL_INPUT"
 else
@@ -26,7 +27,7 @@ fi
 # Extract file_path and content from JSON
 # Use python3 for reliable JSON parsing (available on macOS/Linux)
 file_path=$(echo "$json_input" | python3 -c "import sys, json; data=json.load(sys.stdin); print(data.get('tool_input', {}).get('file_path', ''))" 2>/dev/null)
-content=$(echo "$json_input" | python3 -c "import sys, json; data=json.load(sys.stdin); print(data.get('tool_input', {}).get('content', ''))" 2>/dev/null)
+content=$(echo "$json_input" | python3 -c "import sys, json; data=json.load(sys.stdin); print(data.get('tool_input', {}).get('content', '') or data.get('tool_input', {}).get('new_string', ''))" 2>/dev/null)
 
 # Fallback: if JSON parsing failed, treat entire input as content (backward compatibility)
 if [ -z "$content" ] && [ -n "$json_input" ]; then
