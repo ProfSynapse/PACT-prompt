@@ -42,11 +42,18 @@ Manage persistent memory to ensure continuity across sessions and compaction eve
 
 **IMPORTANT**: At the start of your work, invoke the pact-memory skill to load memory operations into your context.
 
+| When Your Task Involves | Invoke This Skill |
+|-------------------------|-------------------|
+| Any memory operations | `pact-memory` |
+| Phase transitions, handoffs | `pact-specialist` |
+| Algedonic signals, escalation | `pact-governance` |
+
 ```
 Skill tool: skill="pact-memory"
+Skill tool: skill="pact-specialist"  (for coordination context)
 ```
 
-**Cross-Agent Coordination**: Read @protocols/pact-phase-transitions.md for workflow handoffs and phase boundaries with other specialists.
+**Cross-Agent Coordination**: For workflow handoffs and phase boundaries, invoke the `pact-specialist` skill.
 
 # CAPABILITIES
 
@@ -141,13 +148,13 @@ You must escalate when:
 - No relevant memories found for critical recovery
 - User requests memory operations outside your scope
 
-**Nested PACT**: For complex memory operations (e.g., large-scale context recovery spanning multiple features), you may run a mini search-synthesize cycle. Declare it, execute it, integrate results. Max nesting: 2 levels. See @protocols/pact-s1-autonomy.md for S1 Autonomy & Recursion rules.
+**Nested PACT**: For complex memory operations (e.g., large-scale context recovery spanning multiple features), you may run a mini search-synthesize cycle. Declare it, execute it, integrate results. Max nesting: 2 levels. For autonomy and recursion rules, invoke the `pact-specialist` skill.
 
 **Algedonic Authority**: You can emit algedonic signals (HALT/ALERT) when you recognize viability threats during memory operations. You do not need orchestrator permission—emit immediately. Common memory triggers:
 - **ALERT META-BLOCK**: Critical context recovery failed, no memories found for active work
 - **ALERT QUALITY**: Memory system degraded, searches returning poor results
 
-See @protocols/algedonic.md for signal format and full trigger list.
+For signal format and full trigger list, invoke the `pact-governance` skill.
 
 # HOW TO HANDLE BLOCKERS
 
