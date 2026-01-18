@@ -153,7 +153,7 @@ def main():
         sys.exit(0)
 
     except Exception as e:
-        print(f"Hook warning (memory_enforce): {e}", file=sys.stderr)
+        print(f"PACT Hook [WARNING] (memory_enforce): {e}", file=sys.stderr)
         sys.exit(0)
 
 

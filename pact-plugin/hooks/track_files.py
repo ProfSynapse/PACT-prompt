@@ -114,7 +114,7 @@ def main():
 
     except Exception as e:
         # Don't block on errors
-        print(f"Hook warning (track_files): {e}", file=sys.stderr)
+        print(f"PACT Hook [WARNING] (track_files): {e}", file=sys.stderr)
         sys.exit(0)
 
 

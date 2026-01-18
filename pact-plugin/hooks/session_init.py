@@ -393,7 +393,7 @@ def main():
         sys.exit(0)
 
     except Exception as e:
-        print(f"Hook warning (session_init): {e}", file=sys.stderr)
+        print(f"PACT Hook [WARNING] (session_init): {e}", file=sys.stderr)
         sys.exit(0)
 
 
