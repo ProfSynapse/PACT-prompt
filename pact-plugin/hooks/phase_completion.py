@@ -66,24 +66,6 @@ def check_decision_log_mentioned(transcript: str) -> bool:
     return any(mention in transcript_lower for mention in DECISION_LOG_MENTIONS)
 
 
-def check_decision_logs_exist(project_dir: str) -> bool:
-    """
-    Check if any decision logs exist in the project.
-
-    Args:
-        project_dir: The project root directory
-
-    Returns:
-        True if decision-logs directory exists and contains files
-    """
-    decision_logs_dir = Path(project_dir) / "docs" / "decision-logs"
-    if not decision_logs_dir.is_dir():
-        return False
-
-    # Check for any markdown files in the directory
-    return any(decision_logs_dir.glob("*.md"))
-
-
 def phase_docs_exist(project_dir: str, phase: str) -> bool:
     """
     Check if documentation artifacts exist for a given phase.
@@ -171,10 +153,9 @@ def main():
             # Check if decision logs were addressed
             # Skip reminder if docs already exist (established project)
             decision_log_mentioned = check_decision_log_mentioned(transcript)
-            decision_logs_exist = check_decision_logs_exist(project_dir)
-            code_docs_exist = phase_docs_exist(project_dir, 'code')
+            decision_logs_exist = phase_docs_exist(project_dir, 'code')
 
-            if not decision_log_mentioned and not decision_logs_exist and not code_docs_exist:
+            if not decision_log_mentioned and not decision_logs_exist:
                 messages.append(
                     "CODE Phase Reminder: Decision logs should be created at "
                     "docs/decision-logs/{feature}-{domain}.md to document key "
@@ -203,7 +184,7 @@ def main():
 
     except Exception as e:
         # Don't block on errors - just warn
-        print(f"Hook warning (phase_completion): {e}", file=sys.stderr)
+        print(f"PACT Hook [WARNING] (phase_completion): {e}", file=sys.stderr)
         sys.exit(0)
 
 
