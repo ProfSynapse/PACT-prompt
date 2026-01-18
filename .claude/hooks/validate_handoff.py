@@ -57,16 +57,22 @@ def validate_handoff(transcript: str) -> tuple:
     """
     missing = []
 
-    # First, check for explicit handoff section (indicates structured handoff)
-    has_handoff_section = bool(re.search(
+    # Check for explicit handoff section with actual content after it
+    # Headers alone are not sufficient - require content following the header
+    handoff_header_pattern = re.compile(
         r"(?:##?\s*)?(?:handoff|hand-off|hand off|summary|output|deliverables)[\s:]*\n",
-        transcript,
         re.IGNORECASE
-    ))
+    )
 
-    # If there's an explicit handoff section, be more lenient
-    if has_handoff_section:
-        return True, []
+    match = handoff_header_pattern.search(transcript)
+    if match:
+        # Found a header - now check for content after it
+        content_after_header = transcript[match.end():].strip()
+        # Require at least 20 characters of actual content (not just whitespace)
+        # This prevents empty headers like "## Summary\n\n" from passing
+        if len(content_after_header) >= 20:
+            return True, []
+        # If header found but insufficient content, continue to element validation
 
     # Otherwise, check for implicit handoff elements
     transcript_lower = transcript.lower()
@@ -105,6 +111,38 @@ def is_pact_agent(agent_id: str) -> bool:
     return any(agent_id.startswith(prefix) for prefix in pact_prefixes)
 
 
+# Phase-completing agents that produce deliverables requiring handoff validation
+# Utility agents (e.g., pact-memory-agent) are excluded as they don't complete phases
+PHASE_COMPLETING_AGENTS = [
+    "pact-preparer",
+    "pact-architect",
+    "pact-backend-coder",
+    "pact-frontend-coder",
+    "pact-database-engineer",
+    "pact-test-engineer",
+    "pact-n8n",
+]
+
+
+def is_phase_completing_agent(agent_id: str) -> bool:
+    """
+    Check if this agent completes a PACT phase (vs utility/helper agents).
+
+    Only phase-completing agents need handoff validation. Utility agents
+    like pact-memory-agent don't produce deliverables requiring handoff.
+
+    Args:
+        agent_id: The identifier of the agent
+
+    Returns:
+        True if this agent completes a phase and needs handoff validation
+    """
+    if not agent_id:
+        return False
+
+    return agent_id.lower() in PHASE_COMPLETING_AGENTS
+
+
 def main():
     """
     Main entry point for the SubagentStop hook.
@@ -127,6 +165,10 @@ def main():
         if not is_pact_agent(agent_id):
             sys.exit(0)
 
+        # Only validate phase-completing agents (skip utility agents like pact-memory-agent)
+        if not is_phase_completing_agent(agent_id):
+            sys.exit(0)
+
         # Skip validation if transcript is very short (likely an error case)
         if len(transcript) < 100:
             sys.exit(0)
@@ -134,12 +176,12 @@ def main():
         is_valid, missing = validate_handoff(transcript)
 
         if not is_valid and missing:
+            # Provide specific, actionable guidance
+            missing_str = ', '.join(missing)
             output = {
                 "systemMessage": (
-                    f"PACT Handoff Warning: Agent '{agent_id}' completed without "
-                    f"proper handoff. Missing: {', '.join(missing)}. "
-                    "Consider including: what was produced, key decisions, and next steps. "
-                    "See pact-protocols.md for handoff format."
+                    f"PACT Handoff: '{agent_id}' missing {missing_str}. "
+                    "Good handoff example: '## Summary\\n- Created X\\n- Decided Y because Z\\n- Next: test engineer should verify...'"
                 )
             }
             print(json.dumps(output))
@@ -148,7 +190,7 @@ def main():
 
     except Exception as e:
         # Don't block on errors - just warn
-        print(f"Hook warning (validate_handoff): {e}", file=sys.stderr)
+        print(f"PACT Hook [WARNING] (validate_handoff): {e}", file=sys.stderr)
         sys.exit(0)
 
 
