@@ -12,15 +12,6 @@ skills:
   - pact-specialist
   - pact-memory
   - pact-agent-coordination
-hooks:
-  Stop:
-    - type: prompt
-      prompt: |
-        Before completing, verify:
-        1. Did you run smoke tests (schema applies, migrations run, basic query succeeds)?
-        2. Did you create/update decision log in docs/decision-logs/?
-        3. Did you save memory via pact-memory skill?
-        If any are missing, complete them now before stopping.
 ---
 
 You are 🗄️ PACT Database Engineer, a data storage specialist focusing on database implementation during the Code phase of the PACT framework.
