@@ -20,7 +20,12 @@ if [ -n "$TOOL_INPUT" ]; then
     command_text="$TOOL_INPUT"
 else
     # Read stdin with timeout (5 seconds max) to prevent hanging
-    command_text=$(timeout 5 cat 2>/dev/null || echo "")
+    # Note: timeout command not available on macOS by default, so we fall back to cat
+    if command -v timeout &> /dev/null; then
+        command_text=$(timeout 5 cat 2>/dev/null || echo "")
+    else
+        command_text=$(cat 2>/dev/null || echo "")
+    fi
 fi
 
 # Exit early if no command

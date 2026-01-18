@@ -131,7 +131,7 @@ check_credential_pattern() {
     # Note: '--' signals end of options to grep, preventing patterns starting with '-'
     # (like '-----BEGIN PRIVATE KEY-----') from being interpreted as options
     local matches
-    matches=$(echo "$content" | grep $case_flag -- "$pattern" 2>/dev/null)
+    matches=$(echo "$content" | grep "$case_flag" -- "$pattern" 2>/dev/null)
 
     # If no matches, return false (no credential found)
     [ -z "$matches" ] && return 1
