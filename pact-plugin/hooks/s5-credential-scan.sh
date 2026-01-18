@@ -70,7 +70,9 @@ should_skip_path() {
         return 0
     fi
 
-    # Skip markdown files
+    # Skip markdown files - typically documentation, not code
+    # ACCEPTED RISK: A file like secrets.md would be missed, but this is rare
+    # and the trade-off of fewer false positives is worthwhile
     if [[ "$path" == *.md ]]; then
         return 0
     fi
@@ -193,8 +195,8 @@ fi
 
 # === PRIVATE KEYS ===
 
-# RSA/DSA/EC/OPENSSH private keys
-if check_credential_pattern '-----BEGIN (RSA |DSA |EC |OPENSSH )?PRIVATE KEY-----'; then
+# RSA/DSA/EC/OPENSSH/ENCRYPTED private keys
+if check_credential_pattern '-----BEGIN (RSA |DSA |EC |OPENSSH |ENCRYPTED )?PRIVATE KEY-----'; then
     alert_credential "Private key"
 fi
 
@@ -239,8 +241,8 @@ if check_credential_pattern 'DefaultEndpointsProtocol=https;AccountName=[^;]+;Ac
 fi
 
 # GCP service account key files (JSON with private_key)
-# Note: GCP check uses two patterns - both must match, context checked on private_key line
-if echo "$content" | grep -qE '"type"\s*:\s*"service_account"' && check_credential_pattern '"private_key"\s*:'; then
+# Both patterns must match in non-example/comment context for consistent false-positive handling
+if check_credential_pattern '"type"\s*:\s*"service_account"' && check_credential_pattern '"private_key"\s*:'; then
     alert_credential "GCP service account key"
 fi
 
