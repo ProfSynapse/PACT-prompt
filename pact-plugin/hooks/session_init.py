@@ -306,7 +306,7 @@ def setup_plugin_symlinks() -> str | None:
                 dst.unlink()
                 dst.symlink_to(src)
                 return "PACT symlinks updated"
-            return None  # Already correct
+            return "PACT symlinks verified"
         elif dst.exists():
             return None  # Real directory, don't touch
         else:
