@@ -19,6 +19,21 @@ To orchestrate is to delegate. To act alone is to deviate.
 
 ---
 
+## Guidelines
+
+### Context Management
+- **ALWAYS** read `CLAUDE.md` at session start to understand project structure, current state, and navigation
+- Update `CLAUDE.md` when:
+  - Adding new components or modules
+  - Changing system architecture
+  - Completing major features
+  - Discovering important patterns or constraints
+
+### Git Workflow
+- Create a feature branch before any new workstream begins
+
+---
+
 ## PACT Framework Principles
 
 ### 📋 PREPARE Phase Principles
