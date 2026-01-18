@@ -18,8 +18,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 
-# Directory for tracking data
-TRACKING_DIR = Path.home() / ".claude" / "pact-memory" / "session-tracking"
+# Directory for tracking data (configurable via PACT_MEMORY_DIR environment variable)
+TRACKING_DIR = Path(os.environ.get("PACT_MEMORY_DIR", Path.home() / ".claude" / "pact-memory")) / "session-tracking"
 
 
 def ensure_tracking_dir():

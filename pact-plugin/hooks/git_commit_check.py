@@ -18,9 +18,10 @@ import json
 import subprocess
 import re
 from pathlib import Path
+from typing import List, Tuple
 
 
-def get_staged_files():
+def get_staged_files() -> List[str]:
     """Returns a list of staged files."""
     try:
         result = subprocess.run(
@@ -34,7 +35,7 @@ def get_staged_files():
         return []
 
 
-def get_staged_file_content(filename):
+def get_staged_file_content(filename: str) -> str:
     """Returns the content of a staged file."""
     try:
         result = subprocess.run(
@@ -48,7 +49,7 @@ def get_staged_file_content(filename):
         return ""
 
 
-def check_security(staged_files):
+def check_security(staged_files: List[str]) -> List[str]:
     """
     Check for basic security violations in staged files.
 
@@ -94,7 +95,7 @@ def check_security(staged_files):
     return errors
 
 
-def check_frontend_credentials(staged_files):
+def check_frontend_credentials(staged_files: List[str]) -> List[str]:
     """
     SACROSANCT Rule 2: Check for credential exposure in frontend code.
 
@@ -149,7 +150,7 @@ def check_frontend_credentials(staged_files):
     return errors
 
 
-def check_direct_api_calls(staged_files):
+def check_direct_api_calls(staged_files: List[str]) -> List[str]:
     """
     SACROSANCT Rule 2: Warn about potential direct API calls from frontend.
 
@@ -204,7 +205,7 @@ def check_direct_api_calls(staged_files):
     return warnings
 
 
-def check_env_file_in_gitignore():
+def check_env_file_in_gitignore() -> Tuple[bool, str | None]:
     """
     Verify .env files are listed in .gitignore.
 
@@ -236,7 +237,7 @@ def check_env_file_in_gitignore():
         return False, "Warning: Could not read .gitignore file."
 
 
-def is_example_password(line):
+def is_example_password(line: str) -> bool:
     """
     Check if a line containing a password pattern appears to be an example/mock value.
 
@@ -277,7 +278,7 @@ def is_example_password(line):
     return False
 
 
-def check_hardcoded_secrets(staged_files):
+def check_hardcoded_secrets(staged_files: List[str]) -> List[str]:
     """
     Check for hardcoded secrets and API keys in code.
 

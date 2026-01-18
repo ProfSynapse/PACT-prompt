@@ -42,36 +42,60 @@ HANDOFF_ELEMENTS = {
         ],
         "description": "next steps/needs",
     },
+    "s4_checkpoint": {
+        "patterns": [
+            r"S4 checkpoint",
+            r"environment.*stable",
+            r"model.*aligned",
+            r"plan.*viable",
+        ],
+        "description": "S4 checkpoint documentation (required for phase-completing agents)",
+    },
 }
 
 
-def validate_handoff(transcript: str) -> tuple:
+def validate_handoff(transcript: str, check_s4_checkpoint: bool = False) -> tuple:
     """
     Check if transcript contains proper handoff elements.
 
     Args:
         transcript: The agent's complete output/transcript
+        check_s4_checkpoint: If True, also validate S4 checkpoint documentation
 
     Returns:
         Tuple of (is_valid, missing_elements)
     """
     missing = []
 
-    # First, check for explicit handoff section (indicates structured handoff)
-    has_handoff_section = bool(re.search(
+    # Check for explicit handoff section with actual content after it
+    # Headers alone are not sufficient - require content following the header
+    handoff_header_pattern = re.compile(
         r"(?:##?\s*)?(?:handoff|hand-off|hand off|summary|output|deliverables)[\s:]*\n",
-        transcript,
         re.IGNORECASE
-    ))
+    )
 
-    # If there's an explicit handoff section, be more lenient
-    if has_handoff_section:
-        return True, []
+    match = handoff_header_pattern.search(transcript)
+    if match:
+        # Found a header - now check for content after it
+        content_after_header = transcript[match.end():].strip()
+        # Require at least 20 characters of actual content (not just whitespace)
+        # This prevents empty headers like "## Summary\n\n" from passing
+        if len(content_after_header) >= 20:
+            # Even with a valid header, check S4 checkpoint if required
+            if check_s4_checkpoint:
+                s4_missing = validate_s4_checkpoint(transcript)
+                if s4_missing:
+                    return False, [s4_missing]
+            return True, []
+        # If header found but insufficient content, continue to element validation
 
     # Otherwise, check for implicit handoff elements
     transcript_lower = transcript.lower()
 
-    for element_key, element_info in HANDOFF_ELEMENTS.items():
+    # Determine which elements to check (exclude s4_checkpoint from general check)
+    elements_to_check = {k: v for k, v in HANDOFF_ELEMENTS.items() if k != "s4_checkpoint"}
+
+    for element_key, element_info in elements_to_check.items():
         found = False
         for pattern in element_info["patterns"]:
             if re.search(pattern, transcript_lower):
@@ -81,11 +105,42 @@ def validate_handoff(transcript: str) -> tuple:
         if not found:
             missing.append(element_info["description"])
 
-    # Consider valid if at least 2 out of 3 elements are present
-    # (some agents may not have explicit decisions if straightforward)
-    is_valid = len(missing) <= 1
+    # Check S4 checkpoint separately if required
+    if check_s4_checkpoint:
+        s4_missing = validate_s4_checkpoint(transcript)
+        if s4_missing:
+            missing.append(s4_missing)
+
+    # Consider valid if at most 1 element is missing from the base elements
+    # S4 checkpoint missing counts as a separate validation failure
+    base_missing = [m for m in missing if "S4 checkpoint" not in m]
+    s4_missing_in_list = any("S4 checkpoint" in m for m in missing)
+
+    # Valid if: base elements mostly present AND (S4 not required OR S4 present)
+    is_valid = len(base_missing) <= 1 and not s4_missing_in_list
 
     return is_valid, missing
+
+
+def validate_s4_checkpoint(transcript: str) -> str | None:
+    """
+    Check if transcript contains S4 checkpoint documentation.
+
+    Args:
+        transcript: The agent's complete output/transcript
+
+    Returns:
+        Error description if S4 checkpoint is missing, None if present
+    """
+    transcript_lower = transcript.lower()
+    s4_info = HANDOFF_ELEMENTS.get("s4_checkpoint", {})
+    patterns = s4_info.get("patterns", [])
+
+    for pattern in patterns:
+        if re.search(pattern, transcript_lower, re.IGNORECASE):
+            return None  # Found S4 checkpoint
+
+    return s4_info.get("description", "S4 checkpoint documentation")
 
 
 def is_pact_agent(agent_id: str) -> bool:
@@ -103,6 +158,65 @@ def is_pact_agent(agent_id: str) -> bool:
 
     pact_prefixes = ["pact-", "PACT-", "pact_", "PACT_"]
     return any(agent_id.startswith(prefix) for prefix in pact_prefixes)
+
+
+# Phase-completing agents that produce deliverables requiring handoff validation
+# Utility agents (e.g., pact-memory-agent) are excluded as they don't complete phases
+PHASE_COMPLETING_AGENTS = [
+    "pact-preparer",
+    "pact-architect",
+    "pact-backend-coder",
+    "pact-frontend-coder",
+    "pact-database-engineer",
+    "pact-test-engineer",
+    "pact-n8n",
+]
+
+# Agents that transition between PACT phases and require S4 checkpoint documentation
+# These agents complete PREPARE or ARCHITECT phases, triggering S4 checkpoint review
+PHASE_TRANSITION_AGENTS = [
+    "pact-preparer",
+    "pact-architect",
+]
+
+
+def is_phase_completing_agent(agent_id: str) -> bool:
+    """
+    Check if this agent completes a PACT phase (vs utility/helper agents).
+
+    Only phase-completing agents need handoff validation. Utility agents
+    like pact-memory-agent don't produce deliverables requiring handoff.
+
+    Args:
+        agent_id: The identifier of the agent
+
+    Returns:
+        True if this agent completes a phase and needs handoff validation
+    """
+    if not agent_id:
+        return False
+
+    return agent_id.lower() in PHASE_COMPLETING_AGENTS
+
+
+def requires_s4_checkpoint(agent_id: str) -> bool:
+    """
+    Check if this agent requires S4 checkpoint documentation.
+
+    Phase-transition agents (pact-preparer, pact-architect) complete phases
+    that trigger S4 checkpoint review, so their handoffs should include
+    S4 checkpoint information.
+
+    Args:
+        agent_id: The identifier of the agent
+
+    Returns:
+        True if this agent requires S4 checkpoint documentation
+    """
+    if not agent_id:
+        return False
+
+    return agent_id.lower() in PHASE_TRANSITION_AGENTS
 
 
 def main():
@@ -127,19 +241,26 @@ def main():
         if not is_pact_agent(agent_id):
             sys.exit(0)
 
+        # Only validate phase-completing agents (skip utility agents like pact-memory-agent)
+        if not is_phase_completing_agent(agent_id):
+            sys.exit(0)
+
         # Skip validation if transcript is very short (likely an error case)
         if len(transcript) < 100:
             sys.exit(0)
 
-        is_valid, missing = validate_handoff(transcript)
+        # Check if this agent requires S4 checkpoint documentation
+        check_s4 = requires_s4_checkpoint(agent_id)
+
+        is_valid, missing = validate_handoff(transcript, check_s4_checkpoint=check_s4)
 
         if not is_valid and missing:
+            # Provide specific, actionable guidance
+            missing_str = ', '.join(missing)
             output = {
                 "systemMessage": (
-                    f"PACT Handoff Warning: Agent '{agent_id}' completed without "
-                    f"proper handoff. Missing: {', '.join(missing)}. "
-                    "Consider including: what was produced, key decisions, and next steps. "
-                    "See pact-protocols.md for handoff format."
+                    f"PACT Handoff: '{agent_id}' missing {missing_str}. "
+                    "Good handoff example: '## Summary\\n- Created X\\n- Decided Y because Z\\n- Next: test engineer should verify...'"
                 )
             }
             print(json.dumps(output))
@@ -148,7 +269,7 @@ def main():
 
     except Exception as e:
         # Don't block on errors - just warn
-        print(f"Hook warning (validate_handoff): {e}", file=sys.stderr)
+        print(f"PACT Hook [WARNING] (validate_handoff): {e}", file=sys.stderr)
         sys.exit(0)
 
 
