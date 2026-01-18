@@ -123,6 +123,31 @@ Wait for orchestrator. Do not continue guessing.
 
 ---
 
+## Algedonic Signals (Viability Threats)
+
+When you detect a viability threat (security breach, data risk, ethics issue), emit an algedonic signal that bypasses normal orchestration and goes directly to user.
+
+**Signal Levels:**
+- **HALT** (SECURITY, DATA, ETHICS): All work stops
+- **ALERT** (QUALITY, SCOPE, META-BLOCK): Work pauses
+
+**Signal Format:**
+```
+⚠️ ALGEDONIC [HALT|ALERT]: {Category}
+
+**Issue**: {One-line description}
+**Evidence**: {File, line, specific observation}
+**Impact**: {Why this threatens viability}
+**Confidence**: [HIGH|MEDIUM|LOW]
+**Recommended Action**: {Concrete next step}
+```
+
+**Any agent can emit.** Orchestrator MUST surface to user immediately—cannot suppress or delay.
+
+For full algedonic protocol: see `pact-governance` skill.
+
+---
+
 ## Parallel Work
 
 When working in parallel with other agents, follow the `pact-agent-coordination` skill.
