@@ -57,16 +57,22 @@ def validate_handoff(transcript: str) -> tuple:
     """
     missing = []
 
-    # First, check for explicit handoff section (indicates structured handoff)
-    has_handoff_section = bool(re.search(
+    # Check for explicit handoff section with actual content after it
+    # Headers alone are not sufficient - require content following the header
+    handoff_header_pattern = re.compile(
         r"(?:##?\s*)?(?:handoff|hand-off|hand off|summary|output|deliverables)[\s:]*\n",
-        transcript,
         re.IGNORECASE
-    ))
+    )
 
-    # If there's an explicit handoff section, be more lenient
-    if has_handoff_section:
-        return True, []
+    match = handoff_header_pattern.search(transcript)
+    if match:
+        # Found a header - now check for content after it
+        content_after_header = transcript[match.end():].strip()
+        # Require at least 20 characters of actual content (not just whitespace)
+        # This prevents empty headers like "## Summary\n\n" from passing
+        if len(content_after_header) >= 20:
+            return True, []
+        # If header found but insufficient content, continue to element validation
 
     # Otherwise, check for implicit handoff elements
     transcript_lower = transcript.lower()
@@ -184,7 +190,7 @@ def main():
 
     except Exception as e:
         # Don't block on errors - just warn
-        print(f"Hook warning (validate_handoff): {e}", file=sys.stderr)
+        print(f"PACT Hook [WARNING] (validate_handoff): {e}", file=sys.stderr)
         sys.exit(0)
 
 
