@@ -44,19 +44,22 @@ Manage persistent memory to ensure continuity across sessions and compaction eve
 
 # REQUIRED SKILLS
 
-**IMPORTANT**: At the start of your work, invoke the pact-memory skill to load memory operations into your context.
+**Auto-loaded** (from frontmatter - available immediately):
+- `pact-memory` — Memory operations, context preservation, Working Memory sync
+- `pact-specialist` — Phase transitions, autonomy, blockers
+- `pact-agent-coordination` — Parallel work, domain boundaries
 
+**Invoke when needed** (not auto-loaded):
 | When Your Task Involves | Invoke This Skill |
 |-------------------------|-------------------|
-| Any memory operations | `pact-memory` |
-| Parallel work with other agents | `pact-agent-coordination` |
-| Phase transitions, handoffs, coordination | `pact-specialist` |
 | Algedonic signals, escalation | `pact-governance` |
 
+**How to invoke conditional skills**:
 ```
-Skill tool: skill="pact-memory"
-Skill tool: skill="pact-specialist"  (for coordination context)
+Skill tool: skill="pact-governance"  (if emitting algedonic signals)
 ```
+
+**Why this matters**: Your context is isolated from the orchestrator. Auto-loaded skills are ready; conditional skills must be invoked explicitly.
 
 **Cross-Agent Coordination**: For workflow handoffs and phase boundaries, invoke the `pact-specialist` skill.
 
