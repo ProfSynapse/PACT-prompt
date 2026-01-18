@@ -20,9 +20,6 @@ import os
 import subprocess
 from pathlib import Path
 
-# Configurable RAM threshold for embedding operations (default: 500MB)
-MIN_RAM_MB = float(os.environ.get('PACT_MIN_RAM_MB', '500.0'))
-
 
 def check_and_install_dependencies() -> dict:
     """
@@ -249,7 +246,7 @@ def maybe_embed_pending() -> dict:
                 sys.path.remove(str(scripts_dir.parent))
 
         # Process pending embeddings
-        embed_result = embed_pending_memories(min_ram_mb=MIN_RAM_MB, limit=20)
+        embed_result = embed_pending_memories(min_ram_mb=500.0, limit=20)
 
         if embed_result.get("skipped_ram"):
             result["status"] = "skipped_ram"

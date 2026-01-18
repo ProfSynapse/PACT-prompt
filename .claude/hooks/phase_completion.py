@@ -66,39 +66,22 @@ def check_decision_log_mentioned(transcript: str) -> bool:
     return any(mention in transcript_lower for mention in DECISION_LOG_MENTIONS)
 
 
-def phase_docs_exist(project_dir: str, phase: str) -> bool:
+def check_decision_logs_exist(project_dir: str) -> bool:
     """
-    Check if documentation artifacts exist for a given phase.
-
-    Only reminds about phase requirements if artifacts don't already exist,
-    reducing noise for established projects.
+    Check if any decision logs exist in the project.
 
     Args:
         project_dir: The project root directory
-        phase: The phase name ('prepare', 'architect', 'code', 'test')
 
     Returns:
-        True if documentation for that phase already exists
+        True if decision-logs directory exists and contains files
     """
-    docs_paths = {
-        'prepare': 'docs/preparation',
-        'architect': 'docs/architecture',
-        'code': 'docs/decision-logs',
-        'test': 'docs/review',
-    }
-
-    if phase not in docs_paths:
+    decision_logs_dir = Path(project_dir) / "docs" / "decision-logs"
+    if not decision_logs_dir.is_dir():
         return False
 
-    phase_dir = Path(project_dir) / docs_paths[phase]
-    if not phase_dir.is_dir():
-        return False
-
-    # Check if directory has any files (not just exists but empty)
-    try:
-        return any(phase_dir.iterdir())
-    except OSError:
-        return False
+    # Check for any markdown files in the directory
+    return any(decision_logs_dir.glob("*.md"))
 
 
 def check_for_test_reminders(transcript: str) -> bool:
@@ -151,9 +134,8 @@ def main():
 
         if was_code_phase:
             # Check if decision logs were addressed
-            # Skip reminder if docs already exist (established project)
             decision_log_mentioned = check_decision_log_mentioned(transcript)
-            decision_logs_exist = phase_docs_exist(project_dir, 'code')
+            decision_logs_exist = check_decision_logs_exist(project_dir)
 
             if not decision_log_mentioned and not decision_logs_exist:
                 messages.append(
@@ -163,11 +145,8 @@ def main():
                 )
 
             # Check if testing was addressed
-            # Skip reminder if test docs already exist (established project)
             testing_discussed = check_for_test_reminders(transcript)
-            test_docs_exist = phase_docs_exist(project_dir, 'test')
-
-            if not testing_discussed and not test_docs_exist:
+            if not testing_discussed:
                 messages.append(
                     "TEST Phase Reminder: Consider invoking pact-test-engineer "
                     "to verify the implementation."
@@ -184,7 +163,7 @@ def main():
 
     except Exception as e:
         # Don't block on errors - just warn
-        print(f"PACT Hook [WARNING] (phase_completion): {e}", file=sys.stderr)
+        print(f"Hook warning (phase_completion): {e}", file=sys.stderr)
         sys.exit(0)
 
 

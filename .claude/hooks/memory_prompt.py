@@ -15,18 +15,9 @@ Output: JSON with `systemMessage` prompting to save memory if relevant content f
 """
 
 import json
-import os
 import re
 import sys
 from typing import Dict, List
-
-
-# Minimum transcript length threshold for memory prompt consideration.
-# Very short sessions (quick questions, simple lookups) rarely contain
-# memory-worthy content. This threshold filters noise without missing
-# substantive work. Override via environment variable for testing or
-# projects with different verbosity patterns.
-MIN_TRANSCRIPT_LENGTH = int(os.environ.get('PACT_MIN_TRANSCRIPT_LENGTH', '500'))
 
 
 # PACT agent patterns indicating phase work
@@ -135,7 +126,7 @@ def main():
         transcript = input_data.get("transcript", "")
 
         # Skip if no transcript or very short session
-        if not transcript or len(transcript) < MIN_TRANSCRIPT_LENGTH:
+        if not transcript or len(transcript) < 500:
             sys.exit(0)
 
         analysis = analyze_transcript(transcript)

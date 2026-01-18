@@ -19,6 +19,9 @@ import subprocess
 import re
 from pathlib import Path
 
+# Hook version for tracking updates
+HOOK_VERSION = "1.1.0"
+
 
 def get_staged_files():
     """Returns a list of staged files."""
@@ -236,47 +239,6 @@ def check_env_file_in_gitignore():
         return False, "Warning: Could not read .gitignore file."
 
 
-def is_example_password(line):
-    """
-    Check if a line containing a password pattern appears to be an example/mock value.
-
-    This helps reduce false positives from configuration templates and documentation
-    that use placeholder passwords like "your-password-here" or "example_secret".
-
-    Args:
-        line: The line of code containing the password pattern
-
-    Returns:
-        True if the line appears to be an example/mock, False otherwise
-    """
-    # Example/mock/placeholder indicator words (case-insensitive)
-    # Match at word boundaries OR adjacent to underscores/hyphens (common in config)
-    # e.g., "example_secret", "test-password", "your_password"
-    # Use (?:^|[\s_\-"']) as start boundary and (?:$|[\s_\-"']) as end boundary
-    # to catch both natural word boundaries and config-style naming
-    example_indicators = [
-        r'(?:^|[\s_\-"\'])example(?:$|[\s_\-"\'])',
-        r'(?:^|[\s_\-"\'])fake(?:$|[\s_\-"\'])',
-        r'(?:^|[\s_\-"\'])mock(?:$|[\s_\-"\'])',
-        r'(?:^|[\s_\-"\'])test(?:$|[\s_\-"\'])',
-        r'(?:^|[\s_\-"\'])placeholder(?:$|[\s_\-"\'])',
-        r'(?:^|[\s_\-"\'])dummy(?:$|[\s_\-"\'])',
-        r'(?:^|[\s_\-"\'])sample(?:$|[\s_\-"\'])',
-        r'(?:^|[\s_\-"\'])xxx(?:$|[\s_\-"\'])',
-        r'(?:^|[\s_\-"\'])replace(?:$|[\s_\-"\'])',
-        r'(?:^|[\s_\-"\'])template(?:$|[\s_\-"\'])',
-        r'(?:^|[\s_\-"\'])changeme(?:$|[\s_\-"\'])',
-        r'your[-_]',  # your-password, your_secret, etc.
-    ]
-
-    line_lower = line.lower()
-    for indicator in example_indicators:
-        if re.search(indicator, line_lower):
-            return True
-
-    return False
-
-
 def check_hardcoded_secrets(staged_files):
     """
     Check for hardcoded secrets and API keys in code.
@@ -290,20 +252,18 @@ def check_hardcoded_secrets(staged_files):
     errors = []
 
     # Patterns that suggest hardcoded secrets
-    # Format: (pattern, description, check_for_examples)
-    # check_for_examples=True means we should skip matches that look like examples/mocks
     secret_patterns = [
-        # API keys with common prefixes - these have specific formats, unlikely to be examples
-        (r'["\']sk-[a-zA-Z0-9]{20,}["\']', 'OpenAI API key', False),
-        (r'["\']sk_live_[a-zA-Z0-9]{20,}["\']', 'Stripe live key', False),
-        (r'["\']sk_test_[a-zA-Z0-9]{20,}["\']', 'Stripe test key', False),
-        (r'["\']ghp_[a-zA-Z0-9]{36,}["\']', 'GitHub personal access token', False),
-        (r'["\']gho_[a-zA-Z0-9]{36,}["\']', 'GitHub OAuth token', False),
-        (r'["\']xox[baprs]-[a-zA-Z0-9-]{10,}["\']', 'Slack token', False),
-        # Generic patterns - these can have false positives from examples/templates
-        (r'api[_-]?key\s*[=:]\s*["\'][a-zA-Z0-9]{20,}["\']', 'API key assignment', True),
-        (r'secret[_-]?key\s*[=:]\s*["\'][a-zA-Z0-9]{20,}["\']', 'Secret key assignment', True),
-        (r'password\s*[=:]\s*["\'][^"\']{8,}["\']', 'Hardcoded password', True),
+        # API keys with common prefixes
+        (r'["\']sk-[a-zA-Z0-9]{20,}["\']', 'OpenAI API key'),
+        (r'["\']sk_live_[a-zA-Z0-9]{20,}["\']', 'Stripe live key'),
+        (r'["\']sk_test_[a-zA-Z0-9]{20,}["\']', 'Stripe test key'),
+        (r'["\']ghp_[a-zA-Z0-9]{36,}["\']', 'GitHub personal access token'),
+        (r'["\']gho_[a-zA-Z0-9]{36,}["\']', 'GitHub OAuth token'),
+        (r'["\']xox[baprs]-[a-zA-Z0-9-]{10,}["\']', 'Slack token'),
+        # Generic patterns
+        (r'api[_-]?key\s*[=:]\s*["\'][a-zA-Z0-9]{20,}["\']', 'API key assignment'),
+        (r'secret[_-]?key\s*[=:]\s*["\'][a-zA-Z0-9]{20,}["\']', 'Secret key assignment'),
+        (r'password\s*[=:]\s*["\'][^"\']{8,}["\']', 'Hardcoded password'),
     ]
 
     code_extensions = ('.js', '.ts', '.jsx', '.tsx', '.py', '.java', '.go', '.rs', '.rb')
@@ -311,30 +271,14 @@ def check_hardcoded_secrets(staged_files):
     for f in staged_files:
         if f.endswith(code_extensions):
             content = get_staged_file_content(f)
-            for pattern, description, check_for_examples in secret_patterns:
-                # Find all matches with their positions
-                for match in re.finditer(pattern, content, re.IGNORECASE):
-                    matched_text = match.group(0)
-
-                    # If this pattern type should check for examples, get the line
-                    # and skip if it looks like an example/mock
-                    if check_for_examples:
-                        # Find the line containing this match
-                        line_start = content.rfind('\n', 0, match.start()) + 1
-                        line_end = content.find('\n', match.end())
-                        if line_end == -1:
-                            line_end = len(content)
-                        line = content[line_start:line_end]
-
-                        if is_example_password(line):
-                            continue  # Skip this match, it's an example
-
+            for pattern, description in secret_patterns:
+                matches = re.findall(pattern, content, re.IGNORECASE)
+                if matches:
                     # Truncate the match for display
-                    match_preview = matched_text[:30] + '...' if len(matched_text) > 30 else matched_text
+                    match_preview = matches[0][:30] + '...' if len(matches[0]) > 30 else matches[0]
                     errors.append(
                         f"SACROSANCT VIOLATION: Potential {description} in {f}: {match_preview}"
                     )
-                    break  # One error per pattern per file is enough
 
     return errors
 
@@ -407,7 +351,7 @@ def main():
 
     except Exception as e:
         # If something goes wrong in the hook, log it but don't block
-        print(f"PACT Hook [ERROR] (git_commit_check): {e}", file=sys.stderr)
+        print(f"Hook Error (git_commit_check): {e}", file=sys.stderr)
         sys.exit(0)
 
 
