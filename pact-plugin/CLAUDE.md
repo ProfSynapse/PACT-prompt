@@ -189,8 +189,8 @@ This is not punitive—it's corrective. The goal is maintaining role boundaries.
 
 ### Specialist Agents
 
-| Agent | Phase | Domain |
-|-------|-------|--------|
+| Agent | PACT Phase | Domain |
+|-------|------------|--------|
 | **pact-preparer** | Prepare | Research, requirements gathering |
 | **pact-architect** | Architect | System design, interface definition |
 | **pact-backend-coder** | Code | Server-side implementation |
