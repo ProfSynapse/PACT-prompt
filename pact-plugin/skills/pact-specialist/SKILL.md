@@ -123,12 +123,9 @@ Wait for orchestrator. Do not continue guessing.
 
 ---
 
-## Self-Coordination (Parallel Agents)
+## Parallel Work
 
-1. Check S2 protocols first
-2. Respect file boundaries
-3. First agent's conventions = standard
-4. Report conflicts immediately
+When working in parallel with other agents, follow the `pact-agent-coordination` skill.
 
 ---
 

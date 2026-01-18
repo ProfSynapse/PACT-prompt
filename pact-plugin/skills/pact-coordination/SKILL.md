@@ -43,13 +43,6 @@ Before invoking parallel agents, emit:
 - **Staggered**: First agent establishes; orchestrator extracts and propagates
 - **Decision logs**: Subsequent agents MUST read first agent's decision log
 
-### Convention Drift Check
-
-Before editing any file:
-1. Check what conventions are already established in the file/module
-2. Follow established conventions (even if you'd do it differently)
-3. If conventions seem wrong, escalate to orchestrator - don't silently change
-
 ### Anti-Oscillation Protocol
 
 **Detect**: Agents undo each other's work or claim same interface
@@ -86,18 +79,6 @@ Before editing any file:
 
 **Collaboration**: Backend needs complex query → ask Database.
 Database needs access patterns → ask Backend.
-
-### Cross-Agent Discovery Handoff
-
-When you discover something affecting another domain:
-
-```
-⚠️ CROSS-AGENT: {what was discovered}
-Affects: {which domain/agent}
-Impact: {what they need to know/do}
-```
-
-Report to orchestrator immediately - do not attempt cross-domain fixes.
 
 ---
 
@@ -189,12 +170,12 @@ When handing off audit findings to TEST phase:
 - [ ] Propagating conventions from first agent
 - [ ] Checking for 🔴 audit signals
 
-### On Cross-Domain Discovery
-- [ ] Emitted CROSS-AGENT signal
-- [ ] Reported to orchestrator
-- [ ] Did NOT attempt cross-domain fix
+---
 
-### Convention Drift Prevention
-- [ ] Checked existing conventions before editing
-- [ ] Following established patterns
-- [ ] Escalated if conventions seem wrong
+## Agent Protocols
+
+Agents working in parallel should follow the `pact-agent-coordination` skill for:
+- Convention drift checks
+- Cross-agent discovery handoffs
+- Self-coordination checklists
+- Conflict response procedures
