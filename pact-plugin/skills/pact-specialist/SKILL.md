@@ -44,7 +44,7 @@ Scope change > 20%?
 
 > **Do NOT proceed to next phase without S4 checkpoint.**
 
-S4 checkpoints are required at phase boundaries. For full checkpoint procedure, format, and decision table, invoke the `pact-assessment` skill.
+**Action**: Invoke `pact-assessment` for the checkpoint protocol before proceeding.
 
 **Quick reference**: Verify Environment (context shifted?), Model (assumptions valid?), Plan (approach optimal?).
 
