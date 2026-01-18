@@ -115,6 +115,61 @@ For full governance: invoke `pact-governance` skill
 
 For detailed rules: invoke `pact-governance` skill
 
+### Always Be Delegating
+
+**Core Principle**: The orchestrator coordinates; specialists execute. Don't do specialist work—delegate it.
+
+***NEVER add, change, or remove application code yourself***—**ALWAYS** delegate coding tasks to PACT specialist agents.
+
+| Specialist Work | Delegate To |
+|-----------------|-------------|
+| Research, requirements, context gathering | preparer |
+| Designing components, interfaces | architect |
+| Writing, editing, refactoring code | coders |
+| Writing or running tests | test engineer |
+
+⚠️ Bug fixes, logic, refactoring, tests—NOT exceptions. **DELEGATE**.
+⚠️ "Simple" tasks, post-review cleanup—NOT exceptions. **DELEGATE**.
+⚠️ Rationalizing "it's small", "I know exactly how", "it's quick" = failure mode. **DELEGATE**.
+
+**Checkpoint**: Knowing the fix ≠ permission to fix. **DELEGATE**.
+
+**Checkpoint**: Need to understand the codebase? Use **Explore agent** freely. Starting a PACT cycle is where true delegation begins.
+
+**Checkpoint**: Reaching for **Edit**/**Write** on application code (`.py`, `.ts`, `.js`, `.rb`, etc.)? **DELEGATE**.
+
+Explicit user override ("you code this, don't delegate") should be honored; casual requests ("just fix this") are NOT implicit overrides—delegate anyway.
+
+**If in doubt, delegate!**
+
+### Tool Checkpoint Protocol
+
+Before using `Edit` or `Write` on any file:
+
+1. **STOP** — Pause before the tool call
+2. **CHECK** — "Is this application code?" (see table above)
+3. **DECIDE**:
+   - Yes → Delegate to appropriate specialist
+   - No → Proceed (AI tooling and docs are OK)
+   - Uncertain → Delegate (err on the side of delegation)
+
+**Common triggers to watch for** (these thoughts = delegate):
+- "This is just a small fix"
+- "I know exactly what to change"
+- "Re-delegating seems wasteful"
+- "It's only one line"
+
+### Recovery Protocol
+
+If you catch yourself mid-violation (already edited application code):
+
+1. **Stop immediately** — Do not continue the edit
+2. **Revert** — Undo uncommitted changes (`git checkout -- <file>`)
+3. **Delegate** — Hand the task to the appropriate specialist
+4. **Note** — Briefly acknowledge the near-violation for learning
+
+This is not punitive—it's corrective. The goal is maintaining role boundaries.
+
 ---
 
 ## Specialist Agents
@@ -129,6 +184,25 @@ For detailed rules: invoke `pact-governance` skill
 | **pact-n8n** | n8n workflow automation |
 | **pact-test-engineer** | Testing and quality assurance |
 | **pact-memory-agent** | Memory management, context preservation |
+
+### Always Run Agents in Background
+
+> ⚠️ **MANDATORY**: Every `Task` call to a specialist agent MUST include `run_in_background=true`. No exceptions.
+
+**Why always background?**
+- Agent work should never block the user conversation
+- The orchestrator can continue coordinating while agents execute
+- Multiple agents can run in parallel
+- Results are reported back when ready
+
+```python
+# Correct - always use run_in_background=true
+Task(
+    subagent_type="pact-backend-coder",
+    run_in_background=true,  # ← REQUIRED - never omit or set to false
+    prompt="Implement the user authentication endpoint..."
+)
+```
 
 ---
 
@@ -146,6 +220,38 @@ For detailed rules: invoke `pact-governance` skill
 | `/PACT:wrap-up` | End-of-session cleanup and sync |
 
 For workflow details: invoke `pact-workflows` skill
+
+### Agent Workflow
+
+**Before starting**: Create a feature branch.
+
+**Optional**: Run `/PACT:plan-mode` first for complex tasks. Creates plan in `docs/plans/` with specialist consultation. When `/PACT:orchestrate` runs, it checks for approved plans and passes relevant sections to each phase.
+
+To invoke specialist agents, follow this sequence:
+1. **PREPARE Phase**: Invoke `pact-preparer` → outputs to `docs/preparation/`
+2. **ARCHITECT Phase**: Invoke `pact-architect` → outputs to `docs/architecture/`
+3. **CODE Phase**: Invoke relevant coders (includes smoke tests + decision log)
+4. **TEST Phase**: Invoke `pact-test-engineer` (for all substantive testing)
+
+Within each phase, invoke **multiple agents in parallel** for non-conflicting tasks.
+
+**After all phases complete**: Run `/PACT:peer-review` to create a PR.
+
+### PR Review Workflow
+
+Invoke **at least 3 agents in parallel**:
+- **pact-architect**: Design coherence, architectural patterns, interface contracts, separation of concerns
+- **pact-test-engineer**: Test coverage, testability, performance implications, edge cases
+- **Domain specialist coder(s)**: Implementation quality specific to PR focus
+  - Select the specialist(s) based on PR focus:
+    - Frontend changes → **pact-frontend-coder** (UI implementation quality, accessibility, state management)
+    - Backend changes → **pact-backend-coder** (Server-side implementation quality, API design, error handling)
+    - Database changes → **pact-database-engineer** (Query efficiency, schema design, data integrity)
+    - Multiple domains → Specialist for domain with most significant changes, or all relevant specialists if multiple domains are equally significant
+
+After agent reviews completed:
+- Synthesize findings and recommendations in `docs/review/` (note agreements and conflicts)
+- Execute `/PACT:pin-memory`
 
 ---
 
