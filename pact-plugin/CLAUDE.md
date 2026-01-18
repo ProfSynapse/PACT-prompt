@@ -172,7 +172,7 @@ This is not punitive—it's corrective. The goal is maintaining role boundaries.
 
 ### Always Run Agents in Background
 
-> ⚠️ **MANDATORY**: Every `Task` call MUST include `run_in_background=true`. No exceptions.
+> ⚠️ **MANDATORY**: Every `Task` call to a specialist agent MUST include `run_in_background=true`. No exceptions.
 
 Agents run async so orchestrator can continue coordinating while they execute.
 
