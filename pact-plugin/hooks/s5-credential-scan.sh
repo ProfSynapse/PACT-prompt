@@ -168,9 +168,11 @@ if check_credential_pattern '\bsk-[a-zA-Z0-9]{20,}\b'; then
     alert_credential "OpenAI API key (sk-...)"
 fi
 
-# Stripe live keys (pk_live_, sk_live_)
-if check_credential_pattern '\b(pk|sk)_live_[a-zA-Z0-9]{20,}\b'; then
-    alert_credential "Stripe live API key"
+# Stripe API keys (pk_live_, sk_live_, pk_test_, sk_test_)
+# Note: We detect both live and test keys because test keys can still expose
+# account structure and should not be committed to public repos.
+if check_credential_pattern '\b(pk|sk)_(live|test)_[a-zA-Z0-9]{20,}\b'; then
+    alert_credential "Stripe API key"
 fi
 
 # AWS Access Key ID (AKIA...)
