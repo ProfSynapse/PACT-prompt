@@ -42,6 +42,5 @@
     "./agents/pact-test-engineer.md",
     "./agents/pact-memory-agent.md"
   ],
-  "skills": "./skills/",
-  "hooks": "./hooks/hooks.json"
+  "skills": "./skills/"
 }
