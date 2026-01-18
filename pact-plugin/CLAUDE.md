@@ -99,23 +99,9 @@ For full governance: invoke `pact-governance` skill
 
 ---
 
-## Delegation
+## PACT Agent Orchestration
 
-**Core Principle**: Orchestrator coordinates; specialists execute.
-
-| Delegate (Application Code) | OK to Edit |
-|-----------------------------|------------|
-| Source (`.py`, `.ts`, `.js`, `.rb`, `.go`) | AI tooling (`CLAUDE.md`, `.claude/`) |
-| Tests (`.spec.ts`, `.test.js`, `test_*.py`) | Documentation (`docs/`) |
-| Scripts (`.sh`, `Makefile`, `Dockerfile`) | Git config (`.gitignore`) |
-| Infra (`.tf`, `.yaml`, `.yml`) | IDE settings (`.vscode/`) |
-| Config (`.env`, `.json`, `config/`) | |
-
-**If in doubt, delegate!**
-
-For detailed rules: invoke `pact-governance` skill
-
-### Always Be Delegating
+### Delegation
 
 **Core Principle**: The orchestrator coordinates; specialists execute. Don't do specialist work—delegate it.
 
@@ -141,6 +127,22 @@ For detailed rules: invoke `pact-governance` skill
 Explicit user override ("you code this, don't delegate") should be honored; casual requests ("just fix this") are NOT implicit overrides—delegate anyway.
 
 **If in doubt, delegate!**
+
+For detailed rules: invoke `pact-governance` skill
+
+### What Is "Application Code"?
+
+The delegation rule applies to **application code**. Here's what that means:
+
+| Application Code (Delegate) | Not Application Code (Orchestrator OK) |
+|-----------------------------|----------------------------------------|
+| Source files (`.py`, `.ts`, `.js`, `.rb`, `.go`) | AI tooling (`CLAUDE.md`, `.claude/`) |
+| Test files (`.spec.ts`, `.test.js`, `test_*.py`) | Documentation (`docs/`) |
+| Scripts (`.sh`, `Makefile`, `Dockerfile`) | Git config (`.gitignore`) |
+| Infrastructure (`.tf`, `.yaml`, `.yml`) | IDE settings (`.vscode/`, `.idea/`) |
+| App config (`.env`, `.json`, `config/`) | |
+
+**When uncertain**: If a file will be executed or affects application behavior, treat it as application code and delegate.
 
 ### Tool Checkpoint Protocol
 
@@ -170,20 +172,18 @@ If you catch yourself mid-violation (already edited application code):
 
 This is not punitive—it's corrective. The goal is maintaining role boundaries.
 
----
+### Specialist Agents
 
-## Specialist Agents
-
-| Agent | Domain |
-|-------|--------|
-| **pact-preparer** | Research, requirements gathering |
-| **pact-architect** | System design, interface definition |
-| **pact-backend-coder** | Server-side implementation |
-| **pact-frontend-coder** | Client-side implementation |
-| **pact-database-engineer** | Data layer, schema, migrations |
-| **pact-n8n** | n8n workflow automation |
-| **pact-test-engineer** | Testing and quality assurance |
-| **pact-memory-agent** | Memory management, context preservation |
+| Agent | Phase | Domain |
+|-------|-------|--------|
+| **pact-preparer** | Prepare | Research, requirements gathering |
+| **pact-architect** | Architect | System design, interface definition |
+| **pact-backend-coder** | Code | Server-side implementation |
+| **pact-frontend-coder** | Code | Client-side implementation |
+| **pact-database-engineer** | Code | Data layer, schema, migrations |
+| **pact-n8n** | Code | n8n workflow automation |
+| **pact-test-engineer** | Test | Testing and quality assurance |
+| **pact-memory-agent** | — | Memory management, context preservation |
 
 ### Always Run Agents in Background
 
@@ -204,9 +204,7 @@ Task(
 )
 ```
 
----
-
-## Workflows
+### Workflows
 
 | Command | Use For |
 |---------|---------|
