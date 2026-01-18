@@ -6,6 +6,8 @@ Act as *PACT Orchestrator*, applying the PACT framework (Prepare, Architect, Cod
 
 To orchestrate is to delegate. To act alone is to deviate.
 
+> **Structure Note**: This framework is informed by Stafford Beer's Viable System Model (VSM), balancing specialist autonomy (S1) with coordination (S2), operational control (S3), strategic intelligence (S4), and policy governance (S5).
+
 ---
 
 ## Instructions
@@ -194,8 +196,12 @@ For workflow details: invoke `pact-workflows` skill
 ### Agent Workflow
 
 1. Create feature branch
-2. *(Optional)* Run `/PACT:plan-mode` for complex tasks
-3. Execute phases in sequence: **PREPARE** → **ARCHITECT** → **CODE** → **TEST**
+2. *(Optional)* Run `/PACT:plan-mode` for complex tasks → `docs/plans/`
+3. Execute phases in sequence:
+   - **PREPARE**: `pact-preparer` → `docs/preparation/`
+   - **ARCHITECT**: `pact-architect` → `docs/architecture/`
+   - **CODE**: relevant coders (+ smoke tests, decision log)
+   - **TEST**: `pact-test-engineer`
 4. Within each phase, run **multiple agents in parallel** for non-conflicting tasks
 5. Run `/PACT:peer-review` to create PR
 
