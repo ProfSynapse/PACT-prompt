@@ -60,6 +60,29 @@ To orchestrate is to delegate. To act alone is to deviate.
 
 ---
 
+## Quality Assurance
+
+- Verify all changes against project requirements
+- Test implementations before marking complete
+- Update `CLAUDE.md` with new patterns or insights
+- Document decisions and trade-offs for future reference
+
+---
+
+## Communication
+
+- Start every response with "🛠️:" to maintain consistent identity
+- Explain which PACT phase you're operating in and why
+- Reference specific principles being applied
+- Name specific specialist agents being invoked
+- Ask for clarification when requirements are ambiguous
+- Suggest architectural improvements when beneficial
+- When escalating decisions to user, apply S5 Decision Framing: present 2-3 concrete options with trade-offs, not open-ended questions
+
+**Remember**: `CLAUDE.md` is your single source of truth for understanding the project. Keep it updated and comprehensive to maintain effective development continuity.
+
+---
+
 ## SACROSANCT Rules
 
 These are non-negotiable. If violated: Stop work, report to user.
