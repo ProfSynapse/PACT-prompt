@@ -150,14 +150,8 @@ class TestRealCredentialsDetected:
         assert exit_code == 1, f"Should detect Google key. stdout: {stdout}"
         assert "Google API key" in stdout
 
-    @pytest.mark.xfail(reason="Known issue: patterns starting with '-----' are interpreted as grep options")
     def test_private_key_detected(self, run_hook, write_input):
-        """RSA private key should be detected.
-
-        NOTE: Currently fails due to grep pattern issue - the '-----BEGIN' pattern
-        is interpreted as a grep option rather than a pattern. This is a bug in
-        the hook that should be fixed by adding '--' before the pattern.
-        """
+        """RSA private key should be detected."""
         content = """-----BEGIN RSA PRIVATE KEY-----
 MIIEpAIBAAKCAQEA...
 -----END RSA PRIVATE KEY-----"""
@@ -166,12 +160,8 @@ MIIEpAIBAAKCAQEA...
         assert exit_code == 1, f"Should detect private key. stdout: {stdout}"
         assert "Private key" in stdout
 
-    @pytest.mark.xfail(reason="Known issue: patterns starting with '-----' are interpreted as grep options")
     def test_openssh_private_key_detected(self, run_hook, write_input):
-        """OpenSSH private key should be detected.
-
-        NOTE: Currently fails due to grep pattern issue.
-        """
+        """OpenSSH private key should be detected."""
         content = """-----BEGIN OPENSSH PRIVATE KEY-----
 b3BlbnNzaC1rZXktdjEAAAAA...
 -----END OPENSSH PRIVATE KEY-----"""
@@ -180,12 +170,8 @@ b3BlbnNzaC1rZXktdjEAAAAA...
         assert exit_code == 1, f"Should detect OpenSSH key. stdout: {stdout}"
         assert "Private key" in stdout
 
-    @pytest.mark.xfail(reason="Known issue: patterns starting with '-----' are interpreted as grep options")
     def test_pgp_private_key_detected(self, run_hook, write_input):
-        """PGP private key should be detected.
-
-        NOTE: Currently fails due to grep pattern issue.
-        """
+        """PGP private key should be detected."""
         content = """-----BEGIN PGP PRIVATE KEY BLOCK-----
 Version: GnuPG v1
 ...
@@ -610,12 +596,8 @@ password = "secretpassword"'''
         exit_code, stdout, stderr = run_hook(json_data)
         assert exit_code == 1
 
-    @pytest.mark.xfail(reason="Known issue: patterns starting with '-----' are interpreted as grep options")
     def test_multiline_private_key(self, run_hook, write_input):
-        """Multiline private key should be detected.
-
-        NOTE: Currently fails due to grep pattern issue.
-        """
+        """Multiline private key should be detected."""
         content = """KEY = '''-----BEGIN PRIVATE KEY-----
 MIIEvgIBADANBgkqhkiG9w0BAQEFAASC...
 -----END PRIVATE KEY-----'''"""
@@ -697,7 +679,7 @@ class TestGCPServiceAccount:
         json_data = write_input("service-account.json", content)
         exit_code, stdout, stderr = run_hook(json_data)
         assert exit_code == 1
-        assert "GCP service account" in stdout
+        assert "GCP service account key" in stdout
 
     def test_gcp_partial_not_detected(self, run_hook, write_input):
         """Partial GCP patterns should not trigger (need both patterns)."""

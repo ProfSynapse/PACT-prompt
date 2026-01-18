@@ -128,8 +128,10 @@ check_credential_pattern() {
     local case_flag="${2:--E}"  # Default to -E (extended regex), can pass -iE for case-insensitive
 
     # Get all matching lines
+    # Note: '--' signals end of options to grep, preventing patterns starting with '-'
+    # (like '-----BEGIN PRIVATE KEY-----') from being interpreted as options
     local matches
-    matches=$(echo "$content" | grep $case_flag "$pattern" 2>/dev/null)
+    matches=$(echo "$content" | grep $case_flag -- "$pattern" 2>/dev/null)
 
     # If no matches, return false (no credential found)
     [ -z "$matches" ] && return 1
@@ -195,6 +197,14 @@ if check_credential_pattern '\bsk-ant-[a-zA-Z0-9_-]{40,}\b'; then
     alert_credential "Anthropic API key"
 fi
 
+# === GCP SERVICE ACCOUNTS ===
+# Check before generic private key to give more specific detection
+# GCP service account key files (JSON with private_key)
+# Both patterns must match in non-example/comment context for consistent false-positive handling
+if check_credential_pattern '"type"\s*:\s*"service_account"' && check_credential_pattern '"private_key"\s*:'; then
+    alert_credential "GCP service account key"
+fi
+
 # === PRIVATE KEYS ===
 
 # RSA/DSA/EC/OPENSSH/ENCRYPTED private keys
@@ -235,17 +245,11 @@ if check_credential_pattern 'aws[_-]?secret[_-]?access[_-]?key\s*[:=]\s*["\x27]?
     alert_credential "AWS Secret Access Key"
 fi
 
-# === AZURE/GCP CREDENTIALS ===
+# === AZURE CREDENTIALS ===
 
 # Azure connection strings
 if check_credential_pattern 'DefaultEndpointsProtocol=https;AccountName=[^;]+;AccountKey=[a-zA-Z0-9+/=]{40,}'; then
     alert_credential "Azure Storage connection string"
-fi
-
-# GCP service account key files (JSON with private_key)
-# Both patterns must match in non-example/comment context for consistent false-positive handling
-if check_credential_pattern '"type"\s*:\s*"service_account"' && check_credential_pattern '"private_key"\s*:'; then
-    alert_credential "GCP service account key"
 fi
 
 # === JWT SECRETS ===
