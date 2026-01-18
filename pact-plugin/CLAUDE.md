@@ -143,24 +143,20 @@ For workflow details: invoke `pact-workflows` skill
 
 ### Agent Workflow
 
-1. Create feature branch
-2. *(Optional)* Run `/PACT:plan-mode` for complex tasks → `docs/plans/`
-3. Execute phases in sequence using specialist agents. Run **multiple agents in parallel** for non-conflicting tasks within each phase.
+1. *(Optional)* Run `/PACT:plan-mode` for complex tasks → `docs/plans/`
+2. Execute phases in sequence using specialist agents. Run **multiple agents in parallel** for non-conflicting tasks within each phase.
    - **PREPARE**: `pact-preparer` → `docs/preparation/`
    - **ARCHITECT**: `pact-architect` → `docs/architecture/`
    - **CODE**: relevant coders
    - **TEST**: `pact-test-engineer`
-4. Run `/PACT:peer-review` to create PR
+3. Run `/PACT:peer-review`
 
 ### PR Review Workflow
 
 Invoke **at least 3 agents in parallel**:
-
-| Agent | Reviews |
-|-------|---------|
-| **pact-architect** | Design coherence, patterns, interfaces |
-| **pact-test-engineer** | Coverage, testability, edge cases |
-| **Domain coder(s)** | Implementation quality (select by PR focus) |
+  - **pact-architect**: Design coherence, patterns, interfaces
+  - **pact-test-engineer**: Coverage, testability, edge cases
+  - **Domain coder(s)**: Implementation quality (select by PR focus)
 
 After reviews: synthesize in `docs/review/`, then `/PACT:pin-memory`.
 
