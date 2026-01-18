@@ -211,14 +211,8 @@ class TestUncommittedChanges:
         assert result.returncode == 0
         assert "new_file.py" in result.stdout
 
-    @pytest.mark.xfail(reason="Known bug: read -r strips leading whitespace from git status")
     def test_lists_modified_file(self, run_hook, temp_git_repo):
-        """Hook should list modified files.
-
-        NOTE: There is a known bug where `read -r` in bash strips leading whitespace
-        from git status output. For modified files (status ' M filename'), the leading
-        space is stripped, causing the first character of the filename to be lost.
-        """
+        """Hook should list modified files."""
         # Create and commit a file
         test_file = Path(temp_git_repo) / "existing.py"
         test_file.write_text("# Original content\n")

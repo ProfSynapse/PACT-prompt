@@ -15,7 +15,7 @@ fi
 echo "=== PACT Audit ==="
 echo ""
 echo "Files changed this session:"
-echo "$changes" | while read -r line; do
+echo "$changes" | while IFS= read -r line; do
     file="${line:3}"
     echo "  • $file"
 done
