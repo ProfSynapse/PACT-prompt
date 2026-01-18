@@ -62,9 +62,48 @@ def extract_file_path(tool_input: dict) -> str:
     return tool_input.get("file_path", "")
 
 
+def is_safe_path(file_path: str) -> bool:
+    """
+    Validate that a file path is safe to track.
+
+    Rejects paths that:
+    - Start with '..'
+    - Contain '/../'
+    - Start with sensitive system paths
+
+    Args:
+        file_path: The path to validate
+
+    Returns:
+        True if path is safe, False otherwise
+    """
+    # Normalize the path to resolve any . or .. components
+    normalized = os.path.normpath(file_path)
+
+    # Reject paths starting with parent directory traversal
+    if normalized.startswith('..'):
+        return False
+
+    # Reject paths containing parent directory traversal
+    if '/../' in file_path or file_path.endswith('/..'):
+        return False
+
+    # Reject sensitive system paths
+    sensitive_prefixes = ('/etc', '/var', '/usr', '/bin', '/sbin', '/lib', '/boot', '/root')
+    if any(normalized.startswith(prefix) for prefix in sensitive_prefixes):
+        return False
+
+    return True
+
+
 def track_file(file_path: str, tool_name: str):
     """Add a file to the tracking list."""
     if not file_path:
+        return
+
+    # Validate path is safe before tracking
+    if not is_safe_path(file_path):
+        print(f"Warning: Rejecting unsafe path: {file_path}", file=sys.stderr)
         return
 
     data = load_tracked_files()

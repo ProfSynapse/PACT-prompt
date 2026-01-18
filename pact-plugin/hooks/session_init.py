@@ -218,15 +218,13 @@ def maybe_embed_pending() -> dict:
     """
     result = {"status": "skipped", "message": None}
 
-    # Check if we've already attempted this session
+    # Atomic check-and-create to prevent TOCTOU race
     marker_path = _get_embedding_attempted_path()
-    if marker_path.exists():
+    try:
+        marker_path.touch(exist_ok=False)
+    except FileExistsError:
         result["message"] = "Already attempted this session"
         return result
-
-    # Mark as attempted (do this first to prevent retry on errors)
-    try:
-        marker_path.touch()
     except OSError:
         result["message"] = "Could not create session marker"
         return result

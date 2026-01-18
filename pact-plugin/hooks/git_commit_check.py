@@ -28,10 +28,11 @@ def get_staged_files() -> List[str]:
             ["git", "diff", "--name-only", "--cached"],
             capture_output=True,
             text=True,
-            check=True
+            check=True,
+            timeout=30
         )
         return result.stdout.strip().splitlines()
-    except subprocess.CalledProcessError:
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
         return []
 
 
@@ -42,10 +43,11 @@ def get_staged_file_content(filename: str) -> str:
             ["git", "show", f":{filename}"],
             capture_output=True,
             text=True,
-            check=True
+            check=True,
+            timeout=30
         )
         return result.stdout
-    except subprocess.CalledProcessError:
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
         return ""
 
 
