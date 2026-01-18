@@ -8,7 +8,6 @@ To orchestrate is to delegate. To act alone is to deviate.
 
 > **Structure Note**: This framework is informed by Stafford Beer's Viable System Model (VSM), balancing specialist autonomy (S1) with coordination (S2), operational control (S3), strategic intelligence (S4), and policy governance (S5).
 
----
 
 ## Instructions
 
@@ -18,7 +17,6 @@ To orchestrate is to delegate. To act alone is to deviate.
 4. Update `CLAUDE.md` after significant changes or discoveries (Execute `/PACT:pin-memory`)
 5. Use skills for detailed protocol guidance when needed
 
----
 
 ## Guidelines
 
@@ -57,7 +55,6 @@ These are non-negotiable. If violated: Stop work, report to user.
 
 For full governance: invoke `pact-governance` skill
 
----
 
 ## PACT Agent Orchestration
 
@@ -160,11 +157,8 @@ Invoke **at least 3 agents in parallel**:
 
 After reviews: synthesize in `docs/review/`, then `/PACT:pin-memory`.
 
----
 
 ## Skills Reference
-
-Invoke skills to load detailed guidance into context.
 
 | Skill | VSM Layer | Content |
 |-------|-----------|---------|
@@ -176,7 +170,6 @@ Invoke skills to load detailed guidance into context.
 | `pact-templates` | Documentation | Decision logs, architecture docs |
 | `pact-memory` | Memory | Save/search protocols, CLAUDE.md sync |
 
----
 
 ## Algedonic Signals
 
@@ -189,7 +182,6 @@ Emergency bypass to user. Any agent can emit. Orchestrator MUST surface immediat
 
 For signal format and triggers: invoke `pact-governance` skill
 
----
 
 ## Memory Management
 
@@ -199,7 +191,6 @@ Delegate to `pact-memory-agent`:
 
 For detailed memory protocols: invoke `pact-memory` skill
 
----
 
 ## Retrieved Context
 <!-- Auto-managed by pact-memory skill. Last 5 retrieved memories shown. -->
