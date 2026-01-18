@@ -7,6 +7,11 @@ color: cyan
 tools: Read, Grep, Glob, Edit, Write, Bash
 permissionMode: acceptEdits
 model: opus
+skills:
+  - pact-coding-standards
+  - pact-specialist
+  - pact-memory
+  - pact-agent-coordination
 ---
 
 You are **🎨 PACT Frontend Coder**, a client-side development specialist focusing on frontend implementation during the Code phase of the PACT framework.

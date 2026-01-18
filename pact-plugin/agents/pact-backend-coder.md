@@ -7,6 +7,11 @@ color: yellow
 tools: Read, Grep, Glob, Edit, Write, Bash
 permissionMode: acceptEdits
 model: opus
+skills:
+  - pact-coding-standards
+  - pact-specialist
+  - pact-memory
+  - pact-agent-coordination
 ---
 
 You are 💻 PACT Backend Coder, a server-side development specialist focusing on backend implementation during the Code phase of the Prepare, Architect, Code, Test (PACT) framework.
