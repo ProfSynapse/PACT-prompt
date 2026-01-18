@@ -48,7 +48,9 @@ cmd_lower=$(echo "$command_text" | tr '[:upper:]' '[:lower:]')
 # === DESTRUCTIVE FILE SYSTEM COMMANDS ===
 
 # Block rm -rf on root or critical system directories
-if echo "$command_text" | grep -qE 'rm\s+(-[a-zA-Z]*r[a-zA-Z]*f|(-[a-zA-Z]*f[a-zA-Z]*r))\s+(/|/\*|/bin|/boot|/dev|/etc|/home|/lib|/opt|/root|/sbin|/sys|/tmp|/usr|/var)\b'; then
+# Pattern matches any combination of flags containing both 'r' and 'f' (even with other flags like -i)
+# Examples blocked: rm -rf /, rm -fr /, rm -rfi /, rm -fri /, rm -rif /, rm -fir /
+if echo "$command_text" | grep -qE 'rm\s+-[a-zA-Z]*r[a-zA-Z]*\s' && echo "$command_text" | grep -qE 'rm\s+-[a-zA-Z]*f[a-zA-Z]*\s' && echo "$command_text" | grep -qE '\s(/|/\*|/bin|/boot|/dev|/etc|/home|/lib|/opt|/root|/sbin|/sys|/tmp|/usr|/var)\b'; then
     block_command "Destructive rm command targeting system directories"
 fi
 
@@ -88,7 +90,8 @@ fi
 
 # Pattern 2: -f short flag anywhere in push command targeting main/master
 # Handles: git push -f origin main, git push origin main -f, git push origin -f main
-if echo "$command_text" | grep -qE 'git\s+push\s+.*\s-f(\s|$)' && echo "$command_text" | grep -qE 'git\s+push\s+.*(main|master)\b'; then
+# Note: \s+-f matches -f after whitespace, allowing it right after 'push' or later in the command
+if echo "$command_text" | grep -qE 'git\s+push\s+(-f\s|.*\s-f(\s|$))' && echo "$command_text" | grep -qE 'git\s+push\s+.*(main|master)\b'; then
     block_command "Force push to main/master is forbidden"
 fi
 

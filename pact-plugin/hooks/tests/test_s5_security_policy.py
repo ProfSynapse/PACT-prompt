@@ -115,24 +115,28 @@ class TestDestructiveRmCommands:
     @pytest.mark.parametrize(
         "command",
         [
-            # These flag combinations are NOT caught by current regex
-            # (documented limitation - regex requires rf or fr without intervening flags)
+            # Interleaved flags (e.g., -rfi, -fri) containing both r and f should be blocked
             "rm -rfi /",
             "rm -fri /",
+            "rm -rif /",
+            "rm -fir /",
+            "rm -irf /",
+            "rm -ifr /",
         ],
     )
-    def test_rm_with_interleaved_flags_not_caught(self, run_hook, command):
-        """Known limitation: flags with -i interleaved are not caught."""
-        # This documents a limitation - these SHOULD be blocked but aren't
+    def test_rm_with_interleaved_flags_blocked(self, run_hook, command):
+        """rm with interleaved flags containing r and f should be blocked."""
         result = run_hook(command)
-        # Currently passes (not blocked) - this is a known gap
-        assert result.returncode == EXIT_SAFE
+        assert result.returncode == EXIT_BLOCKED
+        assert "BLOCKED" in result.stdout
+        assert "S5 POLICY VIOLATION" in result.stdout
 
     def test_rm_no_preserve_root_blocked(self, run_hook):
         """rm with --no-preserve-root should be blocked."""
         result = run_hook("rm -rf --no-preserve-root /")
         assert result.returncode == EXIT_BLOCKED
-        assert "no-preserve-root" in result.stdout.lower()
+        # May be blocked by either the rm -rf check or the --no-preserve-root check
+        assert "BLOCKED" in result.stdout
 
     @pytest.mark.parametrize(
         "command",
@@ -143,6 +147,9 @@ class TestDestructiveRmCommands:
             "rm -r myproject/",
             "rm -rf data/backup",  # Relative paths are safe
             "rm -rf ../other-project",  # Relative parent paths
+            "rm -i file.txt",  # Interactive flag only (no r or f)
+            "rm -ri mydir/",  # Interactive + recursive (no f)
+            "rm -fi file.txt",  # Interactive + force (no r) - not recursive
         ],
     )
     def test_safe_rm_commands_pass(self, run_hook, command):
@@ -278,22 +285,16 @@ class TestGitForcePush:
     @pytest.mark.parametrize(
         "command",
         [
-            # Known limitation: -f followed by space and more content doesn't match
-            # The regex requires '-f' followed by (\s|$), meaning space or end-of-string
-            # But 'git push -f origin main' has '-f origin' which doesn't match '-f\s'
-            # because the regex is '\s-f(\s|$)' - it needs -f at end or -f followed by space
-            # Actually '-f origin' has '-f ' which should match... let's document actual behavior
+            # -f short flag right after 'push' should be blocked
             "git push -f origin main",
             "git push -f origin master",
         ],
     )
-    def test_force_push_f_flag_not_caught(self, run_hook, command):
-        """Known limitation: 'git push -f origin main' pattern not caught."""
-        # This is a gap in the regex - 'git push -f origin main' should be blocked
-        # but the pattern doesn't catch it. This documents the limitation.
+    def test_force_push_f_flag_after_push_blocked(self, run_hook, command):
+        """git push -f origin main/master should be blocked."""
         result = run_hook(command)
-        # Currently NOT blocked - this is a known gap in coverage
-        assert result.returncode == EXIT_SAFE
+        assert result.returncode == EXIT_BLOCKED
+        assert "force push" in result.stdout.lower()
 
     @pytest.mark.parametrize(
         "command",
