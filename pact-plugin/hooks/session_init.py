@@ -275,6 +275,73 @@ def maybe_embed_pending() -> dict:
         return result
 
 
+def setup_plugin_symlinks() -> str | None:
+    """
+    Create ~/.claude/protocols/pact-plugin/ symlink to plugin cache.
+
+    This enables CLAUDE.md @references like @~/.claude/protocols/pact-plugin/algedonic.md
+    to resolve correctly regardless of where the plugin cache lives.
+
+    Returns:
+        Status message or None if successful
+    """
+    plugin_root = Path(os.environ.get("CLAUDE_PLUGIN_ROOT", ""))
+    if not plugin_root.exists():
+        return None
+
+    claude_dir = Path.home() / ".claude"
+
+    # Only protocols/ needs symlink (CLAUDE.md references these)
+    src = plugin_root / "protocols"
+    if not src.exists():
+        return None
+
+    dst = claude_dir / "protocols" / "pact-plugin"
+    dst.parent.mkdir(parents=True, exist_ok=True)
+
+    try:
+        if dst.is_symlink():
+            # Check if symlink target changed (plugin update)
+            if dst.resolve() != src.resolve():
+                dst.unlink()
+                dst.symlink_to(src)
+                return "PACT symlinks updated"
+            return None  # Already correct
+        elif dst.exists():
+            return None  # Real directory, don't touch
+        else:
+            dst.symlink_to(src)
+            return "PACT symlinks ready"
+    except OSError as e:
+        return f"Symlink setup failed: {str(e)[:30]}"
+
+
+def check_orchestrator_setup() -> str | None:
+    """
+    Guide user to set up CLAUDE.md if not present or missing PACT content.
+
+    Returns:
+        Setup guidance message or None if already configured
+    """
+    claude_md = Path.home() / ".claude" / "CLAUDE.md"
+    plugin_root = os.environ.get("CLAUDE_PLUGIN_ROOT", "")
+
+    if not plugin_root:
+        return None
+
+    if not claude_md.exists():
+        return f"PACT: Run: cp \"{plugin_root}/CLAUDE.md\" ~/.claude/CLAUDE.md"
+
+    try:
+        content = claude_md.read_text(encoding='utf-8')
+        if "PACT Orchestrator" not in content:
+            return f"PACT: To enable orchestrator, update ~/.claude/CLAUDE.md from {plugin_root}/CLAUDE.md"
+    except (IOError, UnicodeDecodeError):
+        pass
+
+    return None
+
+
 def find_active_plans(project_dir: str) -> list:
     """
     Find plans with IN_PROGRESS status or uncompleted items.
@@ -329,10 +396,12 @@ def main():
     Main entry point for the SessionStart hook.
 
     Performs PACT environment initialization:
+    0. Creates plugin symlinks for @reference resolution
     1. Checks for active plans
-    2. Auto-installs pact-memory dependencies
-    3. Migrates embeddings if dimension changed
-    4. Processes any unembedded memories (catch-up)
+    2. Guides user if CLAUDE.md setup needed
+    3. Auto-installs pact-memory dependencies
+    4. Migrates embeddings if dimension changed
+    5. Processes any unembedded memories (catch-up)
     """
     try:
         try:
@@ -344,6 +413,13 @@ def main():
         context_parts = []
         system_messages = []
 
+        # 0. Set up plugin symlinks (enables @~/.claude/protocols/pact-plugin/ references)
+        symlink_result = setup_plugin_symlinks()
+        if symlink_result and "failed" in symlink_result.lower():
+            system_messages.append(symlink_result)
+        elif symlink_result:
+            context_parts.append(symlink_result)
+
         # 1. Check for active plans
         active_plans = find_active_plans(project_dir)
         if active_plans:
@@ -352,7 +428,12 @@ def main():
                 plan_list += f" (+{len(active_plans) - 3} more)"
             context_parts.append(f"Active plans: {plan_list}")
 
-        # 2. Check and install dependencies
+        # 2. Check if orchestrator setup needed
+        orchestrator_msg = check_orchestrator_setup()
+        if orchestrator_msg:
+            system_messages.append(orchestrator_msg)
+
+        # 3. Check and install dependencies
         deps_result = check_and_install_dependencies()
         if deps_result['installed']:
             context_parts.append(
@@ -363,12 +444,12 @@ def main():
                 f"Failed to install: {', '.join(deps_result['failed'])}"
             )
 
-        # 3. Migrate embeddings if dimension changed
+        # 4. Migrate embeddings if dimension changed
         migrate_result = maybe_migrate_embeddings()
         if migrate_result.get("message") and "Migrated" in migrate_result["message"]:
             context_parts.append(migrate_result["message"])
 
-        # 4. Process any unembedded memories (catch-up)
+        # 5. Process any unembedded memories (catch-up)
         embed_result = maybe_embed_pending()
         if embed_result.get("message"):
             if embed_result["status"] == "ok" and "Embedded" in embed_result["message"]:

@@ -22,86 +22,52 @@ Instead of "vibe coding" (letting AI guess), PACT ensures **preparation before c
 
 ## Installation
 
-Choose the approach that fits your workflow:
+### Option A: Install as Plugin (Recommended)
 
-### Option A: Fork as Project Starter (Recommended for New Projects)
-
-Use PACT as the foundation for a new project:
+Install PACT as a plugin to use across all your projects:
 
 ```bash
-# Clone and rename to your project
-git clone https://github.com/ProfSynapse/PACT-prompt.git my-project
-cd my-project
+# Add the marketplace from GitHub
+/plugin marketplace add ProfSynapse/PACT-prompt
 
-# Optional: Start fresh git history
-rm -rf .git
-git init
-git add .
-git commit -m "Initial commit with PACT Framework"
+# Install the plugin
+/plugin install PACT@pact-marketplace
+```
+
+**Set up the Orchestrator:**
+
+```bash
+# Copy the CLAUDE.md file to your global config
+cp ~/.claude/plugins/cache/pact-marketplace/PACT/*/CLAUDE.md ~/.claude/CLAUDE.md
+```
+
+If you already have a `~/.claude/CLAUDE.md`, back it up first and either replace it or prepend the PACT content.
+
+Enable auto-updates via `/plugin` → **Marketplaces** → select marketplace → **Enable auto-update**
+
+**What you get:**
+- PACT agents, commands, and skills available in all projects
+- Automatic symlink setup for protocol references
+- Plugin updates via marketplace
+
+### Option B: Clone for Development
+
+If you want to contribute or customize PACT:
+
+```bash
+# Clone the repository
+git clone https://github.com/ProfSynapse/PACT-prompt.git
+cd PACT-prompt
 
 # Start Claude Code
 claude
 ```
 
-**What you get:**
-- Full PACT framework in your project
-- `.claude/` folder with all agents, commands, skills
-- `CLAUDE.md` configured as the orchestrator
-- Ready to customize for your needs
-
-### Option B: Ask Claude to Install It (Easiest)
-
-Let Claude set up PACT for you in any new project:
-
-1. **Create a new project folder** in your IDE (VS Code, Cursor, etc.)
-2. **Open the terminal** in that folder
-3. **Run `claude`** to start Claude Code
-4. **Paste this prompt:**
-
-```
-Install the PACT framework from https://github.com/ProfSynapse/PACT-prompt
-
-Clone it, copy the .claude folder and CLAUDE.md to this project,
-initialize git, and set up the docs folder structure.
-```
-
-That's it! Claude handles the rest.
-
-### Option C: Install as Plugin (For Existing Projects)
-
-Add PACT capabilities to an existing project:
-
-```bash
-# Navigate to your existing project
-cd your-existing-project
-
-# Install PACT as a plugin (when available on plugin store)
-claude plugins install PACT
-
-# Or manually: clone and link
-git clone https://github.com/ProfSynapse/PACT-prompt.git ~/.claude/plugins/PACT
-```
-
-**What you get:**
-- PACT agents and commands available in any project
-- Skills loaded on-demand
-- Your existing project structure unchanged
-
-### Option D: Manual Setup
-
-Copy the essentials into any project:
-
-```bash
-# Copy the .claude folder to your project
-cp -r /path/to/PACT-prompt/.claude /path/to/your-project/
-
-# Copy CLAUDE.md (the orchestrator)
-cp /path/to/PACT-prompt/CLAUDE.md /path/to/your-project/
-```
+The `.claude/` directory contains the full framework for local development.
 
 ### ⚠️ Important: Restart Required
 
-After installing PACT (any method), you must **restart Claude Code** for changes to take effect:
+After installing PACT, **restart Claude Code** for changes to take effect:
 
 1. **Close** your current Claude Code session (type `exit` or close the terminal)
 2. **Reopen** Claude Code with `claude`

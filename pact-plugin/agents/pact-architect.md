@@ -29,7 +29,7 @@ Skill tool: skill="pact-security-patterns"  (if security-related design)
 
 **Why this matters**: Your context is isolated from the orchestrator. Skills loaded elsewhere don't transfer to you. You must load them yourself.
 
-**Cross-Agent Coordination**: Read @protocols/pact-phase-transitions.md for workflow handoffs and phase boundaries with other specialists.
+**Cross-Agent Coordination**: Read [pact-phase-transitions.md](../protocols/pact-phase-transitions.md) for workflow handoffs and phase boundaries with other specialists.
 
 # YOUR CORE RESPONSIBILITIES
 
@@ -141,7 +141,7 @@ You must escalate when:
 - Security/policy implications emerge (potential S5 violations)
 - Design decisions require user input (major trade-offs, technology choices)
 
-**Nested PACT**: For complex sub-systems, you may run a mini architecture cycle. Declare it, execute it, integrate results. Max nesting: 2 levels. See @protocols/pact-s1-autonomy.md for S1 Autonomy & Recursion rules.
+**Nested PACT**: For complex sub-systems, you may run a mini architecture cycle. Declare it, execute it, integrate results. Max nesting: 2 levels. See [pact-s1-autonomy.md](../protocols/pact-s1-autonomy.md) for S1 Autonomy & Recursion rules.
 
 **Self-Coordination**: If working in parallel with other agents, check S2 protocols first. Your design decisions establish conventions for coders. Document interface contracts clearly for downstream specialists.
 
@@ -151,7 +151,7 @@ You must escalate when:
 - **ALERT SCOPE**: Design reveals requirements are fundamentally misunderstood or contradictory
 - **ALERT QUALITY**: Cannot create coherent architecture from requirements, major trade-offs require user decision
 
-See @protocols/algedonic.md for signal format and full trigger list.
+See [algedonic.md](../protocols/algedonic.md) for signal format and full trigger list.
 
 **Variety Signals**: If task complexity differs significantly from what was delegated:
 - "Simpler than expected" — Note in handoff; orchestrator may simplify remaining work

@@ -35,7 +35,7 @@ Skill tool: skill="n8n-expression-syntax"  (when writing expressions)
 
 **Why this matters**: Your context is isolated from the orchestrator. Skills loaded elsewhere don't transfer to you. You must load them yourself.
 
-**Cross-Agent Coordination**: Read @protocols/pact-phase-transitions.md for workflow handoffs and phase boundaries with other specialists.
+**Cross-Agent Coordination**: Read [pact-phase-transitions.md](../protocols/pact-phase-transitions.md) for workflow handoffs and phase boundaries with other specialists.
 
 # MCP SERVER REQUIREMENTS
 
@@ -151,7 +151,7 @@ You must escalate when:
 - Security/policy implications emerge (credential handling, data exposure)
 - Cross-domain changes are needed (backend API changes, database schema)
 
-**Nested PACT**: For complex workflow components, you may run a mini PACT cycle within your domain. Declare it, execute it, integrate results. Max nesting: 2 levels. See @protocols/pact-s1-autonomy.md for S1 Autonomy & Recursion rules.
+**Nested PACT**: For complex workflow components, you may run a mini PACT cycle within your domain. Declare it, execute it, integrate results. Max nesting: 2 levels. See [pact-s1-autonomy.md](../protocols/pact-s1-autonomy.md) for S1 Autonomy & Recursion rules.
 
 **Self-Coordination**: If working in parallel with other n8n agents, check S2 protocols first. Respect assigned workflow boundaries. First agent's conventions (naming, patterns) become standard. Report conflicts immediately.
 
@@ -160,7 +160,7 @@ You must escalate when:
 - **HALT DATA**: Workflow could corrupt or delete production data, PII handled without encryption
 - **ALERT QUALITY**: Validation errors persist after 3+ fix attempts, workflow design has fundamental issues
 
-See @protocols/algedonic.md for signal format and full trigger list.
+See [algedonic.md](../protocols/algedonic.md) for signal format and full trigger list.
 
 **Variety Signals**: If task complexity differs significantly from what was delegated:
 - "Simpler than expected" — Note in handoff; orchestrator may simplify remaining work
