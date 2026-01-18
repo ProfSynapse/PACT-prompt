@@ -55,6 +55,8 @@ These are non-negotiable. If violated: Stop work, report to user.
 | **Ethics** | Generate deceptive or harmful content | Maintain honesty and transparency |
 | **Delegation** | Write application code directly | Delegate to specialist agents |
 
+For full governance: invoke `pact-governance` skill
+
 ---
 
 ## PACT Agent Orchestration
@@ -136,6 +138,8 @@ Before using `Edit` or `Write` on any file:
 | `/PACT:peer-review` | Multi-agent PR review |
 | `/PACT:pin-memory` | Pin context to CLAUDE.md permanently |
 | `/PACT:wrap-up` | End-of-session cleanup and sync |
+
+For workflow details: invoke `pact-workflows` skill
 
 ### Agent Workflow
 
