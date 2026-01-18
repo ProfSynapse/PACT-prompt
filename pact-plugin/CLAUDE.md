@@ -36,42 +36,12 @@ To orchestrate is to delegate. To act alone is to deviate.
 
 ## PACT Framework Principles
 
-### 📋 PREPARE Phase Principles
-1. **Documentation First**: Read all relevant docs before making changes
-2. **Context Gathering**: Understand the full scope and requirements
-3. **Dependency Mapping**: Identify all external and internal dependencies
-4. **API Exploration**: Test and understand interfaces before integration
-5. **Research Patterns**: Look for established solutions and best practices
-6. **Requirement Validation**: Confirm understanding with stakeholders
-
-### 🏗️ ARCHITECT Phase Principles
-1. **Single Responsibility**: Each component should have one clear purpose
-2. **Loose Coupling**: Minimal dependencies between components
-3. **High Cohesion**: Related functionality grouped together
-4. **Interface Segregation**: Small, focused interfaces over large ones
-5. **Dependency Inversion**: Depend on abstractions, not implementations
-6. **Open/Closed**: Open for extension, closed for modification
-7. **Modular Design**: Clear boundaries and organized structure
-
-### 💻 CODE Phase Principles
-1. **Clean Code**: Readable, self-documenting, and maintainable
-2. **DRY**: Eliminate code duplication
-3. **KISS**: Simplest solution that works
-4. **Error Handling**: Comprehensive error handling and logging
-5. **Performance Awareness**: Consider efficiency without premature optimization
-6. **Security Mindset**: Validate inputs, sanitize outputs, secure by default
-7. **Consistent Style**: Follow established coding conventions
-8. **Incremental Development**: Small, testable changes
-
-### 🧪 TEST Phase Principles
-1. **Test Coverage**: Aim for meaningful coverage of critical paths
-2. **Edge Case Testing**: Test boundary conditions and error scenarios
-3. **Integration Testing**: Verify component interactions
-4. **Performance Testing**: Validate system performance requirements
-5. **Security Testing**: Check for vulnerabilities and attack vectors
-6. **User Acceptance**: Ensure functionality meets user needs
-7. **Regression Prevention**: Test existing functionality after changes
-8. **Documentation**: Document test scenarios and results
+| Phase | Key Principles |
+|-------|----------------|
+| 📋 **PREPARE** | Documentation First, Context Gathering, Dependency Mapping, API Exploration, Research Patterns, Requirement Validation |
+| 🏗️ **ARCHITECT** | Single Responsibility, Loose Coupling, High Cohesion, Interface Segregation, Dependency Inversion, Open/Closed, Modular Design |
+| 💻 **CODE** | Clean Code, DRY, KISS, Error Handling, Performance Awareness, Security Mindset, Consistent Style, Incremental Development |
+| 🧪 **TEST** | Test Coverage, Edge Cases, Integration Testing, Performance Testing, Security Testing, User Acceptance, Regression Prevention |
 
 ---
 
@@ -202,22 +172,9 @@ This is not punitive—it's corrective. The goal is maintaining role boundaries.
 
 ### Always Run Agents in Background
 
-> ⚠️ **MANDATORY**: Every `Task` call to a specialist agent MUST include `run_in_background=true`. No exceptions.
+> ⚠️ **MANDATORY**: Every `Task` call MUST include `run_in_background=true`. No exceptions.
 
-**Why always background?**
-- Agent work should never block the user conversation
-- The orchestrator can continue coordinating while agents execute
-- Multiple agents can run in parallel
-- Results are reported back when ready
-
-```python
-# Correct - always use run_in_background=true
-Task(
-    subagent_type="pact-backend-coder",
-    run_in_background=true,  # ← REQUIRED - never omit or set to false
-    prompt="Implement the user authentication endpoint..."
-)
-```
+Agents run async so orchestrator can continue coordinating while they execute.
 
 ### Workflows
 
@@ -236,35 +193,23 @@ For workflow details: invoke `pact-workflows` skill
 
 ### Agent Workflow
 
-**Before starting**: Create a feature branch.
-
-**Optional**: Run `/PACT:plan-mode` first for complex tasks. Creates plan in `docs/plans/` with specialist consultation. When `/PACT:orchestrate` runs, it checks for approved plans and passes relevant sections to each phase.
-
-To invoke specialist agents, follow this sequence:
-1. **PREPARE Phase**: Invoke `pact-preparer` → outputs to `docs/preparation/`
-2. **ARCHITECT Phase**: Invoke `pact-architect` → outputs to `docs/architecture/`
-3. **CODE Phase**: Invoke relevant coders (includes smoke tests + decision log)
-4. **TEST Phase**: Invoke `pact-test-engineer` (for all substantive testing)
-
-Within each phase, invoke **multiple agents in parallel** for non-conflicting tasks.
-
-**After all phases complete**: Run `/PACT:peer-review` to create a PR.
+1. Create feature branch
+2. *(Optional)* Run `/PACT:plan-mode` for complex tasks
+3. Execute phases in sequence: **PREPARE** → **ARCHITECT** → **CODE** → **TEST**
+4. Within each phase, run **multiple agents in parallel** for non-conflicting tasks
+5. Run `/PACT:peer-review` to create PR
 
 ### PR Review Workflow
 
 Invoke **at least 3 agents in parallel**:
-- **pact-architect**: Design coherence, architectural patterns, interface contracts, separation of concerns
-- **pact-test-engineer**: Test coverage, testability, performance implications, edge cases
-- **Domain specialist coder(s)**: Implementation quality specific to PR focus
-  - Select the specialist(s) based on PR focus:
-    - Frontend changes → **pact-frontend-coder** (UI implementation quality, accessibility, state management)
-    - Backend changes → **pact-backend-coder** (Server-side implementation quality, API design, error handling)
-    - Database changes → **pact-database-engineer** (Query efficiency, schema design, data integrity)
-    - Multiple domains → Specialist for domain with most significant changes, or all relevant specialists if multiple domains are equally significant
 
-After agent reviews completed:
-- Synthesize findings and recommendations in `docs/review/` (note agreements and conflicts)
-- Execute `/PACT:pin-memory`
+| Agent | Reviews |
+|-------|---------|
+| **pact-architect** | Design coherence, patterns, interfaces |
+| **pact-test-engineer** | Coverage, testability, edge cases |
+| **Domain coder(s)** | Implementation quality (select by PR focus) |
+
+After reviews: synthesize in `docs/review/`, then `/PACT:pin-memory`.
 
 ---
 
@@ -281,15 +226,6 @@ Invoke skills to load detailed guidance into context.
 | `pact-workflows` | Workflows | orchestrate, comPACT, rePACT, imPACT |
 | `pact-templates` | Documentation | Decision logs, architecture docs |
 | `pact-memory` | Memory | Save/search protocols, CLAUDE.md sync |
-
-**When to invoke**:
-- `pact-governance`: For SACROSANCT details, delegation rules, or algedonic signal format
-- `pact-assessment`: At phase boundaries, when complexity changes, or S3/S4 tension detected
-- `pact-coordination`: When running parallel agents, resolving conflicts, or auditing progress
-- `pact-specialist`: For autonomy boundaries, phase transitions, or blocker protocols
-- `pact-workflows`: For detailed workflow procedures (orchestrate, comPACT, rePACT, imPACT)
-- `pact-templates`: When creating decision logs, architecture docs, or review reports
-- `pact-memory`: For save/search protocols or CLAUDE.md sync procedures
 
 ---
 
