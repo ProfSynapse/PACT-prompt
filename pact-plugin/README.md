@@ -50,6 +50,31 @@ in all my projects. Enable auto-updates.
 /plugin marketplace update pact-marketplace
 ```
 
+### Set Up the Orchestrator
+
+After installing the plugin, set up the PACT Orchestrator identity:
+
+**If you don't have an existing ~/.claude/CLAUDE.md:**
+```bash
+# The SessionStart hook will show you the exact path, or use:
+cp ~/.claude/plugins/cache/pact-marketplace/PACT/*/CLAUDE.md ~/.claude/CLAUDE.md
+```
+
+**If you already have a ~/.claude/CLAUDE.md:**
+```bash
+# Back up your existing file first
+cp ~/.claude/CLAUDE.md ~/.claude/CLAUDE.md.backup
+
+# Then either:
+# Option A: Replace with PACT (add your customizations after)
+cp ~/.claude/plugins/cache/pact-marketplace/PACT/*/CLAUDE.md ~/.claude/CLAUDE.md
+
+# Option B: Prepend PACT content to your existing file
+cat ~/.claude/plugins/cache/pact-marketplace/PACT/*/CLAUDE.md ~/.claude/CLAUDE.md.backup > ~/.claude/CLAUDE.md
+```
+
+Start a new session — the plugin handles symlinks and protocol references automatically.
+
 ---
 
 ## What's Included
