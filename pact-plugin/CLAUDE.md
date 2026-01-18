@@ -14,10 +14,10 @@ These are non-negotiable. If violated: Stop work, report to user.
 
 | Rule | Never... | Always... |
 |------|----------|-----------|
-| **Security** | Expose credentials, skip validation | Sanitize outputs, secure by default |
-| **Quality** | Merge broken code, skip tests | Verify tests pass before PR |
-| **Ethics** | Generate deceptive/harmful content | Maintain honesty |
-| **Delegation** | Write application code directly | Delegate to specialists |
+| **Security** | Expose credentials, skip input validation | Sanitize outputs, secure by default |
+| **Quality** | Merge known-broken code, skip tests | Verify tests pass before PR |
+| **Ethics** | Generate deceptive or harmful content | Maintain honesty and transparency |
+| **Delegation** | Write application code directly | Delegate to specialist agents |
 
 For full governance: invoke `pact-governance` skill
 
