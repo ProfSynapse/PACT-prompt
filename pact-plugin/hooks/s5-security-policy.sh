@@ -113,12 +113,14 @@ fi
 # === CHMOD/CHOWN RECURSIVE ON ROOT ===
 
 # Block chmod -R on root
-if echo "$command_text" | grep -qE 'chmod\s+(-[a-zA-Z]*R[a-zA-Z]*)\s+[0-9]+\s+/\s*$'; then
+# Match "/" followed by end-of-line, whitespace, or command separator
+if echo "$command_text" | grep -qE 'chmod\s+(-[a-zA-Z]*R[a-zA-Z]*)\s+[0-9]+\s+/(\s|;|&|$)'; then
     block_command "Recursive chmod on root is forbidden"
 fi
 
 # Block chown -R on root
-if echo "$command_text" | grep -qE 'chown\s+(-[a-zA-Z]*R[a-zA-Z]*)\s+\S+\s+/\s*$'; then
+# Match "/" followed by end-of-line, whitespace, or command separator
+if echo "$command_text" | grep -qE 'chown\s+(-[a-zA-Z]*R[a-zA-Z]*)\s+\S+\s+/(\s|;|&|$)'; then
     block_command "Recursive chown on root is forbidden"
 fi
 
