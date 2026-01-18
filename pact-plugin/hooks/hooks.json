@@ -10,16 +10,6 @@
         ]
       }
     ],
-    "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "echo \"Current date/time: $(date '+%Y-%m-%d %H:%M:%S %Z')\""
-          }
-        ]
-      }
-    ],
     "PreToolUse": [
       {
         "matcher": "Bash",
@@ -27,6 +17,28 @@
           {
             "type": "command",
             "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/git_commit_check.py\""
+          },
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/s5-security-policy.sh\""
+          }
+        ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/s5-credential-scan.sh\""
+          }
+        ]
+      },
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/s5-credential-scan.sh\""
           }
         ]
       }
@@ -41,6 +53,11 @@
           {
             "type": "command",
             "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/memory_enforce.py\""
+          },
+          {
+            "type": "prompt",
+            "prompt": "S3 Completion Check.\n\nEvaluate the agent's work based on agent type:\n\n**Universal checks (all agents)**:\n1. Did agent complete the assigned task?\n2. Any blockers reported needing orchestrator attention?\n3. Any algedonic signals (HALT/ALERT) that must surface?\n4. Did agent save memory (context, decisions, lessons)?\n\n**Domain-specific checks**:\n\n- **pact-backend-coder / pact-frontend-coder / pact-database-engineer**:\n  - Smoke tests passed (compile, run, happy path)?\n  - Decision log created/updated in docs/decision-logs/?\n\n- **pact-architect**:\n  - Quality checks passed (requirements addressed, interfaces documented)?\n  - Architecture docs created in docs/architecture/?\n  - S4 checkpoint documented before phase transition?\n\n- **pact-test-engineer**:\n  - All tests run with pass rate and coverage metrics?\n  - Test decision log created in docs/decision-logs/?\n\n- **pact-preparer**:\n  - Sources verified and findings documented?\n  - Preparation docs created in docs/preparation/?\n  - S4 checkpoint documented before phase transition?\n\n- **pact-n8n**:\n  - Workflow validates and basic execution succeeds?\n  - Decision log created in docs/decision-logs/?\n\n- **pact-memory-agent**:\n  - Memory operation completed successfully?\n  - Results reported with memory ID or search findings?\n\nIf incomplete or blocked, return with specific reason and which checklist item failed.",
+            "timeout": 30000
           }
         ]
       }
@@ -73,6 +90,10 @@
           },
           {
             "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/memory_posttool.py\""
+          },
+          {
+            "type": "command",
             "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/file_size_check.py\""
           }
         ]
@@ -83,6 +104,10 @@
           {
             "type": "command",
             "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/track_files.py\""
+          },
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/memory_posttool.py\""
           },
           {
             "type": "command",

@@ -14,12 +14,12 @@ Output: None (writes to tracking file for later memory association)
 import json
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 
-# Directory for tracking data
-TRACKING_DIR = Path.home() / ".claude" / "pact-memory" / "session-tracking"
+# Directory for tracking data (configurable via PACT_MEMORY_DIR environment variable)
+TRACKING_DIR = Path(os.environ.get("PACT_MEMORY_DIR", Path.home() / ".claude" / "pact-memory")) / "session-tracking"
 
 
 def ensure_tracking_dir():
@@ -62,9 +62,48 @@ def extract_file_path(tool_input: dict) -> str:
     return tool_input.get("file_path", "")
 
 
+def is_safe_path(file_path: str) -> bool:
+    """
+    Validate that a file path is safe to track.
+
+    Rejects paths that:
+    - Start with '..'
+    - Contain '/../'
+    - Start with sensitive system paths
+
+    Args:
+        file_path: The path to validate
+
+    Returns:
+        True if path is safe, False otherwise
+    """
+    # Normalize the path to resolve any . or .. components
+    normalized = os.path.normpath(file_path)
+
+    # Reject paths starting with parent directory traversal
+    if normalized.startswith('..'):
+        return False
+
+    # Reject paths containing parent directory traversal
+    if '/../' in file_path or file_path.endswith('/..'):
+        return False
+
+    # Reject sensitive system paths
+    sensitive_prefixes = ('/etc', '/var', '/usr', '/bin', '/sbin', '/lib', '/boot', '/root')
+    if any(normalized.startswith(prefix) for prefix in sensitive_prefixes):
+        return False
+
+    return True
+
+
 def track_file(file_path: str, tool_name: str):
     """Add a file to the tracking list."""
     if not file_path:
+        return
+
+    # Validate path is safe before tracking
+    if not is_safe_path(file_path):
+        print(f"Warning: Rejecting unsafe path: {file_path}", file=sys.stderr)
         return
 
     data = load_tracked_files()
@@ -75,7 +114,7 @@ def track_file(file_path: str, tool_name: str):
         # Update timestamp
         for f in data["files"]:
             if f["path"] == file_path:
-                f["last_modified"] = datetime.utcnow().isoformat()
+                f["last_modified"] = datetime.now(timezone.utc).isoformat()
                 f["tool"] = tool_name
                 break
     else:
@@ -83,8 +122,8 @@ def track_file(file_path: str, tool_name: str):
         data["files"].append({
             "path": file_path,
             "tool": tool_name,
-            "first_seen": datetime.utcnow().isoformat(),
-            "last_modified": datetime.utcnow().isoformat(),
+            "first_seen": datetime.now(timezone.utc).isoformat(),
+            "last_modified": datetime.now(timezone.utc).isoformat(),
         })
 
     save_tracked_files(data)
@@ -114,7 +153,7 @@ def main():
 
     except Exception as e:
         # Don't block on errors
-        print(f"Hook warning (track_files): {e}", file=sys.stderr)
+        print(f"PACT Hook [WARNING] (track_files): {e}", file=sys.stderr)
         sys.exit(0)
 
 

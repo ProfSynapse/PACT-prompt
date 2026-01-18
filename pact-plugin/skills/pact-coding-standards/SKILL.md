@@ -13,6 +13,17 @@ description: |
 Clean code principles for the Code phase of PACT. This skill provides
 essential coding guidelines and links to detailed patterns for implementation.
 
+## Development Best Practices
+
+- Keep files under 500-600 lines for maintainability
+- Review existing code before adding new functionality
+- Code must be self-documenting by using descriptive naming for variables, functions, and classes
+- Add comprehensive comments explaining complex logic
+- Prefer composition over inheritance
+- Follow the Boy Scout Rule: leave code cleaner than you found it, and remove deprecated or legacy code
+
+---
+
 ## Core Principles
 
 ### 1. Single Responsibility Principle

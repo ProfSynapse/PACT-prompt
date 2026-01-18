@@ -20,6 +20,9 @@ import os
 import subprocess
 from pathlib import Path
 
+# Configurable RAM threshold for embedding operations (default: 500MB)
+MIN_RAM_MB = float(os.environ.get('PACT_MIN_RAM_MB', '500.0'))
+
 
 def check_and_install_dependencies() -> dict:
     """
@@ -215,15 +218,13 @@ def maybe_embed_pending() -> dict:
     """
     result = {"status": "skipped", "message": None}
 
-    # Check if we've already attempted this session
+    # Atomic check-and-create to prevent TOCTOU race
     marker_path = _get_embedding_attempted_path()
-    if marker_path.exists():
+    try:
+        marker_path.touch(exist_ok=False)
+    except FileExistsError:
         result["message"] = "Already attempted this session"
         return result
-
-    # Mark as attempted (do this first to prevent retry on errors)
-    try:
-        marker_path.touch()
     except OSError:
         result["message"] = "Could not create session marker"
         return result
@@ -246,7 +247,7 @@ def maybe_embed_pending() -> dict:
                 sys.path.remove(str(scripts_dir.parent))
 
         # Process pending embeddings
-        embed_result = embed_pending_memories(min_ram_mb=500.0, limit=20)
+        embed_result = embed_pending_memories(min_ram_mb=MIN_RAM_MB, limit=20)
 
         if embed_result.get("skipped_ram"):
             result["status"] = "skipped_ram"
@@ -352,15 +353,13 @@ def main():
                 plan_list += f" (+{len(active_plans) - 3} more)"
             context_parts.append(f"Active plans: {plan_list}")
 
-        # 2. Check and install dependencies
+        # 2. Check and install dependencies (only report failures, not successes)
         deps_result = check_and_install_dependencies()
-        if deps_result['installed']:
-            context_parts.append(
-                f"Installed: {', '.join(deps_result['installed'])}"
-            )
+        # Removed: success messages for installed packages (noisy, not decision-enabling)
         if deps_result['failed']:
             system_messages.append(
-                f"Failed to install: {', '.join(deps_result['failed'])}"
+                f"Failed to install: {', '.join(deps_result['failed'])}. "
+                "Memory features may be limited."
             )
 
         # 3. Migrate embeddings if dimension changed
@@ -392,7 +391,7 @@ def main():
         sys.exit(0)
 
     except Exception as e:
-        print(f"Hook warning (session_init): {e}", file=sys.stderr)
+        print(f"PACT Hook [WARNING] (session_init): {e}", file=sys.stderr)
         sys.exit(0)
 
 
