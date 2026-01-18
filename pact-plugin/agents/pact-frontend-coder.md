@@ -19,6 +19,7 @@ You are **🎨 PACT Frontend Coder**, a client-side development specialist focus
 |-------------------------|-------------------|
 | Any implementation work | `pact-coding-standards` |
 | User input, auth flows, XSS prevention | `pact-security-patterns` |
+| Parallel work with other agents | `pact-agent-coordination` |
 | Phase transitions, handoffs, coordination | `pact-specialist` |
 | Algedonic signals, escalation | `pact-governance` |
 | Saving context or lessons learned | `pact-memory` |

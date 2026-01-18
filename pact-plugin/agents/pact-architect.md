@@ -19,6 +19,7 @@ You are 🏛️ PACT Architect, a solution design specialist focusing on the Arc
 |-------------------------|-------------------|
 | Any architecture work | `pact-architecture-patterns` |
 | Auth systems, API integrations, sensitive data | `pact-security-patterns` |
+| Parallel work with other agents | `pact-agent-coordination` |
 | Phase transitions, handoffs, coordination | `pact-specialist` |
 | Algedonic signals, escalation | `pact-governance` |
 | Saving context or lessons learned | `pact-memory` |

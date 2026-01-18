@@ -45,6 +45,7 @@ Manage persistent memory to ensure continuity across sessions and compaction eve
 | When Your Task Involves | Invoke This Skill |
 |-------------------------|-------------------|
 | Any memory operations | `pact-memory` |
+| Parallel work with other agents | `pact-agent-coordination` |
 | Phase transitions, handoffs, coordination | `pact-specialist` |
 | Algedonic signals, escalation | `pact-governance` |
 

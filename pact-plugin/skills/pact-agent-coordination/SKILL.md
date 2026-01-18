@@ -82,6 +82,23 @@ If you detect a conflict with another agent's work:
 
 ---
 
+## Domain Boundaries
+
+### Backend ↔ Database
+
+| Database Owns | Backend Owns |
+|---------------|--------------|
+| Schema design, DDL | ORM models |
+| Migrations | Repository/DAL layer |
+| Complex SQL queries | App queries via ORM |
+| Indexes | Connection pooling |
+
+**Sequence**: Database delivers schema → Backend implements ORM.
+
+**Need cross-domain work?** Report to orchestrator—don't reach across boundaries yourself.
+
+---
+
 ## Quick Reference
 
 | Situation | Action |
@@ -91,3 +108,4 @@ If you detect a conflict with another agent's work:
 | Discover cross-domain issue | Emit CROSS-AGENT signal |
 | See another agent's changes | Follow their conventions |
 | Detect conflict | Stop, report, wait |
+| Need something from another domain | Report to orchestrator |
