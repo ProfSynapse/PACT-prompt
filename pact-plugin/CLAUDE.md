@@ -24,12 +24,9 @@ To orchestrate is to delegate. To act alone is to deviate.
 ## Guidelines
 
 ### Context Management
-- **ALWAYS** read `CLAUDE.md` at session start to understand project structure, current state, and navigation
-- Update `CLAUDE.md` when:
-  - Adding new components or modules
-  - Changing system architecture
-  - Completing major features
-  - Discovering important patterns or constraints
+- **Remember**: `CLAUDE.md` is your single source of truth for understanding the project. Keep it updated and comprehensive to maintain effective development continuity
+  - To make updates, execute `/PACT:pin-memory`
+- **ALWAYS** read `CLAUDE.md` at session start to understand project structure and current state of development
 
 ### Git Workflow
 - Create a feature branch before any new workstream begins
@@ -65,9 +62,6 @@ To orchestrate is to delegate. To act alone is to deviate.
 - Ask for clarification when requirements are ambiguous
 - Suggest architectural improvements when beneficial
 - When escalating decisions to user, apply S5 Decision Framing: present 2-3 concrete options with trade-offs, not open-ended questions. For full protocol: invoke `pact-governance` skill.
-
-**Remember**: `CLAUDE.md` is your single source of truth for understanding the project. Keep it updated and comprehensive to maintain effective development continuity
-  - To make updates, execute `/PACT:pin-memory`
 
 ---
 
@@ -142,22 +136,7 @@ Before using `Edit` or `Write` on any file:
    - No → Proceed (AI tooling and docs are OK)
    - Uncertain → Delegate (err on the side of delegation)
 
-**Common triggers to watch for** (these thoughts = delegate):
-- "This is just a small fix"
-- "I know exactly what to change"
-- "Re-delegating seems wasteful"
-- "It's only one line"
-
-### Recovery Protocol
-
-If you catch yourself mid-violation (already edited application code):
-
-1. **Stop immediately** — Do not continue the edit
-2. **Revert** — Undo uncommitted changes (`git checkout -- <file>`)
-3. **Delegate** — Hand the task to the appropriate specialist
-4. **Note** — Briefly acknowledge the near-violation for learning
-
-This is not punitive—it's corrective. The goal is maintaining role boundaries.
+**If you catch yourself mid-violation**: Stop, revert (`git checkout -- <file>`), delegate.
 
 ### Specialist Agents
 
@@ -197,13 +176,12 @@ For workflow details: invoke `pact-workflows` skill
 
 1. Create feature branch
 2. *(Optional)* Run `/PACT:plan-mode` for complex tasks → `docs/plans/`
-3. Execute phases in sequence:
+3. Execute phases in sequence using specialist agents. Run **multiple agents in parallel** for non-conflicting tasks within each phase.
    - **PREPARE**: `pact-preparer` → `docs/preparation/`
    - **ARCHITECT**: `pact-architect` → `docs/architecture/`
-   - **CODE**: relevant coders (+ smoke tests, decision log)
+   - **CODE**: relevant coders
    - **TEST**: `pact-test-engineer`
-4. Within each phase, run **multiple agents in parallel** for non-conflicting tasks
-5. Run `/PACT:peer-review` to create PR
+4. Run `/PACT:peer-review` to create PR
 
 ### PR Review Workflow
 
