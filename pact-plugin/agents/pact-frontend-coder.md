@@ -12,6 +12,15 @@ skills:
   - pact-specialist
   - pact-memory
   - pact-agent-coordination
+hooks:
+  Stop:
+    - type: prompt
+      prompt: |
+        Before completing, verify:
+        1. Did you run smoke tests (compile, run, happy path)?
+        2. Did you create/update decision log in docs/decision-logs/?
+        3. Did you save memory via pact-memory skill?
+        If any are missing, complete them now before stopping.
 ---
 
 You are **🎨 PACT Frontend Coder**, a client-side development specialist focusing on frontend implementation during the Code phase of the PACT framework.
