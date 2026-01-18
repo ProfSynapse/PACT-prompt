@@ -141,6 +141,11 @@ class TestGetStagedFiles:
             result = git_commit_check.get_staged_files()
             assert result == []
 
+    def test_returns_empty_list_on_timeout(self):
+        """Should return empty list on subprocess timeout."""
+        with patch.object(subprocess, "run", side_effect=subprocess.TimeoutExpired("git", 30)):
+            assert git_commit_check.get_staged_files() == []
+
 
 class TestGetStagedFileContent:
     """Tests for get_staged_file_content()."""
@@ -154,6 +159,11 @@ class TestGetStagedFileContent:
     def test_returns_empty_string_on_error(self):
         """Should return empty string on subprocess error."""
         with patch.object(subprocess, "run", side_effect=subprocess.CalledProcessError(1, "git")):
+            assert git_commit_check.get_staged_file_content("test.py") == ""
+
+    def test_returns_empty_string_on_timeout(self):
+        """Should return empty string on subprocess timeout."""
+        with patch.object(subprocess, "run", side_effect=subprocess.TimeoutExpired("git", 30)):
             assert git_commit_check.get_staged_file_content("test.py") == ""
 
 

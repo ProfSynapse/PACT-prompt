@@ -37,6 +37,53 @@ class TestImportsAndConstants:
         assert str(track_files.TRACKING_DIR).endswith(str(expected_suffix))
 
 
+class TestIsSafePath:
+    """Tests for is_safe_path() function."""
+
+    def test_accepts_normal_absolute_path(self):
+        """Should accept normal absolute paths."""
+        assert track_files.is_safe_path("/home/user/project/file.py") is True
+        assert track_files.is_safe_path("/Users/dev/code/app.ts") is True
+
+    def test_accepts_relative_path(self):
+        """Should accept relative paths."""
+        assert track_files.is_safe_path("src/main.py") is True
+        assert track_files.is_safe_path("./config.json") is True
+
+    def test_rejects_parent_traversal_prefix(self):
+        """Should reject paths starting with parent traversal."""
+        assert track_files.is_safe_path("../etc/passwd") is False
+        assert track_files.is_safe_path("../../secret.key") is False
+
+    def test_rejects_parent_traversal_mid_path(self):
+        """Should reject paths containing parent traversal in the middle."""
+        assert track_files.is_safe_path("/safe/path/../../../etc/passwd") is False
+        assert track_files.is_safe_path("/home/user/../../../root/.ssh/id_rsa") is False
+
+    def test_rejects_parent_traversal_suffix(self):
+        """Should reject paths ending with parent traversal."""
+        assert track_files.is_safe_path("/some/path/..") is False
+
+    def test_rejects_sensitive_system_paths(self):
+        """Should reject sensitive system paths."""
+        assert track_files.is_safe_path("/etc/passwd") is False
+        assert track_files.is_safe_path("/var/log/auth.log") is False
+        assert track_files.is_safe_path("/usr/bin/python") is False
+        assert track_files.is_safe_path("/bin/bash") is False
+        assert track_files.is_safe_path("/sbin/init") is False
+        assert track_files.is_safe_path("/lib/modules") is False
+        assert track_files.is_safe_path("/boot/grub") is False
+        assert track_files.is_safe_path("/root/.bashrc") is False
+
+    def test_allows_non_sensitive_absolute_paths(self):
+        """Should allow absolute paths that are not sensitive system paths."""
+        # Paths that don't start with sensitive prefixes
+        assert track_files.is_safe_path("/home/user/project/file.txt") is True
+        assert track_files.is_safe_path("/Users/dev/code/data.json") is True
+        assert track_files.is_safe_path("/opt/app/main.py") is True
+        assert track_files.is_safe_path("/tmp/workspace/file.py") is True
+
+
 class TestEnsureTrackingDir:
     """Tests for ensure_tracking_dir() function."""
 
@@ -398,6 +445,23 @@ class TestTrackFile:
 
         # Should include timezone (ends with +00:00 or Z)
         assert "+00:00" in first_seen or first_seen.endswith("Z")
+
+    def test_rejects_unsafe_path(self, tmp_path, capsys):
+        """Should reject unsafe paths and log warning."""
+        test_dir = tmp_path / "tracking"
+        test_dir.mkdir(parents=True)
+
+        with patch.object(track_files, 'TRACKING_DIR', test_dir), \
+             patch.dict(os.environ, {'CLAUDE_SESSION_ID': 'test-session'}):
+            track_files.track_file("/etc/passwd", "Write")
+
+        # File should not be tracked
+        tracking_file = test_dir / "test-session.json"
+        assert not tracking_file.exists()
+
+        # Warning should be logged
+        captured = capsys.readouterr()
+        assert "Rejecting unsafe path" in captured.err
 
 
 class TestMainJsonFlow:

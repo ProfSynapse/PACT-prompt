@@ -86,6 +86,10 @@ def check_security(staged_files: List[str]) -> List[str]:
 
     for f in staged_files:
         if f.endswith(code_extensions):
+            # Skip test files - they may contain intentional patterns as fixtures
+            if is_test_file(f):
+                continue
+
             content = get_staged_file_content(f)
             for pattern in risky_patterns:
                 if re.search(pattern, content, re.IGNORECASE):
@@ -239,6 +243,58 @@ def check_env_file_in_gitignore() -> Tuple[bool, str | None]:
         return False, "Warning: Could not read .gitignore file."
 
 
+def is_test_file(filepath: str) -> bool:
+    """
+    Check if a file path is a test file that should be excluded from credential scanning.
+
+    Test files often contain intentional fake credentials as test fixtures to verify
+    the scanner's detection capabilities. Scanning these creates false positives.
+
+    Exclusion patterns (matching s5-credential-scan.sh):
+    - Files in /tests/ directories
+    - Files in /test/ directories
+    - Files in /__tests__/ directories (Jest convention)
+    - Files named test_*.py or *_test.py
+    - Files named *.test.js, *.test.ts, *.spec.js, *.spec.ts
+
+    Args:
+        filepath: The file path to check
+
+    Returns:
+        True if the file is a test file, False otherwise
+    """
+    # Normalize path separators
+    normalized = filepath.replace('\\', '/')
+
+    # Check for test directories
+    test_dir_patterns = ['/tests/', '/test/', '/__tests__/']
+    for pattern in test_dir_patterns:
+        if pattern in normalized:
+            return True
+
+    # Check for files starting with tests/ or test/
+    if normalized.startswith('tests/') or normalized.startswith('test/'):
+        return True
+
+    # Check for test file naming conventions
+    filename = normalized.split('/')[-1]
+
+    # Python test files: test_*.py or *_test.py
+    if filename.startswith('test_') and filename.endswith('.py'):
+        return True
+    if filename.endswith('_test.py'):
+        return True
+
+    # JavaScript/TypeScript test files: *.test.js, *.test.ts, *.spec.js, *.spec.ts
+    test_extensions = ['.test.js', '.test.ts', '.test.jsx', '.test.tsx',
+                       '.spec.js', '.spec.ts', '.spec.jsx', '.spec.tsx']
+    for ext in test_extensions:
+        if filename.endswith(ext):
+            return True
+
+    return False
+
+
 def is_example_password(line: str) -> bool:
     """
     Check if a line containing a password pattern appears to be an example/mock value.
@@ -313,6 +369,10 @@ def check_hardcoded_secrets(staged_files: List[str]) -> List[str]:
 
     for f in staged_files:
         if f.endswith(code_extensions):
+            # Skip test files - they contain intentional fake credentials as fixtures
+            if is_test_file(f):
+                continue
+
             content = get_staged_file_content(f)
             for pattern, description, check_for_examples in secret_patterns:
                 # Find all matches with their positions

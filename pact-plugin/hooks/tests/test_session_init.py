@@ -243,6 +243,26 @@ class TestMaybeEmbedPending:
             assert result['status'] == 'skipped'
             assert 'Could not create session marker' in result['message']
 
+    def test_atomic_marker_prevents_duplicate_embedding(self):
+        """Should use atomic marker creation to prevent race conditions."""
+        marker_path = Path(tempfile.gettempdir()) / f'test_atomic_marker_{os.getpid()}'
+        marker_path.unlink(missing_ok=True)
+
+        try:
+            with patch.object(session_init, '_get_embedding_attempted_path', return_value=marker_path), \
+                 patch.object(session_init, '_get_pending_memories', return_value=[]) if hasattr(session_init, '_get_pending_memories') else patch.dict(os.environ, {}), \
+                 patch.dict(os.environ, {'CLAUDE_PROJECT_DIR': '/tmp'}):
+                # First call creates marker
+                result1 = session_init.maybe_embed_pending()
+                assert marker_path.exists()
+
+                # Second call should skip due to FileExistsError
+                result2 = session_init.maybe_embed_pending()
+                assert result2['status'] == 'skipped'
+                assert 'Already attempted' in result2['message']
+        finally:
+            marker_path.unlink(missing_ok=True)
+
 
 class TestFindActivePlans:
     """Tests for find_active_plans()."""
