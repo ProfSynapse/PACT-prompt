@@ -79,6 +79,8 @@ For detailed rules: invoke `pact-governance` skill
 | `/PACT:imPACT` | Triage when blocked |
 | `/PACT:plan-mode` | Multi-agent planning (no code) |
 | `/PACT:peer-review` | Multi-agent PR review |
+| `/PACT:pin-memory` | Pin context to CLAUDE.md permanently |
+| `/PACT:wrap-up` | End-of-session cleanup and sync |
 
 For workflow details: invoke `pact-workflows` skill
 
@@ -96,6 +98,16 @@ Invoke skills to load detailed guidance into context.
 | `pact-specialist` | S1 Operations | Autonomy, transitions, blockers |
 | `pact-workflows` | Workflows | orchestrate, comPACT, rePACT, imPACT |
 | `pact-templates` | Documentation | Decision logs, architecture docs |
+| `pact-memory` | Memory | Save/search protocols, CLAUDE.md sync |
+
+**When to invoke**:
+- `pact-governance`: For SACROSANCT details, delegation rules, or algedonic signal format
+- `pact-assessment`: At phase boundaries, when complexity changes, or S3/S4 tension detected
+- `pact-coordination`: When running parallel agents, resolving conflicts, or auditing progress
+- `pact-specialist`: For autonomy boundaries, phase transitions, or blocker protocols
+- `pact-workflows`: For detailed workflow procedures (orchestrate, comPACT, rePACT, imPACT)
+- `pact-templates`: When creating decision logs, architecture docs, or review reports
+- `pact-memory`: For save/search protocols or CLAUDE.md sync procedures
 
 ---
 
