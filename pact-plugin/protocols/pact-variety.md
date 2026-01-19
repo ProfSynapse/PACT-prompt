@@ -44,7 +44,7 @@ Score each dimension 1-4 and sum:
 
 **Amplify** (increase response capacity):
 - Invoke additional specialists
-- Enable parallel execution
+- Enable parallel execution — see [pact-parallel-execution.md](pact-parallel-execution.md) for QDCL and patterns (primary strategy for CODE phase variety)
 - Invoke nested PACT (`/PACT:rePACT`) for complex sub-components
 - Run PREPARE phase to build understanding
 - Engage parallel audit (S3*) for high-risk areas
