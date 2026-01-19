@@ -87,6 +87,8 @@ comPACT handles tasks within ONE specialist domain. For independent sub-tasks, i
 
 ### When to Parallelize (Same-Domain)
 
+**Default stance**: Parallel unless proven dependent. Use the Quick Dependency Checklist (QDCL) to verify independence. See [pact-parallel-execution.md](pact-parallel-execution.md) for the full decision framework, patterns, and anti-patterns.
+
 Invoke multiple specialists of the same type when:
 - Multiple independent items (bugs, components, endpoints)
 - No shared files between sub-tasks
@@ -100,7 +102,8 @@ Invoke multiple specialists of the same type when:
 
 ### S2 Light Coordination (for parallel comPACT)
 
-Before parallel invocation within a domain:
+Before parallel invocation within a domain, run the S2 Pre-Parallel Check (see [pact-parallel-execution.md](pact-parallel-execution.md) for the full checklist):
+
 1. **Check for conflicts** — Do any sub-tasks touch the same files?
 2. **Assign boundaries** — If conflicts exist, sequence or define clear boundaries
 3. **Set convention authority** — First agent's choices become standard for the batch
