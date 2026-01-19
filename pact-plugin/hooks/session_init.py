@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Location: .claude/hooks/session_init.py
+Location: pact-plugin/hooks/session_init.py
 Summary: SessionStart hook that initializes PACT environment.
 Used by: Claude Code settings.json SessionStart hook
 

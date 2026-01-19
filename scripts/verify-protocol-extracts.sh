@@ -8,8 +8,8 @@ set -e
 echo "=== Protocol Extract Verification ==="
 echo ""
 
-SOURCE=".claude/protocols/pact-protocols.md"
-PROTOCOLS_DIR=".claude/protocols"
+SOURCE="pact-plugin/protocols/pact-protocols.md"
+PROTOCOLS_DIR="pact-plugin/protocols"
 
 if [ ! -f "$SOURCE" ]; then
     echo "ERROR: Source file $SOURCE not found"

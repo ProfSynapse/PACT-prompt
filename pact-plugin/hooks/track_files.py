@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Location: .claude/hooks/track_files.py
+Location: pact-plugin/hooks/track_files.py
 Summary: PostToolUse hook that tracks files modified during the session.
 Used by: Claude Code settings.json PostToolUse hook (Edit, Write tools)
 

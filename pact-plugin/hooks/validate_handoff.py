@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Location: .claude/hooks/validate_handoff.py
+Location: pact-plugin/hooks/validate_handoff.py
 Summary: SubagentStop hook that validates PACT agent handoff format.
 Used by: Claude Code settings.json SubagentStop hook
 

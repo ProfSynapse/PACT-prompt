@@ -1,7 +1,7 @@
 """
 Working Memory Sync Module
 
-Location: .claude/skills/pact-memory/scripts/working_memory.py
+Location: pact-plugin/skills/pact-memory/scripts/working_memory.py
 
 Summary: Handles synchronization of memories to the Working Memory section
 in CLAUDE.md. Maintains a rolling window of the most recent memories for

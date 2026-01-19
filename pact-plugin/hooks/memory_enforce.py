@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Location: .claude/hooks/memory_enforce.py
+Location: pact-plugin/hooks/memory_enforce.py
 Summary: SubagentStop hook that ENFORCES memory saves after PACT agent work.
 Used by: Claude Code settings.json SubagentStop hook
 

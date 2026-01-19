@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Location: .claude/hooks/git_commit_check.py
+Location: pact-plugin/hooks/git_commit_check.py
 Summary: PreToolUse hook that validates git commits for PACT protocol compliance.
 Used by: Claude Code settings.json PreToolUse hook (matcher: Bash for git commit)
 

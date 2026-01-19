@@ -63,7 +63,7 @@ cd PACT-prompt
 claude
 ```
 
-The `.claude/` directory contains the full framework for local development.
+The `pact-plugin/` directory contains the full framework source for local development.
 
 ### ⚠️ Important: Restart Required
 
@@ -185,15 +185,36 @@ memory.search("rate limiting")
 
 ## Project Structure
 
+### Plugin Installation (Recommended)
+
+When installed as a plugin, PACT lives in your plugin cache:
+
+```
+~/.claude/
+├── CLAUDE.md                   # Orchestrator (copy from plugin)
+├── plugins/
+│   └── cache/
+│       └── pact-marketplace/
+│           └── PACT/
+│               └── 2.0.0/      # Plugin version
+│                   ├── agents/
+│                   ├── commands/
+│                   ├── skills/
+│                   ├── hooks/
+│                   └── protocols/
+├── protocols/
+│   └── pact-plugin/            # Symlink to plugin protocols
+└── pact-memory/                # Memory database (shared)
+    ├── memory.db
+    └── models/
+        └── all-MiniLM-L6-v2.gguf
+```
+
+### Your Project
+
 ```
 your-project/
-├── .claude/                    # Claude Code configuration
-│   ├── agents/                 # 7 specialist agents
-│   ├── commands/               # 8 PACT workflow commands
-│   ├── skills/                 # 13 domain knowledge skills
-│   ├── hooks/                  # Automation hooks
-│   └── protocols/              # Coordination protocols
-├── CLAUDE.md                   # Orchestrator configuration
+├── CLAUDE.md                   # Project-specific config (optional)
 └── docs/
     ├── plans/                  # Implementation plans
     ├── architecture/           # Design documents
@@ -201,20 +222,20 @@ your-project/
     └── preparation/            # Research outputs
 ```
 
-### For Plugin Installation
+### Development Clone
+
+If you cloned this repo for development/contribution:
 
 ```
-~/.claude/
-├── plugins/
-│   └── PACT/         # Plugin location
-│       ├── agents/
-│       ├── commands/
-│       ├── skills/
-│       └── hooks/
-└── pact-memory/                # Memory database (shared)
-    ├── memory.db
-    └── models/
-        └── all-MiniLM-L6-v2.gguf
+PACT-prompt/
+├── pact-plugin/                # Plugin source (canonical)
+│   ├── agents/                 # 7 specialist agents
+│   ├── commands/               # 8 PACT workflow commands
+│   ├── skills/                 # 13 domain knowledge skills
+│   ├── hooks/                  # Automation hooks
+│   └── protocols/              # Coordination protocols
+├── CLAUDE.md                   # Orchestrator configuration
+└── docs/
 ```
 
 ---
@@ -283,10 +304,10 @@ Act as PACT Orchestrator...
 
 ### Customization
 
-1. **Add project-specific context** to `CLAUDE.md`
-2. **Create custom skills** in `.claude/skills/`
-3. **Add custom hooks** in `.claude/hooks/`
-4. **Modify agents** in `.claude/agents/` for your domain
+1. **Add project-specific context** to your project's `CLAUDE.md`
+2. **Create project-local skills** in your project's `.claude/skills/` (Claude Code feature)
+3. **Create global skills** in `~/.claude/skills/` for use across all projects
+4. **Fork the plugin** if you need to modify agents or hooks for your domain
 
 ---
 
