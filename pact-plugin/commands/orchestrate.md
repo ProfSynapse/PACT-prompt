@@ -286,50 +286,79 @@ If PREPARE ran and ARCHITECT was marked "Skip," compare PREPARE's recommended ap
 - `pact-frontend-coder` — UI, client-side
 - `pact-database-engineer` — schema, queries, migrations
 
+#### Parallel-First Philosophy
+
+**Default stance**: Parallel unless proven dependent.
+
+The orchestrator should **expect** to use parallel execution. Sequential is the exception requiring explicit justification. This philosophy reflects the reality that most CODE phase work involves independent domains (backend, frontend, database) or independent components within a domain.
+
+**Required decision output** (no exceptions):
+- "**Parallel**: [groupings]" — the expected outcome
+- "**Sequential because [specific reason]**: [ordering]" — requires explicit justification
+- "**Mixed**: [parallel groupings], then [sequential dependencies]" — when genuinely mixed
+
+**Deviation from parallel requires articulated reasoning.** "I'm not sure" defaults to parallel with S2 coordination, not sequential.
+
+**Analysis should complete quickly.** Use the Quick Dependency Checklist (QDCL) below. If analysis takes more than 2 minutes, you're over-thinking—parallelize with proper S2 coordination.
+
+See [pact-parallel-execution.md](../protocols/pact-parallel-execution.md) for comprehensive parallelization guidance, patterns, and anti-patterns.
+
+---
+
 #### Execution Strategy Analysis
 
-Before invoking coders, analyze dependencies and justify your execution strategy.
+Before invoking coders, complete the **Quick Dependency Checklist (QDCL)** to determine your execution strategy.
 
-**How to analyze:**
+> **REQUIRED**: You must complete the QDCL and emit the checklist output before invoking coders. This is not optional.
+
+**Quick Dependency Checklist (QDCL)**:
+
+For each pair of work units, check:
+```
+[ ] Same file modified? → Sequential (or define strict boundaries)
+[ ] A's output is B's input? → Sequential (A first)
+[ ] Shared interface undefined? → Define interface first, then parallel
+[ ] None of above? → Parallel
+```
+
+**Emit your QDCL result**:
+```
+**QDCL Result**:
+- Backend ↔ Frontend: No shared files, API contract defined → Parallel
+- Backend ↔ Database: Schema needed first → Sequential (DB first)
+- Frontend ↔ Database: No direct dependency → Parallel
+**Strategy**: DB first, then Backend + Frontend in parallel
+```
+
+**How to complete the checklist:**
 - Review the plan's implementation details and file paths mentioned
 - If no plan exists, analyze the task description and examine relevant files directly
 - Check if tasks reference or modify the same files/modules
 - Examine import relationships between components
 
-**Analysis steps:**
-1. **Map file-level dependencies**: Which tasks touch the same files?
-2. **Map import dependencies**: Does one task's output feed another's input?
-3. **Identify parallelizable groups**: Independent tasks with no shared files
+**If QDCL shows no dependencies**: Parallel is your answer. Do not second-guess.
 
-**Required**: State your execution strategy with specific reasoning:
-- "Parallel because [specific files/components are independent]"
-- "Sequential because [specific dependency or shared file]"
-- "Mixed: [A, B] in parallel, then C (depends on A's output)"
+**If QDCL is genuinely inconclusive** (rare): Consult the architect's outputs in `docs/architecture/`, invoke pact-architect for clarification, or escalate to user. Do not default to sequential—parallel with S2 coordination is safer than unnecessary serialization.
 
-> **"I'm not sure"** and **"the plan lists them in order"** are **not valid justifications**. Complete your analysis until you can make a definitive choice.
+#### Parallel vs Sequential: Quick Reference
 
-**If analysis is genuinely inconclusive**: Consult the architect's outputs in `docs/architecture/`, invoke pact-architect for clarification, or escalate to user. Do not default to either strategy without articulated reasoning.
+These examples help calibrate your QDCL judgment. **The QDCL checklist is authoritative**; these are illustrative patterns.
 
-#### Parallel vs Sequential Examples
+**Common parallel patterns** (QDCL typically shows no dependencies):
+- Backend API + Frontend UI for same feature (no shared files, contract defined)
+- Multiple independent components in same domain (separate file trees)
+- Different domain specialists on well-bounded work units
 
-Use these to inform your analysis (not as complete decision criteria):
+**Common sequential patterns** (QDCL shows dependency):
+- Database schema → Backend (backend needs schema for models/queries)
+- Interface definition → consumers (contract must exist first)
+- Any tasks modifying the same file
 
-**Parallel-safe** (when analysis confirms independence):
-- Backend API + Frontend UI for same feature (no shared files)
-- Multiple independent components in same domain (no shared files)
-- Backend + Frontend when API contract is already defined
+**Mixed pattern** (partial parallelization):
+- DB first (schema), then Backend + Frontend in parallel (both consume schema)
+- Define types first, then parallel consumers
 
-**Sequential-required** (when analysis finds dependencies):
-- Database schema → Backend (backend needs schema to build models/queries)
-- Backend API → Frontend (frontend needs API contract to consume)
-- Shared utility/service → consumers of that utility
-- Any work where one task's output is another's input
-- Any tasks that modify the same file
-
-**Mixed** (partial parallelization):
-- When some tasks are independent but others depend on their output
-- Group independent tasks for parallel execution, then sequence dependent groups
-- Example: "A and B in parallel, then C (depends on both outputs)"
+For detailed patterns, anti-patterns, and worked examples, see [pact-parallel-execution.md](../protocols/pact-parallel-execution.md).
 
 #### S2 Pre-Parallel Coordination Check
 
