@@ -1,6 +1,8 @@
 """
 PACT Memory Graph Service
 
+Location: pact-plugin/skills/pact-memory/scripts/graph.py
+
 File relationship tracking and graph queries for the PACT Memory skill.
 Enables tracking of file modifications during sessions and discovering
 related files through the memory graph.

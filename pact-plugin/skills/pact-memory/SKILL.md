@@ -185,7 +185,7 @@ print(f"Semantic search: {'Available' if status['can_use_semantic_search'] else 
 
 ## Storage
 
-Memories are stored in `~/.claude/memory/memory.db` using SQLite with:
+Memories are stored in `~/.claude/pact-memory/memory.db` using SQLite with:
 - WAL mode for crash safety
 - Vector extensions for semantic search
 - Graph tables for file relationships
