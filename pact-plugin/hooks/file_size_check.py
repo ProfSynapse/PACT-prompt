@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Location: .claude/hooks/file_size_check.py
+Location: pact-plugin/hooks/file_size_check.py
 Summary: PostToolUse hook that alerts when files exceed line count thresholds.
 Used by: Claude Code settings.json PostToolUse hook (Edit, Write tools)
 

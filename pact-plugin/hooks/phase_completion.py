@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Location: .claude/hooks/phase_completion.py
+Location: pact-plugin/hooks/phase_completion.py
 Summary: Stop hook that verifies phase completion and reminds about decision logs.
 Used by: Claude Code settings.json Stop hook
 

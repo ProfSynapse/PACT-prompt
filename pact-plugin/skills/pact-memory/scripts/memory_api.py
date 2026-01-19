@@ -1,7 +1,7 @@
 """
 PACT Memory API
 
-Location: .claude/skills/pact-memory/scripts/memory_api.py
+Location: pact-plugin/skills/pact-memory/scripts/memory_api.py
 
 High-level API for the PACT Memory skill providing a clean interface
 for saving, searching, and managing memories.

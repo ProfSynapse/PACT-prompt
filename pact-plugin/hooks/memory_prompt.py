@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Location: .claude/hooks/memory_prompt.py
+Location: pact-plugin/hooks/memory_prompt.py
 Summary: Stop hook that prompts agent to save memories after significant work.
 Used by: Claude Code settings.json Stop hook
 

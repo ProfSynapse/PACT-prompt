@@ -1,7 +1,7 @@
 """
 Embedding Catch-up Module
 
-Location: .claude/skills/pact-memory/scripts/embedding_catchup.py
+Location: pact-plugin/skills/pact-memory/scripts/embedding_catchup.py
 
 Summary: Handles background embedding recovery for memories that failed to
 embed at save time. Provides functions to find unembedded memories and
