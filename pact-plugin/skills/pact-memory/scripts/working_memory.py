@@ -24,13 +24,13 @@ logger = logging.getLogger(__name__)
 
 # Constants for working memory section (saved memories)
 WORKING_MEMORY_HEADER = "## Working Memory"
-WORKING_MEMORY_COMMENT = "<!-- Auto-managed by pact-memory skill. Last 7 memories shown. Full history searchable via pact-memory skill. -->"
-MAX_WORKING_MEMORIES = 7
+WORKING_MEMORY_COMMENT = "<!-- Auto-managed by pact-memory skill. Last 5 memories shown. Full history searchable via pact-memory skill. -->"
+MAX_WORKING_MEMORIES = 5
 
 # Constants for retrieved context section (searched/retrieved memories)
 RETRIEVED_CONTEXT_HEADER = "## Retrieved Context"
-RETRIEVED_CONTEXT_COMMENT = "<!-- Auto-managed by pact-memory skill. Last 5 retrieved memories shown. -->"
-MAX_RETRIEVED_MEMORIES = 5
+RETRIEVED_CONTEXT_COMMENT = "<!-- Auto-managed by pact-memory skill. Last 3 retrieved memories shown. -->"
+MAX_RETRIEVED_MEMORIES = 3
 
 
 def _get_claude_md_path() -> Optional[Path]:

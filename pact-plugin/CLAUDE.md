@@ -375,7 +375,7 @@ After agent reviews completed:
 - Execute `/PACT:pin-memory`
 
 ## Retrieved Context
-<!-- Auto-managed by pact-memory skill. Last 5 retrieved memories shown. -->
+<!-- Auto-managed by pact-memory skill. Last 3 retrieved memories shown. -->
 
 ## Working Memory
-<!-- Auto-managed by pact-memory skill. Last 7 memories shown. Full history searchable via pact-memory skill. -->
+<!-- Auto-managed by pact-memory skill. Last 5 memories shown. Full history searchable via pact-memory skill. -->

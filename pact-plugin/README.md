@@ -7,73 +7,58 @@ VSM-enhanced orchestration framework for AI-assisted software development with C
 
 ## Installation
 
-### Option 1: GitHub (Recommended - Auto-Updates)
-
-```bash
-# Add the marketplace from GitHub
-/plugin marketplace add ProfSynapse/PACT-prompt
-
-# Install the plugin
-/plugin install PACT@pact-marketplace
-```
-
-Enable auto-updates via `/plugin` → **Marketplaces** → select marketplace → **Enable auto-update**
-
-### Option 2: Local Clone
-
-If you've cloned the repository locally:
-
-```bash
-# Add from local path
-/plugin marketplace add /path/to/PACT-prompt
-
-# Install the plugin
-/plugin install PACT@pact-marketplace
-```
-
-### Option 3: Let Claude Set It Up
+### Option 1: Let Claude Set It Up (Easiest)
 
 Give Claude this prompt:
 
 ```
-Set up the PACT plugin from GitHub. Add ProfSynapse/PACT-prompt as a
-marketplace and install PACT to user scope so it's available
-in all my projects. Enable auto-updates.
+Read the PACT setup instructions at https://github.com/ProfSynapse/PACT-prompt/blob/main/README.md
+and help me install the PACT plugin with auto-updates enabled.
 ```
 
-### Updating the Plugin
+### Option 2: Manual Installation
 
-**With auto-update enabled**: Updates happen automatically on Claude Code startup.
-
-**Manual update**:
-```
-/plugin marketplace update pact-marketplace
-```
-
-### Set Up the Orchestrator
-
-After installing the plugin, set up the PACT Orchestrator identity:
-
-**If you don't have an existing ~/.claude/CLAUDE.md:**
 ```bash
-# The SessionStart hook will show you the exact path, or use:
-cp ~/.claude/plugins/cache/pact-marketplace/PACT/*/CLAUDE.md ~/.claude/CLAUDE.md
-```
+# 1. Add the marketplace
+/plugin marketplace add ProfSynapse/PACT-prompt
 
-**If you already have a ~/.claude/CLAUDE.md:**
-```bash
-# Back up your existing file first
-cp ~/.claude/CLAUDE.md ~/.claude/CLAUDE.md.backup
+# 2. Install the plugin
+/plugin install PACT@pact-marketplace
 
-# Then either:
-# Option A: Replace with PACT (add your customizations after)
+# 3. Enable auto-updates
+# Go to /plugin → Marketplaces → pact-marketplace → Enable auto-update
+
+# 4. Set up the Orchestrator
+# If you DON'T have ~/.claude/CLAUDE.md:
 cp ~/.claude/plugins/cache/pact-marketplace/PACT/*/CLAUDE.md ~/.claude/CLAUDE.md
 
-# Option B: Prepend PACT content to your existing file
-cat ~/.claude/plugins/cache/pact-marketplace/PACT/*/CLAUDE.md ~/.claude/CLAUDE.md.backup > ~/.claude/CLAUDE.md
+# If you DO have ~/.claude/CLAUDE.md, append PACT to it:
+cat ~/.claude/plugins/cache/pact-marketplace/PACT/*/CLAUDE.md >> ~/.claude/CLAUDE.md
+
+# 5. Restart Claude Code
+# (Permissions for background agents are auto-merged on first session start)
+exit
+claude
 ```
 
-Start a new session — the plugin handles symlinks and protocol references automatically.
+### Option 3: Local Development
+
+```bash
+/plugin marketplace add /path/to/PACT-prompt
+/plugin install PACT@pact-marketplace
+```
+
+### Updating
+
+- **Auto-update enabled**: Updates happen automatically on startup
+- **Manual**: `/plugin marketplace update pact-marketplace`
+
+### Verify Installation
+
+After restart, test with:
+```
+/PACT:orchestrate Hello, confirm PACT is working
+```
 
 ---
 
@@ -81,9 +66,9 @@ Start a new session — the plugin handles symlinks and protocol references auto
 
 | Component | Description |
 |-----------|-------------|
-| **7 Specialist Agents** | Preparer, Architect, Backend/Frontend/Database Coders, n8n, Test Engineer |
+| **8 Specialist Agents** | Preparer, Architect, Backend/Frontend/Database Coders, n8n, Test Engineer, Memory Agent |
 | **8 Commands** | orchestrate, comPACT, rePACT, plan-mode, imPACT, peer-review, pin-memory, wrap-up |
-| **14 Skills** | Domain knowledge for architecture, coding, testing, security, n8n workflows |
+| **13 Skills** | Domain knowledge for architecture, coding, testing, security, n8n workflows |
 | **Protocols** | VSM-based coordination, algedonic signals, variety management |
 
 ## Quick Start

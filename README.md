@@ -4,7 +4,7 @@
 
 ## What is PACT?
 
-PACT turns a single AI assistant into **7 specialist agents** that work together systematically:
+PACT turns a single AI assistant into **8 specialist agents** that work together systematically:
 
 | Agent | Role |
 |-------|------|
@@ -15,6 +15,7 @@ PACT turns a single AI assistant into **7 specialist agents** that work together
 | **Database Engineer** | Design schemas, optimize queries |
 | **n8n Specialist** | Build workflow automations |
 | **Test Engineer** | Write comprehensive tests |
+| **Memory Agent** | Persist context, recover from compaction |
 
 Instead of "vibe coding" (letting AI guess), PACT ensures **preparation before coding**, **architecture before implementation**, and **testing as integral**.
 
@@ -22,57 +23,91 @@ Instead of "vibe coding" (letting AI guess), PACT ensures **preparation before c
 
 ## Installation
 
-### Option A: Install as Plugin (Recommended)
+### Option A: Let Claude Set It Up (Easiest)
 
-Install PACT as a plugin to use across all your projects:
+Just give Claude this prompt:
 
+```
+Read the PACT setup instructions at https://github.com/ProfSynapse/PACT-prompt/blob/main/README.md
+and help me install the PACT plugin with auto-updates enabled.
+```
+
+Or copy this detailed prompt for Claude:
+
+```
+Help me install the PACT Framework plugin for Claude Code:
+
+1. Add the marketplace: /plugin marketplace add ProfSynapse/PACT-prompt
+2. Install the plugin: /plugin install PACT@pact-marketplace
+3. Enable auto-updates via /plugin → Marketplaces → pact-marketplace → Enable auto-update
+4. Set up the orchestrator by appending PACT's CLAUDE.md to my existing ~/.claude/CLAUDE.md
+   (or create it if I don't have one)
+5. Tell me to restart Claude Code
+```
+
+### Option B: Manual Installation
+
+**Step 1: Add the marketplace**
 ```bash
-# Add the marketplace from GitHub
 /plugin marketplace add ProfSynapse/PACT-prompt
+```
 
-# Install the plugin
+**Step 2: Install the plugin**
+```bash
 /plugin install PACT@pact-marketplace
 ```
 
-**Set up the Orchestrator:**
+**Step 3: Enable auto-updates**
+- Run `/plugin`
+- Select **Marketplaces**
+- Select **pact-marketplace**
+- Enable **Auto-update**
+
+**Step 4: Set up the Orchestrator**
+
+The PACT Orchestrator needs to be in your global `CLAUDE.md`:
 
 ```bash
-# Copy the CLAUDE.md file to your global config
+# If you DON'T have an existing ~/.claude/CLAUDE.md:
 cp ~/.claude/plugins/cache/pact-marketplace/PACT/*/CLAUDE.md ~/.claude/CLAUDE.md
+
+# If you DO have an existing ~/.claude/CLAUDE.md, append PACT to it:
+cat ~/.claude/plugins/cache/pact-marketplace/PACT/*/CLAUDE.md >> ~/.claude/CLAUDE.md
 ```
 
-If you already have a `~/.claude/CLAUDE.md`, back it up first and either replace it or prepend the PACT content.
+**Step 5: Restart Claude Code**
+```bash
+exit
+claude
+```
 
-Enable auto-updates via `/plugin` → **Marketplaces** → select marketplace → **Enable auto-update**
-
-**What you get:**
-- PACT agents, commands, and skills available in all projects
-- Automatic symlink setup for protocol references
-- Plugin updates via marketplace
-
-### Option B: Clone for Development
+### Option C: Clone for Development
 
 If you want to contribute or customize PACT:
 
 ```bash
-# Clone the repository
 git clone https://github.com/ProfSynapse/PACT-prompt.git
 cd PACT-prompt
-
-# Start Claude Code
 claude
 ```
 
-The `pact-plugin/` directory contains the full framework source for local development.
+### ⚠️ Restart Required
 
-### ⚠️ Important: Restart Required
+After installing, you **must restart Claude Code**:
 
-After installing PACT, **restart Claude Code** for changes to take effect:
+1. Type `exit` or close the terminal
+2. Run `claude` again
 
-1. **Close** your current Claude Code session (type `exit` or close the terminal)
-2. **Reopen** Claude Code with `claude`
+This loads all agents, hooks, and skills properly.
 
-This ensures all agents, hooks, and skills are loaded properly.
+### Verifying Installation
+
+After restart, test with:
+```
+/PACT:orchestrate Hello, confirm PACT is working
+```
+
+You should see the 🛠️ PACT Orchestrator respond.
 
 ---
 
@@ -228,13 +263,17 @@ If you cloned this repo for development/contribution:
 
 ```
 PACT-prompt/
+├── .claude-plugin/
+│   └── marketplace.json        # Self-hosted marketplace definition
 ├── pact-plugin/                # Plugin source (canonical)
-│   ├── agents/                 # 7 specialist agents
+│   ├── .claude-plugin/
+│   │   └── plugin.json         # Plugin definition
+│   ├── agents/                 # 8 specialist agents
 │   ├── commands/               # 8 PACT workflow commands
 │   ├── skills/                 # 13 domain knowledge skills
 │   ├── hooks/                  # Automation hooks
-│   └── protocols/              # Coordination protocols
-├── CLAUDE.md                   # Orchestrator configuration
+│   ├── protocols/              # Coordination protocols
+│   └── CLAUDE.md               # Orchestrator configuration
 └── docs/
 ```
 

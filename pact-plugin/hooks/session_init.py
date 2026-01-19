@@ -275,12 +275,96 @@ def maybe_embed_pending() -> dict:
         return result
 
 
+def setup_permissions() -> str | None:
+    """
+    Merge PACT permission settings into ~/.claude/settings.json.
+
+    PACT agents running in background need pre-authorized permissions.
+    This function merges PACT's permissions with existing user settings
+    without overwriting other configuration.
+
+    Returns:
+        Status message or None if no changes needed
+    """
+    plugin_root = Path(os.environ.get("CLAUDE_PLUGIN_ROOT", ""))
+    if not plugin_root.exists():
+        return None
+
+    pact_settings_file = plugin_root / ".claude" / "settings.json"
+    if not pact_settings_file.exists():
+        return None
+
+    user_settings_file = Path.home() / ".claude" / "settings.json"
+
+    try:
+        # Load PACT permissions
+        pact_settings = json.loads(pact_settings_file.read_text(encoding='utf-8'))
+        pact_permissions = pact_settings.get("permissions", {})
+
+        if not pact_permissions:
+            return None
+
+        # Load existing user settings (or create empty)
+        if user_settings_file.exists():
+            user_settings = json.loads(user_settings_file.read_text(encoding='utf-8'))
+        else:
+            user_settings = {}
+
+        # Get or create user permissions
+        user_permissions = user_settings.setdefault("permissions", {})
+
+        # Track what we're adding
+        added_allow = 0
+        added_deny = 0
+
+        # Merge allow rules (add PACT rules that don't exist)
+        pact_allow = set(pact_permissions.get("allow", []))
+        user_allow = set(user_permissions.get("allow", []))
+        new_allow = pact_allow - user_allow
+        if new_allow:
+            user_permissions["allow"] = list(user_allow | pact_allow)
+            added_allow = len(new_allow)
+
+        # Merge deny rules (add PACT rules that don't exist)
+        pact_deny = set(pact_permissions.get("deny", []))
+        user_deny = set(user_permissions.get("deny", []))
+        new_deny = pact_deny - user_deny
+        if new_deny:
+            user_permissions["deny"] = list(user_deny | pact_deny)
+            added_deny = len(new_deny)
+
+        # Set defaultMode only if not already set
+        if "defaultMode" not in user_permissions and "defaultMode" in pact_permissions:
+            user_permissions["defaultMode"] = pact_permissions["defaultMode"]
+
+        # Write back if changes were made
+        if added_allow or added_deny:
+            user_settings_file.write_text(
+                json.dumps(user_settings, indent=2) + "\n",
+                encoding='utf-8'
+            )
+            parts = []
+            if added_allow:
+                parts.append(f"{added_allow} allow rules")
+            if added_deny:
+                parts.append(f"{added_deny} deny rules")
+            return f"PACT permissions merged: {', '.join(parts)}"
+
+        return None
+
+    except (json.JSONDecodeError, IOError) as e:
+        return f"PACT permissions setup failed: {str(e)[:30]}"
+
+
 def setup_plugin_symlinks() -> str | None:
     """
-    Create ~/.claude/protocols/pact-plugin/ symlink to plugin cache.
+    Create symlinks for plugin resources to ~/.claude/.
 
-    This enables CLAUDE.md @references like @~/.claude/protocols/pact-plugin/algedonic.md
-    to resolve correctly regardless of where the plugin cache lives.
+    Creates:
+    1. ~/.claude/protocols/pact-plugin/ -> plugin/protocols/
+       (enables @~/.claude/protocols/pact-plugin/... references in CLAUDE.md)
+    2. ~/.claude/agents/pact-*.md -> plugin/agents/pact-*.md
+       (enables non-prefixed agent names like "pact-memory-agent")
 
     Returns:
         Status message or None if successful
@@ -290,30 +374,57 @@ def setup_plugin_symlinks() -> str | None:
         return None
 
     claude_dir = Path.home() / ".claude"
+    messages = []
 
-    # Only protocols/ needs symlink (CLAUDE.md references these)
-    src = plugin_root / "protocols"
-    if not src.exists():
-        return None
+    # 1. Symlink protocols/ directory
+    protocols_src = plugin_root / "protocols"
+    if protocols_src.exists():
+        protocols_dst = claude_dir / "protocols" / "pact-plugin"
+        protocols_dst.parent.mkdir(parents=True, exist_ok=True)
 
-    dst = claude_dir / "protocols" / "pact-plugin"
-    dst.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            if protocols_dst.is_symlink():
+                if protocols_dst.resolve() != protocols_src.resolve():
+                    protocols_dst.unlink()
+                    protocols_dst.symlink_to(protocols_src)
+                    messages.append("protocols updated")
+            elif not protocols_dst.exists():
+                protocols_dst.symlink_to(protocols_src)
+                messages.append("protocols linked")
+        except OSError as e:
+            messages.append(f"protocols failed: {str(e)[:20]}")
 
-    try:
-        if dst.is_symlink():
-            # Check if symlink target changed (plugin update)
-            if dst.resolve() != src.resolve():
-                dst.unlink()
-                dst.symlink_to(src)
-                return "PACT symlinks updated"
-            return "PACT symlinks verified"
-        elif dst.exists():
-            return None  # Real directory, don't touch
-        else:
-            dst.symlink_to(src)
-            return "PACT symlinks ready"
-    except OSError as e:
-        return f"Symlink setup failed: {str(e)[:30]}"
+    # 2. Symlink individual agent files (enables non-prefixed agent names)
+    agents_src = plugin_root / "agents"
+    if agents_src.exists():
+        agents_dst = claude_dir / "agents"
+        agents_dst.mkdir(parents=True, exist_ok=True)
+
+        agents_updated = 0
+        agents_created = 0
+        for agent_file in agents_src.glob("pact-*.md"):
+            dst_file = agents_dst / agent_file.name
+            try:
+                if dst_file.is_symlink():
+                    if dst_file.resolve() != agent_file.resolve():
+                        dst_file.unlink()
+                        dst_file.symlink_to(agent_file)
+                        agents_updated += 1
+                elif not dst_file.exists():
+                    dst_file.symlink_to(agent_file)
+                    agents_created += 1
+                # Skip if real file exists (user override)
+            except OSError:
+                continue
+
+        if agents_created:
+            messages.append(f"{agents_created} agents linked")
+        if agents_updated:
+            messages.append(f"{agents_updated} agents updated")
+
+    if not messages:
+        return "PACT symlinks verified"
+    return "PACT: " + ", ".join(messages)
 
 
 def check_orchestrator_setup() -> str | None:
@@ -397,11 +508,12 @@ def main():
 
     Performs PACT environment initialization:
     0. Creates plugin symlinks for @reference resolution
-    1. Checks for active plans
-    2. Guides user if CLAUDE.md setup needed
-    3. Auto-installs pact-memory dependencies
-    4. Migrates embeddings if dimension changed
-    5. Processes any unembedded memories (catch-up)
+    1. Merges PACT permissions for background agent support
+    2. Checks for active plans
+    3. Guides user if CLAUDE.md setup needed
+    4. Auto-installs pact-memory dependencies
+    5. Migrates embeddings if dimension changed
+    6. Processes any unembedded memories (catch-up)
     """
     try:
         try:
@@ -420,7 +532,14 @@ def main():
         elif symlink_result:
             context_parts.append(symlink_result)
 
-        # 1. Check for active plans
+        # 1. Merge PACT permissions for background agent support
+        permissions_result = setup_permissions()
+        if permissions_result and "failed" in permissions_result.lower():
+            system_messages.append(permissions_result)
+        elif permissions_result:
+            context_parts.append(permissions_result)
+
+        # 2. Check for active plans
         active_plans = find_active_plans(project_dir)
         if active_plans:
             plan_list = ", ".join(active_plans[:3])
@@ -428,12 +547,12 @@ def main():
                 plan_list += f" (+{len(active_plans) - 3} more)"
             context_parts.append(f"Active plans: {plan_list}")
 
-        # 2. Check if orchestrator setup needed
+        # 3. Check if orchestrator setup needed
         orchestrator_msg = check_orchestrator_setup()
         if orchestrator_msg:
             system_messages.append(orchestrator_msg)
 
-        # 3. Check and install dependencies
+        # 4. Check and install dependencies
         deps_result = check_and_install_dependencies()
         if deps_result['installed']:
             context_parts.append(
@@ -444,12 +563,12 @@ def main():
                 f"Failed to install: {', '.join(deps_result['failed'])}"
             )
 
-        # 4. Migrate embeddings if dimension changed
+        # 5. Migrate embeddings if dimension changed
         migrate_result = maybe_migrate_embeddings()
         if migrate_result.get("message") and "Migrated" in migrate_result["message"]:
             context_parts.append(migrate_result["message"])
 
-        # 5. Process any unembedded memories (catch-up)
+        # 6. Process any unembedded memories (catch-up)
         embed_result = maybe_embed_pending()
         if embed_result.get("message"):
             if embed_result["status"] == "ok" and "Embedded" in embed_result["message"]:
