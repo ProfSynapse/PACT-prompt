@@ -70,6 +70,116 @@ When "first agent's choice becomes standard," subsequent agents need to discover
    - Orchestrator pre-defines conventions in all prompts
    - Or: Run one agent first to establish conventions, then parallelize the rest
 
+### Convention Extraction Template
+
+When the first agent completes work, extract conventions using this format:
+
+```markdown
+**Conventions Established** (propagate to parallel agents):
+- Naming: {pattern — e.g., camelCase for functions, PascalCase for classes}
+- File structure: {pattern — e.g., one component per file, co-located tests}
+- Error handling: {pattern — e.g., custom error classes, Result<T,E> pattern}
+- Imports: {pattern — e.g., absolute paths, grouped by type}
+- Documentation: {pattern — e.g., JSDoc for public APIs, inline for complex logic}
+- [Other domain-specific conventions discovered]
+```
+
+**What to extract**:
+- Explicit choices mentioned in decision log or handoff
+- Implicit patterns observable in the code produced
+- Deviations from project defaults (and why)
+
+### Convention Announcement Protocol
+
+When parallel agents are running and conventions need propagation:
+
+| Step | Actor | Action |
+|------|-------|--------|
+| 1 | First agent | Completes work, provides handoff with decisions |
+| 2 | Orchestrator | Extracts conventions using template above |
+| 3 | Orchestrator | Announces conventions to remaining parallel agents |
+| 4 | Remaining agents | Acknowledge receipt and align ongoing work |
+
+**Announcement format** (inject into running agent context):
+
+```markdown
+**Convention Update** (from completed parallel work):
+
+Agent {name} established these conventions — align your work accordingly:
+{extracted conventions}
+
+If you've already made conflicting choices, note in handoff for reconciliation.
+```
+
+**Timing considerations**:
+- Announce as soon as first agent completes (don't wait for all)
+- If multiple agents complete near-simultaneously, merge their conventions before announcing
+- Late-completing agents receive accumulated conventions from all prior completions
+
+### Conflict Resolution: When Conventions Collide
+
+When two agents started simultaneously establish different conventions before either receives the other's output:
+
+**Detection signals**:
+- Two agents' outputs use different naming patterns for similar concepts
+- File structure choices conflict (e.g., flat vs nested)
+- Error handling approaches differ within same domain
+
+**Resolution protocol**:
+
+| Scenario | Resolution | Rationale |
+|----------|------------|-----------|
+| One completes first, other still running | First completes wins; notify second | Simpler; second can still adapt |
+| Both complete before conflict detected | Architect arbitrates; normalize both | Need authoritative decision |
+| Conventions are compatible (just different) | Document both as acceptable variants | Avoid unnecessary churn |
+| Conventions directly conflict | Pick one; refactor the other | Consistency over individual preference |
+
+**Arbitration criteria** (when Architect decides):
+1. Which convention better aligns with existing project patterns?
+2. Which is more idiomatic for the language/framework?
+3. Which is simpler to maintain long-term?
+4. If equal, prefer the convention from the larger body of work
+
+**After resolution**:
+- Document chosen convention in decision log
+- Note the conflict and resolution (helps future similar situations)
+- Refactoring of non-chosen convention may be deferred if low-impact
+
+### Convention Extraction Examples
+
+**Good example** — Clear, actionable conventions extracted:
+
+```markdown
+**Conventions Established** (propagate to parallel agents):
+- Naming: camelCase for functions/variables, PascalCase for types/classes,
+  SCREAMING_SNAKE for constants
+- File structure: Feature folders with index.ts barrel exports;
+  tests co-located as `*.test.ts`
+- Error handling: Custom `AppError` class with error codes;
+  wrap external errors at boundary
+- Imports: Absolute paths from `@/`; group order: external, internal, relative
+- API responses: `{ success: boolean, data?: T, error?: { code, message } }`
+- Logging: Structured JSON via `logger.info({ event, context })`
+```
+
+**Poor example** — Vague, missing actionable detail:
+
+```markdown
+**Conventions Established**:
+- Naming: Standard conventions
+- File structure: Organized appropriately
+- Error handling: Proper error handling implemented
+- Other: Following best practices
+```
+
+**Why the poor example fails**:
+- "Standard" and "proper" are subjective and undefined
+- No specific patterns a parallel agent could replicate
+- Forces parallel agents to guess or inspect code directly
+- Creates convention drift risk
+
+**What to do with poor extraction**: If you find yourself writing vague conventions, review the first agent's actual output and extract specific, replicable patterns. If patterns aren't clear from the output, that's a signal the first agent's work may need clarification.
+
 ### Shared Language
 
 All agents operating in parallel must:
