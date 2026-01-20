@@ -135,17 +135,16 @@ This prevents excessive ping-pong for small decisions while catching real issues
 
 ## Handoff Format
 
-Each specialist should end with a structured handoff (2-4 sentences):
+Each specialist should end with a structured handoff:
 
 ```
-**Handoff**:
-1. Produced: [files created/modified, key artifacts]
-2. Key context for next phase: [decisions made, patterns established, constraints discovered]
-3. Open questions (if any): [uncertainties for next phase to resolve or confirm]
-4. Decisions made (if phases skipped): [moderate decisions with rationale—for orchestrator validation]
+1. **Produced**: Files created/modified
+2. **Key context**: Decisions made, patterns used, assumptions
+3. **Areas of uncertainty**: Where bugs might hide, tricky parts, things to watch
+4. **Open questions**: Anything unresolved
 ```
 
-**Example**: `1. Produced: src/middleware/rateLimiter.ts. 2. Key context: Used token bucket with Redis. 3. Open questions: None. 4. Decisions made: X-RateLimit header format (moderate)—follows RFC 6585.`
+**Example**: `1. Produced: src/middleware/rateLimiter.ts. 2. Key context: Used token bucket with Redis. 3. Areas of uncertainty: Edge case with concurrent resets. 4. Open questions: None.`
 
 ---
 
@@ -241,7 +240,7 @@ The orchestrator should **expect** to use parallel execution. Sequential is the 
 
 **Deviation from parallel requires articulated reasoning.** "I'm not sure" defaults to parallel with S2 coordination, not sequential.
 
-**Analysis should complete quickly.** Use the Quick Dependency Checklist (QDCL) below. If analysis takes more than 2 minutes, you're over-thinking—parallelize with proper S2 coordination.
+**Analysis should complete quickly.** Use the Quick Dependency Checklist (QDCL) below. If QDCL analysis takes more than 2 minutes, you're likely over-analyzing independent tasks—default to parallel with S2 coordination.
 
 ---
 
@@ -343,3 +342,4 @@ If a sub-task emerges that is too complex for a single specialist invocation:
 1. **Update plan status** (if plan exists): IN_PROGRESS → IMPLEMENTED
 2. **Run `/PACT:peer-review`** to commit, create PR, and get multi-agent review
 3. **S4 Retrospective**: Briefly note—what worked well? What should we adapt for next time?
+4. **High-variety audit trail** (variety 10+ only): Delegate to `pact-memory-agent` to save key orchestration decisions, S3/S4 tensions resolved, and lessons learned. This preserves the audit trail that formal decision logs previously provided.

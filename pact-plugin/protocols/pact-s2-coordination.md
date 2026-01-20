@@ -69,6 +69,7 @@ When "first agent's choice becomes standard," subsequent agents need to discover
 3. **For truly parallel invocation** (all start simultaneously):
    - Orchestrator pre-defines conventions in all prompts
    - Or: Run one agent first to establish conventions, then parallelize the rest
+   - **Tie-breaker**: If agents complete simultaneously and no first-agent convention exists, use alphabetical domain order (backend, database, frontend) for convention precedence
 
 ### Shared Language
 
@@ -105,6 +106,8 @@ If agents produce contradictory outputs (each "fixing" the other's work):
 - Both agents claim ownership of same interface
 - Output contradicts established convention
 - Repeated "fix" cycles in same file/component
+
+**Heuristic**: Consider it oscillation if the same file is modified by different agents 2+ times in rapid succession.
 
 ### Routine Information Sharing
 

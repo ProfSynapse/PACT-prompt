@@ -195,6 +195,8 @@ The orchestrator passes CODE phase handoff summaries. Use these for context:
 
 **Use handoff as context, not prescription.** You decide what and how to test.
 
+**If handoff context seems incomplete** (missing what was implemented, or no areas of uncertainty flagged), ask the orchestrator for clarification before proceeding with limited context.
+
 **HANDOFF**
 
 End with a structured handoff for the orchestrator:
