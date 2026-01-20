@@ -422,15 +422,29 @@ When "first agent's choice becomes standard," subsequent agents need to discover
    - Extract key conventions from first agent's output (naming patterns, file structure, API style)
    - Include in subsequent agents' prompts: "Follow conventions established: {list}"
 
-2. **For truly parallel invocation** (all start simultaneously):
+2. **Handoff reference**: Orchestrator passes first agent's key decisions to subsequent agents
+
+3. **For truly parallel invocation** (all start simultaneously):
    - Orchestrator pre-defines conventions in all prompts
    - Or: Run one agent first to establish conventions, then parallelize the rest
+   - **Tie-breaker**: If agents complete simultaneously and no first-agent convention exists, use alphabetical domain order (backend, database, frontend) for convention precedence
 
 ### Shared Language
 
 All agents operating in parallel must:
 - Use project glossary and established terminology
 - Use standardized handoff structure (see Phase Handoffs)
+
+### Parallelization Anti-Patterns
+
+| Anti-Pattern | Problem | Fix |
+|--------------|---------|-----|
+| **Sequential by default** | Missed parallelization opportunity | Run QDCL; require justification for sequential |
+| **Ignoring shared files** | Merge conflicts; wasted work | QDCL catches this; sequence or assign boundaries |
+| **Over-parallelization** | Coordination overhead; convention drift | Limit parallel agents; use S2 coordination |
+| **Analysis paralysis** | QDCL takes longer than the work | Time-box to 1 minute; default to parallel if unclear |
+
+**Recovery**: If in doubt, default to parallel with S2 coordination active. Conflicts are recoverable; lost time is not.
 
 ### Anti-Oscillation Protocol
 
@@ -442,7 +456,7 @@ If agents produce contradictory outputs (each "fixing" the other's work):
 4. **Resolve**:
    - Technical disagreement → Architect arbitrates
    - Requirements ambiguity → User (S5) clarifies
-5. **Document**: Note resolution in handoff
+5. **Document**: Note resolution in handoff for future reference
 6. **Resume**: Only after documented resolution
 
 **Detection Signals**:
@@ -450,6 +464,8 @@ If agents produce contradictory outputs (each "fixing" the other's work):
 - Both agents claim ownership of same interface
 - Output contradicts established convention
 - Repeated "fix" cycles in same file/component
+
+**Heuristic**: Consider it oscillation if the same file is modified by different agents 2+ times in rapid succession.
 
 ### Routine Information Sharing
 
@@ -534,67 +550,6 @@ While specialists can invoke nested cycles autonomously, the orchestrator can al
 - Multi-domain: `/PACT:rePACT "implement audit logging sub-system"`
 
 See [rePACT.md](../commands/rePACT.md) for full command documentation.
-
----
-
-## S3* Continuous Audit
-
-S3* provides real-time quality signals during CODE phase, complementing the sequential TEST phase. This enables early detection of critical issues without waiting for phase completion.
-
-### When to Invoke Parallel Audit
-
-| Condition | Risk Level | Action |
-|-----------|------------|--------|
-| Security-sensitive code (auth, payments, PII) | High | Invoke test engineer in parallel |
-| Complex multi-component integration | High | Invoke for early integration review |
-| Novel patterns (first use of new approach) | Medium-High | Invoke for testability assessment |
-| User explicitly requests monitoring | Variable | Invoke parallel audit |
-| Routine, well-understood code | Low | Sequential TEST phase sufficient |
-
-**Default**: Sequential TEST phase. Parallel audit is opt-in for higher-risk work.
-
-### Audit Modes
-
-| Mode | When | Focus |
-|------|------|-------|
-| **Parallel Audit** | During CODE phase | Testability, early risks, integration concerns |
-| **Comprehensive Test** | After CODE phase | Full coverage, edge cases, performance, security |
-
-### Audit Signals
-
-Test engineer surfaces to orchestrator:
-
-| Signal | Meaning | Action |
-|--------|---------|--------|
-| 🟢 **GREEN** | "Code is testable, no concerns" | Continue normally |
-| 🟡 **YELLOW** | "Testability concerns: {list}" | Note for TEST phase, continue |
-| 🔴 **RED** | "Critical issue: {description}" | Interrupt CODE, triage immediately |
-
-### 🔴 Signal Response Flow
-
-When test engineer emits RED signal during parallel audit:
-
-1. Orchestrator receives signal (S3* direct channel)
-2. Orchestrator pauses affected coder(s)
-3. Orchestrator triages: `/PACT:imPACT` with signal as input
-4. imPACT determines: fix now, redo phase, or escalate
-5. Resume CODE after resolution
-
-**Note**: RED signals do NOT bypass orchestrator (unlike algedonic signals—see below). They interrupt normal flow but remain operational (S3), not emergency (S5).
-
-### S2 Coordination for Parallel Audit
-
-When test engineer runs parallel with coders:
-
-- Test engineer is **READ-ONLY** on code files (no modifications)
-- Test engineer may create test scaffolding in separate test files
-- Coders have priority on source files; test engineer observes
-- Conflicts escalate to orchestrator
-
-### Scope
-
-- Parallel audit is for `/PACT:orchestrate` only
-- `/PACT:comPACT` uses sequential smoke tests (light ceremony)
 
 ---
 
@@ -687,10 +642,10 @@ Score each dimension 1-4 and sum:
 
 **Amplify** (increase response capacity):
 - Invoke additional specialists
-- Enable parallel execution
+- Enable parallel execution (primary CODE phase strategy; use QDCL from orchestrate.md)
 - Invoke nested PACT (`/PACT:rePACT`) for complex sub-components
 - Run PREPARE phase to build understanding
-- Engage parallel audit (S3*) for high-risk areas
+- Apply risk-tiered testing (CRITICAL/HIGH) for high-risk areas
 
 ### Variety Checkpoints
 
@@ -792,6 +747,8 @@ comPACT handles tasks within ONE specialist domain. For independent sub-tasks, i
 
 ### When to Parallelize (Same-Domain)
 
+**Default: parallel unless tasks share files.** comPACT can invoke multiple agents of the same type.
+
 Invoke multiple specialists of the same type when:
 - Multiple independent items (bugs, components, endpoints)
 - No shared files between sub-tasks
@@ -805,7 +762,6 @@ Invoke multiple specialists of the same type when:
 
 ### S2 Light Coordination (for parallel comPACT)
 
-Before parallel invocation within a domain:
 1. **Check for conflicts** — Do any sub-tasks touch the same files?
 2. **Assign boundaries** — If conflicts exist, sequence or define clear boundaries
 3. **Set convention authority** — First agent's choices become standard for the batch
@@ -870,12 +826,44 @@ Keep it brief. No templates required.
 
 ### CODE → TEST Handoff
 
-Coders provide handoff summaries to the orchestrator, who passes them to the test engineer. Handoff includes:
-- What was implemented
-- Key decisions and assumptions
-- Areas of uncertainty (where bugs might hide—test engineer should prioritize these)
+Coders provide handoff summaries to the orchestrator, who passes them to the test engineer.
 
-**This is context, not prescription.** The test engineer decides what and how to test.
+**Enhanced Handoff Format**:
+```
+1. Produced: Files created/modified
+2. Key decisions: Decisions with rationale, assumptions that could be wrong
+3. Areas of uncertainty (PRIORITIZED):
+   - [HIGH] {description} — Why risky, suggested test focus
+   - [MEDIUM] {description}
+   - [LOW] {description}
+4. Integration points: Other components touched
+5. Open questions: Unresolved items
+```
+
+Note: Not all priority levels need to be present. Most handoffs have 1-3 uncertainty items total. If you have no uncertainties to flag, explicitly state "No areas of uncertainty flagged" to confirm you considered the question (rather than forgot or omitted it).
+
+**Example**:
+```
+1. Produced: `src/auth/token-manager.ts`, `src/auth/token-manager.test.ts`
+2. Key decisions: Used JWT with 15min expiry (assumed acceptable for this app)
+3. Areas of uncertainty:
+   - [HIGH] Token refresh race condition — concurrent requests may get stale tokens; test with parallel calls
+   - [MEDIUM] Clock skew handling — assumed <5s drift; may fail with larger skew
+4. Integration points: Modified `src/middleware/auth.ts` to use new manager
+5. Open questions: Should refresh tokens be stored in httpOnly cookies?
+```
+
+**Uncertainty Prioritization**:
+- **HIGH**: "This could break in production" — Test engineer MUST cover these
+- **MEDIUM**: "I'm not 100% confident" — Test engineer should cover these
+- **LOW**: "Edge case I thought of" — Test engineer uses discretion
+
+**Test Engineer Response**:
+- HIGH uncertainty areas require explicit test cases (mandatory)
+- If skipping a flagged area, document the rationale
+- Report findings using the Signal Output System (GREEN/YELLOW/RED)
+
+**This is context, not prescription.** The test engineer decides *how* to test, but flagged HIGH uncertainty areas must be addressed.
 
 ---
 

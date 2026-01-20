@@ -24,12 +24,44 @@ Keep it brief. No templates required.
 
 ### CODE → TEST Handoff
 
-Coders provide handoff summaries to the orchestrator, who passes them to the test engineer. Handoff includes:
-- What was implemented
-- Key decisions and assumptions
-- Areas of uncertainty (where bugs might hide—test engineer should prioritize these)
+Coders provide handoff summaries to the orchestrator, who passes them to the test engineer.
 
-**This is context, not prescription.** The test engineer decides what and how to test.
+**Enhanced Handoff Format**:
+```
+1. Produced: Files created/modified
+2. Key decisions: Decisions with rationale, assumptions that could be wrong
+3. Areas of uncertainty (PRIORITIZED):
+   - [HIGH] {description} — Why risky, suggested test focus
+   - [MEDIUM] {description}
+   - [LOW] {description}
+4. Integration points: Other components touched
+5. Open questions: Unresolved items
+```
+
+Note: Not all priority levels need to be present. Most handoffs have 1-3 uncertainty items total. If you have no uncertainties to flag, explicitly state "No areas of uncertainty flagged" to confirm you considered the question (rather than forgot or omitted it).
+
+**Example**:
+```
+1. Produced: `src/auth/token-manager.ts`, `src/auth/token-manager.test.ts`
+2. Key decisions: Used JWT with 15min expiry (assumed acceptable for this app)
+3. Areas of uncertainty:
+   - [HIGH] Token refresh race condition — concurrent requests may get stale tokens; test with parallel calls
+   - [MEDIUM] Clock skew handling — assumed <5s drift; may fail with larger skew
+4. Integration points: Modified `src/middleware/auth.ts` to use new manager
+5. Open questions: Should refresh tokens be stored in httpOnly cookies?
+```
+
+**Uncertainty Prioritization**:
+- **HIGH**: "This could break in production" — Test engineer MUST cover these
+- **MEDIUM**: "I'm not 100% confident" — Test engineer should cover these
+- **LOW**: "Edge case I thought of" — Test engineer uses discretion
+
+**Test Engineer Response**:
+- HIGH uncertainty areas require explicit test cases (mandatory)
+- If skipping a flagged area, document the rationale
+- Report findings using the Signal Output System (GREEN/YELLOW/RED)
+
+**This is context, not prescription.** The test engineer decides *how* to test, but flagged HIGH uncertainty areas must be addressed.
 
 ---
 

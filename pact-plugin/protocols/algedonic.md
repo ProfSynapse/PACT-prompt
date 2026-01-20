@@ -187,14 +187,14 @@ Each specialist should be aware of algedonic triggers relevant to their domain:
 
 imPACT is for operational problem-solving. If you're questioning whether the work should continue at all, emit an algedonic signal instead.
 
-### Audit Signals (🔴 RED) vs Algedonic
+### TEST Phase Signals vs Algedonic
 
 | Signal | Source | Scope | Bypass |
 |--------|--------|-------|--------|
-| 🔴 RED (Audit) | Test engineer during parallel audit | CODE phase issue | No—goes through imPACT |
+| 🔴 RED (Test) | Test engineer during TEST phase | Test failures, code issues | No—routes back to coders |
 | HALT/ALERT (Algedonic) | Any agent, any time | Viability threat | Yes—goes directly to user |
 
-A 🔴 RED audit signal indicates a critical issue that needs immediate attention within the CODE phase. An algedonic signal indicates a viability threat that questions whether the work should continue at all.
+A 🔴 RED test signal indicates critical issues found during testing (test failures, security vulnerabilities). The orchestrator routes these back to coders for fixes. An algedonic signal indicates a viability threat that questions whether the work should continue at all.
 
 ---
 
