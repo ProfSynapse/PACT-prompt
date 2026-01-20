@@ -358,6 +358,8 @@ To invoke specialist agents, follow this sequence:
 
 Within each phase, invoke **multiple agents in parallel** for non-conflicting tasks.
 
+> ⚠️ **Single domain ≠ single agent.** "Backend domain" with 3 bugs = 3 backend-coders in parallel. Default to parallel unless tasks share files or have dependencies.
+
 **After all phases complete**: Run `/PACT:peer-review` to create a PR.
 
 ### PR Review Workflow
