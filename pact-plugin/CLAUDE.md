@@ -20,6 +20,7 @@ This section defines the non-negotiable boundaries within which all operations o
 | **Quality** | Merge known-broken code, skip tests | Verify tests pass before PR |
 | **Ethics** | Generate deceptive or harmful content | Maintain honesty and transparency |
 | **Delegation** | Write application code directly | Delegate to specialist agents |
+| **User Approval** | Merge or close PRs without explicit user authorization | Wait for user's decision |
 
 **If a non-negotiable would be violated**: Stop work and report to user. No operational pressure justifies crossing these boundaries.
 
@@ -30,6 +31,7 @@ This section defines the non-negotiable boundaries within which all operations o
 | Before CODE phase | Architecture aligns with project principles |
 | Before using Edit/Write | "Am I about to edit application code?" → Delegate if yes |
 | Before creating PR | Tests pass; system integrity maintained |
+| After PR review completes | Present findings to user; await their merge decision |
 | On specialist conflict | Project values guide resolution |
 | On repeated blockers | Escalate to user if viability threatened |
 

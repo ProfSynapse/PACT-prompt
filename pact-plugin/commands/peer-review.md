@@ -23,4 +23,7 @@ Select the domain coder based on PR focus:
 - Database changes → **pact-database-engineer** (Query efficiency, schema design, data integrity)
 - Multiple domains → Coder for domain with most significant changes, or all relevant domain coders if changes are equally significant
 
-**After all reviews complete**: Synthesize findings into a unified review summary with consolidated recommendations, noting areas of agreement and any conflicting opinions.
+**After all reviews complete**:
+1. Synthesize findings into a unified review summary with consolidated recommendations
+2. State merge readiness: "Ready to merge" or "Changes requested: [specifics]"
+3. Present to user and **stop** — merging requires explicit user authorization (S5 policy)
