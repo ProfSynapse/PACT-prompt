@@ -42,18 +42,18 @@ verify() {
 }
 
 # Single-range extracts
-verify 135 "pact-s5-policy.md" "S5 Policy (lines 13-147)"
-verify 72 "pact-s4-checkpoints.md" "S4 Checkpoints (lines 148-219)"
-verify 74 "pact-s4-environment.md" "S4 Environment (lines 220-293)"
-verify 65 "pact-s4-tension.md" "S4 Tension (lines 294-358)"
-verify 75 "pact-s1-autonomy.md" "S1 Autonomy (lines 468-542)"
-verify 62 "pact-variety.md" "Variety (lines 647-708)"
+verify 135 "pact-s5-policy.md" "S5 Policy (lines 13-146)"
+verify 72 "pact-s4-checkpoints.md" "S4 Checkpoints (lines 148-218)"
+verify 74 "pact-s4-environment.md" "S4 Environment (lines 220-292)"
+verify 65 "pact-s4-tension.md" "S4 Tension (lines 294-357)"
+verify 75 "pact-s1-autonomy.md" "S1 Autonomy (lines 481-554)"
+verify 62 "pact-variety.md" "Variety (lines 599-659)"
 
 # Combined-range extracts
-verify 124 "pact-s2-coordination.md" "S2 Coordination (lines 359-467 + 846-860)"
-verify 126 "pact-workflows.md" "Workflows (lines 709-834)"
-verify 117 "pact-phase-transitions.md" "Phase Transitions (lines 835-845 + 861-966)"
-verify 115 "pact-documentation.md" "Documentation (lines 967-1081)"
+verify 137 "pact-s2-coordination.md" "S2 Coordination (lines 359-479 + 798-810)"
+verify 127 "pact-workflows.md" "Workflows (lines 661-784)"
+verify 89 "pact-phase-transitions.md" "Phase Transitions (lines 787-795 + 813-866)"
+verify 25 "pact-documentation.md" "Documentation (lines 891-913)"
 
 echo ""
 echo "=== Summary ==="

@@ -422,15 +422,29 @@ When "first agent's choice becomes standard," subsequent agents need to discover
    - Extract key conventions from first agent's output (naming patterns, file structure, API style)
    - Include in subsequent agents' prompts: "Follow conventions established: {list}"
 
-2. **For truly parallel invocation** (all start simultaneously):
+2. **Handoff reference**: Orchestrator passes first agent's key decisions to subsequent agents
+
+3. **For truly parallel invocation** (all start simultaneously):
    - Orchestrator pre-defines conventions in all prompts
    - Or: Run one agent first to establish conventions, then parallelize the rest
+   - **Tie-breaker**: If agents complete simultaneously and no first-agent convention exists, use alphabetical domain order (backend, database, frontend) for convention precedence
 
 ### Shared Language
 
 All agents operating in parallel must:
 - Use project glossary and established terminology
 - Use standardized handoff structure (see Phase Handoffs)
+
+### Parallelization Anti-Patterns
+
+| Anti-Pattern | Problem | Fix |
+|--------------|---------|-----|
+| **Sequential by default** | Missed parallelization opportunity | Run QDCL; require justification for sequential |
+| **Ignoring shared files** | Merge conflicts; wasted work | QDCL catches this; sequence or assign boundaries |
+| **Over-parallelization** | Coordination overhead; convention drift | Limit parallel agents; use S2 coordination |
+| **Analysis paralysis** | QDCL takes longer than the work | Time-box to 1 minute; default to parallel if unclear |
+
+**Recovery**: If in doubt, default to parallel with S2 coordination active. Conflicts are recoverable; lost time is not.
 
 ### Anti-Oscillation Protocol
 
@@ -442,7 +456,7 @@ If agents produce contradictory outputs (each "fixing" the other's work):
 4. **Resolve**:
    - Technical disagreement → Architect arbitrates
    - Requirements ambiguity → User (S5) clarifies
-5. **Document**: Note resolution in handoff
+5. **Document**: Note resolution in handoff for future reference
 6. **Resume**: Only after documented resolution
 
 **Detection Signals**:
@@ -450,6 +464,8 @@ If agents produce contradictory outputs (each "fixing" the other's work):
 - Both agents claim ownership of same interface
 - Output contradicts established convention
 - Repeated "fix" cycles in same file/component
+
+**Heuristic**: Consider it oscillation if the same file is modified by different agents 2+ times in rapid succession.
 
 ### Routine Information Sharing
 
@@ -809,14 +825,44 @@ Keep it brief. No templates required.
 
 ### CODE → TEST Handoff
 
-Coders provide handoff summaries to the orchestrator, who passes them to the test engineer. Handoff includes:
-- What was implemented
-- Key decisions and assumptions
-- Areas of uncertainty (where bugs might hide—test engineer should prioritize these)
+Coders provide handoff summaries to the orchestrator, who passes them to the test engineer.
 
-See [pact-phase-transitions.md](pact-phase-transitions.md) for the enhanced handoff format with prioritized uncertainty levels.
+**Enhanced Handoff Format**:
+```
+1. Produced: Files created/modified
+2. Key decisions: Decisions with rationale, assumptions that could be wrong
+3. Areas of uncertainty (PRIORITIZED):
+   - [HIGH] {description} — Why risky, suggested test focus
+   - [MEDIUM] {description}
+   - [LOW] {description}
+4. Integration points: Other components touched
+5. Open questions: Unresolved items
+```
 
-**This is context, not prescription.** The test engineer decides what and how to test.
+Note: Not all priority levels need to be present. Most handoffs have 1-3 uncertainty items total.
+
+**Example**:
+```
+1. Produced: `src/auth/token-manager.ts`, `src/auth/token-manager.test.ts`
+2. Key decisions: Used JWT with 15min expiry (assumed acceptable for this app)
+3. Areas of uncertainty:
+   - [HIGH] Token refresh race condition — concurrent requests may get stale tokens; test with parallel calls
+   - [MEDIUM] Clock skew handling — assumed <5s drift; may fail with larger skew
+4. Integration points: Modified `src/middleware/auth.ts` to use new manager
+5. Open questions: Should refresh tokens be stored in httpOnly cookies?
+```
+
+**Uncertainty Prioritization**:
+- **HIGH**: "This could break in production" — Test engineer MUST cover these
+- **MEDIUM**: "I'm not 100% confident" — Test engineer should cover these
+- **LOW**: "Edge case I thought of" — Test engineer uses discretion
+
+**Test Engineer Response**:
+- HIGH uncertainty areas require explicit test cases (mandatory)
+- If skipping a flagged area, document the rationale
+- Report findings using the Signal Output System (GREEN/YELLOW/RED)
+
+**This is context, not prescription.** The test engineer decides *how* to test, but flagged HIGH uncertainty areas must be addressed.
 
 ---
 
