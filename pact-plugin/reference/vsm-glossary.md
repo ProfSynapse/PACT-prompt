@@ -71,7 +71,7 @@
 2. Mandatory coverage of uncertainty areas flagged by coders
 3. Static analysis tools that can run independently
 
-**Key Point**: S3* is about *independent observation and ground truth*, not timing. While not achieving real-time monitoring, this sequential approach provides independent ground-truth observation. The test engineer's independence from coders (sequential execution) and mandatory uncertainty coverage approximate the audit function that S3* represents in classical VSM.
+**Key Point**: S3* is about *independent observation and ground truth*, not timing. While not achieving real-time monitoring, this sequential approach provides independent ground-truth observation. The test engineer's independence from coders (sequential execution) and mandatory uncertainty coverage approximate the audit function that S3* represents in classical VSM. In PACT's sequential model, the VSM concept of "unpredictability" (which prevents gaming the audit) is approximated through mandatory uncertainty coverage: coders cannot predict which of their flagged uncertainties the test engineer will scrutinize most heavily, preserving the audit's independence.
 
 ---
 

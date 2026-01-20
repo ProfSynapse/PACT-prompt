@@ -840,7 +840,7 @@ Coders provide handoff summaries to the orchestrator, who passes them to the tes
 5. Open questions: Unresolved items
 ```
 
-Note: Not all priority levels need to be present. Most handoffs have 1-3 uncertainty items total.
+Note: Not all priority levels need to be present. Most handoffs have 1-3 uncertainty items total. If you have no uncertainties to flag, explicitly state "No areas of uncertainty flagged" to confirm you considered the question (rather than forgot or omitted it).
 
 **Example**:
 ```

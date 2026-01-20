@@ -152,11 +152,11 @@ Determine the risk tier of the code you're testing and apply the appropriate tes
 | Risk Tier | Examples | Coverage Target | Testing Approach |
 |-----------|----------|-----------------|------------------|
 | **CRITICAL** | Auth, payments, PII, security-sensitive | 90%+ | Comprehensive coverage, adversarial testing, security sweep |
-| **HIGH** | Novel patterns, complex integration, first-time approaches | 80%+ | Targeted adversarial testing, thorough edge cases |
+| **HIGH** | Novel patterns, complex integration, first-time approaches | 80%+ | Targeted **adversarial** testing, thorough edge cases |
 | **STANDARD** | Well-understood patterns, routine logic | 80%+ | Standard coverage, normal edge cases |
 | **LIGHT** | Config changes, docs (no logic) | Smoke | Smoke verification only |
 
-Note: HIGH and STANDARD share coverage targets, but differ in testing *approach*. HIGH requires targeted adversarial testing; STANDARD uses normal edge cases.
+Note: HIGH and STANDARD share coverage targets, but differ in testing *approach*. HIGH requires targeted adversarial testing; STANDARD uses normal edge cases. LIGHT tier has no coverage target, but smoke verification should confirm: (1) code compiles, (2) imports resolve, (3) happy path executes without crash.
 
 **Risk Tier Selection**:
 1. Start with STANDARD as the default
@@ -169,12 +169,17 @@ Note: HIGH and STANDARD share coverage targets, but differ in testing *approach*
 
 **Mixed-Risk Codebases**: For code spanning multiple risk tiers (e.g., auth endpoint + config changes), apply the appropriate tier to each component. Report the highest tier in your signal output.
 
+- **File-level**: When a single file contains mixed tiers (e.g., auth logic + utility functions), apply the highest tier to the entire file
+- **PR-level**: When a PR spans multiple files at different tiers, apply the appropriate tier per file and report the highest overall tier in your signal output
+
 ### Mandatory Uncertainty Coverage
 
 When coders flag areas of uncertainty in their handoff:
 - **HIGH uncertainty** areas MUST have explicit test cases—you cannot skip these
 - **MEDIUM uncertainty** areas should have targeted tests
 - If you choose not to test a MEDIUM or LOW flagged area, document your rationale
+
+**Note**: Coder flags are inputs, not constraints. If you identify code that should be HIGH/CRITICAL but was not flagged as such, elevate accordingly and note the discrepancy in your findings.
 
 ### Signal Output System
 
@@ -198,9 +203,10 @@ If no HIGH areas were flagged in the handoff, report: `Uncertainty Coverage: N/A
 
 **RED → Coder Loop**: When you emit RED:
 1. Document the specific failures/issues
-2. Orchestrator routes back to relevant coder(s)
-3. After fix, re-run affected tests
-4. Re-emit signal based on new results
+2. Include the coder domain (backend/frontend/database) to enable proper routing when multiple coders worked on the code
+3. Orchestrator routes back to relevant coder(s)
+4. After fix, re-run affected tests
+5. Re-emit signal based on new results
 
 **Example skip rationale**:
 ```
