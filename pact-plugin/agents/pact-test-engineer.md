@@ -176,6 +176,13 @@ When coders flag areas of uncertainty in their handoff:
 - **MEDIUM uncertainty** areas should have targeted tests
 - If you choose not to test a flagged area, document your rationale
 
+**Example skip rationale**:
+```
+Skipped: [MEDIUM] Clock skew handling
+Rationale: Input is server-generated timestamp; clock skew is infrastructure
+concern, not application logic. Deferred to ops team for NTP monitoring.
+```
+
 ### Signal Output System
 
 Report your findings to the orchestrator using this signal format:
@@ -184,6 +191,7 @@ Report your findings to the orchestrator using this signal format:
 Risk Tier: {CRITICAL|HIGH|STANDARD|LIGHT}
 Signal: {GREEN|YELLOW|RED}
 Coverage: {percentage for critical paths}
+Uncertainty Coverage: {X of Y HIGH areas tested}
 Findings: {specific issues if any}
 ```
 
