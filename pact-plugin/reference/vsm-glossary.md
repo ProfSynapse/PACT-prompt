@@ -71,7 +71,7 @@
 2. Mandatory coverage of uncertainty areas flagged by coders
 3. Static analysis tools that can run independently
 
-**Key Point**: S3* is about *independent observation and ground truth*, not timing. The test engineer's independence from coders (sequential execution) and mandatory uncertainty coverage provide the audit function that S3* represents.
+**Key Point**: S3* is about *independent observation and ground truth*, not timing. While not achieving real-time monitoring, this sequential approach provides independent ground-truth observation. The test engineer's independence from coders (sequential execution) and mandatory uncertainty coverage approximate the audit function that S3* represents in classical VSM.
 
 ---
 
@@ -422,7 +422,7 @@ These terms are specific to PACT's implementation of VSM concepts.
 | S1 | Primary operations | Specialist agents |
 | S2 | Coordination between S1 units | Protocols, conflict resolution |
 | S3 | Operational control (inside-now) | Orchestrator execution mode |
-| S3* | Audit channel bypassing S2 | Continuous testing signal |
+| S3* | Audit channel bypassing S2 | Independent quality observation |
 | S4 | Intelligence (outside-future) | plan-mode, adaptation checks |
 | S5 | Policy/identity/values | User + CLAUDE.md principles |
 | Algedonic | Emergency bypass signal | HALT/ALERT to user |

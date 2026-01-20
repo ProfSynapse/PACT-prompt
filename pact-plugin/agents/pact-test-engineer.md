@@ -156,6 +156,8 @@ Determine the risk tier of the code you're testing and apply the appropriate tes
 | **STANDARD** | Well-understood patterns, routine logic | 80%+ | Standard coverage, normal edge cases |
 | **LIGHT** | Config changes, docs (no logic) | Smoke | Smoke verification only |
 
+Note: HIGH and STANDARD share coverage targets, but differ in testing *approach*. HIGH requires targeted adversarial testing; STANDARD uses normal edge cases.
+
 **Risk Tier Selection**:
 1. Start with STANDARD as the default
 2. Elevate to HIGH/CRITICAL based on:
@@ -164,6 +166,8 @@ Determine the risk tier of the code you're testing and apply the appropriate tes
    - Novel patterns or first-time approaches
    - Complex multi-component integration
 3. Reduce to LIGHT only for pure config/doc changes with no logic
+
+**Mixed-Risk Codebases**: For code spanning multiple risk tiers (e.g., auth endpoint + config changes), apply the appropriate tier to each component. Report the highest tier in your signal output.
 
 ### Mandatory Uncertainty Coverage
 

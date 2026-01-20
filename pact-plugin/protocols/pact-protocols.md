@@ -814,6 +814,8 @@ Coders provide handoff summaries to the orchestrator, who passes them to the tes
 - Key decisions and assumptions
 - Areas of uncertainty (where bugs might hide—test engineer should prioritize these)
 
+See [pact-phase-transitions.md](pact-phase-transitions.md) for the enhanced handoff format with prioritized uncertainty levels.
+
 **This is context, not prescription.** The test engineer decides what and how to test.
 
 ---

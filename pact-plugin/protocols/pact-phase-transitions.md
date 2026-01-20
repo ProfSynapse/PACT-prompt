@@ -38,6 +38,8 @@ Coders provide handoff summaries to the orchestrator, who passes them to the tes
 5. Open questions: Unresolved items
 ```
 
+Note: Not all priority levels need to be present. Most handoffs have 1-3 uncertainty items total.
+
 **Uncertainty Prioritization**:
 - **HIGH**: "This could break in production" — Test engineer MUST cover these
 - **MEDIUM**: "I'm not 100% confident" — Test engineer should cover these

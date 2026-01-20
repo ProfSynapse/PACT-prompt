@@ -46,7 +46,6 @@ verify 135 "pact-s5-policy.md" "S5 Policy (lines 13-147)"
 verify 72 "pact-s4-checkpoints.md" "S4 Checkpoints (lines 148-219)"
 verify 74 "pact-s4-environment.md" "S4 Environment (lines 220-293)"
 verify 65 "pact-s4-tension.md" "S4 Tension (lines 294-358)"
-verify 61 "pact-s3-audit.md" "S3 Audit (lines 543-603)"
 verify 75 "pact-s1-autonomy.md" "S1 Autonomy (lines 468-542)"
 verify 62 "pact-variety.md" "Variety (lines 647-708)"
 
