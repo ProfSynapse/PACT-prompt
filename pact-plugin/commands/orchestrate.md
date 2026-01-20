@@ -32,7 +32,7 @@ Algedonic signals are emergency escalations that bypass normal triage. You **MUS
 | **HALT** (Security, Data, Ethics) | Stop ALL agents, present to user, await acknowledgment |
 | **ALERT** (Quality, Scope, Meta-block) | Pause current work, present options, await decision |
 
-If unsure whether something is an operational blocker or viability threat, err toward algedonic (safer).
+**Algedonic vs imPACT**: Operational blocker → `/PACT:imPACT` ("How do we proceed?"). Viability threat → Algedonic ("Should we proceed at all?"). If unsure, err toward algedonic (safer).
 
 See [algedonic.md](../protocols/algedonic.md) for signal format and full protocol.
 
@@ -53,6 +53,12 @@ Before running orchestration, assess task variety using the protocol in [pact-va
 | Multiple domains, some ambiguity | Medium (7-10) | Standard orchestrate with all phases |
 | Greenfield, architectural decisions, unknowns | High (11-14) | Recommend plan-mode first |
 | Novel technology, unclear requirements, critical stakes | Extreme (15-16) | Recommend research spike before planning |
+
+**Variety Dimensions** (score 1-4 each, sum for total):
+- **Novelty**: Routine (1) → Unprecedented (4)
+- **Scope**: Single concern (1) → Cross-cutting (4)
+- **Uncertainty**: Clear (1) → Unknown (4)
+- **Risk**: Low impact (1) → Critical (4)
 
 **When uncertain**: Default to standard orchestrate. Variety can be reassessed at phase transitions.
 
@@ -76,7 +82,13 @@ Before running orchestration, assess task variety using the protocol in [pact-va
 
 ### Orchestration Decision Log
 
-For variety 7+, create decision log at `docs/decision-logs/orchestration-{feature}.md`. See [pact-documentation.md](../protocols/pact-documentation.md) for format.
+| Variety Score | Log Type |
+|---------------|----------|
+| 4-6 | None (comPACT territory) |
+| 7-9 | Lightweight format |
+| 10+ | Full format |
+
+Create at `docs/decision-logs/orchestration-{feature}.md`. See [pact-documentation.md](../protocols/pact-documentation.md) for format.
 
 ---
 
@@ -269,12 +281,15 @@ Before parallel invocation, check: shared files? shared interfaces? conventions 
 
 - **Shared files**: Sequence those agents OR assign clear boundaries
 - **Conventions**: First agent's choice becomes standard; propagate to others
+- **Resolution authority**: Technical disagreements → Architect arbitrates; Style/convention → First agent's choice
 
 **Include in parallel prompts**: "You are working in parallel. Your scope is [files]. Do not modify files outside your scope."
 
 #### Optional: S3* Parallel Audit
 
-For high-risk work (security, complex integration, novel patterns), invoke test engineer in audit mode alongside coders. Signals: 🟢 continue, 🟡 log concern, 🔴 pause and run `/PACT:imPACT`. See [pact-s3-audit.md](../protocols/pact-s3-audit.md).
+**Trigger conditions** (invoke when ANY apply): Security-sensitive code, complex multi-component integration, novel patterns, or user requests monitoring.
+
+Invoke test engineer in audit mode alongside coders. Signal meanings: 🟢 no concerns (continue), 🟡 concerns noted (log for TEST phase), 🔴 critical issue (pause coders, run `/PACT:imPACT`). See [pact-s3-audit.md](../protocols/pact-s3-audit.md).
 
 **Invoke coder(s) with**:
 - Task description
