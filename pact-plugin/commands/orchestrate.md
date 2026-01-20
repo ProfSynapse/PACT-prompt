@@ -331,9 +331,10 @@ If a sub-task emerges that is too complex for a single specialist invocation:
 
 ## After All Phases Complete
 
-> **S5 Policy Checkpoint (Pre-Merge)**: Before creating PR, verify: "Do all tests pass? Is system integrity maintained? Have S5 non-negotiables been respected throughout?"
+> **S5 Policy Checkpoint (Pre-PR)**: Before creating PR, verify: "Do all tests pass? Is system integrity maintained? Have S5 non-negotiables been respected throughout?"
 
 1. **Update plan status** (if plan exists): IN_PROGRESS → IMPLEMENTED
 2. **Run `/PACT:peer-review`** to commit, create PR, and get multi-agent review
-3. **S4 Retrospective**: Briefly note—what worked well? What should we adapt for next time?
-4. **High-variety audit trail** (variety 10+ only): Delegate to `pact-memory-agent` to save key orchestration decisions, S3/S4 tensions resolved, and lessons learned. This preserves the audit trail that formal decision logs previously provided.
+3. **Present review summary and stop** — orchestrator never merges (S5 policy)
+4. **S4 Retrospective** (after user decides): Briefly note—what worked well? What should we adapt for next time?
+5. **High-variety audit trail** (variety 10+ only): Delegate to `pact-memory-agent` to save key orchestration decisions, S3/S4 tensions resolved, and lessons learned
