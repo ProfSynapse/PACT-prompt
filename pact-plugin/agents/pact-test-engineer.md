@@ -174,14 +174,7 @@ Note: HIGH and STANDARD share coverage targets, but differ in testing *approach*
 When coders flag areas of uncertainty in their handoff:
 - **HIGH uncertainty** areas MUST have explicit test cases—you cannot skip these
 - **MEDIUM uncertainty** areas should have targeted tests
-- If you choose not to test a flagged area, document your rationale
-
-**Example skip rationale**:
-```
-Skipped: [MEDIUM] Clock skew handling
-Rationale: Input is server-generated timestamp; clock skew is infrastructure
-concern, not application logic. Deferred to ops team for NTP monitoring.
-```
+- If you choose not to test a MEDIUM or LOW flagged area, document your rationale
 
 ### Signal Output System
 
@@ -195,6 +188,8 @@ Uncertainty Coverage: {X of Y HIGH areas tested}
 Findings: {specific issues if any}
 ```
 
+If no HIGH areas were flagged in the handoff, report: `Uncertainty Coverage: N/A (no HIGH areas flagged)`
+
 | Signal | Meaning | Action |
 |--------|---------|--------|
 | 🟢 **GREEN** | All tests pass, adequate coverage, no concerns | Continue to PR |
@@ -206,6 +201,13 @@ Findings: {specific issues if any}
 2. Orchestrator routes back to relevant coder(s)
 3. After fix, re-run affected tests
 4. Re-emit signal based on new results
+
+**Example skip rationale**:
+```
+Skipped: [MEDIUM] Clock skew handling
+Rationale: Input is server-generated timestamp; clock skew is infrastructure
+concern, not application logic. Deferred to ops team for NTP monitoring.
+```
 
 **CODE PHASE CONTEXT**
 
