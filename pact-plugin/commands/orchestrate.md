@@ -274,12 +274,6 @@ Before parallel invocation, check: shared files? shared interfaces? conventions 
 
 **Include in parallel prompts**: "You are working in parallel. Your scope is [files]. Do not modify files outside your scope."
 
-#### Optional: S3* Parallel Audit
-
-**Trigger conditions** (invoke when ANY apply): Security-sensitive code, complex multi-component integration, novel patterns, or user requests monitoring.
-
-Invoke test engineer in audit mode alongside coders. Signal meanings: 🟢 no concerns (continue), 🟡 concerns noted (log for TEST phase), 🔴 critical issue (pause coders, run `/PACT:imPACT`). See [pact-s3-audit.md](../protocols/pact-s3-audit.md).
-
 **Invoke coder(s) with**:
 - Task description
 - ARCHITECT phase outputs (or plan's Architecture Phase if ARCHITECT was skipped)
