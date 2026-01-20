@@ -147,38 +147,17 @@ When two agents started simultaneously establish different conventions before ei
 
 ### Convention Extraction Examples
 
-**Good example** — Clear, actionable conventions extracted:
+**Example** — Clear, actionable conventions:
 
 ```markdown
 **Conventions Established** (propagate to parallel agents):
-- Naming: camelCase for functions/variables, PascalCase for types/classes,
-  SCREAMING_SNAKE for constants
-- File structure: Feature folders with index.ts barrel exports;
-  tests co-located as `*.test.ts`
-- Error handling: Custom `AppError` class with error codes;
-  wrap external errors at boundary
+- Naming: camelCase for functions/variables, PascalCase for types/classes
+- File structure: Feature folders with index.ts barrel exports; tests co-located as `*.test.ts`
+- Error handling: Custom `AppError` class with error codes
 - Imports: Absolute paths from `@/`; group order: external, internal, relative
-- API responses: `{ success: boolean, data?: T, error?: { code, message } }`
-- Logging: Structured JSON via `logger.info({ event, context })`
 ```
 
-**Poor example** — Vague, missing actionable detail:
-
-```markdown
-**Conventions Established**:
-- Naming: Standard conventions
-- File structure: Organized appropriately
-- Error handling: Proper error handling implemented
-- Other: Following best practices
-```
-
-**Why the poor example fails**:
-- "Standard" and "proper" are subjective and undefined
-- No specific patterns a parallel agent could replicate
-- Forces parallel agents to guess or inspect code directly
-- Creates convention drift risk
-
-**What to do with poor extraction**: If you find yourself writing vague conventions, review the first agent's actual output and extract specific, replicable patterns. If patterns aren't clear from the output, that's a signal the first agent's work may need clarification.
+Avoid vague conventions like "standard" or "proper" — extract specific, replicable patterns.
 
 ### Shared Language
 
@@ -186,6 +165,17 @@ All agents operating in parallel must:
 - Use project glossary and established terminology
 - Follow consistent decision log format (see CODE → TEST Handoff)
 - Use standardized handoff structure (see Phase Handoffs)
+
+### Parallelization Anti-Patterns
+
+| Anti-Pattern | Problem | Fix |
+|--------------|---------|-----|
+| **Sequential by default** | Missed parallelization opportunity | Run QDCL; require justification for sequential |
+| **Ignoring shared files** | Merge conflicts; wasted work | QDCL catches this; sequence or assign boundaries |
+| **Over-parallelization** | Coordination overhead; convention drift | Limit parallel agents; use S2 coordination |
+| **Analysis paralysis** | QDCL takes longer than the work | Time-box to 1 minute; default to parallel if unclear |
+
+**Recovery**: If in doubt, default to parallel with S2 coordination active. Conflicts are recoverable; lost time is not.
 
 ### Anti-Oscillation Protocol
 

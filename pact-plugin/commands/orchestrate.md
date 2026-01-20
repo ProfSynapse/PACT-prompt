@@ -301,8 +301,6 @@ The orchestrator should **expect** to use parallel execution. Sequential is the 
 
 **Analysis should complete quickly.** Use the Quick Dependency Checklist (QDCL) below. If analysis takes more than 2 minutes, you're over-thinking—parallelize with proper S2 coordination.
 
-See [pact-parallel-execution.md](../protocols/pact-parallel-execution.md) for comprehensive parallelization guidance, patterns, and anti-patterns.
-
 ---
 
 #### Execution Strategy Analysis
@@ -357,8 +355,6 @@ These examples help calibrate your QDCL judgment. **The QDCL checklist is author
 **Mixed pattern** (partial parallelization):
 - DB first (schema), then Backend + Frontend in parallel (both consume schema)
 - Define types first, then parallel consumers
-
-For detailed patterns, anti-patterns, and worked examples, see [pact-parallel-execution.md](../protocols/pact-parallel-execution.md).
 
 #### S2 Pre-Parallel Coordination Check
 
