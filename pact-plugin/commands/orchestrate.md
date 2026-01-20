@@ -25,54 +25,16 @@ When transitioning to S4 mode, pause and ask: "Are we still building the right t
 
 ## Responding to Algedonic Signals
 
-Algedonic signals are emergency escalations that bypass normal triage. Any agent can emit them when they recognize viability threats. You **MUST** surface them to the user immediately.
+Algedonic signals are emergency escalations that bypass normal triage. You **MUST** surface them to the user immediately.
 
-### HALT Signal Response
+| Signal | Response |
+|--------|----------|
+| **HALT** (Security, Data, Ethics) | Stop ALL agents, present to user, await acknowledgment |
+| **ALERT** (Quality, Scope, Meta-block) | Pause current work, present options, await decision |
 
-When you receive a HALT signal (SECURITY, DATA, or ETHICS category):
+If unsure whether something is an operational blocker or viability threat, err toward algedonic (safer).
 
-1. **Stop ALL agents immediately** — no exceptions
-2. **Present signal to user** with full context:
-   ```
-   ⚠️ ALGEDONIC HALT: {Category}
-
-   Issue: {from signal}
-   Evidence: {from signal}
-   Impact: {from signal}
-
-   All work has stopped. Please acknowledge before we can proceed.
-   Options: [Acknowledged, investigate] / [Override, continue anyway (requires justification)]
-   ```
-3. **Do NOT resume** until user explicitly acknowledges
-4. **Log** the halt in session notes
-
-### ALERT Signal Response
-
-When you receive an ALERT signal (QUALITY, SCOPE, or META-BLOCK category):
-
-1. **Pause current phase** — don't stop everything, but pause active work
-2. **Present signal to user** with options:
-   ```
-   ⚠️ ALGEDONIC ALERT: {Category}
-
-   Issue: {from signal}
-   Evidence: {from signal}
-
-   Options: [Investigate further] / [Continue with caution] / [Stop work]
-   ```
-3. **Await user decision** before proceeding
-4. **Log** the alert and user's decision
-
-### Algedonic vs imPACT
-
-| Signal Type | Protocol | When |
-|-------------|----------|------|
-| Operational blocker | `/PACT:imPACT` | "How do we proceed?" |
-| Viability threat | Algedonic | "Should we proceed at all?" |
-
-If you're unsure whether something is an operational blocker or viability threat, err on the side of algedonic (safer).
-
-See [algedonic.md](../protocols/algedonic.md) for full protocol and trigger conditions.
+See [algedonic.md](../protocols/algedonic.md) for signal format and full protocol.
 
 ---
 
@@ -91,12 +53,6 @@ Before running orchestration, assess task variety using the protocol in [pact-va
 | Multiple domains, some ambiguity | Medium (7-10) | Standard orchestrate with all phases |
 | Greenfield, architectural decisions, unknowns | High (11-14) | Recommend plan-mode first |
 | Novel technology, unclear requirements, critical stakes | Extreme (15-16) | Recommend research spike before planning |
-
-**Variety Dimensions** (score 1-4 each, sum for total):
-- **Novelty**: Routine (1) → Unprecedented (4)
-- **Scope**: Single concern (1) → Cross-cutting (4)
-- **Uncertainty**: Clear (1) → Unknown (4)
-- **Risk**: Low impact (1) → Critical (4)
 
 **When uncertain**: Default to standard orchestrate. Variety can be reassessed at phase transitions.
 
@@ -120,19 +76,7 @@ Before running orchestration, assess task variety using the protocol in [pact-va
 
 ### Orchestration Decision Log
 
-Based on variety assessment, create decision log at `docs/decision-logs/orchestration-{feature}.md`:
-
-| Variety Score | Log Type |
-|---------------|----------|
-| 4-6 | None (comPACT territory) |
-| 7-9 | Lightweight format |
-| 10+ | Full format |
-
-See [pact-documentation.md](../protocols/pact-documentation.md) for Orchestration Decision Log format templates.
-
-**Initial entry**: Record variety assessment rationale and response (attenuators/amplifiers to apply).
-
-**Update cadence**: Add phase outcomes after each S4 checkpoint.
+For variety 7+, create decision log at `docs/decision-logs/orchestration-{feature}.md`. See [pact-documentation.md](../protocols/pact-documentation.md) for format.
 
 ---
 
@@ -199,11 +143,7 @@ Each specialist should end with a structured handoff (2-4 sentences):
 4. Decisions made (if phases skipped): [moderate decisions with rationale—for orchestrator validation]
 ```
 
-**Examples**:
-
-> **Handoff**: 1. Produced: `docs/preparation/rate-limiting-research.md` covering token bucket vs sliding window algorithms. 2. Key context: Recommended Redis-based token bucket; existing `redis-client.ts` can be reused. 3. Open questions: Should rate limits be per-user or per-API-key?
-
-> **Handoff**: 1. Produced: `src/middleware/rateLimiter.ts`, `src/config/rateLimits.ts`, smoke tests passing. 2. Key context: Used token bucket with Redis; added `X-RateLimit-*` headers per RFC 6585. 3. Open questions: None—ready for integration testing. 4. Decisions made: Chose `X-RateLimit-Remaining` header format (moderate—affects API consumers); rationale: follows RFC 6585 standard.
+**Example**: `1. Produced: src/middleware/rateLimiter.ts. 2. Key context: Used token bucket with Redis. 3. Open questions: None. 4. Decisions made: X-RateLimit header format (moderate)—follows RFC 6585.`
 
 ---
 
@@ -323,70 +263,18 @@ For each pair of work units, check:
 
 **If QDCL shows no dependencies**: Parallel is your answer. Don't second-guess.
 
-#### S2 Pre-Parallel Coordination Check
+#### S2 Pre-Parallel Coordination
 
-Once you've decided on parallel execution, apply S2 Coordination. S2 is **proactive** (prevents conflicts) not just reactive (resolves conflicts).
+Before parallel invocation, check: shared files? shared interfaces? conventions established?
 
-**Emit the S2 Pre-Parallel Checkpoint**:
+- **Shared files**: Sequence those agents OR assign clear boundaries
+- **Conventions**: First agent's choice becomes standard; propagate to others
 
-> **S2 Pre-Parallel Check**:
-> - Shared files: [none / list with mitigation]
-> - Shared interfaces: [none / contract defined by X]
-> - Conventions: [pre-defined / first agent establishes]
-> - Anticipated conflicts: [none / sequencing X before Y]
+**Include in parallel prompts**: "You are working in parallel. Your scope is [files]. Do not modify files outside your scope."
 
-**If shared files identified**:
-- Sequence those agents, OR
-- Assign clear boundaries: "You may READ `types.ts`, backend WRITES it"
+#### Optional: S3* Parallel Audit
 
-**If shared interfaces identified**:
-- Reference architecture doc for contract
-- If no contract exists, sequence: define interface first, then consume
-
-**Establish resolution authority**:
-- Technical disagreements → Architect arbitrates
-- Style/convention → First agent's choice becomes standard
-
-**Include in parallel agent prompts**: "You are working in parallel with [other agent(s)]. Your scope is [specific files/components]. Do not modify files outside your scope. If you need changes outside your scope, report as a blocker."
-
-**After any agent completes** (while others still running):
-- Extract key decisions and conventions from their output
-- Propagate to remaining agents if relevant: "Agent X established: [conventions]"
-
-See [pact-s2-coordination.md](../protocols/pact-s2-coordination.md) for S2 Coordination Layer protocol.
-
-#### Optional: S3* Parallel Audit During CODE
-
-For high-risk work, invoke test engineer in parallel with coders to catch issues early.
-
-**Trigger conditions** (invoke parallel audit when ANY apply):
-- Security-sensitive code (auth, payments, PII handling)
-- Complex multi-component integration
-- Novel patterns or first-time approaches
-- User explicitly requests monitoring ("watch this closely")
-
-**Invoke test engineer in audit mode with**:
-```
-AUDIT MODE: Review {scope} for testability and early risks.
-Emit signals (🟢/🟡/🔴) as you observe. Do not block coders.
-You are READ-ONLY on source files.
-```
-
-**Handling audit signals**:
-
-| Signal | Meaning | Response |
-|--------|---------|----------|
-| 🟢 GREEN | No concerns | Continue normally |
-| 🟡 YELLOW | Concerns noted | Log for TEST phase, continue |
-| 🔴 RED | Critical issue | Pause affected coder(s), run `/PACT:imPACT` with signal |
-
-**If 🔴 RED signal received**:
-1. Immediately pause the affected coder(s)
-2. Run `/PACT:imPACT` with the RED signal details as input
-3. imPACT triages: fix now, redo phase, or escalate
-4. Resume CODE only after resolution
-
-See [pact-s3-audit.md](../protocols/pact-s3-audit.md) for S3* Continuous Audit protocol.
+For high-risk work (security, complex integration, novel patterns), invoke test engineer in audit mode alongside coders. Signals: 🟢 continue, 🟡 log concern, 🔴 pause and run `/PACT:imPACT`. See [pact-s3-audit.md](../protocols/pact-s3-audit.md).
 
 **Invoke coder(s) with**:
 - Task description
@@ -419,21 +307,6 @@ If a sub-task emerges that is too complex for a single specialist invocation:
 - Sub-task requires architectural decisions before coding
 - Sub-task spans multiple concerns within a domain
 - Sub-task is large enough to warrant its own decision log
-
-**Example:**
-During CODE phase for "user authentication," you realize "OAuth2 token refresh" is complex enough to need its own design:
-```
-/PACT:rePACT backend "implement OAuth2 token refresh mechanism"
-```
-
-This runs a nested P→A→C→T cycle, staying on the current branch, producing a `-nested` decision log.
-
-**For multi-domain sub-tasks:**
-```
-/PACT:rePACT "implement audit logging sub-system"
-```
-
-This runs a mini-orchestration for the sub-task, invoking relevant specialists across domains.
 
 ---
 
