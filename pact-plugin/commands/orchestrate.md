@@ -319,42 +319,9 @@ For each pair of work units, check:
 [ ] None of above? → Parallel
 ```
 
-**Emit your QDCL result**:
-```
-**QDCL Result**:
-- Backend ↔ Frontend: No shared files, API contract defined → Parallel
-- Backend ↔ Database: Schema needed first → Sequential (DB first)
-- Frontend ↔ Database: No direct dependency → Parallel
-**Strategy**: DB first, then Backend + Frontend in parallel
-```
+**Emit your QDCL result** (example): `Backend ↔ Frontend: Parallel | Backend ↔ DB: Sequential (schema first)`
 
-**How to complete the checklist:**
-- Review the plan's implementation details and file paths mentioned
-- If no plan exists, analyze the task description and examine relevant files directly
-- Check if tasks reference or modify the same files/modules
-- Examine import relationships between components
-
-**If QDCL shows no dependencies**: Parallel is your answer. Do not second-guess.
-
-**If QDCL is genuinely inconclusive** (rare): Consult the architect's outputs in `docs/architecture/`, invoke pact-architect for clarification, or escalate to user. Do not default to sequential—parallel with S2 coordination is safer than unnecessary serialization.
-
-#### Parallel vs Sequential: Quick Reference
-
-These examples help calibrate your QDCL judgment. **The QDCL checklist is authoritative**; these are illustrative patterns.
-
-**Common parallel patterns** (QDCL typically shows no dependencies):
-- Backend API + Frontend UI for same feature (no shared files, contract defined)
-- Multiple independent components in same domain (separate file trees)
-- Different domain specialists on well-bounded work units
-
-**Common sequential patterns** (QDCL shows dependency):
-- Database schema → Backend (backend needs schema for models/queries)
-- Interface definition → consumers (contract must exist first)
-- Any tasks modifying the same file
-
-**Mixed pattern** (partial parallelization):
-- DB first (schema), then Backend + Frontend in parallel (both consume schema)
-- Define types first, then parallel consumers
+**If QDCL shows no dependencies**: Parallel is your answer. Don't second-guess.
 
 #### S2 Pre-Parallel Coordination Check
 
