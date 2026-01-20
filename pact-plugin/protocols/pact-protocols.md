@@ -642,7 +642,7 @@ Score each dimension 1-4 and sum:
 
 **Amplify** (increase response capacity):
 - Invoke additional specialists
-- Enable parallel execution
+- Enable parallel execution (primary CODE phase strategy; use QDCL from orchestrate.md)
 - Invoke nested PACT (`/PACT:rePACT`) for complex sub-components
 - Run PREPARE phase to build understanding
 - Apply risk-tiered testing (CRITICAL/HIGH) for high-risk areas
@@ -747,6 +747,8 @@ comPACT handles tasks within ONE specialist domain. For independent sub-tasks, i
 
 ### When to Parallelize (Same-Domain)
 
+**Default: parallel unless tasks share files.** comPACT can invoke multiple agents of the same type.
+
 Invoke multiple specialists of the same type when:
 - Multiple independent items (bugs, components, endpoints)
 - No shared files between sub-tasks
@@ -760,7 +762,6 @@ Invoke multiple specialists of the same type when:
 
 ### S2 Light Coordination (for parallel comPACT)
 
-Before parallel invocation within a domain:
 1. **Check for conflicts** — Do any sub-tasks touch the same files?
 2. **Assign boundaries** — If conflicts exist, sequence or define clear boundaries
 3. **Set convention authority** — First agent's choices become standard for the batch
