@@ -87,6 +87,8 @@ comPACT handles tasks within ONE specialist domain. For independent sub-tasks, i
 
 ### When to Parallelize (Same-Domain)
 
+**Default: parallel unless tasks share files.** comPACT can invoke multiple agents of the same type.
+
 Invoke multiple specialists of the same type when:
 - Multiple independent items (bugs, components, endpoints)
 - No shared files between sub-tasks
