@@ -34,7 +34,7 @@ At phase boundaries, the orchestrator performs an S4 checkpoint to assess whethe
 | Finding | Action |
 |---------|--------|
 | All clear | Continue to next phase |
-| Minor drift | Note in decision log, continue |
+| Minor drift | Note in handoff, continue |
 | Significant change | Pause, assess, may re-run prior phase |
 | Fundamental shift | Escalate to user (S5) |
 

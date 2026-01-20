@@ -80,16 +80,6 @@ Before running orchestration, assess task variety using the protocol in [pact-va
 | SUPERSEDED/IMPLEMENTED | Confirm with user before proceeding |
 | No plan found | Proceed—phases will do full discovery |
 
-### Orchestration Decision Log
-
-| Variety Score | Log Type |
-|---------------|----------|
-| 4-6 | None (comPACT territory) |
-| 7-9 | Lightweight format |
-| 10+ | Full format |
-
-Create at `docs/decision-logs/orchestration-{feature}.md`. See [pact-documentation.md](../protocols/pact-documentation.md) for format.
-
 ---
 
 ## Context Assessment
@@ -302,7 +292,6 @@ Invoke test engineer in audit mode alongside coders. Signal meanings: 🟢 no co
 **Before next phase**:
 - [ ] Implementation complete
 - [ ] All tests passing (full test suite; fix any tests your changes break)
-- [ ] Decision log(s) created at `docs/decision-logs/{feature}-{domain}.md`
 - [ ] Specialist handoff(s) received (see Handoff Format above)
 - [ ] If blocker reported → `/PACT:imPACT`
 - [ ] **S4 Checkpoint**: Environment stable? Model aligned? Plan viable?
@@ -321,7 +310,6 @@ If a sub-task emerges that is too complex for a single specialist invocation:
 - Sub-task needs its own research/preparation phase
 - Sub-task requires architectural decisions before coding
 - Sub-task spans multiple concerns within a domain
-- Sub-task is large enough to warrant its own decision log
 
 ---
 
@@ -336,15 +324,13 @@ If a sub-task emerges that is too complex for a single specialist invocation:
 
 **Invoke `pact-test-engineer` with**:
 - Task description
-- Decision log(s) from CODE phase: "Read the implementation decision log(s) at `docs/decision-logs/{feature}-*.md` for context on what was built, key decisions, assumptions, and areas of uncertainty."
+- CODE phase handoff(s): Pass the handoff summaries from coders for context on what was built
 - Plan sections above (if any)
 - "Reference the approved plan at `docs/plans/{slug}-plan.md` for full context."
-- "You own ALL substantive testing: unit tests, integration, E2E, edge cases. The decision log provides context—you decide what and how to test."
+- "You own ALL substantive testing: unit tests, integration, E2E, edge cases."
 
 **Before completing**:
-- [ ] Outputs exist in `docs/testing/`
 - [ ] All tests passing
-- [ ] Test decision log created at `docs/decision-logs/{feature}-test.md`
 - [ ] Specialist handoff received (see Handoff Format above)
 - [ ] If blocker reported → `/PACT:imPACT`
 
@@ -355,6 +341,5 @@ If a sub-task emerges that is too complex for a single specialist invocation:
 > **S5 Policy Checkpoint (Pre-Merge)**: Before creating PR, verify: "Do all tests pass? Is system integrity maintained? Have S5 non-negotiables been respected throughout?"
 
 1. **Update plan status** (if plan exists): IN_PROGRESS → IMPLEMENTED
-2. **Finalize orchestration log** (if created): Add S3/S4 tensions, algedonic signals (if any), and retrospective notes
-3. **Run `/PACT:peer-review`** to commit, create PR, and get multi-agent review
-4. **S4 Retrospective**: Briefly note—what worked well? What should we adapt for next time?
+2. **Run `/PACT:peer-review`** to commit, create PR, and get multi-agent review
+3. **S4 Retrospective**: Briefly note—what worked well? What should we adapt for next time?

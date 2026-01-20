@@ -64,7 +64,7 @@ When "first agent's choice becomes standard," subsequent agents need to discover
    - Extract key conventions from first agent's output (naming patterns, file structure, API style)
    - Include in subsequent agents' prompts: "Follow conventions established: {list}"
 
-2. **Decision log reference**: If first agent wrote a decision log, subsequent agents should read it
+2. **Handoff reference**: Orchestrator passes first agent's key decisions to subsequent agents
 
 3. **For truly parallel invocation** (all start simultaneously):
    - Orchestrator pre-defines conventions in all prompts
@@ -74,7 +74,6 @@ When "first agent's choice becomes standard," subsequent agents need to discover
 
 All agents operating in parallel must:
 - Use project glossary and established terminology
-- Follow consistent decision log format (see CODE → TEST Handoff)
 - Use standardized handoff structure (see Phase Handoffs)
 
 ### Parallelization Anti-Patterns
@@ -98,7 +97,7 @@ If agents produce contradictory outputs (each "fixing" the other's work):
 4. **Resolve**:
    - Technical disagreement → Architect arbitrates
    - Requirements ambiguity → User (S5) clarifies
-5. **Document**: Record resolution in decision log for future reference
+5. **Document**: Note resolution in handoff for future reference
 6. **Resume**: Only after documented resolution
 
 **Detection Signals**:

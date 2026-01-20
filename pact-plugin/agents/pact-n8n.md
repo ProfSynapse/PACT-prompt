@@ -127,16 +127,13 @@ Provide:
 5. **Validation Status**: Results of validation and any fixes applied
 6. **Activation Status**: Whether workflow is active or draft
 
-# DECISION LOG
+# HANDOFF
 
-Before completing, output a decision log to `docs/decision-logs/{feature}-n8n.md` containing:
-- Summary of workflow created
-- Pattern selection rationale
-- Key node configurations
-- Expressions used and why
-- Validation iterations performed
-- Known limitations or edge cases
-- Testing recommendations for Test Engineer
+End with a structured handoff for the orchestrator:
+1. **Produced**: Workflow created, key node configurations
+2. **Key context**: Pattern selection rationale, expressions used
+3. **Areas of uncertainty**: Known limitations, edge cases (helps TEST phase)
+4. **Open questions**: Anything unresolved
 
 # AUTONOMY CHARTER
 
