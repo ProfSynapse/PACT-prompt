@@ -104,6 +104,8 @@ Testing responsibilities:
 - Existing tests: If your changes break existing tests, fix them.
 - Before handoff: Run the test suite and ensure all tests pass.
 
+> **Smoke vs comprehensive tests**: These are verification tests—enough to confirm your implementation works. Comprehensive coverage (edge cases, integration, E2E, adversarial) is TEST phase work handled by `pact-test-engineer`.
+
 If you hit a blocker, STOP and report it so the orchestrator can run /PACT:imPACT.
 
 Task: [user's task description]

@@ -236,4 +236,6 @@ When nested cycle completes:
 2. **Report** any decisions that affect the parent task
 3. **Continue** with parent orchestration
 
+**Handoff format**: Use the standard 4-item structure (Produced, Key context, Areas of uncertainty, Open questions). See orchestrate.md § Handoff Format.
+
 The parent orchestration resumes with the sub-task complete.
