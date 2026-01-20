@@ -58,15 +58,20 @@
 
 ### S3* — Audit Channel
 
-**VSM Definition**: A sporadic audit channel that allows S3 to directly monitor S1, bypassing S2's filters. Catches what routine coordination might miss.
+**VSM Definition**: A sporadic audit channel that allows S3 to directly monitor S1, bypassing S2's filters. Catches what routine coordination might miss. The "sporadic" aspect refers to unpredictability (preventing gaming), not real-time concurrent monitoring.
 
-**In PACT**: Continuous quality signals:
-- Test engineer in parallel audit mode (not just sequential phase)
-- Automated checks (lint, type, security scan)
-- Early testability feedback during CODE phase
-- Direct quality signals to orchestrator
+**In PACT**: Independent observation mechanisms:
+- **Risk-tiered testing** — Higher scrutiny for security-sensitive, novel, or complex code
+- **Mandatory uncertainty coverage** — Coder-flagged concerns MUST be tested
+- **Automated checks** — Lint, type checking, security scans (static tooling)
+- **Direct quality signals** — Test engineer reports GREEN/YELLOW/RED to orchestrator
 
-**Key Point**: S3* provides ground truth when S2's coordination might be filtering or missing important signals.
+**Architectural Note**: Due to Claude Code's agent isolation (agents run in separate 200K-token context windows), S3* cannot be realized as parallel real-time monitoring. Instead, PACT implements S3* through:
+1. Strengthened sequential TEST phase with risk-based rigor
+2. Mandatory coverage of uncertainty areas flagged by coders
+3. Static analysis tools that can run independently
+
+**Key Point**: S3* is about *independent observation and ground truth*, not timing. The test engineer's independence from coders (sequential execution) and mandatory uncertainty coverage provide the audit function that S3* represents.
 
 ---
 

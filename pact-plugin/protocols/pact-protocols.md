@@ -629,7 +629,7 @@ Score each dimension 1-4 and sum:
 - Enable parallel execution
 - Invoke nested PACT (`/PACT:rePACT`) for complex sub-components
 - Run PREPARE phase to build understanding
-- Engage parallel audit (S3*) for high-risk areas
+- Apply risk-tiered testing (CRITICAL/HIGH) for high-risk areas
 
 ### Variety Checkpoints
 
