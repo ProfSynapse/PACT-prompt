@@ -24,12 +24,31 @@ Keep it brief. No templates required.
 
 ### CODE → TEST Handoff
 
-Coders provide handoff summaries to the orchestrator, who passes them to the test engineer. Handoff includes:
-- What was implemented
-- Key decisions and assumptions
-- Areas of uncertainty (where bugs might hide—test engineer should prioritize these)
+Coders provide handoff summaries to the orchestrator, who passes them to the test engineer.
 
-**This is context, not prescription.** The test engineer decides what and how to test.
+**Enhanced Handoff Format**:
+```
+1. Produced: Files created/modified
+2. Key decisions: Decisions with rationale, assumptions that could be wrong
+3. Areas of uncertainty (PRIORITIZED):
+   - [HIGH] {description} — Why risky, suggested test focus
+   - [MEDIUM] {description}
+   - [LOW] {description}
+4. Integration points: Other components touched
+5. Open questions: Unresolved items
+```
+
+**Uncertainty Prioritization**:
+- **HIGH**: "This could break in production" — Test engineer MUST cover these
+- **MEDIUM**: "I'm not 100% confident" — Test engineer should cover these
+- **LOW**: "Edge case I thought of" — Test engineer uses discretion
+
+**Test Engineer Response**:
+- HIGH uncertainty areas require explicit test cases (mandatory)
+- If skipping a flagged area, document the rationale
+- Report findings using the Signal Output System (GREEN/YELLOW/RED)
+
+**This is context, not prescription.** The test engineer decides *how* to test, but flagged HIGH uncertainty areas must be addressed.
 
 ---
 
