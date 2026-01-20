@@ -181,7 +181,7 @@ At phase boundaries, the orchestrator performs an S4 checkpoint to assess whethe
 | Finding | Action |
 |---------|--------|
 | All clear | Continue to next phase |
-| Minor drift | Note in decision log, continue |
+| Minor drift | Note in handoff, continue |
 | Significant change | Pause, assess, may re-run prior phase |
 | Fundamental shift | Escalate to user (S5) |
 
@@ -422,9 +422,7 @@ When "first agent's choice becomes standard," subsequent agents need to discover
    - Extract key conventions from first agent's output (naming patterns, file structure, API style)
    - Include in subsequent agents' prompts: "Follow conventions established: {list}"
 
-2. **Decision log reference**: If first agent wrote a decision log, subsequent agents should read it
-
-3. **For truly parallel invocation** (all start simultaneously):
+2. **For truly parallel invocation** (all start simultaneously):
    - Orchestrator pre-defines conventions in all prompts
    - Or: Run one agent first to establish conventions, then parallelize the rest
 
@@ -432,7 +430,6 @@ When "first agent's choice becomes standard," subsequent agents need to discover
 
 All agents operating in parallel must:
 - Use project glossary and established terminology
-- Follow consistent decision log format (see CODE → TEST Handoff)
 - Use standardized handoff structure (see Phase Handoffs)
 
 ### Anti-Oscillation Protocol
@@ -445,7 +442,7 @@ If agents produce contradictory outputs (each "fixing" the other's work):
 4. **Resolve**:
    - Technical disagreement → Architect arbitrates
    - Requirements ambiguity → User (S5) clarifies
-5. **Document**: Record resolution in decision log for future reference
+5. **Document**: Note resolution in handoff
 6. **Resume**: Only after documented resolution
 
 **Detection Signals**:
@@ -510,7 +507,7 @@ When a sub-task is complex enough to warrant its own PACT treatment:
 **Constraints:**
 - **Nesting limit**: 2 levels maximum (prevent infinite recursion)
 - **Scope check**: Nested PACT must be within your domain; cross-domain needs escalate to orchestrator
-- **Documentation**: Nested cycles produce their own decision logs (append `-nested` to filename)
+- **Documentation**: Nested cycles report via handoff to parent
 - **Algedonic signals**: Algedonic signals from nested cycles still go **directly to user**—they bypass both the nested orchestration AND the parent orchestrator. Viability threats don't wait for hierarchy.
 
 **Example:**
@@ -873,72 +870,12 @@ Keep it brief. No templates required.
 
 ### CODE → TEST Handoff
 
-CODE phase produces decision log(s) at `docs/decision-logs/{feature}-{domain}.md`:
-- `{feature}` = kebab-case feature name (match branch slug when available)
-- `{domain}` = `backend`, `frontend`, or `database`
-- Example: `user-authentication-backend.md`
+Coders provide handoff summaries to the orchestrator, who passes them to the test engineer. Handoff includes:
+- What was implemented
+- Key decisions and assumptions
+- Areas of uncertainty (where bugs might hide—test engineer should prioritize these)
 
-**Decision log contents:**
-```markdown
-# Decision Log: {Feature Name}
-
-## Summary
-Brief description of what was implemented.
-
-## Key Decisions
-- Decision: rationale
-
-## Assumptions
-- Assumption made and why
-
-## Known Limitations
-- What wasn't handled and why
-
-## Areas of Uncertainty
-- Where bugs might hide, tricky parts
-
-## Integration Context
-- Depends on: [services, modules]
-- Consumed by: [downstream code]
-
-## Smoke Tests
-- What was verified (compile, run, happy path)
-```
-
-**This is context, not prescription.** The test engineer decides what and how to test. The decision log helps inform that judgment.
-
-**If decision log is missing**: For `/PACT:orchestrate`, request it from the orchestrator. For `/PACT:comPACT` (light ceremony), proceed with test design based on code analysis—decision logs are optional.
-
-### TEST Decision Log
-
-TEST phase produces its own decision log at `docs/decision-logs/{feature}-test.md`:
-
-```markdown
-# Test Decision Log: {Feature Name}
-
-## Testing Approach
-What strategy was chosen and why.
-
-## Areas Prioritized
-Referenced CODE logs: [list files read, e.g., `user-auth-backend.md`]
-Focus areas based on their "areas of uncertainty".
-
-## Edge Cases Identified
-What boundary conditions and error scenarios were tested.
-
-## Coverage Notes
-What coverage was achieved, any significant gaps.
-
-## What Was NOT Tested
-Explicit scope boundaries and rationale (complexity, time, low risk).
-
-## Known Issues
-Flaky tests, environment dependencies, or unresolved concerns.
-```
-
-Focus on the **"why"** not the "what" — test code shows what was tested, the decision log explains the reasoning.
-
-For `/PACT:comPACT` (light ceremony), this is optional.
+**This is context, not prescription.** The test engineer decides what and how to test.
 
 ---
 
@@ -970,101 +907,13 @@ Skip for simple features or when "just build it."
 |-------|-----------------|
 | Plan | `docs/plans/` |
 | Prepare | `docs/preparation/` |
-| Prepare (environment model) | `docs/preparation/environment-model-{feature}.md` |
 | Architect | `docs/architecture/` |
-| Code (decision logs) | `docs/decision-logs/{feature}-{domain}.md` |
-| Test (decision log) | `docs/decision-logs/{feature}-test.md` |
-| Test (artifacts) | `docs/testing/` |
-| Orchestration (decision log) | `docs/decision-logs/orchestration-{feature}.md` |
 
 **Plan vs. Architecture artifacts**:
-- **Plans** (`docs/plans/`): Pre-approval roadmaps created by `/PACT:plan-mode`. Multi-specialist consultation synthesized into scope estimates, sequencing, and risk assessment. Created *before* implementation begins.
-- **Architecture** (`docs/architecture/`): Formal specifications created by `pact-architect` *during* the Architect phase of `/PACT:orchestrate`. Detailed component designs, interface contracts, and technical decisions.
+- **Plans** (`docs/plans/`): Pre-approval roadmaps created by `/PACT:plan-mode`. Created *before* implementation begins.
+- **Architecture** (`docs/architecture/`): Formal specifications created by `pact-architect` *during* the Architect phase.
 
-Plans inform implementation strategy; architecture documents define the technical blueprint.
-
-### Orchestration Decision Log
-
-For `/PACT:orchestrate` runs, the orchestrator maintains a decision log providing an S3-level audit trail. This log captures key orchestration decisions for retrospective analysis and pattern recognition.
-
-**Location**: `docs/decision-logs/orchestration-{feature}.md`
-
-**When to create**:
-- Variety score 7-9: Lightweight log (key decisions only)
-- Variety score 10+: Full log (complete audit trail)
-- Variety 4-6 (comPACT): No orchestration log (task too simple)
-
-**Lightweight format** (Variety 7-9):
-```markdown
-# Orchestration Log: {Feature}
-Date: {YYYY-MM-DD}
-Variety Score: {score} ({N/S/U/R})
-
-## Key Decisions
-| Phase | Decision | Rationale |
-|-------|----------|-----------|
-| ... | ... | ... |
-
-## Outcome
-- Result: [success / partial / blocked]
-- Follow-up: [none / items]
-```
-
-**Full format** (Variety 10+):
-```markdown
-# Orchestration Log: {Feature}
-Date: {YYYY-MM-DD}
-Variety Score: {score} ({Novelty}/{Scope}/{Uncertainty}/{Risk})
-
-## Variety Assessment
-- Novelty: {1-4} — {rationale}
-- Scope: {1-4} — {rationale}
-- Uncertainty: {1-4} — {rationale}
-- Risk: {1-4} — {rationale}
-- Response: {attenuators/amplifiers applied}
-
-## Phase Log
-
-### PREPARE
-- Agent(s): {list}
-- Duration: {approx}
-- S4 Checkpoint: {outcome}
-- Key findings: {list}
-
-### ARCHITECT
-- Agent(s): {list}
-- S2 Coordination: {pre-parallel check if applicable}
-- S4 Checkpoint: {outcome}
-- Key decisions: {list}
-
-### CODE
-- Agent(s): {list}
-- Parallelization: {yes/no — rationale}
-- S2 Coordination: {conflict prevention measures}
-- S4 Checkpoint: {outcome}
-- Blockers: {none / handled via imPACT}
-
-### TEST
-- Agent(s): {list}
-- Coverage: {summary}
-- Issues found: {list}
-
-## S3/S4 Tensions
-{Record any detected tensions and resolutions, or "None detected"}
-
-## Algedonic Signals
-{Record any HALT/ALERT signals, or "None"}
-
-## Retrospective
-- What worked: {list}
-- What to improve: {list}
-- Patterns to note: {list}
-```
-
-**Update cadence**:
-- Create log at orchestration start (after variety assessment)
-- Update after each phase completion
-- Finalize after TEST phase or on early termination
+**No persistent logging for CODE/TEST phases.** Context passes via structured handoffs between agents. Git commits capture the audit trail.
 
 ---
 

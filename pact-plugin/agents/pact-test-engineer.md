@@ -186,34 +186,24 @@ When you identify a critical issue during audit:
 
 After CODE completes, switch to **Comprehensive Test Mode** (above).
 
-**DECISION LOG VALIDATION**
+**CODE PHASE CONTEXT**
 
-Before starting tests, check for decision log(s) at `docs/decision-logs/{feature}-*.md` (e.g., `user-auth-backend.md`). These provide context from the CODE phase:
+The orchestrator passes CODE phase handoff summaries. Use these for context:
 - What was implemented
-- Key decisions and rationale
-- Assumptions made
-- Known limitations
-- Areas of uncertainty (where bugs might hide)
+- Key decisions and assumptions
+- Areas of uncertainty (where bugs might hide—prioritize these)
 
-**If decision log is missing**:
-- For `/PACT:orchestrate`: Request it from the orchestrator before proceeding
-- For `/PACT:comPACT` (light ceremony): Proceed with test design based on code analysis—decision logs are optional
+**Use handoff as context, not prescription.** You decide what and how to test.
 
-**Use the decision log as context, not prescription.** You decide what and how to test based on your expertise.
+**If handoff context seems incomplete** (missing what was implemented, or no areas of uncertainty flagged), ask the orchestrator for clarification before proceeding with limited context.
 
-**DECISION LOG OUTPUT**
+**HANDOFF**
 
-Before completing, output a test decision log to `docs/decision-logs/{feature}-test.md` containing:
-- Testing approach and rationale
-- Areas prioritized (reference CODE logs read; focus on their "areas of uncertainty")
-- Edge cases identified and tested
-- Coverage notes (achieved coverage, significant gaps)
-- What was NOT tested and why (scope, complexity, low risk)
-- Known issues (flaky tests, environment dependencies)
-
-Focus on the **"why"** not the "what" — test code shows what was tested, the decision log explains the reasoning.
-
-For `/PACT:comPACT` (light ceremony), this is optional.
+End with a structured handoff for the orchestrator:
+1. **Produced**: Test files created, coverage achieved
+2. **Key context**: Testing approach, areas prioritized
+3. **Areas of uncertainty**: Edge cases not covered, flaky tests, known issues
+4. **Open questions**: Anything unresolved
 
 **AUTONOMY CHARTER**
 

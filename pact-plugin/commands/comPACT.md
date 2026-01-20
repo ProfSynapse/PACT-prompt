@@ -4,7 +4,7 @@ argument-hint: [backend|frontend|database|prepare|test|architect] <task>
 ---
 Delegate this focused task within a single PACT domain: $ARGUMENTS
 
-For independent sub-tasks, you may invoke MULTIPLE specialists of the same type in parallel.
+**Default: parallel for independent sub-tasks.** If the task contains multiple independent items (bugs, endpoints, components), invoke multiple specialists of the same type in parallel unless they share files.
 
 ---
 
@@ -46,9 +46,9 @@ If the first word isn't a recognized shorthand, treat the entire argument as the
 
 ## When to Parallelize (Same-Domain)
 
-If the task contains multiple independent items within the same domain, invoke multiple specialists in parallel:
+**Default: parallel unless tasks share files.**
 
-**Parallelize when:**
+Parallelize when:
 - Multiple independent items (bugs, components, endpoints)
 - No shared files between sub-tasks
 - Same patterns/conventions apply to all

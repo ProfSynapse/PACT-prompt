@@ -94,14 +94,6 @@ If you hit the nesting limit:
 - **No PR**: Results integrate into the parent task's eventual PR
 - All commits remain part of the current feature work
 
-### Decision Log Naming
-
-Nested cycles use `-nested` suffix:
-- Parent: `docs/decision-logs/user-auth-backend.md`
-- Nested: `docs/decision-logs/user-auth-oauth2-refresh-backend-nested.md`
-
-For deeply nested (level 2): `*-nested-2.md`
-
 ---
 
 ## Workflow
@@ -134,7 +126,7 @@ Implement the sub-component:
 - Invoke relevant specialist(s)
 - For multi-domain: may invoke multiple specialists
 - Apply S2 coordination if parallel work
-- Output: Code + decision log with `-nested` suffix
+- Output: Code + handoff summary
 
 ### Phase 4: Mini-Test
 
@@ -147,8 +139,7 @@ Verify the sub-component:
 
 Complete the nested cycle:
 1. **Verify**: Sub-component works within parent context
-2. **Document**: Update parent decision log with nested work summary
-3. **Handoff**: Return control to parent orchestration
+2. **Handoff**: Return control to parent orchestration with summary
 
 ---
 
@@ -162,7 +153,6 @@ Nested cycles inherit from parent:
 
 Nested cycles produce:
 - Code committed to current branch
-- Decision logs with `-nested` suffix
 - Handoff summary for parent orchestration
 
 ---

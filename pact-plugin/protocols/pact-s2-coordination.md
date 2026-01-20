@@ -64,18 +64,29 @@ When "first agent's choice becomes standard," subsequent agents need to discover
    - Extract key conventions from first agent's output (naming patterns, file structure, API style)
    - Include in subsequent agents' prompts: "Follow conventions established: {list}"
 
-2. **Decision log reference**: If first agent wrote a decision log, subsequent agents should read it
+2. **Handoff reference**: Orchestrator passes first agent's key decisions to subsequent agents
 
 3. **For truly parallel invocation** (all start simultaneously):
    - Orchestrator pre-defines conventions in all prompts
    - Or: Run one agent first to establish conventions, then parallelize the rest
+   - **Tie-breaker**: If agents complete simultaneously and no first-agent convention exists, use alphabetical domain order (backend, database, frontend) for convention precedence
 
 ### Shared Language
 
 All agents operating in parallel must:
 - Use project glossary and established terminology
-- Follow consistent decision log format (see CODE → TEST Handoff)
 - Use standardized handoff structure (see Phase Handoffs)
+
+### Parallelization Anti-Patterns
+
+| Anti-Pattern | Problem | Fix |
+|--------------|---------|-----|
+| **Sequential by default** | Missed parallelization opportunity | Run QDCL; require justification for sequential |
+| **Ignoring shared files** | Merge conflicts; wasted work | QDCL catches this; sequence or assign boundaries |
+| **Over-parallelization** | Coordination overhead; convention drift | Limit parallel agents; use S2 coordination |
+| **Analysis paralysis** | QDCL takes longer than the work | Time-box to 1 minute; default to parallel if unclear |
+
+**Recovery**: If in doubt, default to parallel with S2 coordination active. Conflicts are recoverable; lost time is not.
 
 ### Anti-Oscillation Protocol
 
@@ -87,7 +98,7 @@ If agents produce contradictory outputs (each "fixing" the other's work):
 4. **Resolve**:
    - Technical disagreement → Architect arbitrates
    - Requirements ambiguity → User (S5) clarifies
-5. **Document**: Record resolution in decision log for future reference
+5. **Document**: Note resolution in handoff for future reference
 6. **Resume**: Only after documented resolution
 
 **Detection Signals**:
@@ -95,6 +106,8 @@ If agents produce contradictory outputs (each "fixing" the other's work):
 - Both agents claim ownership of same interface
 - Output contradicts established convention
 - Repeated "fix" cycles in same file/component
+
+**Heuristic**: Consider it oscillation if the same file is modified by different agents 2+ times in rapid succession.
 
 ### Routine Information Sharing
 
