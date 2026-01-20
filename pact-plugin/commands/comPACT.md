@@ -1,10 +1,12 @@
 ---
-description: Delegate a focused task within a single domain (light ceremony)
+description: Delegate within a single domain—parallel agents for independent sub-tasks
 argument-hint: [backend|frontend|database|prepare|test|architect] <task>
 ---
 Delegate this focused task within a single PACT domain: $ARGUMENTS
 
 **Default: parallel for independent sub-tasks.** If the task contains multiple independent items (bugs, endpoints, components), invoke multiple specialists of the same type in parallel unless they share files.
+
+> ⚠️ **Single domain ≠ single agent.** "Backend domain" with 3 bugs = 3 backend-coders in parallel. The domain is singular; the agents are not.
 
 ---
 
@@ -91,29 +93,9 @@ Before invoking multiple specialists in parallel, perform this coordination chec
 
 **Create feature branch** if not already on one (recommended for behavior changes; optional for trivial).
 
-### Single Specialist (Default)
+### Parallel Specialist Agents (Default)
 
-**Invoke the specialist with**:
-```
-comPACT mode: Work directly from this task description.
-Check docs/plans/, docs/preparation/, docs/architecture/ briefly if they exist—reference relevant context.
-Do not create new documentation artifacts in docs/.
-Focus on the task at hand.
-Testing responsibilities:
-- New unit tests: Required for logic changes; optional for trivial changes (documentation, comments, config).
-- Existing tests: If your changes break existing tests, fix them.
-- Before handoff: Run the test suite and ensure all tests pass.
-
-> **Smoke vs comprehensive tests**: These are verification tests—enough to confirm your implementation works. Comprehensive coverage (edge cases, integration, E2E, adversarial) is TEST phase work handled by `pact-test-engineer`.
-
-If you hit a blocker, STOP and report it so the orchestrator can run /PACT:imPACT.
-
-Task: [user's task description]
-```
-
-### Parallel Specialists (Same-Domain)
-
-When invoking multiple specialists in parallel, add boundary context to each:
+When the task contains multiple independent items, invoke multiple specialists in parallel with boundary context:
 
 ```
 comPACT mode (parallel): You are one of [N] specialists working in parallel.
@@ -137,6 +119,32 @@ Task: [this agent's specific sub-task]
 ```
 
 **After all parallel agents complete**: Verify no conflicts occurred, run full test suite.
+
+### Single Specialist Agent (When Required)
+
+Use a single specialist agent only when:
+- Task is atomic (one bug, one endpoint, one component)
+- Sub-tasks modify the same files
+- Sub-tasks have dependencies on each other
+- Conventions haven't been established yet (run one first to set patterns)
+
+**Invoke the specialist with**:
+```
+comPACT mode: Work directly from this task description.
+Check docs/plans/, docs/preparation/, docs/architecture/ briefly if they exist—reference relevant context.
+Do not create new documentation artifacts in docs/.
+Focus on the task at hand.
+Testing responsibilities:
+- New unit tests: Required for logic changes; optional for trivial changes (documentation, comments, config).
+- Existing tests: If your changes break existing tests, fix them.
+- Before handoff: Run the test suite and ensure all tests pass.
+
+> **Smoke vs comprehensive tests**: These are verification tests—enough to confirm your implementation works. Comprehensive coverage (edge cases, integration, E2E, adversarial) is TEST phase work handled by `pact-test-engineer`.
+
+If you hit a blocker, STOP and report it so the orchestrator can run /PACT:imPACT.
+
+Task: [user's task description]
+```
 
 ---
 

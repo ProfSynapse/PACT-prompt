@@ -66,6 +66,20 @@ Before running orchestration, assess task variety using the protocol in [pact-va
 
 ---
 
+## Execution Philosophy
+
+**Default: Parallel unless proven dependent.**
+
+This applies across ALL phases, not just CODE:
+- PREPARE with multiple research areas → parallel preparers
+- ARCHITECT with independent component designs → parallel architects
+- CODE with multiple domains or independent tasks → parallel coders
+- TEST with independent test suites → parallel test engineers
+
+Sequential execution is the exception requiring explicit justification. When assessing any phase, ask: "Can parts of this run in parallel?" The answer is usually yes.
+
+---
+
 1. **Create feature branch** if not already on one
 2. **Check for plan** in `docs/plans/` matching this task
 
@@ -101,15 +115,9 @@ Before executing phases, assess which are needed based on existing context:
 1. Which skip criterion was met
 2. The context source (plan path, doc path, or pattern name)
 
-Example:
+Example: "Skipping PREPARE (plan has Preparation section). Skipping ARCHITECT (following pattern in `src/utils/`). Running CODE and TEST."
 
-> "Approved plan found at `docs/plans/user-auth-jwt-plan.md`. Skipping PREPARE (plan has Preparation Phase section). Skipping ARCHITECT (plan has Architecture Phase section). Running CODE. Running TEST (plan specifies integration tests needed)."
-
-Or without a plan:
-
-> "No plan found. Skipping PREPARE (requirements explicit in task). Skipping ARCHITECT (following established pattern in `src/utils/`). Running CODE. Skipping TEST (trivial change, no new logic to test)."
-
-The user can override your assessment if they want more or less ceremony.
+The user can override your assessment.
 
 ---
 
@@ -128,8 +136,6 @@ When a phase is skipped but a coder encounters a decision that would have been h
 **Coder instruction when phases were skipped**:
 
 > "PREPARE and/or ARCHITECT were skipped based on existing context. Minor decisions (naming, local structure) are yours to make. For moderate decisions (interface shape, error patterns), decide and implement but flag the decision with your rationale in the handoff so it can be validated. Major decisions affecting other components are blockers—don't implement, escalate."
-
-This prevents excessive ping-pong for small decisions while catching real issues.
 
 ---
 
@@ -166,6 +172,8 @@ Each specialist should end with a structured handoff:
 - [ ] Specialist handoff received (see Handoff Format below)
 - [ ] If blocker reported → `/PACT:imPACT`
 - [ ] **S4 Checkpoint** (see [pact-s4-checkpoints.md](../protocols/pact-s4-checkpoints.md)): Environment stable? Model aligned? Plan viable?
+
+**Parallel within PREPARE**: If research spans multiple independent areas (e.g., "research auth options AND caching strategies"), invoke multiple preparers in parallel with clear scope boundaries.
 
 ---
 
@@ -204,6 +212,8 @@ If PREPARE ran and ARCHITECT was marked "Skip," compare PREPARE's recommended ap
 - [ ] If blocker reported → `/PACT:imPACT`
 - [ ] **S4 Checkpoint**: Environment stable? Model aligned? Plan viable?
 
+**Parallel within ARCHITECT**: If designing multiple independent components (e.g., "design user service AND notification service"), invoke multiple architects in parallel. Ensure interface contracts between components are defined as a coordination checkpoint.
+
 ---
 
 ### Phase 3: CODE → `pact-*-coder(s)`
@@ -229,9 +239,7 @@ If PREPARE ran and ARCHITECT was marked "Skip," compare PREPARE's recommended ap
 
 #### Parallel-First Philosophy
 
-**Default stance**: Parallel unless proven dependent.
-
-The orchestrator should **expect** to use parallel execution. Sequential is the exception requiring explicit justification. This philosophy reflects the reality that most CODE phase work involves independent domains (backend, frontend, database) or independent components within a domain.
+**Default stance**: Parallel unless proven dependent. Sequential requires explicit justification.
 
 **Required decision output** (no exceptions):
 - "**Parallel**: [groupings]" — the expected outcome
@@ -246,9 +254,7 @@ The orchestrator should **expect** to use parallel execution. Sequential is the 
 
 #### Execution Strategy Analysis
 
-Before invoking coders, complete the **Quick Dependency Checklist (QDCL)** to determine your execution strategy.
-
-> **REQUIRED**: You must complete the QDCL and emit the checklist output before invoking coders. This is not optional.
+**REQUIRED**: Complete the QDCL and emit the result before invoking coders.
 
 **Quick Dependency Checklist (QDCL)**:
 
@@ -326,6 +332,8 @@ If a sub-task emerges that is too complex for a single specialist invocation:
 - [ ] All tests passing
 - [ ] Specialist handoff received (see Handoff Format above)
 - [ ] If blocker reported → `/PACT:imPACT`
+
+**Parallel within TEST**: If test suites are independent (e.g., "unit tests AND E2E tests" or "API tests AND UI tests"), invoke multiple test engineers in parallel with clear suite boundaries.
 
 ---
 
