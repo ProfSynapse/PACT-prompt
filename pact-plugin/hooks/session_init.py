@@ -555,6 +555,50 @@ def update_claude_md() -> str | None:
         return f"PACT update failed: {str(e)[:30]}"
 
 
+def ensure_project_memory_md() -> str | None:
+    """
+    Ensure project has a CLAUDE.md with memory sections.
+
+    Creates a minimal project-level CLAUDE.md containing only the memory
+    sections (Retrieved Context, Working Memory) if one doesn't exist.
+    These sections are project-specific and managed by the pact-memory skill.
+
+    If the project already has a CLAUDE.md, this function does nothing
+    (preserves existing project configuration).
+
+    Returns:
+        Status message or None if no action taken.
+    """
+    project_dir = os.environ.get("CLAUDE_PROJECT_DIR", "")
+    if not project_dir:
+        return None
+
+    target_file = Path(project_dir) / "CLAUDE.md"
+
+    # Don't overwrite existing project CLAUDE.md
+    if target_file.exists():
+        return None
+
+    # Create minimal CLAUDE.md with memory sections
+    memory_template = """# Project Memory
+
+This file contains project-specific memory managed by the PACT framework.
+The global PACT Orchestrator is loaded from `~/.claude/CLAUDE.md`.
+
+## Retrieved Context
+<!-- Auto-managed by pact-memory skill. Last 3 retrieved memories shown. -->
+
+## Working Memory
+<!-- Auto-managed by pact-memory skill. Last 5 memories shown. Full history searchable via pact-memory skill. -->
+"""
+
+    try:
+        target_file.write_text(memory_template, encoding="utf-8")
+        return "Created project CLAUDE.md with memory sections"
+    except Exception as e:
+        return f"Project CLAUDE.md failed: {str(e)[:30]}"
+
+
 def main():
     """
     Main entry point for the SessionStart hook.
@@ -564,9 +608,10 @@ def main():
     1. Merges PACT permissions for background agent support
     2. Checks for active plans
     3. Updates ~/.claude/CLAUDE.md (merges/installs PACT Orchestrator)
-    4. Auto-installs pact-memory dependencies
-    5. Migrates embeddings if dimension changed
-    6. Processes any unembedded memories (catch-up)
+    4. Ensures project CLAUDE.md exists with memory sections
+    5. Auto-installs pact-memory dependencies
+    6. Migrates embeddings if dimension changed
+    7. Processes any unembedded memories (catch-up)
     """
     try:
         try:
@@ -608,7 +653,15 @@ def main():
             else:
                 context_parts.append(claude_md_msg)
 
-        # 4. Check and install dependencies
+        # 4. Ensure project has CLAUDE.md with memory sections
+        project_md_msg = ensure_project_memory_md()
+        if project_md_msg:
+            if "failed" in project_md_msg.lower():
+                system_messages.append(project_md_msg)
+            else:
+                context_parts.append(project_md_msg)
+
+        # 6. Check and install dependencies
         deps_result = check_and_install_dependencies()
         if deps_result['installed']:
             context_parts.append(
@@ -619,12 +672,12 @@ def main():
                 f"Failed to install: {', '.join(deps_result['failed'])}"
             )
 
-        # 5. Migrate embeddings if dimension changed
+        # 7. Migrate embeddings if dimension changed
         migrate_result = maybe_migrate_embeddings()
         if migrate_result.get("message") and "Migrated" in migrate_result["message"]:
             context_parts.append(migrate_result["message"])
 
-        # 6. Process any unembedded memories (catch-up)
+        # 8. Process any unembedded memories (catch-up)
         embed_result = maybe_embed_pending()
         if embed_result.get("message"):
             if embed_result["status"] == "ok" and "Embedded" in embed_result["message"]:
