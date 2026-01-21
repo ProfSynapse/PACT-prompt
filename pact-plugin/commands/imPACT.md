@@ -50,6 +50,23 @@ imPACT is for operational problem-solving. If you're questioning whether the wor
 
 ---
 
+## Output Conciseness
+
+**Default: Concise output.** User sees triage outcome, not diagnostic process.
+
+| Internal (don't show) | External (show) |
+|----------------------|-----------------|
+| Question-by-question analysis | `imPACT: Redo ARCHITECT — interface mismatch` |
+| Full diagnostic reasoning | `imPACT: Augmenting with parallel backend coder` |
+| Context-gathering details | `imPACT: Not blocked — clarifying guidance to agent` |
+
+| Verbose (avoid) | Concise (prefer) |
+|-----------------|------------------|
+| "Let me assess whether this is an upstream issue..." | (just do it, report outcome) |
+| "The first question is whether we need to redo..." | `imPACT: [outcome] — [reason]` |
+
+---
+
 ## Gather Context
 
 Before triaging, quickly check for existing context:

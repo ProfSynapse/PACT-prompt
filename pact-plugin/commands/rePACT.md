@@ -88,6 +88,25 @@ If you hit the nesting limit:
 - Use `/PACT:comPACT` for remaining work
 - Or escalate to user for guidance
 
+---
+
+## Output Conciseness
+
+**Default: Concise output.** User sees nested cycle start/completion, not mini-phase details.
+
+| Internal (don't show) | External (show) |
+|----------------------|-----------------|
+| Mini-phase transitions | `rePACT: backend "OAuth2 token refresh"` |
+| Nesting depth calculations | `rePACT complete. Continuing parent.` |
+| Phase skip reasoning | (implicit — just proceed) |
+
+| Verbose (avoid) | Concise (prefer) |
+|-----------------|------------------|
+| "Starting mini-PREPARE phase for the nested cycle..." | (just do it) |
+| "The nested cycle has completed successfully..." | `rePACT complete. Continuing parent.` |
+
+---
+
 ### Branch Behavior
 
 - **No new branch**: rePACT stays on the current feature branch
