@@ -50,6 +50,14 @@ See [algedonic.md](../protocols/algedonic.md) for signal format and full protoco
 
 **User can always ask** "Why that strategy?" or "Show me the variety analysis" for details.
 
+**Narration style**: State decisions, not reasoning process. Minimize commentary.
+
+| Verbose (avoid) | Concise (prefer) |
+|-----------------|------------------|
+| "Let me assess variety and check for the approved plan" | (just do it, show result) |
+| "I'm now going to invoke the backend coder" | `Invoking backend coder` |
+| "S4 Mode — Task Assessment" | (implicit, don't announce) |
+
 ---
 
 ## Before Starting
