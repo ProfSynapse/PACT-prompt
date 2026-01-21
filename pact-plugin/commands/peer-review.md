@@ -31,7 +31,7 @@ Select the domain coder based on PR focus:
 
 | Internal (don't show) | External (show) |
 |----------------------|-----------------|
-| Each reviewer's raw output | `Review: 2 issues, 3 suggestions. See docs/review/` |
+| Each reviewer's raw output | `Review: 2 issues (architect: 1, test: 1), 3 suggestions. See docs/review/` |
 | Reviewer selection reasoning | `Invoking architect + test engineer + backend coder` |
 | Agreement/conflict analysis details | `Ready to merge` or `Changes requested: [specifics]` |
 
@@ -46,9 +46,10 @@ Select the domain coder based on PR focus:
 
 **After all reviews complete**:
 1. Synthesize findings into a unified review summary with consolidated recommendations
-2. Categorize findings by severity and state merge readiness:
-   - Format: `Review: X issues, Y major suggestions, Z minor suggestions`
-   - "Ready to merge" or "Changes requested: [specifics]"
+2. Categorize findings by severity with reviewer attribution:
+   - Format: `Review: X issues (reviewer: N, ...), Y suggestions (reviewer: N major, reviewer: N minor)`
+   - Example: `Review: 2 issues (architect: 1, test: 1), 3 suggestions (backend: 2 major, architect: 1 minor)`
+   - State merge readiness: "Ready to merge" or "Changes requested: [specifics]"
 3. Ask user: "Would you like to address any reviewer suggestions before merging?"
    - If yes → Select appropriate workflow based on fix complexity:
      - Simple/single-domain fixes → `/PACT:comPACT`
