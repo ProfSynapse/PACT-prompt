@@ -38,6 +38,32 @@ See [algedonic.md](../protocols/algedonic.md) for signal format and full protoco
 
 ---
 
+## Output Conciseness
+
+**Default: Concise output.** The orchestrator's internal reasoning (variety analysis, dependency checking, execution strategy) runs internally. User sees only decisions and key context.
+
+| Internal (don't show) | External (show) |
+|----------------------|-----------------|
+| Variety dimension scores, full tables | One-line summary: `Variety: Low (5) — proceeding with orchestrate` |
+| QDCL checklist, dependency analysis | Decision only: `Invoking 2 backend coders in parallel` |
+| Phase skip reasoning details | Brief: `Skipping PREPARE/ARCHITECT (approved plan exists)` |
+
+**User can always ask** for details (e.g., "Why that strategy?" or "Show me the variety analysis").
+
+**Narration style**: State decisions, not reasoning process. Minimize commentary.
+
+**Exceptions warranting more detail**:
+- Error conditions, blockers, or unexpected issues — proactively explain what went wrong
+- High-variety tasks (11+) — visible reasoning helps user track complex orchestration
+
+| Verbose (avoid) | Concise (prefer) |
+|-----------------|------------------|
+| "Let me assess variety and check for the approved plan" | (just do it, show result) |
+| "I'm now going to invoke the backend coder" | `Invoking backend coder` |
+| "S4 Mode — Task Assessment" | (implicit, don't announce) |
+
+---
+
 ## Before Starting
 
 ### Task Variety Assessment
@@ -59,6 +85,8 @@ Before running orchestration, assess task variety using the protocol in [pact-va
 - **Scope**: Single concern (1) → Cross-cutting (4)
 - **Uncertainty**: Clear (1) → Unknown (4)
 - **Risk**: Low impact (1) → Critical (4)
+
+**Output format**: One-line summary only. Example: `Variety: Medium (8) — standard orchestrate with all phases`
 
 **When uncertain**: Default to standard orchestrate. Variety can be reassessed at phase transitions.
 
@@ -111,13 +139,9 @@ Before executing phases, assess which are needed based on existing context:
 
 **Plan-aware fast path**: When an approved plan exists in `docs/plans/`, PREPARE and ARCHITECT are typically skippable—the plan already synthesized specialist perspectives. Skip unless scope has changed or plan appears stale (typically >2 weeks; ask user to confirm if uncertain).
 
-**State your assessment before proceeding.** For each skipped phase, state:
-1. Which skip criterion was met
-2. The context source (plan path, doc path, or pattern name)
+**State your assessment briefly.** Example: `Skipping PREPARE/ARCHITECT (approved plan exists). Running CODE and TEST.`
 
-Example: "Skipping PREPARE (plan has Preparation section). Skipping ARCHITECT (following pattern in `src/utils/`). Running CODE and TEST."
-
-The user can override your assessment.
+The user can override your assessment or ask for details.
 
 ---
 
@@ -254,29 +278,29 @@ If PREPARE ran and ARCHITECT was marked "Skip," compare PREPARE's recommended ap
 
 #### Execution Strategy Analysis
 
-**REQUIRED**: Complete the QDCL and emit the result before invoking coders.
+**REQUIRED**: Complete the QDCL internally before invoking coders.
 
-**Quick Dependency Checklist (QDCL)**:
+**Quick Dependency Checklist (QDCL)** — run mentally, don't output:
 
 For each pair of work units, check:
-```
-[ ] Same file modified? → Sequential (or define strict boundaries)
-[ ] A's output is B's input? → Sequential (A first)
-[ ] Shared interface undefined? → Define interface first, then parallel
-[ ] None of above? → Parallel
-```
+- Same file modified? → Sequential (or define strict boundaries)
+- A's output is B's input? → Sequential (A first)
+- Shared interface undefined? → Define interface first, then parallel
+- None of above? → Parallel
 
-**Emit your QDCL result** (example): `Backend ↔ Frontend: Parallel | Backend ↔ DB: Sequential (schema first)`
+**Output format**: Decision only. Example: `Invoking backend + frontend coders in parallel` or `Sequential: database first, then backend (schema dependency)`
 
 **If QDCL shows no dependencies**: Parallel is your answer. Don't second-guess.
 
 #### S2 Pre-Parallel Coordination
 
-Before parallel invocation, check: shared files? shared interfaces? conventions established?
+Before parallel invocation, check internally: shared files? shared interfaces? conventions established?
 
 - **Shared files**: Sequence those agents OR assign clear boundaries
 - **Conventions**: First agent's choice becomes standard; propagate to others
 - **Resolution authority**: Technical disagreements → Architect arbitrates; Style/convention → First agent's choice
+
+**Output**: Silent if no conflicts; only mention if conflicts found (e.g., `S2 check: types.ts shared — backend writes, frontend reads`).
 
 **Include in parallel prompts**: "You are working in parallel. Your scope is [files]. Do not modify files outside your scope."
 
