@@ -61,8 +61,8 @@ Select the domain coder based on PR focus:
      - Complex/multi-domain → `/PACT:orchestrate`
      - After fixes complete, re-run review to verify
    - **Minor + Future**: Use `AskUserQuestion` tool with one question per recommendation:
-     - Each minor: "Address '[recommendation]'?" → Yes / No
-     - Each future: "Create issue for '[recommendation]'?" → Yes / No
+     - Each minor: "Address [recommendation] now?" → Yes / No
+     - Each future: "Create GitHub issue for [recommendation]?" → Yes / No
      - Note: Tool supports up to 4 questions per call; batch accordingly
      - Process responses:
        - For each minor=Yes → Select workflow and fix
