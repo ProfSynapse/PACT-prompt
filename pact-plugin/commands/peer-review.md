@@ -23,7 +23,59 @@ Select the domain coder based on PR focus:
 - Database changes → **pact-database-engineer** (Query efficiency, schema design, data integrity)
 - Multiple domains → Coder for domain with most significant changes, or all relevant domain coders if changes are equally significant
 
+---
+
+## Output Conciseness
+
+**Default: Concise output.** User sees synthesis, not each reviewer's full output restated.
+
+| Internal (don't show) | External (show) |
+|----------------------|-----------------|
+| Each reviewer's raw output | Recommendations table + `See docs/review/` |
+| Reviewer selection reasoning | `Invoking architect + test engineer + backend coder` |
+| Agreement/conflict analysis details | `Ready to merge` or `Changes requested: [specifics]` |
+
+**User can always ask** for full reviewer output (e.g., "What did the architect say?" or "Show me all findings").
+
+| Verbose (avoid) | Concise (prefer) |
+|-----------------|------------------|
+| "The architect found X, the test engineer found Y..." | Consolidated summary in `docs/review/` |
+| "Let me synthesize the findings from all reviewers..." | (just do it, show result) |
+
+---
+
 **After all reviews complete**:
 1. Synthesize findings into a unified review summary with consolidated recommendations
-2. State merge readiness: "Ready to merge" or "Changes requested: [specifics]"
-3. Present to user and **stop** — merging requires explicit user authorization (S5 policy)
+2. Present **all** findings to user as a table **before asking any questions** (blocking, minor, and future):
+   | Recommendation | Severity | Reviewer |
+   |----------------|----------|----------|
+   | [the finding]  | Blocking / Minor / Future | architect / test / backend / etc. |
+
+   - **Blocking**: Must fix before merge
+   - **Minor**: Optional fix for this PR
+   - **Future**: Out of scope; track as GitHub issue
+
+3. Handle recommendations by severity:
+   - **No recommendations**: If the table is empty (no blocking, minor, or future items), proceed directly to step 4.
+   - **Blocking**: Automatically address all blocking items:
+     - Batch fixes by selecting appropriate workflow(s) based on combined scope:
+       - Single-domain items → `/PACT:comPACT` (parallelize if independent)
+       - Multi-domain items → `/PACT:orchestrate`
+       - Mixed (both single and multi-domain) → Use `/PACT:comPACT` for the single-domain batch AND `/PACT:orchestrate` for the multi-domain batch (can run in parallel if independent)
+     - After all fixes complete, re-run review to verify fixes only (not a full PR re-review)
+     - **Termination**: If blocking items persist after 2 fix-verify cycles → escalate via `/PACT:imPACT`
+   - **Minor + Future** (table from step 2 provides context for these questions):
+     - Use `AskUserQuestion` tool with one question per recommendation:
+       - Each minor: "Address [recommendation] now?" with description explaining the issue context
+       - Each future: "Create GitHub issue for [recommendation]?" with description explaining the issue context
+       - Note: Tool supports up to 4 questions per call. If >4 recommendations exist, make multiple `AskUserQuestion` calls to cover all items.
+     - **Collect all answers first**, then batch work:
+       - Group all minor=Yes items → Select workflow based on combined scope:
+         - Single-domain items → `/PACT:comPACT` (parallelize if independent)
+         - Multi-domain items → `/PACT:orchestrate`
+       - Group all future=Yes items → Create GitHub issues
+     - If any minor items fixed → re-run review to verify fixes only (not a full PR re-review)
+
+4. State merge readiness (only after ALL blocking fixes complete AND minor/future item handling is done): "Ready to merge" or "Changes requested: [specifics]"
+
+5. Present to user and **stop** — merging requires explicit user authorization (S5 policy)

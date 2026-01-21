@@ -397,6 +397,27 @@ To implement this plan after approval:
 The orchestrator should reference this plan during execution.
 ```
 
+---
+
+## Output Conciseness
+
+**Default: Concise output.** User sees plan summary and decision points, not synthesis process.
+
+| Internal (don't show) | External (show) |
+|----------------------|-----------------|
+| Specialist consultation reasoning | `Consulting: preparer, architect, backend, test` |
+| Conflict resolution analysis | Summary in plan document |
+| Synthesis process details | `Plan saved to docs/plans/{slug}-plan.md` |
+
+**User can always ask** for details (e.g., "What did the architect recommend?" or "Show me the conflicts").
+
+| Verbose (avoid) | Concise (prefer) |
+|-----------------|------------------|
+| "The plan has been created. Let me walk you through..." | `Plan saved. Complexity: Medium. 3 decisions need your input.` |
+| "I'm now synthesizing the specialist perspectives..." | (just do it, present result) |
+
+---
+
 ### Phase 4: Present and Resolve
 
 After saving the plan:

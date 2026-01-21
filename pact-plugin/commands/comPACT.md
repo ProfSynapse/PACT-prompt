@@ -89,6 +89,25 @@ Before invoking multiple specialists in parallel, perform this coordination chec
 
 ---
 
+## Output Conciseness
+
+**Default: Concise output.** User sees delegation decisions, not coordination analysis.
+
+| Internal (don't show) | External (show) |
+|----------------------|-----------------|
+| S2 coordination analysis, conflict checking | `Delegating to backend coder` |
+| Parallelization reasoning, file boundary decisions | `Invoking 3 frontend coders in parallel` |
+| Specialist selection logic | `Auto-selected: database (SQL keywords detected)` |
+
+**User can always ask** for details (e.g., "Why that specialist?" or "Show me the conflict analysis").
+
+| Verbose (avoid) | Concise (prefer) |
+|-----------------|------------------|
+| "Let me check if these sub-tasks share files..." | (just do it, report result) |
+| "I'm analyzing whether to parallelize..." | `Parallel: no shared files` |
+
+---
+
 ## Invocation
 
 **Create feature branch** if not already on one (recommended for behavior changes; optional for trivial).
