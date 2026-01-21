@@ -47,4 +47,7 @@ Select the domain coder based on PR focus:
 **After all reviews complete**:
 1. Synthesize findings into a unified review summary with consolidated recommendations
 2. State merge readiness: "Ready to merge" or "Changes requested: [specifics]"
-3. Present to user and **stop** — merging requires explicit user authorization (S5 policy)
+3. Ask user: "Would you like to address any suggestions before merging?"
+   - If yes → Delegate fixes via `/PACT:comPACT`, then re-summarize
+   - If no → Proceed to step 4
+4. Present to user and **stop** — merging requires explicit user authorization (S5 policy)
