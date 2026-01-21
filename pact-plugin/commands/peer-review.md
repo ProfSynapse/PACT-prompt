@@ -64,9 +64,11 @@ Select the domain coder based on PR focus:
      - Each minor: "Address [recommendation] now?" → Yes / No
      - Each future: "Create GitHub issue for [recommendation]?" → Yes / No
      - Note: Tool supports up to 4 questions per call; batch accordingly
-     - Process responses:
-       - For each minor=Yes → Select workflow and fix
-       - For each future=Yes → Create GitHub issue
+     - **Collect all answers first**, then batch work:
+       - Group all minor=Yes items → Select workflow based on combined scope:
+         - Single-domain items → `/PACT:comPACT` (parallelize if independent)
+         - Multi-domain items → `/PACT:orchestrate`
+       - Group all future=Yes items → Create GitHub issues
      - If any minor items fixed → re-run review to verify
 
 4. State merge readiness: "Ready to merge" or "Changes requested: [specifics]"
