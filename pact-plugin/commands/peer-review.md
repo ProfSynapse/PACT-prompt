@@ -76,6 +76,6 @@ Select the domain coder based on PR focus:
        - Group all future=Yes items → Create GitHub issues
      - If any minor items fixed → re-run review to verify
 
-4. State merge readiness (only after ALL blocking fixes complete AND minor item handling is done): "Ready to merge" or "Changes requested: [specifics]"
+4. State merge readiness (only after ALL blocking fixes complete AND minor/future item handling is done): "Ready to merge" or "Changes requested: [specifics]"
 
 5. Present to user and **stop** — merging requires explicit user authorization (S5 policy)
