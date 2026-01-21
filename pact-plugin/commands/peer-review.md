@@ -54,11 +54,19 @@ Select the domain coder based on PR focus:
    - **Blocking**: Must fix before merge
    - **Minor**: Optional fix for this PR
    - **Future**: Out of scope; track as GitHub issue
-   - State merge readiness: "Ready to merge" or "Changes requested: [specifics]"
-3. Ask user: "Would you like to address any reviewer suggestions before merging?"
-   - If yes → Select appropriate workflow based on fix complexity:
-     - Simple/single-domain fixes → `/PACT:comPACT`
-     - Complex/multi-domain fixes → `/PACT:orchestrate`
-   - After fixes complete, re-run review to verify
-   - If no → Proceed to step 4
-4. Present to user and **stop** — merging requires explicit user authorization (S5 policy)
+
+3. Handle recommendations by severity:
+   - **Blocking**: Automatically address by selecting appropriate workflow:
+     - Simple/single-domain → `/PACT:comPACT`
+     - Complex/multi-domain → `/PACT:orchestrate`
+     - After fixes complete, re-run review to verify
+   - **Minor**: Ask user: "Would you like to address minor recommendations before merging?"
+     - If yes → Select workflow and fix; re-run review
+     - If no → Continue
+   - **Future**: Ask user: "Create GitHub issues to track future enhancements?"
+     - If yes → Create issue(s) with recommendation details
+     - If no → Continue
+
+4. State merge readiness: "Ready to merge" or "Changes requested: [specifics]"
+
+5. Present to user and **stop** — merging requires explicit user authorization (S5 policy)
