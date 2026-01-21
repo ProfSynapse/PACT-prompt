@@ -56,16 +56,18 @@ Select the domain coder based on PR focus:
    - **Future**: Out of scope; track as GitHub issue
 
 3. Handle recommendations by severity:
+   - **No recommendations**: If the table is empty (no blocking, minor, or future items), proceed directly to step 4.
    - **Blocking**: Automatically address all blocking items:
      - Batch fixes by selecting appropriate workflow(s) based on combined scope:
        - Single-domain items → `/PACT:comPACT` (parallelize if independent)
        - Multi-domain items → `/PACT:orchestrate`
+       - Mixed (both single and multi-domain) → Use `/PACT:comPACT` for the single-domain batch AND `/PACT:orchestrate` for the multi-domain batch (can run in parallel if independent)
      - After all fixes complete, re-run review to verify
      - **Termination**: If blocking items persist after 2 fix-verify cycles → escalate via `/PACT:imPACT`
    - **Minor + Future**: Use `AskUserQuestion` tool with one question per recommendation:
      - Each minor: "Address [recommendation] now?" → Yes / No
      - Each future: "Create GitHub issue for [recommendation]?" → Yes / No
-     - Note: Tool supports up to 4 questions per call; batch accordingly
+     - Note: Tool supports up to 4 questions per call. If >4 recommendations exist, make multiple `AskUserQuestion` calls to cover all items.
      - **Collect all answers first**, then batch work:
        - Group all minor=Yes items → Select workflow based on combined scope:
          - Single-domain items → `/PACT:comPACT` (parallelize if independent)
@@ -73,6 +75,6 @@ Select the domain coder based on PR focus:
        - Group all future=Yes items → Create GitHub issues
      - If any minor items fixed → re-run review to verify
 
-4. State merge readiness: "Ready to merge" or "Changes requested: [specifics]"
+4. State merge readiness (only after ALL blocking fixes complete AND minor item handling is done): "Ready to merge" or "Changes requested: [specifics]"
 
 5. Present to user and **stop** — merging requires explicit user authorization (S5 policy)
