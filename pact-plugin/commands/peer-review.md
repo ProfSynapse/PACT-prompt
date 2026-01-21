@@ -60,12 +60,14 @@ Select the domain coder based on PR focus:
      - Simple/single-domain → `/PACT:comPACT`
      - Complex/multi-domain → `/PACT:orchestrate`
      - After fixes complete, re-run review to verify
-   - **Minor + Future**: Use `AskUserQuestion` tool to batch prompts:
-     - Q1 (if minor exists): "Address minor recommendations before merging?" → Yes / No
-     - Q2 (if future exists): "Create GitHub issues for future enhancements?" → Yes / No
+   - **Minor + Future**: Use `AskUserQuestion` tool with one question per recommendation:
+     - Each minor: "Address '[recommendation]'?" → Yes / No
+     - Each future: "Create issue for '[recommendation]'?" → Yes / No
+     - Note: Tool supports up to 4 questions per call; batch accordingly
      - Process responses:
-       - Minor=Yes → Select workflow and fix; re-run review
-       - Future=Yes → Create issue(s) with recommendation details
+       - For each minor=Yes → Select workflow and fix
+       - For each future=Yes → Create GitHub issue
+     - If any minor items fixed → re-run review to verify
 
 4. State merge readiness: "Ready to merge" or "Changes requested: [specifics]"
 
