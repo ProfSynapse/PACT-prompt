@@ -46,7 +46,7 @@ Select the domain coder based on PR focus:
 
 **After all reviews complete**:
 1. Synthesize findings into a unified review summary with consolidated recommendations
-2. Present findings as a simple table:
+2. Present **all** findings to user as a table (blocking, minor, and future):
    | Recommendation | Severity | Reviewer |
    |----------------|----------|----------|
    | [the finding]  | Blocking / Minor / Future | architect / test / backend / etc. |
@@ -64,9 +64,7 @@ Select the domain coder based on PR focus:
        - Mixed (both single and multi-domain) → Use `/PACT:comPACT` for the single-domain batch AND `/PACT:orchestrate` for the multi-domain batch (can run in parallel if independent)
      - After all fixes complete, re-run review to verify
      - **Termination**: If blocking items persist after 2 fix-verify cycles → escalate via `/PACT:imPACT`
-   - **Minor + Future**:
-     - **First**: Display the recommendations table to the user (so they have context)
-     - **Then**: Use `AskUserQuestion` tool with one question per recommendation:
+   - **Minor + Future**: Use `AskUserQuestion` tool with one question per recommendation:
        - Each minor: "Address [recommendation] now?" with description explaining the issue context
        - Each future: "Create GitHub issue for [recommendation]?" with description explaining the issue context
        - Note: Tool supports up to 4 questions per call. If >4 recommendations exist, make multiple `AskUserQuestion` calls to cover all items.
