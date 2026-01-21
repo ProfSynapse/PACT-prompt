@@ -64,10 +64,12 @@ Select the domain coder based on PR focus:
        - Mixed (both single and multi-domain) → Use `/PACT:comPACT` for the single-domain batch AND `/PACT:orchestrate` for the multi-domain batch (can run in parallel if independent)
      - After all fixes complete, re-run review to verify
      - **Termination**: If blocking items persist after 2 fix-verify cycles → escalate via `/PACT:imPACT`
-   - **Minor + Future**: Use `AskUserQuestion` tool with one question per recommendation:
-     - Each minor: "Address [recommendation] now?" → Yes / No
-     - Each future: "Create GitHub issue for [recommendation]?" → Yes / No
-     - Note: Tool supports up to 4 questions per call. If >4 recommendations exist, make multiple `AskUserQuestion` calls to cover all items.
+   - **Minor + Future**:
+     - **First**: Display the recommendations table to the user (so they have context)
+     - **Then**: Use `AskUserQuestion` tool with one question per recommendation:
+       - Each minor: "Address [recommendation] now?" with description explaining the issue context
+       - Each future: "Create GitHub issue for [recommendation]?" with description explaining the issue context
+       - Note: Tool supports up to 4 questions per call. If >4 recommendations exist, make multiple `AskUserQuestion` calls to cover all items.
      - **Collect all answers first**, then batch work:
        - Group all minor=Yes items → Select workflow based on combined scope:
          - Single-domain items → `/PACT:comPACT` (parallelize if independent)
