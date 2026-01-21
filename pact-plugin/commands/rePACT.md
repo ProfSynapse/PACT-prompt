@@ -100,6 +100,8 @@ If you hit the nesting limit:
 | Nesting depth calculations | `rePACT complete. Continuing parent.` |
 | Phase skip reasoning | (implicit — just proceed) |
 
+**User can always ask** for nested cycle details (e.g., "What phases ran?" or "Show me the mini-architect output").
+
 | Verbose (avoid) | Concise (prefer) |
 |-----------------|------------------|
 | "Starting mini-PREPARE phase for the nested cycle..." | (just do it) |

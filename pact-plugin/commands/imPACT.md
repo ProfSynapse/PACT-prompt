@@ -60,6 +60,8 @@ imPACT is for operational problem-solving. If you're questioning whether the wor
 | Full diagnostic reasoning | `imPACT: Augmenting with parallel backend coder` |
 | Context-gathering details | `imPACT: Not blocked — clarifying guidance to agent` |
 
+**User can always ask** for triage details (e.g., "Why redo that phase?" or "What was the diagnosis?").
+
 | Verbose (avoid) | Concise (prefer) |
 |-----------------|------------------|
 | "Let me assess whether this is an upstream issue..." | (just do it, report outcome) |

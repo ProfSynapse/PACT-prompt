@@ -99,6 +99,8 @@ Before invoking multiple specialists in parallel, perform this coordination chec
 | Parallelization reasoning, file boundary decisions | `Invoking 3 frontend coders in parallel` |
 | Specialist selection logic | `Auto-selected: database (SQL keywords detected)` |
 
+**User can always ask** for details (e.g., "Why that specialist?" or "Show me the conflict analysis").
+
 | Verbose (avoid) | Concise (prefer) |
 |-----------------|------------------|
 | "Let me check if these sub-tasks share files..." | (just do it, report result) |

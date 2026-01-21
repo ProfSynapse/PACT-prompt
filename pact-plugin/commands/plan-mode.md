@@ -409,6 +409,8 @@ The orchestrator should reference this plan during execution.
 | Conflict resolution analysis | Summary in plan document |
 | Synthesis process details | `Plan saved to docs/plans/{slug}-plan.md` |
 
+**User can always ask** for details (e.g., "What did the architect recommend?" or "Show me the conflicts").
+
 | Verbose (avoid) | Concise (prefer) |
 |-----------------|------------------|
 | "The plan has been created. Let me walk you through..." | `Plan saved. Complexity: Medium. 3 decisions need your input.` |

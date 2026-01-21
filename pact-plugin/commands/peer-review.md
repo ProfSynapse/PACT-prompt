@@ -35,6 +35,8 @@ Select the domain coder based on PR focus:
 | Reviewer selection reasoning | `Invoking architect + test engineer + backend coder` |
 | Agreement/conflict analysis details | `Ready to merge` or `Changes requested: [specifics]` |
 
+**User can always ask** for full reviewer output (e.g., "What did the architect say?" or "Show me all findings").
+
 | Verbose (avoid) | Concise (prefer) |
 |-----------------|------------------|
 | "The architect found X, the test engineer found Y..." | Consolidated summary in `docs/review/` |
