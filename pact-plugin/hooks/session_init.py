@@ -427,30 +427,6 @@ def setup_plugin_symlinks() -> str | None:
     return "PACT: " + ", ".join(messages)
 
 
-def check_orchestrator_setup() -> str | None:
-    """
-    Guide user to set up CLAUDE.md if not present or missing PACT content.
-
-    Returns:
-        Setup guidance message or None if already configured
-    """
-    claude_md = Path.home() / ".claude" / "CLAUDE.md"
-    plugin_root = os.environ.get("CLAUDE_PLUGIN_ROOT", "")
-
-    if not plugin_root:
-        return None
-
-    if not claude_md.exists():
-        return f"PACT: Run: cp \"{plugin_root}/CLAUDE.md\" ~/.claude/CLAUDE.md"
-
-    try:
-        content = claude_md.read_text(encoding='utf-8')
-        if "PACT Orchestrator" not in content:
-            return f"PACT: To enable orchestrator, update ~/.claude/CLAUDE.md from {plugin_root}/CLAUDE.md"
-    except (IOError, UnicodeDecodeError):
-        pass
-
-    return None
 
 
 def find_active_plans(project_dir: str) -> list:
@@ -502,6 +478,83 @@ def find_active_plans(project_dir: str) -> list:
     return active_plans
 
 
+def update_claude_md() -> str | None:
+    """
+    Update ~/.claude/CLAUDE.md with PACT content.
+
+    Automatically merges or updates the PACT Orchestrator prompt in the user's
+    CLAUDE.md file. Uses explicit markers to manage the PACT section without
+    disturbing other user customizations.
+
+    Strategy:
+    1. If file missing -> create with PACT content in markers.
+    2. If markers found -> replace content between markers.
+    3. If no markers but "PACT Orchestrator" found -> assume manual install, warn.
+    4. If no markers and no conflict -> append PACT content with markers.
+
+    Returns:
+        Status message or None if no change.
+    """
+    plugin_root = Path(os.environ.get("CLAUDE_PLUGIN_ROOT", ""))
+    if not plugin_root.exists():
+        return None
+
+    source_file = plugin_root / "CLAUDE.md"
+    if not source_file.exists():
+        return None
+
+    target_file = Path.home() / ".claude" / "CLAUDE.md"
+
+    START_MARKER = "<!-- PACT_START: Managed by pact-plugin - Do not edit this block -->"
+    END_MARKER = "<!-- PACT_END -->"
+
+    try:
+        source_content = source_file.read_text(encoding="utf-8")
+        wrapped_source = f"{START_MARKER}\n{source_content}\n{END_MARKER}"
+
+        # Case 1: Target doesn't exist
+        if not target_file.exists():
+            target_file.parent.mkdir(parents=True, exist_ok=True)
+            target_file.write_text(wrapped_source, encoding="utf-8")
+            return "Created CLAUDE.md with PACT Orchestrator"
+
+        target_content = target_file.read_text(encoding="utf-8")
+
+        # Case 2: Markers found - update if changed
+        if START_MARKER in target_content and END_MARKER in target_content:
+            parts = target_content.split(START_MARKER)
+            pre = parts[0]
+            # Handle case where multiple markers might exist (take first and last valid)
+            # but usually just one block.
+            rest = parts[1]
+            if END_MARKER in rest:
+                post = rest.split(END_MARKER, 1)[1]
+                new_full_content = f"{pre}{wrapped_source}{post}"
+
+                if new_full_content != target_content:
+                    target_file.write_text(new_full_content, encoding="utf-8")
+                    return "PACT Orchestrator updated"
+                return None
+
+        # Case 3: No markers but content similar to PACT found
+        if "PACT Orchestrator" in target_content:
+            # Check if it looks roughly like what we expect, or just leave it
+            # Returning a message prompts the user to check it
+            return "PACT present but unmanaged (add markers to auto-update)"
+
+        # Case 4: No markers, no specific PACT content -> Append
+        # Ensure we append on a new line
+        if not target_content.endswith("\n"):
+            target_content += "\n"
+        
+        new_content = f"{target_content}\n{wrapped_source}"
+        target_file.write_text(new_content, encoding="utf-8")
+        return "PACT Orchestrator added to CLAUDE.md"
+
+    except Exception as e:
+        return f"PACT update failed: {str(e)[:30]}"
+
+
 def main():
     """
     Main entry point for the SessionStart hook.
@@ -510,7 +563,7 @@ def main():
     0. Creates plugin symlinks for @reference resolution
     1. Merges PACT permissions for background agent support
     2. Checks for active plans
-    3. Guides user if CLAUDE.md setup needed
+    3. Updates ~/.claude/CLAUDE.md (merges/installs PACT Orchestrator)
     4. Auto-installs pact-memory dependencies
     5. Migrates embeddings if dimension changed
     6. Processes any unembedded memories (catch-up)
@@ -547,10 +600,13 @@ def main():
                 plan_list += f" (+{len(active_plans) - 3} more)"
             context_parts.append(f"Active plans: {plan_list}")
 
-        # 3. Check if orchestrator setup needed
-        orchestrator_msg = check_orchestrator_setup()
-        if orchestrator_msg:
-            system_messages.append(orchestrator_msg)
+        # 3. Updates ~/.claude/CLAUDE.md (merges/installs PACT Orchestrator)
+        claude_md_msg = update_claude_md()
+        if claude_md_msg:
+            if "failed" in claude_md_msg.lower() or "unmanaged" in claude_md_msg.lower():
+                system_messages.append(claude_md_msg)
+            else:
+                context_parts.append(claude_md_msg)
 
         # 4. Check and install dependencies
         deps_result = check_and_install_dependencies()
