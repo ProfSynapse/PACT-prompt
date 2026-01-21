@@ -61,6 +61,7 @@ Select the domain coder based on PR focus:
        - Single-domain items → `/PACT:comPACT` (parallelize if independent)
        - Multi-domain items → `/PACT:orchestrate`
      - After all fixes complete, re-run review to verify
+     - **Termination**: If blocking items persist after 2 fix-verify cycles → escalate via `/PACT:imPACT`
    - **Minor + Future**: Use `AskUserQuestion` tool with one question per recommendation:
      - Each minor: "Address [recommendation] now?" → Yes / No
      - Each future: "Create GitHub issue for [recommendation]?" → Yes / No
