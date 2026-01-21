@@ -46,8 +46,13 @@ Select the domain coder based on PR focus:
 
 **After all reviews complete**:
 1. Synthesize findings into a unified review summary with consolidated recommendations
-2. State merge readiness: "Ready to merge" or "Changes requested: [specifics]"
-3. Ask user: "Would you like to address any suggestions before merging?"
-   - If yes → Delegate fixes via `/PACT:comPACT`, then re-summarize
+2. Categorize findings by severity and state merge readiness:
+   - Format: `Review: X issues, Y major suggestions, Z minor suggestions`
+   - "Ready to merge" or "Changes requested: [specifics]"
+3. Ask user: "Would you like to address any reviewer suggestions before merging?"
+   - If yes → Select appropriate workflow based on fix complexity:
+     - Simple/single-domain fixes → `/PACT:comPACT`
+     - Complex/multi-domain fixes → `/PACT:orchestrate`
+   - After fixes complete, re-run review to verify
    - If no → Proceed to step 4
 4. Present to user and **stop** — merging requires explicit user authorization (S5 policy)
