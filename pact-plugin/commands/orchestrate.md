@@ -40,7 +40,7 @@ See [algedonic.md](../protocols/algedonic.md) for signal format and full protoco
 
 ## Output Conciseness
 
-**Default: Concise output.** The orchestrator's internal reasoning (variety analysis, dependency checking, execution strategy) happens in the background. User sees only decisions and key context.
+**Default: Concise output.** The orchestrator's internal reasoning (variety analysis, dependency checking, execution strategy) runs internally. User sees only decisions and key context.
 
 | Internal (don't show) | External (show) |
 |----------------------|-----------------|
@@ -48,9 +48,13 @@ See [algedonic.md](../protocols/algedonic.md) for signal format and full protoco
 | QDCL checklist, dependency analysis | Decision only: `Invoking 2 backend coders in parallel` |
 | Phase skip reasoning details | Brief: `Skipping PREPARE/ARCHITECT (approved plan exists)` |
 
-**User can always ask** "Why that strategy?" or "Show me the variety analysis" for details.
+**User can always ask** for details (e.g., "Why that strategy?" or "Show me the variety analysis").
 
 **Narration style**: State decisions, not reasoning process. Minimize commentary.
+
+**Exceptions warranting more detail**:
+- Error conditions, blockers, or unexpected issues — proactively explain what went wrong
+- High-variety tasks (11+) — visible reasoning helps user track complex orchestration
 
 | Verbose (avoid) | Concise (prefer) |
 |-----------------|------------------|
@@ -296,9 +300,7 @@ Before parallel invocation, check internally: shared files? shared interfaces? c
 - **Conventions**: First agent's choice becomes standard; propagate to others
 - **Resolution authority**: Technical disagreements → Architect arbitrates; Style/convention → First agent's choice
 
-**Output**: Only mention if conflicts found. Example: `S2 check: types.ts shared — backend writes, frontend reads`
-
-Silent if no conflicts.
+**Output**: Silent if no conflicts; only mention if conflicts found (e.g., `S2 check: types.ts shared — backend writes, frontend reads`).
 
 **Include in parallel prompts**: "You are working in parallel. Your scope is [files]. Do not modify files outside your scope."
 
