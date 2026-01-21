@@ -49,10 +49,11 @@ Select the domain coder based on PR focus:
 2. Present findings as a simple table:
    | Recommendation | Severity | Reviewer |
    |----------------|----------|----------|
-   | [the finding]  | Blocking / Minor | architect / test / backend / etc. |
+   | [the finding]  | Blocking / Minor / Future | architect / test / backend / etc. |
 
-   - **Blocking**: Urgent, must fix before merge
-   - **Minor**: Non-blocking, nice to have
+   - **Blocking**: Must fix before merge
+   - **Minor**: Optional fix for this PR
+   - **Future**: Out of scope; track as GitHub issue
    - State merge readiness: "Ready to merge" or "Changes requested: [specifics]"
 3. Ask user: "Would you like to address any reviewer suggestions before merging?"
    - If yes → Select appropriate workflow based on fix complexity:
