@@ -62,7 +62,7 @@ Select the domain coder based on PR focus:
        - Single-domain items → `/PACT:comPACT` (parallelize if independent)
        - Multi-domain items → `/PACT:orchestrate`
        - Mixed (both single and multi-domain) → Use `/PACT:comPACT` for the single-domain batch AND `/PACT:orchestrate` for the multi-domain batch (can run in parallel if independent)
-     - After all fixes complete, re-run review to verify
+     - After all fixes complete, re-run review to verify fixes only (not a full PR re-review)
      - **Termination**: If blocking items persist after 2 fix-verify cycles → escalate via `/PACT:imPACT`
    - **Minor + Future** (table from step 2 provides context for these questions):
      - Use `AskUserQuestion` tool with one question per recommendation:
@@ -74,7 +74,7 @@ Select the domain coder based on PR focus:
          - Single-domain items → `/PACT:comPACT` (parallelize if independent)
          - Multi-domain items → `/PACT:orchestrate`
        - Group all future=Yes items → Create GitHub issues
-     - If any minor items fixed → re-run review to verify
+     - If any minor items fixed → re-run review to verify fixes only (not a full PR re-review)
 
 4. State merge readiness (only after ALL blocking fixes complete AND minor/future item handling is done): "Ready to merge" or "Changes requested: [specifics]"
 
