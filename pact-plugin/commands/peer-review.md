@@ -56,10 +56,11 @@ Select the domain coder based on PR focus:
    - **Future**: Out of scope; track as GitHub issue
 
 3. Handle recommendations by severity:
-   - **Blocking**: Automatically address by selecting appropriate workflow:
-     - Simple/single-domain → `/PACT:comPACT`
-     - Complex/multi-domain → `/PACT:orchestrate`
-     - After fixes complete, re-run review to verify
+   - **Blocking**: Automatically address all blocking items:
+     - Batch fixes by selecting appropriate workflow(s) based on combined scope:
+       - Single-domain items → `/PACT:comPACT` (parallelize if independent)
+       - Multi-domain items → `/PACT:orchestrate`
+     - After all fixes complete, re-run review to verify
    - **Minor + Future**: Use `AskUserQuestion` tool with one question per recommendation:
      - Each minor: "Address [recommendation] now?" → Yes / No
      - Each future: "Create GitHub issue for [recommendation]?" → Yes / No
