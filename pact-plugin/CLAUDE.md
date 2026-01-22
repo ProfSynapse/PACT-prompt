@@ -231,6 +231,7 @@ When making decisions, consider which horizon applies. Misalignment indicates mo
 
 ⚠️ Bug fixes, logic, refactoring, tests—NOT exceptions. **DELEGATE**.
 ⚠️ "Simple" tasks, post-review cleanup—NOT exceptions. **DELEGATE**.
+⚠️ Urgent fixes, production issues—NOT exceptions. **DELEGATE**.
 ⚠️ Rationalizing "it's small", "I know exactly how", "it's quick" = failure mode. **DELEGATE**.
 
 **Checkpoint**: Knowing the fix ≠ permission to fix. **DELEGATE**.
