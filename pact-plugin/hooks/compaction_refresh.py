@@ -22,6 +22,19 @@ import os
 import sys
 from pathlib import Path
 
+# Import shared utilities from refresh package (Fix 1 & 2)
+_hooks_dir = Path(__file__).parent
+if str(_hooks_dir) not in sys.path:
+    sys.path.insert(0, str(_hooks_dir))
+try:
+    from refresh.checkpoint_builder import (
+        get_checkpoint_path,
+        checkpoint_to_refresh_message,
+    )
+    _USE_SHARED_UTILS = True
+except ImportError:
+    _USE_SHARED_UTILS = False
+
 
 def get_encoded_project_path_from_env() -> str | None:
     """
@@ -45,17 +58,14 @@ def get_encoded_project_path_from_env() -> str | None:
     return encoded
 
 
-def get_checkpoint_path(encoded_path: str) -> Path:
-    """
-    Get the full checkpoint file path for a project.
-
-    Args:
-        encoded_path: The encoded project path segment
-
-    Returns:
-        Path to the checkpoint file
-    """
+def _get_checkpoint_path_fallback(encoded_path: str) -> Path:
+    """Fallback if refresh package not available."""
     return Path.home() / ".claude" / "pact-refresh" / f"{encoded_path}.json"
+
+
+# Use shared or fallback based on import success
+if not _USE_SHARED_UTILS:
+    get_checkpoint_path = _get_checkpoint_path_fallback
 
 
 def read_checkpoint(checkpoint_path: Path) -> dict | None:
@@ -96,9 +106,9 @@ def validate_checkpoint(checkpoint: dict, current_session_id: str) -> bool:
     if not checkpoint:
         return False
 
-    # Check version
+    # Check version (handle None values)
     version = checkpoint.get("version", "")
-    if not version.startswith("1."):
+    if not version or not version.startswith("1."):
         return False
 
     # Check session ID matches
@@ -113,9 +123,11 @@ def validate_checkpoint(checkpoint: dict, current_session_id: str) -> bool:
     return True
 
 
-def build_refresh_message(checkpoint: dict) -> str:
+def _build_refresh_message_fallback(checkpoint: dict) -> str:
     """
-    Build the refresh instruction message for the orchestrator.
+    Fallback: Build the refresh instruction message for the orchestrator.
+
+    Used when refresh package is not available.
 
     Args:
         checkpoint: The validated checkpoint data
@@ -179,6 +191,24 @@ NEXT ACTION REQUIRED:
     message_parts.append("===========================")
 
     return "\n".join(message_parts)
+
+
+def build_refresh_message(checkpoint: dict) -> str:
+    """
+    Build the refresh instruction message for the orchestrator.
+
+    Uses shared checkpoint_to_refresh_message if available (Fix 2),
+    falls back to local implementation otherwise.
+
+    Args:
+        checkpoint: The validated checkpoint data
+
+    Returns:
+        Formatted refresh message string
+    """
+    if _USE_SHARED_UTILS:
+        return checkpoint_to_refresh_message(checkpoint)
+    return _build_refresh_message_fallback(checkpoint)
 
 
 def main():

@@ -11,8 +11,8 @@ for the compaction refresh system. The main entry point is
 from .transcript_parser import parse_transcript, Turn
 from .workflow_detector import detect_active_workflow, WorkflowInfo
 from .step_extractor import extract_current_step, StepInfo, PendingAction
-from .checkpoint_builder import build_checkpoint
-from .patterns import WORKFLOW_PATTERNS
+from .checkpoint_builder import build_checkpoint, get_checkpoint_path, CheckpointSchema
+from .patterns import WORKFLOW_PATTERNS, CONFIDENCE_THRESHOLD
 
 __all__ = [
     # Main entry point
@@ -29,8 +29,11 @@ __all__ = [
     "PendingAction",
     # Checkpoint building
     "build_checkpoint",
-    # Patterns
+    "get_checkpoint_path",
+    "CheckpointSchema",
+    # Patterns and constants
     "WORKFLOW_PATTERNS",
+    "CONFIDENCE_THRESHOLD",
 ]
 
 
@@ -77,8 +80,8 @@ def extract_workflow_state(transcript_path: str) -> dict | None:
         lines_scanned=len(turns),
     )
 
-    # Only return if confidence meets threshold
-    if checkpoint and checkpoint.get("extraction", {}).get("confidence", 0) >= 0.3:
+    # Only return if confidence meets threshold (Fix 3: use named constant)
+    if checkpoint and checkpoint.get("extraction", {}).get("confidence", 0) >= CONFIDENCE_THRESHOLD:
         return checkpoint
 
     return None

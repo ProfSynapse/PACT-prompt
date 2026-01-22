@@ -143,12 +143,17 @@ def parse_line(line: str, line_number: int) -> Turn | None:
     )
 
 
+# Size threshold for switching to efficient tail-reading (10 MB)
+LARGE_FILE_THRESHOLD_BYTES = 10 * 1024 * 1024
+
+
 def read_last_n_lines(path: Path, n: int) -> list[str]:
     """
     Read the last N lines from a file efficiently.
 
-    Uses a simple approach that works well for typical transcript sizes.
-    For very large files, this reads from the end.
+    For small files (< 10MB), reads all and slices.
+    For large files, uses efficient reverse-seek approach to avoid
+    loading entire file into memory. (Fix 6: optimized for large files)
 
     Args:
         path: Path to the file
@@ -158,13 +163,54 @@ def read_last_n_lines(path: Path, n: int) -> list[str]:
         List of lines (most recent last)
     """
     try:
-        with open(path, "r", encoding="utf-8") as f:
-            # For files under ~10MB, just read all and slice
-            # This is simpler and fast enough for our use case
-            lines = f.readlines()
-            if len(lines) <= n:
-                return lines
-            return lines[-n:]
+        file_size = path.stat().st_size
+
+        # For small files, simple approach is efficient enough
+        if file_size < LARGE_FILE_THRESHOLD_BYTES:
+            with open(path, "r", encoding="utf-8") as f:
+                lines = f.readlines()
+                if len(lines) <= n:
+                    return lines
+                return lines[-n:]
+
+        # For large files, read from end in chunks to find last N lines
+        # This avoids loading entire file into memory
+        chunk_size = 8192
+        lines: list[str] = []
+        with open(path, "rb") as f:
+            # Start from end of file
+            f.seek(0, 2)  # Seek to end
+            remaining = f.tell()
+            buffer = b""
+
+            while remaining > 0 and len(lines) < n:
+                # Read a chunk from the end
+                read_size = min(chunk_size, remaining)
+                remaining -= read_size
+                f.seek(remaining)
+                chunk = f.read(read_size)
+                buffer = chunk + buffer
+
+                # Split into lines and accumulate
+                # Keep partial line at start of buffer for next iteration
+                buffer_lines = buffer.split(b"\n")
+                if remaining > 0:
+                    # First element might be partial, keep in buffer
+                    buffer = buffer_lines[0]
+                    new_lines = buffer_lines[1:]
+                else:
+                    # At start of file, include everything
+                    new_lines = buffer_lines
+                    buffer = b""
+
+                # Prepend new lines (they're earlier in file)
+                lines = [line.decode("utf-8", errors="replace") + "\n" for line in new_lines if line] + lines
+
+            # Return only the last n lines
+            if len(lines) > n:
+                lines = lines[-n:]
+            return lines
+
     except IOError as e:
         print(f"Warning: Could not read transcript: {e}", file=sys.stderr)
         return []
@@ -275,3 +321,23 @@ def find_task_calls_to_agent(turns: list[Turn], agent_pattern: str) -> list[tupl
                 if agent_pattern in subagent:
                     results.append((turn, tc))
     return results
+
+
+def find_trigger_turn_index(turns: list[Turn], trigger_line_number: int) -> int:
+    """
+    Find the index of a turn by its line number.
+
+    Shared utility to avoid duplicate trigger-index lookup loops across modules
+    (Fix 4: extracted from workflow_detector.py, step_extractor.py, checkpoint_builder.py).
+
+    Args:
+        turns: List of turns to search
+        trigger_line_number: Line number of the trigger turn
+
+    Returns:
+        Index of the turn with matching line number, or 0 if not found
+    """
+    for i, turn in enumerate(turns):
+        if turn.line_number == trigger_line_number:
+            return i
+    return 0

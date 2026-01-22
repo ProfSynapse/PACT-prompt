@@ -376,6 +376,208 @@ def create_malformed_transcript() -> str:
     return "\n".join(lines)
 
 
+def create_plan_mode_transcript(
+    step: str = "consult",
+    include_task: str = "implement new feature",
+    include_termination: bool = False,
+) -> str:
+    """
+    Generate a realistic plan-mode workflow transcript.
+
+    Args:
+        step: Current workflow step (analyze, consult, synthesize, present)
+        include_task: Task description
+        include_termination: Whether to add termination signal
+
+    Returns:
+        JSONL string representing the transcript
+    """
+    lines = []
+
+    # User triggers plan-mode
+    lines.append(make_user_message(
+        f"/PACT:plan-mode {include_task}",
+        timestamp="2025-01-22T09:00:00Z",
+    ))
+
+    # Analyze phase
+    lines.append(make_assistant_message(
+        f"analyze: Assessing scope for: {include_task}. Determining specialists needed.",
+        timestamp="2025-01-22T09:00:05Z",
+    ))
+
+    # Consult phase - invoke specialists for planning perspectives
+    if step in ["consult", "synthesize", "present"]:
+        lines.append(make_assistant_message(
+            content=[
+                {"type": "text", "text": "consult: Invoking specialists for planning perspectives..."},
+                make_task_call("pact-architect", "Provide architectural perspective for plan", "task-arch-plan"),
+                make_task_call("pact-backend-coder", "Provide implementation perspective", "task-backend-plan"),
+            ],
+            timestamp="2025-01-22T09:00:15Z",
+        ))
+
+    # Synthesize phase
+    if step in ["synthesize", "present"]:
+        lines.append(make_assistant_message(
+            "synthesize: All specialists responded. Resolving conflicts and sequencing work.",
+            timestamp="2025-01-22T09:01:00Z",
+        ))
+
+    # Present phase
+    if step == "present":
+        lines.append(make_assistant_message(
+            "present: Plan ready. AskUserQuestion: Would you like to review the plan before approval?",
+            timestamp="2025-01-22T09:01:30Z",
+        ))
+
+    # Termination
+    if include_termination:
+        lines.append(make_assistant_message(
+            "Plan saved to docs/plans/new-feature-plan.md. Awaiting approval to proceed.",
+            timestamp="2025-01-22T09:02:00Z",
+        ))
+
+    return create_transcript_lines(lines)
+
+
+def create_compact_transcript(
+    specialist: str = "backend",
+    include_task: str = "fix auth bug",
+    include_termination: bool = False,
+) -> str:
+    """
+    Generate a realistic comPACT workflow transcript.
+
+    Args:
+        specialist: Specialist type (backend, frontend, database, test, architect)
+        include_task: Task description
+        include_termination: Whether to add termination signal
+
+    Returns:
+        JSONL string representing the transcript
+    """
+    lines = []
+
+    # User triggers comPACT
+    lines.append(make_user_message(
+        f"/PACT:comPACT {specialist} {include_task}",
+        timestamp="2025-01-22T14:00:00Z",
+    ))
+
+    # Specialist selection
+    lines.append(make_assistant_message(
+        f"invoking-specialist: Delegating to pact-{specialist}-coder with light ceremony.",
+        timestamp="2025-01-22T14:00:05Z",
+    ))
+
+    # Invoke specialist
+    agent_type = f"pact-{specialist}-coder" if specialist not in ["test", "architect"] else f"pact-{specialist}"
+    if specialist == "test":
+        agent_type = "pact-test-engineer"
+
+    lines.append(make_assistant_message(
+        content=[
+            {"type": "text", "text": f"Invoking {agent_type} for: {include_task}"},
+            make_task_call(agent_type, f"Execute: {include_task}", "task-compact"),
+        ],
+        timestamp="2025-01-22T14:00:10Z",
+    ))
+
+    # Termination
+    if include_termination:
+        lines.append(make_assistant_message(
+            f"specialist completed: Task complete. Handoff complete.",
+            timestamp="2025-01-22T14:05:00Z",
+        ))
+
+    return create_transcript_lines(lines)
+
+
+def create_repact_transcript(
+    nested_phase: str = "nested-code",
+    parent_workflow: str = "orchestrate",
+    include_termination: bool = False,
+) -> str:
+    """
+    Generate a realistic rePACT (nested PACT) workflow transcript.
+
+    Args:
+        nested_phase: Current nested phase (nested-prepare, nested-architect, nested-code, nested-test)
+        parent_workflow: Parent workflow that spawned rePACT
+        include_termination: Whether to add termination signal
+
+    Returns:
+        JSONL string representing the transcript
+    """
+    lines = []
+
+    # Parent workflow context (orchestrate in code phase discovers need for nested cycle)
+    lines.append(make_user_message(
+        "/PACT:orchestrate implement complex feature",
+        timestamp="2025-01-22T10:00:00Z",
+    ))
+
+    lines.append(make_assistant_message(
+        "code phase: Complexity detected. Invoking rePACT for sub-component.",
+        timestamp="2025-01-22T10:30:00Z",
+    ))
+
+    # User triggers rePACT (or orchestrator invokes it)
+    lines.append(make_user_message(
+        "/PACT:rePACT implement auth sub-module",
+        timestamp="2025-01-22T10:30:05Z",
+    ))
+
+    # Nested prepare
+    lines.append(make_assistant_message(
+        content=[
+            {"type": "text", "text": "nested-prepare: Starting nested PACT cycle for sub-module."},
+            make_task_call("pact-preparer", "Research auth sub-module requirements", "task-nested-prep"),
+        ],
+        timestamp="2025-01-22T10:30:10Z",
+    ))
+
+    # Nested architect
+    if nested_phase in ["nested-architect", "nested-code", "nested-test"]:
+        lines.append(make_assistant_message(
+            content=[
+                {"type": "text", "text": "nested-architect: Designing sub-module architecture."},
+                make_task_call("pact-architect", "Design auth sub-module", "task-nested-arch"),
+            ],
+            timestamp="2025-01-22T10:31:00Z",
+        ))
+
+    # Nested code
+    if nested_phase in ["nested-code", "nested-test"]:
+        lines.append(make_assistant_message(
+            content=[
+                {"type": "text", "text": "nested-code: Implementing sub-module."},
+                make_task_call("pact-backend-coder", "Implement auth sub-module", "task-nested-code"),
+            ],
+            timestamp="2025-01-22T10:32:00Z",
+        ))
+
+    # Nested test
+    if nested_phase == "nested-test":
+        lines.append(make_assistant_message(
+            content=[
+                {"type": "text", "text": "nested-test: Testing sub-module."},
+                make_task_call("pact-test-engineer", "Test auth sub-module", "task-nested-test"),
+            ],
+            timestamp="2025-01-22T10:33:00Z",
+        ))
+
+    # Termination
+    if include_termination:
+        lines.append(make_assistant_message(
+            "nested cycle complete. rePACT complete. Returning to parent workflow.",
+            timestamp="2025-01-22T10:35:00Z",
+        ))
+
+    return create_transcript_lines(lines)
+
+
 # =============================================================================
 # Pytest Fixtures
 # =============================================================================
@@ -508,3 +710,33 @@ def no_workflow_transcript() -> str:
 def terminated_workflow_transcript() -> str:
     """Fixture returning a transcript with completed workflow."""
     return create_terminated_workflow_transcript()
+
+
+@pytest.fixture
+def plan_mode_mid_workflow_transcript() -> str:
+    """Fixture returning a plan-mode transcript mid-workflow (in consult phase)."""
+    return create_plan_mode_transcript(
+        step="consult",
+        include_task="implement new feature",
+        include_termination=False,
+    )
+
+
+@pytest.fixture
+def compact_mid_workflow_transcript() -> str:
+    """Fixture returning a comPACT transcript mid-workflow."""
+    return create_compact_transcript(
+        specialist="backend",
+        include_task="fix auth bug",
+        include_termination=False,
+    )
+
+
+@pytest.fixture
+def repact_mid_workflow_transcript() -> str:
+    """Fixture returning a rePACT transcript mid-workflow (in nested-code phase)."""
+    return create_repact_transcript(
+        nested_phase="nested-code",
+        parent_workflow="orchestrate",
+        include_termination=False,
+    )

@@ -11,13 +11,14 @@ signals.
 from dataclasses import dataclass
 from typing import Optional
 
-from .transcript_parser import Turn
+from .transcript_parser import Turn, find_trigger_turn_index
 from .patterns import (
     WORKFLOW_PATTERNS,
     TRIGGER_PATTERNS,
     is_termination_signal,
     extract_context_value,
     CONFIDENCE_WEIGHTS,
+    TERMINATION_WINDOW_TURNS,
 )
 
 
@@ -78,7 +79,9 @@ def check_workflow_termination(
     """
     Check if the workflow has terminated since its trigger.
 
-    Scans turns after the trigger for termination signals.
+    Scans the last N turns after the trigger for termination signals.
+    (Fix 8: Only check recent turns to avoid false positives from earlier
+    workflow completions in the transcript.)
 
     Args:
         turns: List of turns in chronological order
@@ -88,8 +91,13 @@ def check_workflow_termination(
     Returns:
         True if workflow appears terminated
     """
-    # Check all turns after the trigger
-    for turn in turns[trigger_index + 1:]:
+    # Only check the last TERMINATION_WINDOW_TURNS turns after trigger
+    # This prevents false positives from old termination signals
+    relevant_turns = turns[trigger_index + 1:]
+    if len(relevant_turns) > TERMINATION_WINDOW_TURNS:
+        relevant_turns = relevant_turns[-TERMINATION_WINDOW_TURNS:]
+
+    for turn in relevant_turns:
         if turn.is_assistant:
             if is_termination_signal(turn.content, workflow_name):
                 return True
@@ -249,12 +257,8 @@ def detect_active_workflow(turns: list[Turn]) -> WorkflowInfo | None:
     if not workflow_name or not trigger_turn:
         return None
 
-    # Find trigger index for subsequent checks
-    trigger_index = 0
-    for i, turn in enumerate(turns):
-        if turn.line_number == trigger_turn.line_number:
-            trigger_index = i
-            break
+    # Find trigger index for subsequent checks (Fix 4: use shared utility)
+    trigger_index = find_trigger_turn_index(turns, trigger_turn.line_number)
 
     # Check if workflow has terminated
     is_terminated = check_workflow_termination(turns, workflow_name, trigger_index)

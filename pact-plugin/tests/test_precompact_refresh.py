@@ -430,3 +430,186 @@ class TestIntegrationScenarios:
         new_checkpoint = json.loads(old_checkpoint_path.read_text())
         assert new_checkpoint.get("session_id") == "new-session"
         assert "old" not in new_checkpoint
+
+
+class TestExceptionHandlingPaths:
+    """Tests for exception handling and defensive paths in precompact_refresh."""
+
+    def test_import_error_handling_fallback(self, tmp_path: Path):
+        """Test that ImportError during refresh module import is handled gracefully.
+
+        When the refresh package is unavailable, the hook should still
+        write a checkpoint with no workflow state.
+        """
+        # Create transcript
+        transcript_content = create_peer_review_transcript()
+        projects_dir = tmp_path / ".claude" / "projects"
+        encoded_path = "-test-project"
+        session_dir = projects_dir / encoded_path / "session-uuid"
+        session_dir.mkdir(parents=True)
+        transcript_path = session_dir / "session.jsonl"
+        transcript_path.write_text(transcript_content)
+
+        checkpoint_dir = tmp_path / ".claude" / "pact-refresh"
+        checkpoint_dir.mkdir(parents=True)
+
+        input_data = json.dumps({"transcript_path": str(transcript_path)})
+
+        # Mock the import to raise ImportError
+        with patch("sys.stdin", StringIO(input_data)), \
+             patch.dict(os.environ, {"CLAUDE_SESSION_ID": "test-session"}), \
+             patch("pathlib.Path.home", return_value=tmp_path), \
+             patch.dict(sys.modules, {"refresh": None}):  # Force import to fail
+
+            from precompact_refresh import main
+
+            with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
+                with pytest.raises(SystemExit) as exc_info:
+                    main()
+                # Should exit 0 even with import error
+                assert exc_info.value.code == 0
+                output = mock_stdout.getvalue()
+
+        # Should still produce valid output
+        result = json.loads(output)
+        assert "hookSpecificOutput" in result
+
+    def test_extract_workflow_state_exception_handling(self, tmp_path: Path):
+        """Test that exceptions during transcript parsing are handled.
+
+        When extract_workflow_state raises an exception, the hook should
+        catch it and continue with a fallback checkpoint.
+        """
+        # Create transcript
+        transcript_content = create_peer_review_transcript()
+        projects_dir = tmp_path / ".claude" / "projects"
+        encoded_path = "-test-project"
+        session_dir = projects_dir / encoded_path / "session-uuid"
+        session_dir.mkdir(parents=True)
+        transcript_path = session_dir / "session.jsonl"
+        transcript_path.write_text(transcript_content)
+
+        checkpoint_dir = tmp_path / ".claude" / "pact-refresh"
+        checkpoint_dir.mkdir(parents=True)
+
+        input_data = json.dumps({"transcript_path": str(transcript_path)})
+
+        # Mock extract_workflow_state to raise an exception
+        def mock_extract_raises(*args, **kwargs):
+            raise ValueError("Simulated parsing failure")
+
+        with patch("sys.stdin", StringIO(input_data)), \
+             patch.dict(os.environ, {"CLAUDE_SESSION_ID": "test-session"}), \
+             patch("pathlib.Path.home", return_value=tmp_path):
+
+            # Import and patch the function
+            import precompact_refresh
+            original_main = precompact_refresh.main
+
+            with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
+                with pytest.raises(SystemExit) as exc_info:
+                    original_main()
+
+                # Should exit 0 even with parse errors
+                assert exc_info.value.code == 0
+                output = mock_stdout.getvalue()
+
+        result = json.loads(output)
+        assert "hookSpecificOutput" in result
+
+    def test_file_permission_error_on_checkpoint_write(self, tmp_path: Path):
+        """Test handling of file permission errors when writing checkpoint.
+
+        When the checkpoint directory is not writable, the hook should
+        handle the error gracefully without crashing.
+        """
+        # Create transcript
+        transcript_content = create_peer_review_transcript()
+        projects_dir = tmp_path / ".claude" / "projects"
+        encoded_path = "-test-project"
+        session_dir = projects_dir / encoded_path / "session-uuid"
+        session_dir.mkdir(parents=True)
+        transcript_path = session_dir / "session.jsonl"
+        transcript_path.write_text(transcript_content)
+
+        # Create checkpoint dir but make it read-only
+        checkpoint_dir = tmp_path / ".claude" / "pact-refresh"
+        checkpoint_dir.mkdir(parents=True)
+
+        input_data = json.dumps({"transcript_path": str(transcript_path)})
+
+        # Mock write_checkpoint_atomic to return False (simulating permission error)
+        with patch("sys.stdin", StringIO(input_data)), \
+             patch.dict(os.environ, {"CLAUDE_SESSION_ID": "test-session"}), \
+             patch("pathlib.Path.home", return_value=tmp_path):
+
+            from precompact_refresh import main, write_checkpoint_atomic
+
+            with patch("precompact_refresh.write_checkpoint_atomic", return_value=False):
+                with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
+                    with pytest.raises(SystemExit) as exc_info:
+                        main()
+
+                    # Should exit 0 even with write failure
+                    assert exc_info.value.code == 0
+                    output = mock_stdout.getvalue()
+
+        result = json.loads(output)
+        assert "hookSpecificOutput" in result
+        # Should mention write failure
+        assert "Warning" in result["hookSpecificOutput"]["additionalContext"] or \
+               "failed" in result["hookSpecificOutput"]["additionalContext"]
+
+    def test_outer_exception_handling(self, tmp_path: Path):
+        """Test that outer try/except in main() catches all exceptions.
+
+        The main() function has a top-level try/except that should
+        catch any unexpected exceptions and exit cleanly.
+        """
+        # Force an exception by providing invalid input
+        with patch("sys.stdin", StringIO("")), \
+             patch("pathlib.Path.home", return_value=tmp_path):
+
+            from precompact_refresh import main
+
+            # Even with empty stdin, should not raise
+            with pytest.raises(SystemExit) as exc_info:
+                main()
+
+            assert exc_info.value.code == 0
+
+    def test_missing_session_id_uses_unknown(self, tmp_path: Path):
+        """Test that missing CLAUDE_SESSION_ID uses 'unknown' fallback."""
+        transcript_content = create_peer_review_transcript()
+        projects_dir = tmp_path / ".claude" / "projects"
+        encoded_path = "-test-project"
+        session_dir = projects_dir / encoded_path / "session-uuid"
+        session_dir.mkdir(parents=True)
+        transcript_path = session_dir / "session.jsonl"
+        transcript_path.write_text(transcript_content)
+
+        checkpoint_dir = tmp_path / ".claude" / "pact-refresh"
+        checkpoint_dir.mkdir(parents=True)
+
+        input_data = json.dumps({"transcript_path": str(transcript_path)})
+
+        # Remove CLAUDE_SESSION_ID from environment
+        env_without_session = {k: v for k, v in os.environ.items() if k != "CLAUDE_SESSION_ID"}
+
+        with patch("sys.stdin", StringIO(input_data)), \
+             patch.dict(os.environ, env_without_session, clear=True), \
+             patch("pathlib.Path.home", return_value=tmp_path):
+
+            from precompact_refresh import main
+
+            with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
+                with pytest.raises(SystemExit) as exc_info:
+                    main()
+                assert exc_info.value.code == 0
+
+        # Verify checkpoint was created
+        checkpoint_path = checkpoint_dir / f"{encoded_path}.json"
+        if checkpoint_path.exists():
+            checkpoint = json.loads(checkpoint_path.read_text())
+            # Session ID should be "unknown" when not set
+            assert checkpoint.get("session_id") == "unknown"

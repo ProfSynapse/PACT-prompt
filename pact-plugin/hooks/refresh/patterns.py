@@ -5,11 +5,27 @@ Used by: workflow_detector.py and step_extractor.py for pattern matching.
 
 Defines the trigger patterns, step markers, and termination signals
 for each PACT workflow type as specified in the refresh plan.
+Also defines shared constants for thresholds and limits.
 """
 
 import re
 from dataclasses import dataclass
 from typing import Pattern
+
+
+# === THRESHOLD AND LIMIT CONSTANTS (Fix 3 & 10) ===
+
+# Minimum confidence score for checkpoint to be considered valid
+CONFIDENCE_THRESHOLD = 0.3
+
+# Length caps for extracted text to prevent excessive data
+PENDING_ACTION_INSTRUCTION_MAX_LENGTH = 200
+REVIEW_PROMPT_INSTRUCTION_MAX_LENGTH = 150
+TASK_SUMMARY_MAX_LENGTH = 200
+
+# Termination detection window: number of turns after trigger to check
+# (Fix 8: structural context for termination signals)
+TERMINATION_WINDOW_TURNS = 10
 
 
 @dataclass

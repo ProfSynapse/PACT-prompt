@@ -11,12 +11,15 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
-from .transcript_parser import Turn
+from .transcript_parser import Turn, find_trigger_turn_index
 from .workflow_detector import WorkflowInfo
 from .patterns import (
     WORKFLOW_PATTERNS,
     PENDING_ACTION_PATTERNS,
     extract_context_value,
+    PENDING_ACTION_INSTRUCTION_MAX_LENGTH,
+    REVIEW_PROMPT_INSTRUCTION_MAX_LENGTH,
+    TASK_SUMMARY_MAX_LENGTH,
 )
 
 
@@ -91,7 +94,8 @@ def determine_current_step(
     Determine the current step in the workflow.
 
     Scans turns after the workflow trigger to find the most recent
-    step marker.
+    step marker. Prioritizes recency over exact position in step list.
+    (Fix 9: improved step detection considering recency and context)
 
     Args:
         turns: List of turns
@@ -103,12 +107,8 @@ def determine_current_step(
     if not workflow_info.trigger_turn:
         return "unknown", 0, ""
 
-    # Find trigger index
-    trigger_index = 0
-    for i, turn in enumerate(turns):
-        if turn.line_number == workflow_info.trigger_turn.line_number:
-            trigger_index = i
-            break
+    # Find trigger index (Fix 4: use shared utility)
+    trigger_index = find_trigger_turn_index(turns, workflow_info.trigger_turn.line_number)
 
     pattern = WORKFLOW_PATTERNS.get(workflow_info.name)
     if not pattern:
@@ -119,22 +119,31 @@ def determine_current_step(
     step_sequence = 0
     step_timestamp = ""
 
-    # Scan forward from trigger to find most recent step
-    for turn in turns[trigger_index:]:
+    # Track all step mentions with their turn index for recency analysis
+    step_mentions: list[tuple[str, int, str]] = []  # (step, turn_index, timestamp)
+
+    # Scan forward from trigger to find all step mentions
+    for idx, turn in enumerate(turns[trigger_index:], start=trigger_index):
         if not turn.is_assistant:
             continue
 
         markers = find_step_markers_in_turn(turn, workflow_info.name)
-        if markers:
-            # Use the last marker found (most recent step mention)
-            current_step = markers[-1]
-            step_timestamp = turn.timestamp
+        for marker in markers:
+            step_mentions.append((marker, idx, turn.timestamp))
 
-            # Determine sequence from marker position in step_markers list
-            try:
-                step_sequence = step_markers.index(current_step) + 1
-            except ValueError:
-                step_sequence = 0
+    if step_mentions:
+        # (Fix 9: Prefer the most recent step mention, not just last in list)
+        # Sort by turn index descending, take the most recent
+        step_mentions.sort(key=lambda x: x[1], reverse=True)
+        current_step, _, step_timestamp = step_mentions[0]
+
+        # Determine sequence - try to find in step_markers list
+        # (Fix 9: Use safe lookup instead of relying on list.index())
+        step_sequence = 0
+        for i, marker in enumerate(step_markers):
+            if marker.lower() == current_step.lower():
+                step_sequence = i + 1
+                break
 
     # If no step found, use first step as default
     if not current_step and step_markers:
@@ -168,20 +177,20 @@ def detect_pending_action(turns: list[Turn], trigger_index: int) -> PendingActio
     for turn in reversed(assistant_turns[-2:]):
         content = turn.content
 
-        # Check for AskUserQuestion pattern
+        # Check for AskUserQuestion pattern (Fix 10: use named constant for length cap)
         match = PENDING_ACTION_PATTERNS["AskUserQuestion"].search(content)
         if match:
             return PendingAction(
                 action_type="AskUserQuestion",
-                instruction=match.group(1).strip()[:200],  # Cap length
+                instruction=match.group(1).strip()[:PENDING_ACTION_INSTRUCTION_MAX_LENGTH],
             )
 
-        # Check for review prompt pattern
+        # Check for review prompt pattern (Fix 10: use named constant for length cap)
         match = PENDING_ACTION_PATTERNS["review_prompt"].search(content)
         if match:
             return PendingAction(
                 action_type="UserDecision",
-                instruction=f"Would you like to {match.group(1).strip()[:150]}",
+                instruction=f"Would you like to {match.group(1).strip()[:REVIEW_PROMPT_INSTRUCTION_MAX_LENGTH]}",
             )
 
         # Check for general awaiting input
@@ -213,13 +222,10 @@ def extract_workflow_context(
     """
     context: dict[str, Any] = {}
 
-    # Find trigger index
+    # Find trigger index (Fix 4: use shared utility)
     trigger_index = 0
     if workflow_info.trigger_turn:
-        for i, turn in enumerate(turns):
-            if turn.line_number == workflow_info.trigger_turn.line_number:
-                trigger_index = i
-                break
+        trigger_index = find_trigger_turn_index(turns, workflow_info.trigger_turn.line_number)
 
     # Extract context from all turns after trigger
     for turn in turns[trigger_index:]:
@@ -231,11 +237,11 @@ def extract_workflow_context(
             if pr_num:
                 context["pr_number"] = int(pr_num)
 
-        # Task summary
+        # Task summary (Fix 10: use named constant for length cap)
         if "task_summary" not in context:
             summary = extract_context_value(content, "task_summary")
             if summary:
-                context["task_summary"] = summary[:200]  # Cap length
+                context["task_summary"] = summary[:TASK_SUMMARY_MAX_LENGTH]
 
         # Branch name
         if "branch_name" not in context:
@@ -346,13 +352,10 @@ def extract_current_step(
     Returns:
         StepInfo with current step details
     """
-    # Find trigger index
+    # Find trigger index (Fix 4: use shared utility)
     trigger_index = 0
     if workflow_info.trigger_turn:
-        for i, turn in enumerate(turns):
-            if turn.line_number == workflow_info.trigger_turn.line_number:
-                trigger_index = i
-                break
+        trigger_index = find_trigger_turn_index(turns, workflow_info.trigger_turn.line_number)
 
     # Determine current step
     step_name, sequence, started_at = determine_current_step(turns, workflow_info)

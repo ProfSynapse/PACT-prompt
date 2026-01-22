@@ -24,6 +24,18 @@ import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
+# Import shared utilities from refresh package (Fix 1: shared get_checkpoint_path)
+# Using absolute import via package - refresh is a sibling directory
+_hooks_dir = Path(__file__).parent
+if str(_hooks_dir) not in sys.path:
+    sys.path.insert(0, str(_hooks_dir))
+try:
+    from refresh.checkpoint_builder import get_checkpoint_path
+except ImportError:
+    # Fallback if refresh package not available yet
+    def get_checkpoint_path(encoded_path: str) -> Path:
+        return Path.home() / ".claude" / "pact-refresh" / f"{encoded_path}.json"
+
 
 def get_encoded_project_path(transcript_path: str) -> str | None:
     """
@@ -44,19 +56,6 @@ def get_encoded_project_path(transcript_path: str) -> str | None:
         return parts[projects_idx + 1]
     except (ValueError, IndexError):
         return None
-
-
-def get_checkpoint_path(encoded_path: str) -> Path:
-    """
-    Get the full checkpoint file path for a project.
-
-    Args:
-        encoded_path: The encoded project path segment
-
-    Returns:
-        Path to the checkpoint file
-    """
-    return Path.home() / ".claude" / "pact-refresh" / f"{encoded_path}.json"
 
 
 def write_checkpoint_atomic(checkpoint_path: Path, data: dict) -> bool:
@@ -193,22 +192,15 @@ def main():
             sys.exit(0)
 
         # Try to extract workflow state using the refresh package
+        # (Fix 5: sys.path already configured at module level)
         checkpoint = None
         try:
-            # The refresh package is built by Agent A in parallel
-            # Import path: hooks/refresh/
-            hooks_dir = Path(__file__).parent
-            sys.path.insert(0, str(hooks_dir))
-            try:
-                from refresh import extract_workflow_state
-                # extract_workflow_state returns checkpoint dict directly (or None)
-                checkpoint = extract_workflow_state(transcript_path)
-                if checkpoint is not None:
-                    # Update session_id to current session (may differ from extraction)
-                    checkpoint["session_id"] = session_id
-            finally:
-                if str(hooks_dir) in sys.path:
-                    sys.path.remove(str(hooks_dir))
+            from refresh import extract_workflow_state
+            # extract_workflow_state returns checkpoint dict directly (or None)
+            checkpoint = extract_workflow_state(transcript_path)
+            if checkpoint is not None:
+                # Update session_id to current session (may differ from extraction)
+                checkpoint["session_id"] = session_id
         except ImportError as e:
             # Refresh package not yet available (Agent A still building it)
             print(f"PreCompact: refresh package not available ({e})", file=sys.stderr)

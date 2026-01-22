@@ -510,3 +510,134 @@ class TestEndToEndRefresh:
         # (or low confidence that doesn't trigger refresh)
         # The exact behavior depends on confidence threshold
         assert checkpoint["workflow"]["name"] in ["none", "peer-review"]
+
+
+class TestExceptionHandlingPaths:
+    """Tests for exception handling and defensive paths in compaction_refresh."""
+
+    def test_read_checkpoint_io_error(self, tmp_path: Path):
+        """Test handling of IOError when reading checkpoint file."""
+        from compaction_refresh import read_checkpoint
+
+        # Create a directory where a file is expected (will cause IOError on read)
+        checkpoint_path = tmp_path / "checkpoint.json"
+        checkpoint_path.mkdir()  # Create as directory, not file
+
+        result = read_checkpoint(checkpoint_path)
+
+        assert result is None
+
+    def test_read_checkpoint_corrupted_json(self, tmp_path: Path):
+        """Test handling of corrupted JSON in checkpoint file."""
+        from compaction_refresh import read_checkpoint
+
+        checkpoint_path = tmp_path / "checkpoint.json"
+        checkpoint_path.write_text("{ corrupted json without closing brace")
+
+        result = read_checkpoint(checkpoint_path)
+
+        assert result is None
+
+    def test_main_outer_exception_handling(self, tmp_path: Path):
+        """Test that outer try/except in main() catches all exceptions.
+
+        The main() function has a top-level try/except that should
+        catch any unexpected exceptions and exit cleanly.
+        """
+        # Simulate an exception by patching stdin to raise
+        class RaisingStdin:
+            def read(self):
+                raise RuntimeError("Simulated stdin error")
+
+        with patch("sys.stdin", RaisingStdin()), \
+             patch("pathlib.Path.home", return_value=tmp_path):
+
+            from compaction_refresh import main
+
+            # Should not raise, should exit 0
+            with pytest.raises(SystemExit) as exc_info:
+                main()
+
+            assert exc_info.value.code == 0
+
+    def test_main_handles_missing_session_id(self, tmp_path: Path, sample_checkpoint):
+        """Test handling when CLAUDE_SESSION_ID is missing."""
+        # Create checkpoint file
+        checkpoint_dir = tmp_path / ".claude" / "pact-refresh"
+        checkpoint_dir.mkdir(parents=True)
+        checkpoint_path = checkpoint_dir / "-test-project.json"
+        checkpoint_path.write_text(json.dumps(sample_checkpoint))
+
+        input_data = json.dumps({"source": "compact"})
+
+        # Environment without session ID
+        env_without_session = {"CLAUDE_PROJECT_DIR": "/test/project"}
+
+        with patch("sys.stdin", StringIO(input_data)), \
+             patch.dict(os.environ, env_without_session, clear=True), \
+             patch("pathlib.Path.home", return_value=tmp_path):
+
+            from compaction_refresh import main
+
+            with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
+                with pytest.raises(SystemExit) as exc_info:
+                    main()
+                assert exc_info.value.code == 0
+                output = mock_stdout.getvalue()
+
+        # Should handle gracefully - validation will fail due to session mismatch
+        if output:
+            result = json.loads(output)
+            assert "hookSpecificOutput" in result
+
+    def test_validate_checkpoint_with_none_fields(self, sample_checkpoint):
+        """Test validation handles None values in checkpoint fields."""
+        from compaction_refresh import validate_checkpoint
+
+        # Set version to None
+        sample_checkpoint["version"] = None
+        is_valid = validate_checkpoint(sample_checkpoint, "test-session-123")
+
+        assert is_valid is False
+
+    def test_build_refresh_message_with_missing_fields(self):
+        """Test build_refresh_message handles missing optional fields."""
+        from compaction_refresh import build_refresh_message
+
+        # Minimal checkpoint with only required fields
+        minimal_checkpoint = {
+            "workflow": {"name": "peer-review"},
+            "step": {"name": "unknown"},
+            "extraction": {"confidence": 0.5},
+        }
+
+        message = build_refresh_message(minimal_checkpoint)
+
+        # Should not crash and should produce valid message
+        assert "WORKFLOW REFRESH" in message
+        assert "peer-review" in message
+
+    def test_build_refresh_message_with_empty_context(self):
+        """Test build_refresh_message handles empty context dict."""
+        from compaction_refresh import build_refresh_message
+
+        checkpoint = {
+            "workflow": {"name": "peer-review", "id": ""},
+            "step": {"name": "commit"},
+            "extraction": {"confidence": 0.7},
+            "context": {},  # Empty context
+        }
+
+        message = build_refresh_message(checkpoint)
+
+        # Should not crash
+        assert "WORKFLOW REFRESH" in message
+
+    def test_get_encoded_project_path_from_env_empty_string(self):
+        """Test handling of empty string CLAUDE_PROJECT_DIR."""
+        from compaction_refresh import get_encoded_project_path_from_env
+
+        with patch.dict(os.environ, {"CLAUDE_PROJECT_DIR": ""}):
+            result = get_encoded_project_path_from_env()
+
+        assert result is None
