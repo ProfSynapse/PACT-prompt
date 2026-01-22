@@ -141,38 +141,39 @@ class TestBuildRefreshMessage:
     """Tests for build_refresh_message function."""
 
     def test_build_complete_message(self, sample_checkpoint):
-        """Test building refresh message with all fields."""
+        """Test building compact refresh message with all fields."""
         from compaction_refresh import build_refresh_message
 
         message = build_refresh_message(sample_checkpoint)
 
-        assert "=== WORKFLOW REFRESH ===" in message
+        # Check compact format
+        assert "[REFRESH]" in message
         assert "peer-review" in message
         assert "pr-64" in message
         assert "recommendations" in message
         assert "0.9" in message
-        assert "high" in message
+        assert "conf:" in message
 
     def test_build_message_with_pending_action(self, sample_checkpoint):
-        """Test refresh message includes pending action."""
+        """Test refresh message includes pending action in compact format."""
         from compaction_refresh import build_refresh_message
 
         message = build_refresh_message(sample_checkpoint)
 
-        assert "NEXT ACTION REQUIRED:" in message
+        assert "Next:" in message
         assert "AskUserQuestion" in message
 
     def test_build_message_with_context(self, sample_checkpoint):
-        """Test refresh message includes context."""
+        """Test refresh message includes context in compact key=value format."""
         from compaction_refresh import build_refresh_message
 
         message = build_refresh_message(sample_checkpoint)
 
         assert "Context:" in message
-        assert "pr_number" in message
+        assert "pr_number=64" in message
 
-    def test_build_message_medium_confidence(self):
-        """Test medium confidence label."""
+    def test_build_message_confidence_values(self):
+        """Test confidence values are displayed numerically."""
         from compaction_refresh import build_refresh_message
 
         checkpoint = {
@@ -184,22 +185,8 @@ class TestBuildRefreshMessage:
 
         message = build_refresh_message(checkpoint)
 
-        assert "medium" in message
-
-    def test_build_message_low_confidence(self):
-        """Test low confidence label."""
-        from compaction_refresh import build_refresh_message
-
-        checkpoint = {
-            "workflow": {"name": "peer-review", "id": ""},
-            "step": {"name": "commit"},
-            "extraction": {"confidence": 0.3},
-            "context": {},
-        }
-
-        message = build_refresh_message(checkpoint)
-
-        assert "low" in message
+        # Compact format shows numeric confidence
+        assert "conf: 0.5" in message
 
 
 class TestCompactionRefreshMain:
@@ -234,7 +221,7 @@ class TestCompactionRefreshMain:
 
         assert "hookSpecificOutput" in result
         refresh_msg = result["hookSpecificOutput"]["additionalContext"]
-        assert "WORKFLOW REFRESH" in refresh_msg
+        assert "[REFRESH]" in refresh_msg
         assert "peer-review" in refresh_msg
 
     def test_main_with_no_workflow(self, tmp_path: Path):
@@ -469,7 +456,7 @@ class TestEndToEndRefresh:
         result = json.loads(output)
         refresh_msg = result["hookSpecificOutput"]["additionalContext"]
 
-        assert "WORKFLOW REFRESH" in refresh_msg
+        assert "[REFRESH]" in refresh_msg
         assert "peer-review" in refresh_msg
         assert "recommendations" in refresh_msg or "pr-99" in refresh_msg
 
@@ -614,7 +601,7 @@ class TestExceptionHandlingPaths:
         message = build_refresh_message(minimal_checkpoint)
 
         # Should not crash and should produce valid message
-        assert "WORKFLOW REFRESH" in message
+        assert "[REFRESH]" in message
         assert "peer-review" in message
 
     def test_build_refresh_message_with_empty_context(self):
@@ -631,7 +618,7 @@ class TestExceptionHandlingPaths:
         message = build_refresh_message(checkpoint)
 
         # Should not crash
-        assert "WORKFLOW REFRESH" in message
+        assert "[REFRESH]" in message
 
     def test_get_encoded_project_path_from_env_empty_string(self):
         """Test handling of empty string CLAUDE_PROJECT_DIR."""

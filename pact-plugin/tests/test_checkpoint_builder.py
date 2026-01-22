@@ -313,32 +313,33 @@ class TestCheckpointToRefreshMessage:
     """Tests for checkpoint_to_refresh_message function."""
 
     def test_refresh_message_format(self, sample_checkpoint):
-        """Test refresh message contains expected elements."""
+        """Test compact refresh message contains expected elements."""
         message = checkpoint_to_refresh_message(sample_checkpoint)
 
-        assert "=== WORKFLOW REFRESH ===" in message
+        # Check new compact format
+        assert "[REFRESH]" in message
         assert "peer-review" in message
         assert "pr-64" in message
         assert "recommendations" in message
         assert "0.9" in message
-        assert "high" in message
-        assert "Resume workflow from this checkpoint" in message
+        # Check compact format structure
+        assert "@" in message  # step separator
+        assert "conf:" in message  # confidence prefix
 
     def test_refresh_message_with_pending_action(self, sample_checkpoint):
-        """Test refresh message includes pending action."""
+        """Test refresh message includes pending action in compact format."""
         message = checkpoint_to_refresh_message(sample_checkpoint)
 
-        assert "NEXT ACTION REQUIRED:" in message
+        assert "Next:" in message
         assert "AskUserQuestion" in message
         assert "Would you like to review" in message
 
     def test_refresh_message_with_context(self, sample_checkpoint):
-        """Test refresh message includes context."""
+        """Test refresh message includes context in compact key=value format."""
         message = checkpoint_to_refresh_message(sample_checkpoint)
 
         assert "Context:" in message
-        assert "pr_number" in message
-        assert "64" in message
+        assert "pr_number=64" in message
 
     def test_refresh_message_no_workflow(self):
         """Test no refresh message for 'none' workflow."""
@@ -350,8 +351,8 @@ class TestCheckpointToRefreshMessage:
 
         assert message == ""
 
-    def test_refresh_message_medium_confidence(self):
-        """Test confidence label for medium confidence."""
+    def test_refresh_message_confidence_values(self):
+        """Test confidence value is displayed correctly."""
         checkpoint = {
             "workflow": {
                 "name": "peer-review",
@@ -365,24 +366,8 @@ class TestCheckpointToRefreshMessage:
 
         message = checkpoint_to_refresh_message(checkpoint)
 
-        assert "medium" in message
-
-    def test_refresh_message_low_confidence(self):
-        """Test confidence label for low confidence."""
-        checkpoint = {
-            "workflow": {
-                "name": "peer-review",
-                "id": "",
-            },
-            "step": {"name": "commit"},
-            "extraction": {"confidence": 0.3},
-            "context": {},
-            "pending_action": None,
-        }
-
-        message = checkpoint_to_refresh_message(checkpoint)
-
-        assert "low" in message
+        # Compact format shows numeric confidence, not labels
+        assert "conf: 0.5" in message
 
     def test_refresh_message_no_pending_action(self):
         """Test refresh message without pending action."""
@@ -400,7 +385,7 @@ class TestCheckpointToRefreshMessage:
         message = checkpoint_to_refresh_message(checkpoint)
 
         assert "orchestrate" in message
-        assert "NEXT ACTION REQUIRED:" not in message
+        assert "Next:" not in message
 
     def test_refresh_message_no_context(self):
         """Test refresh message without context."""
@@ -417,22 +402,42 @@ class TestCheckpointToRefreshMessage:
 
         message = checkpoint_to_refresh_message(checkpoint)
 
-        # Should not include context section if empty
-        lines = message.split("\n")
-        context_found = False
-        for i, line in enumerate(lines):
-            if line.strip() == "Context:":
-                context_found = True
-                # Check next line is not a context item
-                if i + 1 < len(lines) and lines[i + 1].strip().startswith("-"):
-                    context_found = True
-                else:
-                    context_found = False
-                break
-
-        # Empty context means no "Context:" section with items
-        # The function may or may not include empty Context header
+        # Empty context means no "Context:" line
+        assert "Context:" not in message
         assert isinstance(message, str)
+
+    def test_refresh_message_compact_format(self):
+        """Test the exact compact format structure."""
+        checkpoint = {
+            "workflow": {
+                "name": "peer-review",
+                "id": "PR#88",
+            },
+            "step": {"name": "awaiting_user_decision"},
+            "extraction": {"confidence": 0.8},
+            "context": {"reviewers": 3, "blocking": 0},
+            "pending_action": {
+                "type": "User Decision",
+                "instruction": "Waiting for user to authorize merge",
+            },
+        }
+
+        message = checkpoint_to_refresh_message(checkpoint)
+        lines = message.split("\n")
+
+        # Should have 3 lines
+        assert len(lines) == 3
+        # Line 1: [REFRESH] workflow @ step (conf: X.X)
+        assert lines[0].startswith("[REFRESH]")
+        assert "peer-review PR#88 @ awaiting_user_decision" in lines[0]
+        assert "conf: 0.8" in lines[0]
+        # Line 2: Next action
+        assert lines[1].startswith("Next:")
+        assert "User Decision" in lines[1]
+        # Line 3: Context
+        assert lines[2].startswith("Context:")
+        assert "reviewers=3" in lines[2]
+        assert "blocking=0" in lines[2]
 
 
 class TestEdgeCases:

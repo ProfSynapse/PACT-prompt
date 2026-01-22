@@ -138,7 +138,7 @@ def validate_checkpoint(checkpoint: dict, current_session_id: str) -> bool:
 
 def _build_refresh_message_fallback(checkpoint: dict) -> str:
     """
-    Fallback: Build the refresh instruction message for the orchestrator.
+    Fallback: Build the compact refresh message for the orchestrator (~50 tokens).
 
     Used when refresh package is not available.
 
@@ -146,7 +146,7 @@ def _build_refresh_message_fallback(checkpoint: dict) -> str:
         checkpoint: The validated checkpoint data
 
     Returns:
-        Formatted refresh message string
+        Compact formatted refresh message string
     """
     workflow = checkpoint.get("workflow", {})
     workflow_name = workflow.get("name", "unknown")
@@ -157,59 +157,31 @@ def _build_refresh_message_fallback(checkpoint: dict) -> str:
 
     extraction = checkpoint.get("extraction", {})
     confidence = extraction.get("confidence", 0)
-    # Item 3: Use consistent confidence thresholds from constants
-    if confidence >= CONFIDENCE_LABEL_HIGH:
-        confidence_label = "high"
-    elif confidence >= CONFIDENCE_LABEL_MEDIUM:
-        confidence_label = "medium"
-    else:
-        confidence_label = "low"
 
-    # Build context summary
     context = checkpoint.get("context", {})
-    context_lines = []
-    for key, value in context.items():
-        context_lines.append(f"- {key}: {value}")
-
-    # Build pending action section
     pending_action = checkpoint.get("pending_action", {})
-    action_section = ""
+
+    # Build workflow identifier with optional ID
+    workflow_display = workflow_name
+    if workflow_id:
+        workflow_display = f"{workflow_name} {workflow_id}"
+
+    # Line 1: [REFRESH] workflow @ step (conf: X.X)
+    lines = [f"[REFRESH] {workflow_display} @ {step_name} (conf: {confidence:.1f})"]
+
+    # Line 2: Next action if present
     if pending_action:
         action_type = pending_action.get("type", "")
         instruction = pending_action.get("instruction", "")
         if action_type and instruction:
-            action_section = f"""
-NEXT ACTION REQUIRED:
-{action_type}: {instruction}
-"""
+            lines.append(f"Next: {action_type} - {instruction}")
 
-    # Assemble the message
-    workflow_display = workflow_name
-    if workflow_id:
-        workflow_display = f"{workflow_name} ({workflow_id})"
+    # Line 3: Context in compact key=value format
+    if context:
+        context_parts = [f"{k}={v}" for k, v in context.items()]
+        lines.append(f"Context: {', '.join(context_parts)}")
 
-    message_parts = [
-        "=== WORKFLOW REFRESH ===",
-        "",
-        "Session resumed after compaction.",
-        f"Active workflow: {workflow_display}",
-        f"Checkpoint: {step_name}",
-        f"Confidence: {confidence:.1f} ({confidence_label})",
-    ]
-
-    if action_section:
-        message_parts.append(action_section.strip())
-
-    if context_lines:
-        message_parts.append("")
-        message_parts.append("Context:")
-        message_parts.extend(context_lines)
-
-    message_parts.append("")
-    message_parts.append("Resume workflow from this checkpoint.")
-    message_parts.append("===========================")
-
-    return "\n".join(message_parts)
+    return "\n".join(lines)
 
 
 def build_refresh_message(checkpoint: dict) -> str:

@@ -422,7 +422,7 @@ def validate_checkpoint(checkpoint: dict[str, Any]) -> tuple[bool, str]:
 
 def checkpoint_to_refresh_message(checkpoint: dict[str, Any]) -> str:
     """
-    Convert a checkpoint to a human-readable refresh message.
+    Convert a checkpoint to a compact refresh message (~50 tokens).
 
     Used by the SessionStart hook to generate the refresh
     instructions injected after compaction.
@@ -431,7 +431,7 @@ def checkpoint_to_refresh_message(checkpoint: dict[str, Any]) -> str:
         checkpoint: Valid checkpoint dict
 
     Returns:
-        Formatted refresh message string
+        Compact formatted refresh message string
     """
     workflow = checkpoint.get("workflow", {})
     workflow_name = workflow.get("name", "unknown")
@@ -447,43 +447,23 @@ def checkpoint_to_refresh_message(checkpoint: dict[str, Any]) -> str:
     context = checkpoint.get("context", {})
     pending_action = checkpoint.get("pending_action")
 
-    # Item 3: Format confidence level using consistent thresholds from constants
-    if confidence >= CONFIDENCE_LABEL_HIGH:
-        confidence_label = "high"
-    elif confidence >= CONFIDENCE_LABEL_MEDIUM:
-        confidence_label = "medium"
-    else:
-        confidence_label = "low"
+    # Build workflow identifier with optional ID
+    workflow_display = workflow_name
+    if workflow_id:
+        workflow_display = f"{workflow_name} {workflow_id}"
 
-    lines = [
-        "=== WORKFLOW REFRESH ===",
-        "",
-        "Session resumed after compaction.",
-        f"Active workflow: {workflow_name}" + (f" ({workflow_id})" if workflow_id else ""),
-        f"Checkpoint: {step_name}",
-        f"Confidence: {confidence:.1f} ({confidence_label})",
-    ]
+    # Line 1: [REFRESH] workflow @ step (conf: X.X)
+    lines = [f"[REFRESH] {workflow_display} @ {step_name} (conf: {confidence:.1f})"]
 
-    # Add pending action if present
+    # Line 2: Next action if present
     if pending_action:
         action_type = pending_action.get("type", "Unknown")
         instruction = pending_action.get("instruction", "")
-        lines.extend([
-            "",
-            "NEXT ACTION REQUIRED:",
-            f"{action_type}: {instruction}",
-        ])
+        lines.append(f"Next: {action_type} - {instruction}")
 
-    # Add context if present
+    # Line 3: Context in compact key=value format
     if context:
-        lines.extend(["", "Context:"])
-        for key, value in context.items():
-            lines.append(f"- {key}: {value}")
-
-    lines.extend([
-        "",
-        "Resume workflow from this checkpoint.",
-        "===========================",
-    ])
+        context_parts = [f"{k}={v}" for k, v in context.items()]
+        lines.append(f"Context: {', '.join(context_parts)}")
 
     return "\n".join(lines)
