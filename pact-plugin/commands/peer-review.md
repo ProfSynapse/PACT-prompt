@@ -71,14 +71,17 @@ Select the domain coder based on PR focus:
        - If **Yes**: Continue with recommendation review flow below:
          - Use `AskUserQuestion` tool with one question per recommendation (table from step 2 provides context):
            - Each minor: "Address [recommendation] now?" with description explaining the issue context
-           - Each future: "Create GitHub issue for [recommendation]?" with description explaining the issue context
+           - Each future: "What would you like to do with [recommendation]?" with options:
+             - **Create GitHub issue** — Track for future work
+             - **Skip** — Don't track or address
+             - **Address now** — Fix it in this PR
            - Note: Tool supports up to 4 questions per call. If >4 recommendations exist, make multiple `AskUserQuestion` calls to cover all items.
          - **Collect all answers first**, then batch work:
-           - Group all minor=Yes items → Select workflow based on combined scope:
+           - Group all minor=Yes items AND future="Address now" items → Select workflow based on combined scope:
              - Single-domain items → `/PACT:comPACT` (parallelize if independent)
              - Multi-domain items → `/PACT:orchestrate`
-           - Group all future=Yes items → Create GitHub issues
-         - If any minor items fixed → re-run review to verify fixes only (not a full PR re-review)
+           - Group all future="Create GitHub issue" items → Create GitHub issues
+         - If any items fixed (minor or future addressed now) → re-run review to verify fixes only (not a full PR re-review)
 
 4. State merge readiness (only after ALL blocking fixes complete AND minor/future item handling is done): "Ready to merge" or "Changes requested: [specifics]"
 
