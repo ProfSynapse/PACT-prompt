@@ -21,18 +21,30 @@ import json
 import os
 import sys
 import tempfile
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-# Import shared utilities from refresh package (Fix 1: shared get_checkpoint_path)
+from refresh.constants import CHECKPOINT_MAX_AGE_DAYS, CHECKPOINT_VERSION
+
+# Import shared utilities from refresh package (Item 1: use shared checkpoint_builder)
 # Using absolute import via package - refresh is a sibling directory
 _hooks_dir = Path(__file__).parent
 if str(_hooks_dir) not in sys.path:
     sys.path.insert(0, str(_hooks_dir))
+
+# Track which utilities are available from the shared package
+_SHARED_UTILS_AVAILABLE = False
 try:
-    from refresh.checkpoint_builder import get_checkpoint_path
+    from refresh.checkpoint_builder import (
+        get_checkpoint_path,
+        build_no_workflow_checkpoint,
+    )
+    _SHARED_UTILS_AVAILABLE = True
 except ImportError:
     # Fallback if refresh package not available yet
+    _SHARED_UTILS_AVAILABLE = False
+
     def get_checkpoint_path(encoded_path: str) -> Path:
         return Path.home() / ".claude" / "pact-refresh" / f"{encoded_path}.json"
 
@@ -96,14 +108,53 @@ def write_checkpoint_atomic(checkpoint_path: Path, data: dict) -> bool:
         return False
 
 
-def build_checkpoint(
+def cleanup_old_checkpoints(checkpoint_dir: Path) -> int:
+    """
+    Item 11: Remove checkpoint files older than CHECKPOINT_MAX_AGE_DAYS.
+
+    Called when writing a new checkpoint to prevent accumulation of stale files.
+
+    Args:
+        checkpoint_dir: Directory containing checkpoint files
+
+    Returns:
+        Number of files cleaned up
+    """
+    if not checkpoint_dir.exists():
+        return 0
+
+    max_age_seconds = CHECKPOINT_MAX_AGE_DAYS * 24 * 60 * 60
+    cutoff_time = time.time() - max_age_seconds
+    cleaned = 0
+
+    try:
+        for checkpoint_file in checkpoint_dir.glob("*.json"):
+            try:
+                mtime = os.path.getmtime(checkpoint_file)
+                if mtime < cutoff_time:
+                    checkpoint_file.unlink()
+                    cleaned += 1
+            except OSError:
+                # File may have been deleted by another process
+                pass
+    except Exception:
+        # Don't fail the hook due to cleanup issues
+        pass
+
+    return cleaned
+
+
+def _build_checkpoint_fallback(
     workflow_state: dict | None,
     session_id: str,
     transcript_path: str,
     lines_scanned: int = 0
 ) -> dict:
     """
-    Build checkpoint data structure.
+    Fallback checkpoint builder when shared utils are not available.
+
+    Item 1 & 9: Only used when checkpoint_builder package is unavailable,
+    avoiding duplicate code when shared utils are present.
 
     Args:
         workflow_state: Extracted workflow state from refresh package, or None
@@ -119,7 +170,7 @@ def build_checkpoint(
     if workflow_state is None:
         # No active workflow detected
         return {
-            "version": "1.0",
+            "version": CHECKPOINT_VERSION,
             "session_id": session_id,
             "workflow": {
                 "name": "none"
@@ -134,7 +185,7 @@ def build_checkpoint(
 
     # Build full checkpoint from extracted state
     checkpoint = {
-        "version": "1.0",
+        "version": CHECKPOINT_VERSION,
         "session_id": session_id,
         "workflow": workflow_state.get("workflow", {"name": "none"}),
         "created_at": now
@@ -212,16 +263,29 @@ def main():
             pass
 
         # Build fallback checkpoint if extraction failed or returned None
+        # Item 1 & 9: Use shared utils when available, fallback otherwise
         if checkpoint is None:
-            checkpoint = build_checkpoint(
-                workflow_state=None,
-                session_id=session_id,
-                transcript_path=transcript_path,
-                lines_scanned=0
-            )
+            if _SHARED_UTILS_AVAILABLE:
+                checkpoint = build_no_workflow_checkpoint(
+                    transcript_path=transcript_path,
+                    lines_scanned=0,
+                    reason="No active workflow detected"
+                )
+                checkpoint["session_id"] = session_id
+            else:
+                checkpoint = _build_checkpoint_fallback(
+                    workflow_state=None,
+                    session_id=session_id,
+                    transcript_path=transcript_path,
+                    lines_scanned=0
+                )
 
         # Write checkpoint atomically
         checkpoint_path = get_checkpoint_path(encoded_path)
+
+        # Item 11: Clean up old checkpoints before writing new one
+        cleanup_old_checkpoints(checkpoint_path.parent)
+
         success = write_checkpoint_atomic(checkpoint_path, checkpoint)
 
         if success:

@@ -16,6 +16,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 from refresh.checkpoint_builder import (
+    CheckpointSchema,
     get_session_id,
     get_encoded_project_path,
     get_current_timestamp,
@@ -501,3 +502,197 @@ class TestEdgeCases:
 
         assert "peer-review" in message
         assert "unknown" in message  # Default step name
+
+
+class TestCheckpointSchemaRoundTrip:
+    """Tests for CheckpointSchema to_dict and from_dict round-trip."""
+
+    def test_round_trip_complete_schema(self, sample_checkpoint):
+        """Test from_dict(to_dict(schema)) == schema for complete checkpoint."""
+        # Create schema from sample checkpoint
+        schema = CheckpointSchema.from_dict(sample_checkpoint)
+
+        # Round-trip: schema -> dict -> schema
+        exported = schema.to_dict()
+        reimported = CheckpointSchema.from_dict(exported)
+
+        # Compare key fields
+        assert reimported.version == schema.version
+        assert reimported.session_id == schema.session_id
+        assert reimported.workflow_name == schema.workflow_name
+        assert reimported.workflow_id == schema.workflow_id
+        assert reimported.step_name == schema.step_name
+        assert reimported.step_sequence == schema.step_sequence
+        assert reimported.pending_action_type == schema.pending_action_type
+        assert reimported.pending_action_instruction == schema.pending_action_instruction
+        assert reimported.context == schema.context
+        assert reimported.confidence == schema.confidence
+
+    def test_round_trip_no_pending_action(self):
+        """Test round-trip when pending_action is None."""
+        checkpoint = {
+            "version": "1.0",
+            "session_id": "test-123",
+            "workflow": {"name": "orchestrate", "id": "", "started_at": ""},
+            "step": {"name": "code", "sequence": 3, "started_at": ""},
+            "pending_action": None,
+            "context": {},
+            "extraction": {"confidence": 0.8, "notes": "", "transcript_lines_scanned": 100},
+            "created_at": "2025-01-22T12:00:00Z",
+        }
+
+        schema = CheckpointSchema.from_dict(checkpoint)
+        exported = schema.to_dict()
+
+        assert exported["pending_action"] is None
+        assert schema.pending_action_type is None
+
+        # Round-trip
+        reimported = CheckpointSchema.from_dict(exported)
+        assert reimported.pending_action_type is None
+
+    def test_from_dict_missing_optional_fields(self):
+        """Test from_dict handles missing optional fields."""
+        minimal_checkpoint = {
+            "version": "1.0",
+            "session_id": "test-123",
+            "workflow": {"name": "peer-review"},
+            "extraction": {"confidence": 0.5},
+        }
+
+        schema = CheckpointSchema.from_dict(minimal_checkpoint)
+
+        # Should use defaults for missing fields
+        assert schema.version == "1.0"
+        assert schema.session_id == "test-123"
+        assert schema.workflow_name == "peer-review"
+        assert schema.workflow_id == ""  # Default
+        assert schema.workflow_started_at == ""  # Default
+        assert schema.step_name == ""  # Default
+        assert schema.step_sequence == 0  # Default
+        assert schema.pending_action_type is None  # Default
+        assert schema.context == {}  # Default
+        assert schema.confidence == 0.5
+        assert schema.extraction_notes == ""  # Default
+        assert schema.created_at == ""  # Default
+
+    def test_from_dict_with_none_pending_action(self):
+        """Test from_dict with explicit None for pending_action."""
+        checkpoint = {
+            "version": "1.0",
+            "session_id": "test",
+            "workflow": {"name": "test"},
+            "step": {"name": "step1"},
+            "pending_action": None,
+            "context": {},
+            "extraction": {"confidence": 0.7},
+        }
+
+        schema = CheckpointSchema.from_dict(checkpoint)
+
+        assert schema.pending_action_type is None
+        assert schema.pending_action_instruction is None
+        assert schema.pending_action_data == {}
+
+    def test_from_dict_empty_dict_uses_defaults(self):
+        """Test from_dict with empty dict uses sensible defaults."""
+        schema = CheckpointSchema.from_dict({})
+
+        # Should use defaults without raising
+        assert schema.version == "1.0"
+        assert schema.session_id == ""
+        assert schema.workflow_name == "none"
+        assert schema.step_name == ""
+        assert schema.confidence == 0.0
+
+    def test_to_dict_creates_proper_structure(self):
+        """Test to_dict creates the expected nested structure."""
+        schema = CheckpointSchema(
+            version="1.0",
+            session_id="session-abc",
+            workflow_name="peer-review",
+            workflow_id="pr-42",
+            workflow_started_at="2025-01-22T10:00:00Z",
+            step_name="synthesize",
+            step_sequence=4,
+            step_started_at="2025-01-22T10:30:00Z",
+            pending_action_type="AskUserQuestion",
+            pending_action_instruction="Continue?",
+            pending_action_data={"key": "value"},
+            context={"pr_number": 42},
+            confidence=0.85,
+            extraction_notes="test notes",
+            transcript_lines_scanned=200,
+            created_at="2025-01-22T11:00:00Z",
+        )
+
+        result = schema.to_dict()
+
+        # Verify structure
+        assert result["version"] == "1.0"
+        assert result["session_id"] == "session-abc"
+
+        assert result["workflow"]["name"] == "peer-review"
+        assert result["workflow"]["id"] == "pr-42"
+        assert result["workflow"]["started_at"] == "2025-01-22T10:00:00Z"
+
+        assert result["step"]["name"] == "synthesize"
+        assert result["step"]["sequence"] == 4
+        assert result["step"]["started_at"] == "2025-01-22T10:30:00Z"
+
+        assert result["pending_action"]["type"] == "AskUserQuestion"
+        assert result["pending_action"]["instruction"] == "Continue?"
+        assert result["pending_action"]["data"] == {"key": "value"}
+
+        assert result["context"] == {"pr_number": 42}
+
+        assert result["extraction"]["confidence"] == 0.85
+        assert result["extraction"]["notes"] == "test notes"
+        assert result["extraction"]["transcript_lines_scanned"] == 200
+
+        assert result["created_at"] == "2025-01-22T11:00:00Z"
+
+    def test_to_dict_no_pending_action(self):
+        """Test to_dict when pending_action_type is None."""
+        schema = CheckpointSchema(
+            version="1.0",
+            session_id="test",
+            workflow_name="orchestrate",
+            pending_action_type=None,
+        )
+
+        result = schema.to_dict()
+
+        assert result["pending_action"] is None
+
+    def test_round_trip_with_complex_context(self):
+        """Test round-trip preserves complex context data."""
+        checkpoint = {
+            "version": "1.0",
+            "session_id": "test",
+            "workflow": {"name": "peer-review", "id": "pr-99", "started_at": ""},
+            "step": {"name": "recommendations", "sequence": 5, "started_at": ""},
+            "pending_action": {
+                "type": "UserDecision",
+                "instruction": "Choose option",
+                "data": {"options": ["A", "B", "C"], "nested": {"key": 123}},
+            },
+            "context": {
+                "pr_number": 99,
+                "has_blocking": True,
+                "minor_count": 3,
+                "future_count": 2,
+                "tags": ["review", "test"],
+            },
+            "extraction": {"confidence": 0.95, "notes": "complex test", "transcript_lines_scanned": 500},
+            "created_at": "2025-01-22T12:00:00Z",
+        }
+
+        schema = CheckpointSchema.from_dict(checkpoint)
+        exported = schema.to_dict()
+
+        # Verify complex data preserved
+        assert exported["pending_action"]["data"]["options"] == ["A", "B", "C"]
+        assert exported["pending_action"]["data"]["nested"]["key"] == 123
+        assert exported["context"]["tags"] == ["review", "test"]
+        assert exported["context"]["pr_number"] == 99

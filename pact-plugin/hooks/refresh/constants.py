@@ -1,0 +1,44 @@
+"""
+Location: pact-plugin/hooks/refresh/constants.py
+Summary: Configuration constants for the workflow refresh system.
+Used by: All refresh modules for consistent threshold and limit values.
+
+This module centralizes configuration constants that may need tuning,
+keeping regex patterns and workflow definitions in patterns.py while
+extracting tunable numeric values here for maintainability.
+"""
+
+# === CONFIDENCE THRESHOLDS (Item 3) ===
+
+# Minimum confidence score for checkpoint to be considered valid
+CONFIDENCE_THRESHOLD = 0.3
+
+# Confidence labels for human-readable output
+CONFIDENCE_LABEL_HIGH = 0.8
+CONFIDENCE_LABEL_MEDIUM = 0.5
+
+# === LENGTH LIMITS ===
+
+# Maximum length for extracted text to prevent excessive data
+PENDING_ACTION_INSTRUCTION_MAX_LENGTH = 200
+REVIEW_PROMPT_INSTRUCTION_MAX_LENGTH = 150
+TASK_SUMMARY_MAX_LENGTH = 200
+
+# === PROCESSING LIMITS ===
+
+# Termination detection window: number of turns after trigger to check
+TERMINATION_WINDOW_TURNS = 10
+
+# Size threshold for switching to efficient tail-reading (10 MB)
+LARGE_FILE_THRESHOLD_BYTES = 10 * 1024 * 1024
+
+# Maximum transcript lines to read for workflow detection
+MAX_TRANSCRIPT_LINES = 500
+
+# === CHECKPOINT CONFIGURATION ===
+
+# Current checkpoint schema version
+CHECKPOINT_VERSION = "1.0"
+
+# Checkpoint file expiration in days (Item 11)
+CHECKPOINT_MAX_AGE_DAYS = 7

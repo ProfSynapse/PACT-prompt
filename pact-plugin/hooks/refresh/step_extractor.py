@@ -9,7 +9,7 @@ the current step/phase and any pending user action.
 
 import re
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any
 
 from .transcript_parser import Turn, find_trigger_turn_index
 from .workflow_detector import WorkflowInfo
@@ -55,7 +55,7 @@ class StepInfo:
     name: str
     sequence: int = 0
     started_at: str = ""
-    pending_action: Optional[PendingAction] = None
+    pending_action: PendingAction | None = None
     context: dict[str, Any] = field(default_factory=dict)
 
 
@@ -89,26 +89,24 @@ def find_step_markers_in_turn(turn: Turn, workflow_name: str) -> list[str]:
 def determine_current_step(
     turns: list[Turn],
     workflow_info: WorkflowInfo,
+    trigger_index: int,
 ) -> tuple[str, int, str]:
     """
     Determine the current step in the workflow.
 
     Scans turns after the workflow trigger to find the most recent
     step marker. Prioritizes recency over exact position in step list.
-    (Fix 9: improved step detection considering recency and context)
 
     Args:
         turns: List of turns
         workflow_info: Detected workflow information
+        trigger_index: Pre-computed index of the trigger turn (Item 2)
 
     Returns:
         Tuple of (step_name, sequence_number, started_timestamp)
     """
     if not workflow_info.trigger_turn:
         return "unknown", 0, ""
-
-    # Find trigger index (Fix 4: use shared utility)
-    trigger_index = find_trigger_turn_index(turns, workflow_info.trigger_turn.line_number)
 
     pattern = WORKFLOW_PATTERNS.get(workflow_info.name)
     if not pattern:
@@ -206,6 +204,7 @@ def detect_pending_action(turns: list[Turn], trigger_index: int) -> PendingActio
 def extract_workflow_context(
     turns: list[Turn],
     workflow_info: WorkflowInfo,
+    trigger_index: int,
 ) -> dict[str, Any]:
     """
     Extract context values relevant to the workflow.
@@ -216,26 +215,26 @@ def extract_workflow_context(
     Args:
         turns: List of turns
         workflow_info: Detected workflow information
+        trigger_index: Pre-computed index of the trigger turn (Item 2)
 
     Returns:
         Dict of context key-value pairs
     """
     context: dict[str, Any] = {}
 
-    # Find trigger index (Fix 4: use shared utility)
-    trigger_index = 0
-    if workflow_info.trigger_turn:
-        trigger_index = find_trigger_turn_index(turns, workflow_info.trigger_turn.line_number)
-
     # Extract context from all turns after trigger
     for turn in turns[trigger_index:]:
         content = turn.content
 
-        # PR number
+        # PR number (Item 6: validate numeric before conversion)
         if "pr_number" not in context:
             pr_num = extract_context_value(content, "pr_number")
             if pr_num:
-                context["pr_number"] = int(pr_num)
+                try:
+                    context["pr_number"] = int(pr_num)
+                except ValueError:
+                    # Non-numeric PR reference, skip
+                    pass
 
         # Task summary (Fix 10: use named constant for length cap)
         if "task_summary" not in context:
@@ -352,19 +351,19 @@ def extract_current_step(
     Returns:
         StepInfo with current step details
     """
-    # Find trigger index (Fix 4: use shared utility)
+    # Item 2: Compute trigger_index once and pass to sub-functions
     trigger_index = 0
     if workflow_info.trigger_turn:
         trigger_index = find_trigger_turn_index(turns, workflow_info.trigger_turn.line_number)
 
-    # Determine current step
-    step_name, sequence, started_at = determine_current_step(turns, workflow_info)
+    # Determine current step (pass trigger_index to avoid recomputation)
+    step_name, sequence, started_at = determine_current_step(turns, workflow_info, trigger_index)
 
     # Detect pending action
     pending_action = detect_pending_action(turns, trigger_index)
 
-    # Extract context
-    context = extract_workflow_context(turns, workflow_info)
+    # Extract context (pass trigger_index to avoid recomputation)
+    context = extract_workflow_context(turns, workflow_info, trigger_index)
 
     return StepInfo(
         name=step_name,

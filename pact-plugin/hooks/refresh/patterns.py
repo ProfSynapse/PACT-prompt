@@ -5,27 +5,48 @@ Used by: workflow_detector.py and step_extractor.py for pattern matching.
 
 Defines the trigger patterns, step markers, and termination signals
 for each PACT workflow type as specified in the refresh plan.
-Also defines shared constants for thresholds and limits.
+Configuration constants are imported from constants.py for maintainability.
 """
 
 import re
 from dataclasses import dataclass
 from typing import Pattern
 
+# Import configuration constants from centralized location (Item 12)
+from .constants import (
+    CONFIDENCE_THRESHOLD,
+    CONFIDENCE_LABEL_HIGH,
+    CONFIDENCE_LABEL_MEDIUM,
+    PENDING_ACTION_INSTRUCTION_MAX_LENGTH,
+    REVIEW_PROMPT_INSTRUCTION_MAX_LENGTH,
+    TASK_SUMMARY_MAX_LENGTH,
+    TERMINATION_WINDOW_TURNS,
+)
 
-# === THRESHOLD AND LIMIT CONSTANTS (Fix 3 & 10) ===
-
-# Minimum confidence score for checkpoint to be considered valid
-CONFIDENCE_THRESHOLD = 0.3
-
-# Length caps for extracted text to prevent excessive data
-PENDING_ACTION_INSTRUCTION_MAX_LENGTH = 200
-REVIEW_PROMPT_INSTRUCTION_MAX_LENGTH = 150
-TASK_SUMMARY_MAX_LENGTH = 200
-
-# Termination detection window: number of turns after trigger to check
-# (Fix 8: structural context for termination signals)
-TERMINATION_WINDOW_TURNS = 10
+# Re-export for backwards compatibility
+__all__ = [
+    "CONFIDENCE_THRESHOLD",
+    "CONFIDENCE_LABEL_HIGH",
+    "CONFIDENCE_LABEL_MEDIUM",
+    "PENDING_ACTION_INSTRUCTION_MAX_LENGTH",
+    "REVIEW_PROMPT_INSTRUCTION_MAX_LENGTH",
+    "TASK_SUMMARY_MAX_LENGTH",
+    "TERMINATION_WINDOW_TURNS",
+    "WorkflowPattern",
+    "TRIGGER_PATTERNS",
+    "STEP_MARKERS",
+    "TERMINATION_SIGNALS",
+    "PACT_AGENT_PATTERN",
+    "TASK_TOOL_PATTERN",
+    "SUBAGENT_TYPE_PATTERN",
+    "CONTEXT_EXTRACTORS",
+    "PENDING_ACTION_PATTERNS",
+    "CONFIDENCE_WEIGHTS",
+    "compile_workflow_patterns",
+    "WORKFLOW_PATTERNS",
+    "is_termination_signal",
+    "extract_context_value",
+]
 
 
 @dataclass

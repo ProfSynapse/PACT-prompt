@@ -23,6 +23,8 @@ from refresh.step_extractor import (
     detect_pending_action,
     extract_workflow_context,
     extract_current_step,
+    _extract_peer_review_context,
+    _extract_orchestrate_context,
 )
 
 from conftest import (
@@ -167,7 +169,8 @@ class TestDetermineCurrentStep:
             trigger_turn=trigger_turn,
         )
 
-        step_name, sequence, timestamp = determine_current_step(turns, workflow_info)
+        # Item 2: Pass trigger_index (0 for first turn)
+        step_name, sequence, timestamp = determine_current_step(turns, workflow_info, trigger_index=0)
 
         assert step_name == "invoke-reviewers"
         assert sequence == 3  # invoke-reviewers is 3rd in peer-review steps
@@ -186,7 +189,8 @@ class TestDetermineCurrentStep:
             started_at="2025-01-22T12:00:00Z",
         )
 
-        step_name, sequence, timestamp = determine_current_step(turns, workflow_info)
+        # Item 2: Pass trigger_index
+        step_name, sequence, timestamp = determine_current_step(turns, workflow_info, trigger_index=0)
 
         assert step_name == "commit"  # First step in peer-review
         assert sequence == 1
@@ -200,7 +204,8 @@ class TestDetermineCurrentStep:
             trigger_turn=trigger_turn,
         )
 
-        step_name, sequence, timestamp = determine_current_step([], workflow_info)
+        # Item 2: Pass trigger_index
+        step_name, sequence, timestamp = determine_current_step([], workflow_info, trigger_index=0)
 
         assert step_name == "unknown"
         assert sequence == 0
@@ -212,7 +217,8 @@ class TestDetermineCurrentStep:
             trigger_turn=None,
         )
 
-        step_name, sequence, timestamp = determine_current_step([], workflow_info)
+        # Item 2: Pass trigger_index
+        step_name, sequence, timestamp = determine_current_step([], workflow_info, trigger_index=0)
 
         assert step_name == "unknown"
 
@@ -343,7 +349,8 @@ class TestExtractWorkflowContext:
             trigger_turn=trigger_turn,
         )
 
-        context = extract_workflow_context(turns, workflow_info)
+        # Item 2: Pass trigger_index
+        context = extract_workflow_context(turns, workflow_info, trigger_index=0)
 
         assert context.get("pr_number") == 64
 
@@ -367,7 +374,8 @@ class TestExtractWorkflowContext:
             trigger_turn=trigger_turn,
         )
 
-        context = extract_workflow_context(turns, workflow_info)
+        # Item 2: Pass trigger_index
+        context = extract_workflow_context(turns, workflow_info, trigger_index=0)
 
         # May or may not match depending on pattern
         # The pattern is: "task|implementing|working on:[:\s]+(.{10,100})"
@@ -390,7 +398,8 @@ class TestExtractWorkflowContext:
             trigger_turn=trigger_turn,
         )
 
-        context = extract_workflow_context(turns, workflow_info)
+        # Item 2: Pass trigger_index
+        context = extract_workflow_context(turns, workflow_info, trigger_index=0)
 
         assert context.get("has_blocking") is False
         assert context.get("minor_count") == 2
@@ -416,7 +425,8 @@ class TestExtractWorkflowContext:
             trigger_turn=trigger_turn,
         )
 
-        context = extract_workflow_context(turns, workflow_info)
+        # Item 2: Pass trigger_index
+        context = extract_workflow_context(turns, workflow_info, trigger_index=0)
 
         assert context.get("current_phase") == "code"
 
@@ -433,7 +443,8 @@ class TestExtractWorkflowContext:
             trigger_turn=trigger_turn,
         )
 
-        context = extract_workflow_context(turns, workflow_info)
+        # Item 2: Pass trigger_index
+        context = extract_workflow_context(turns, workflow_info, trigger_index=0)
 
         if "task_summary" in context:
             assert len(context["task_summary"]) <= 200
@@ -576,3 +587,221 @@ class TestEdgeCases:
 
         # Context should be empty dict, not fail
         assert isinstance(step_info.context, dict)
+
+
+class TestPrivateExtractionFunctions:
+    """Tests for private extraction function edge cases."""
+
+    def test_peer_review_multiple_blocking_mentions(self):
+        """Test _extract_peer_review_context with multiple 'blocking' mentions."""
+        turns = [
+            Turn(turn_type="assistant", content="Found blocking issue in auth.", line_number=1),
+            Turn(turn_type="assistant", content="Another blocking problem found.", line_number=2),
+            Turn(turn_type="assistant", content="Total: 2 blocking issues.", line_number=3),
+        ]
+
+        context = _extract_peer_review_context(turns, 0, {})
+
+        # Should detect that there ARE blocking issues
+        assert context.get("has_blocking") is True
+
+    def test_peer_review_conflicting_blocking_counts(self):
+        """Test _extract_peer_review_context with conflicting blocking info."""
+        turns = [
+            Turn(turn_type="assistant", content="0 blocking issues found.", line_number=1),
+            Turn(turn_type="assistant", content="Wait, found 1 blocking issue.", line_number=2),
+        ]
+
+        context = _extract_peer_review_context(turns, 0, {})
+
+        # The function scans in reverse, so the last mention (first in reversed) wins
+        # "1 blocking issue" should be detected as has_blocking=True
+        # But since "0 blocking" also contains "blocking", it depends on order
+        # The current implementation checks "no blocking" or "0 blocking" first
+        assert "has_blocking" in context
+
+    def test_peer_review_no_blocking_explicitly(self):
+        """Test _extract_peer_review_context with explicit 'no blocking'."""
+        turns = [
+            Turn(turn_type="assistant", content="Review complete. No blocking issues.", line_number=1),
+        ]
+
+        context = _extract_peer_review_context(turns, 0, {})
+
+        assert context.get("has_blocking") is False
+
+    def test_peer_review_zero_blocking(self):
+        """Test _extract_peer_review_context with '0 blocking'."""
+        turns = [
+            Turn(turn_type="assistant", content="Summary: 0 blocking, 3 minor.", line_number=1),
+        ]
+
+        context = _extract_peer_review_context(turns, 0, {})
+
+        assert context.get("has_blocking") is False
+        assert context.get("minor_count") == 3
+
+    def test_peer_review_multiple_minor_counts(self):
+        """Test that first minor count found (in reverse) is used."""
+        turns = [
+            Turn(turn_type="assistant", content="Found 5 minor issues.", line_number=1),
+            Turn(turn_type="assistant", content="After fixes: 2 minor issues remain.", line_number=2),
+        ]
+
+        context = _extract_peer_review_context(turns, 0, {})
+
+        # Scanning in reverse, should find "2 minor" first
+        assert context.get("minor_count") == 2
+
+    def test_peer_review_future_count_extraction(self):
+        """Test extraction of future recommendation count."""
+        turns = [
+            Turn(turn_type="assistant", content="3 future recommendations noted.", line_number=1),
+        ]
+
+        context = _extract_peer_review_context(turns, 0, {})
+
+        assert context.get("future_count") == 3
+
+    def test_peer_review_preserves_existing_context(self):
+        """Test that existing context values are preserved."""
+        turns = [
+            Turn(turn_type="assistant", content="2 minor issues.", line_number=1),
+        ]
+        existing_context = {"pr_number": 42, "branch_name": "feature/test"}
+
+        context = _extract_peer_review_context(turns, 0, existing_context)
+
+        # Should preserve existing values
+        assert context.get("pr_number") == 42
+        assert context.get("branch_name") == "feature/test"
+        # And add new ones
+        assert context.get("minor_count") == 2
+
+    def test_peer_review_skips_user_turns(self):
+        """Test that user turns are skipped during extraction."""
+        turns = [
+            Turn(turn_type="user", content="There are 99 blocking issues!", line_number=1),
+            Turn(turn_type="assistant", content="No blocking issues found.", line_number=2),
+        ]
+
+        context = _extract_peer_review_context(turns, 0, {})
+
+        # Should only consider assistant turn
+        assert context.get("has_blocking") is False
+
+    def test_orchestrate_phase_mentioned_in_non_standard_format(self):
+        """Test _extract_orchestrate_context with non-standard phase format."""
+        turns = [
+            Turn(turn_type="assistant", content="Currently executing the code implementation.", line_number=1),
+        ]
+
+        context = _extract_orchestrate_context(turns, 0, {})
+
+        # "code phase" pattern not matched, so no current_phase
+        # unless the content matches the expected patterns
+        assert isinstance(context, dict)
+
+    def test_orchestrate_phase_standard_format(self):
+        """Test _extract_orchestrate_context with standard 'X phase' format."""
+        turns = [
+            Turn(turn_type="assistant", content="In the code phase now.", line_number=1),
+        ]
+
+        context = _extract_orchestrate_context(turns, 0, {})
+
+        assert context.get("current_phase") == "code"
+
+    def test_orchestrate_starting_phase_format(self):
+        """Test _extract_orchestrate_context with 'starting X' format."""
+        turns = [
+            Turn(turn_type="assistant", content="Starting prepare phase.", line_number=1),
+        ]
+
+        context = _extract_orchestrate_context(turns, 0, {})
+
+        assert context.get("current_phase") == "prepare"
+
+    def test_orchestrate_missing_phase(self):
+        """Test _extract_orchestrate_context when no phase is mentioned."""
+        turns = [
+            Turn(turn_type="assistant", content="Working on the task...", line_number=1),
+        ]
+
+        context = _extract_orchestrate_context(turns, 0, {})
+
+        assert "current_phase" not in context
+
+    def test_orchestrate_all_phases_detected(self):
+        """Test that all PACT phases can be detected."""
+        phases = ["prepare", "architect", "code", "test"]
+
+        for phase in phases:
+            turns = [
+                Turn(turn_type="assistant", content=f"Now in {phase} phase.", line_number=1),
+            ]
+            context = _extract_orchestrate_context(turns, 0, {})
+            assert context.get("current_phase") == phase, f"Failed to detect {phase} phase"
+
+    def test_orchestrate_most_recent_phase_used(self):
+        """Test that the most recent phase (in reverse scan) is used."""
+        turns = [
+            Turn(turn_type="assistant", content="prepare phase complete.", line_number=1),
+            Turn(turn_type="assistant", content="architect phase complete.", line_number=2),
+            Turn(turn_type="assistant", content="Starting code phase.", line_number=3),
+        ]
+
+        context = _extract_orchestrate_context(turns, 0, {})
+
+        # Scanning in reverse, "code phase" should be found first
+        assert context.get("current_phase") == "code"
+
+    def test_orchestrate_case_insensitive(self):
+        """Test that phase detection is case insensitive."""
+        turns = [
+            Turn(turn_type="assistant", content="CODE PHASE initiated.", line_number=1),
+        ]
+
+        context = _extract_orchestrate_context(turns, 0, {})
+
+        # Content is lowercased before matching
+        assert context.get("current_phase") == "code"
+
+    def test_orchestrate_preserves_existing_context(self):
+        """Test that existing context is preserved."""
+        turns = [
+            Turn(turn_type="assistant", content="In test phase.", line_number=1),
+        ]
+        existing = {"task_summary": "implement auth", "branch_name": "feat/auth"}
+
+        context = _extract_orchestrate_context(turns, 0, existing)
+
+        assert context.get("task_summary") == "implement auth"
+        assert context.get("branch_name") == "feat/auth"
+        assert context.get("current_phase") == "test"
+
+    def test_orchestrate_skips_user_turns(self):
+        """Test that user turns are skipped."""
+        turns = [
+            Turn(turn_type="user", content="What code phase are you in?", line_number=1),
+            Turn(turn_type="assistant", content="Currently in architect phase.", line_number=2),
+        ]
+
+        context = _extract_orchestrate_context(turns, 0, {})
+
+        assert context.get("current_phase") == "architect"
+
+    def test_orchestrate_respects_trigger_index(self):
+        """Test that extraction starts from trigger_index."""
+        turns = [
+            Turn(turn_type="assistant", content="Old: prepare phase.", line_number=1),
+            Turn(turn_type="assistant", content="Old: architect phase.", line_number=2),
+            Turn(turn_type="user", content="/PACT:orchestrate", line_number=3),  # trigger
+            Turn(turn_type="assistant", content="New: code phase.", line_number=4),
+        ]
+
+        # With trigger_index=2, should only look at turns[2:]
+        context = _extract_orchestrate_context(turns, 2, {})
+
+        # Should find "code" from turn at index 3, not older phases
+        assert context.get("current_phase") == "code"

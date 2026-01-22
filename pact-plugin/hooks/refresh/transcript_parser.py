@@ -14,6 +14,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from .constants import LARGE_FILE_THRESHOLD_BYTES
+
 
 @dataclass
 class ToolCall:
@@ -127,6 +129,15 @@ def parse_line(line: str, line_number: int) -> Turn | None:
                             tool_use_id=block.get("id", ""),
                         )
                     )
+                elif block_type == "tool_result":
+                    # Tool results are expected, skip silently
+                    pass
+                else:
+                    # Item 5: Log unexpected block types for debugging
+                    print(
+                        f"Debug: Unexpected content block type '{block_type}' at line {line_number}",
+                        file=sys.stderr,
+                    )
             elif isinstance(block, str):
                 text_parts.append(block)
         content = "\n".join(text_parts)
@@ -143,24 +154,21 @@ def parse_line(line: str, line_number: int) -> Turn | None:
     )
 
 
-# Size threshold for switching to efficient tail-reading (10 MB)
-LARGE_FILE_THRESHOLD_BYTES = 10 * 1024 * 1024
-
-
-def read_last_n_lines(path: Path, n: int) -> list[str]:
+def read_last_n_lines(path: Path, n: int) -> tuple[list[str], int]:
     """
     Read the last N lines from a file efficiently.
 
     For small files (< 10MB), reads all and slices.
     For large files, uses efficient reverse-seek approach to avoid
-    loading entire file into memory. (Fix 6: optimized for large files)
+    loading entire file into memory.
 
     Args:
         path: Path to the file
         n: Maximum number of lines to return
 
     Returns:
-        List of lines (most recent last)
+        Tuple of (list of lines most recent last, total line count in file).
+        Item 8: Returns total lines counted during reading to avoid second file open.
     """
     try:
         file_size = path.stat().st_size
@@ -169,14 +177,16 @@ def read_last_n_lines(path: Path, n: int) -> list[str]:
         if file_size < LARGE_FILE_THRESHOLD_BYTES:
             with open(path, "r", encoding="utf-8") as f:
                 lines = f.readlines()
-                if len(lines) <= n:
-                    return lines
-                return lines[-n:]
+                total_lines = len(lines)
+                if total_lines <= n:
+                    return lines, total_lines
+                return lines[-n:], total_lines
 
         # For large files, read from end in chunks to find last N lines
         # This avoids loading entire file into memory
         chunk_size = 8192
         lines: list[str] = []
+        total_lines_estimate = 0
         with open(path, "rb") as f:
             # Start from end of file
             f.seek(0, 2)  # Seek to end
@@ -206,14 +216,22 @@ def read_last_n_lines(path: Path, n: int) -> list[str]:
                 # Prepend new lines (they're earlier in file)
                 lines = [line.decode("utf-8", errors="replace") + "\n" for line in new_lines if line] + lines
 
+            # Item 8: For large files, estimate total lines based on average line length
+            # This avoids a second file scan while providing approximate line numbers
+            if lines:
+                avg_line_len = sum(len(line) for line in lines) / len(lines)
+                total_lines_estimate = int(file_size / avg_line_len) if avg_line_len > 0 else len(lines)
+            else:
+                total_lines_estimate = 0
+
             # Return only the last n lines
             if len(lines) > n:
                 lines = lines[-n:]
-            return lines
+            return lines, total_lines_estimate
 
     except IOError as e:
         print(f"Warning: Could not read transcript: {e}", file=sys.stderr)
-        return []
+        return [], 0
 
 
 def parse_transcript(path: Path, max_lines: int = 500) -> list[Turn]:
@@ -234,19 +252,15 @@ def parse_transcript(path: Path, max_lines: int = 500) -> list[Turn]:
         print(f"Warning: Transcript not found: {path}", file=sys.stderr)
         return []
 
-    lines = read_last_n_lines(path, max_lines)
+    # Item 8: read_last_n_lines now returns total line count, avoiding second file open
+    lines, total_lines = read_last_n_lines(path, max_lines)
     turns = []
 
     # Calculate starting line number (for debugging)
-    # If we read fewer lines than max, we got the whole file
+    # If we read fewer lines than total, we got the tail of the file
     start_line = 1
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            total_lines = sum(1 for _ in f)
-            if total_lines > max_lines:
-                start_line = total_lines - max_lines + 1
-    except IOError:
-        pass
+    if total_lines > len(lines):
+        start_line = total_lines - len(lines) + 1
 
     for i, line in enumerate(lines):
         line_number = start_line + i

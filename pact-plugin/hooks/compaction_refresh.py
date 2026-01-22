@@ -21,19 +21,42 @@ import json
 import os
 import sys
 from pathlib import Path
+from typing import Callable
 
-# Import shared utilities from refresh package (Fix 1 & 2)
+# Import shared utilities from refresh package
 _hooks_dir = Path(__file__).parent
 if str(_hooks_dir) not in sys.path:
     sys.path.insert(0, str(_hooks_dir))
+
+# Import constants for consistent thresholds (Item 3)
+try:
+    from refresh.constants import CONFIDENCE_LABEL_HIGH, CONFIDENCE_LABEL_MEDIUM
+except ImportError:
+    # Fallback thresholds if constants not available
+    CONFIDENCE_LABEL_HIGH = 0.8
+    CONFIDENCE_LABEL_MEDIUM = 0.5
+
+# Item 4 & 9: Explicit type annotation for get_checkpoint_path
+# Restructured to avoid defining unused fallback when shared utils are available
+get_checkpoint_path: Callable[[str], Path]
+checkpoint_to_refresh_message: Callable[[dict], str] | None = None
+
 try:
     from refresh.checkpoint_builder import (
-        get_checkpoint_path,
-        checkpoint_to_refresh_message,
+        get_checkpoint_path as _shared_get_checkpoint_path,
+        checkpoint_to_refresh_message as _shared_checkpoint_to_refresh_message,
     )
+    get_checkpoint_path = _shared_get_checkpoint_path
+    checkpoint_to_refresh_message = _shared_checkpoint_to_refresh_message
     _USE_SHARED_UTILS = True
 except ImportError:
     _USE_SHARED_UTILS = False
+    # Only define fallback when shared utils are not available
+    def _get_checkpoint_path_fallback(encoded_path: str) -> Path:
+        """Fallback if refresh package not available."""
+        return Path.home() / ".claude" / "pact-refresh" / f"{encoded_path}.json"
+
+    get_checkpoint_path = _get_checkpoint_path_fallback
 
 
 def get_encoded_project_path_from_env() -> str | None:
@@ -56,16 +79,6 @@ def get_encoded_project_path_from_env() -> str | None:
     # This preserves the leading dash from "/Users/..." -> "-Users-..."
     encoded = project_dir.replace("/", "-")
     return encoded
-
-
-def _get_checkpoint_path_fallback(encoded_path: str) -> Path:
-    """Fallback if refresh package not available."""
-    return Path.home() / ".claude" / "pact-refresh" / f"{encoded_path}.json"
-
-
-# Use shared or fallback based on import success
-if not _USE_SHARED_UTILS:
-    get_checkpoint_path = _get_checkpoint_path_fallback
 
 
 def read_checkpoint(checkpoint_path: Path) -> dict | None:
@@ -144,7 +157,13 @@ def _build_refresh_message_fallback(checkpoint: dict) -> str:
 
     extraction = checkpoint.get("extraction", {})
     confidence = extraction.get("confidence", 0)
-    confidence_label = "high" if confidence >= 0.7 else "medium" if confidence >= 0.4 else "low"
+    # Item 3: Use consistent confidence thresholds from constants
+    if confidence >= CONFIDENCE_LABEL_HIGH:
+        confidence_label = "high"
+    elif confidence >= CONFIDENCE_LABEL_MEDIUM:
+        confidence_label = "medium"
+    else:
+        confidence_label = "low"
 
     # Build context summary
     context = checkpoint.get("context", {})

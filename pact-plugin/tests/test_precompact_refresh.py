@@ -110,8 +110,9 @@ class TestBuildCheckpointFunction:
     """Tests for build_checkpoint function in precompact_refresh."""
 
     def test_build_with_workflow_state(self):
-        """Test building checkpoint from workflow state."""
-        from precompact_refresh import build_checkpoint
+        """Test building checkpoint from workflow state using fallback function."""
+        # Item 1: Renamed to _build_checkpoint_fallback, test the fallback
+        from precompact_refresh import _build_checkpoint_fallback
 
         workflow_state = {
             "workflow": {"name": "peer-review", "id": "pr-64"},
@@ -121,7 +122,7 @@ class TestBuildCheckpointFunction:
             "extraction": {"confidence": 0.9, "notes": "clear trigger"},
         }
 
-        checkpoint = build_checkpoint(
+        checkpoint = _build_checkpoint_fallback(
             workflow_state=workflow_state,
             session_id="test-session",
             transcript_path="/test/path",
@@ -136,10 +137,11 @@ class TestBuildCheckpointFunction:
         assert "created_at" in checkpoint
 
     def test_build_without_workflow_state(self):
-        """Test building checkpoint when no workflow detected."""
-        from precompact_refresh import build_checkpoint
+        """Test building checkpoint when no workflow detected using fallback."""
+        # Item 1: Renamed to _build_checkpoint_fallback, test the fallback
+        from precompact_refresh import _build_checkpoint_fallback
 
-        checkpoint = build_checkpoint(
+        checkpoint = _build_checkpoint_fallback(
             workflow_state=None,
             session_id="test-session",
             transcript_path="/test/path",

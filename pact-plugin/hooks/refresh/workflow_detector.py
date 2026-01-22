@@ -9,7 +9,6 @@ signals.
 """
 
 from dataclasses import dataclass
-from typing import Optional
 
 from .transcript_parser import Turn, find_trigger_turn_index
 from .patterns import (
@@ -40,7 +39,7 @@ class WorkflowInfo:
     name: str
     workflow_id: str = ""
     started_at: str = ""
-    trigger_turn: Optional[Turn] = None
+    trigger_turn: Turn | None = None
     confidence: float = 0.0
     is_terminated: bool = False
     notes: str = ""

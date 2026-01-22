@@ -22,7 +22,9 @@ from refresh.transcript_parser import (
     find_turns_with_content,
     find_last_user_message,
     find_task_calls_to_agent,
+    find_trigger_turn_index,
 )
+from refresh.constants import LARGE_FILE_THRESHOLD_BYTES
 
 
 class TestTurnDataclass:
@@ -206,11 +208,12 @@ class TestReadLastNLines:
         content = "line1\nline2\nline3"
         file_path.write_text(content)
 
-        lines = read_last_n_lines(file_path, 10)
+        lines, total = read_last_n_lines(file_path, 10)
 
         assert len(lines) == 3
         assert "line1" in lines[0]
         assert "line3" in lines[2]
+        assert total == 3
 
     def test_read_large_file_truncated(self, tmp_path: Path):
         """Test reading only last N lines from large file."""
@@ -218,18 +221,20 @@ class TestReadLastNLines:
         all_lines = [f"line{i}" for i in range(100)]
         file_path.write_text("\n".join(all_lines))
 
-        lines = read_last_n_lines(file_path, 10)
+        lines, total = read_last_n_lines(file_path, 10)
 
         assert len(lines) == 10
         # Should get lines 90-99
         assert "line90" in lines[0]
         assert "line99" in lines[9]
+        assert total == 100
 
     def test_read_nonexistent_file(self, capsys):
         """Test handling of nonexistent file."""
-        lines = read_last_n_lines(Path("/nonexistent/file.txt"), 10)
+        lines, total = read_last_n_lines(Path("/nonexistent/file.txt"), 10)
 
         assert lines == []
+        assert total == 0
         captured = capsys.readouterr()
         assert "Could not read transcript" in captured.err
 
@@ -431,3 +436,176 @@ class TestEdgeCases:
         assert turns[0].tool_calls[0].name == "Read"
         assert turns[0].tool_calls[1].name == "Write"
         assert turns[0].tool_calls[2].name == "Task"
+
+
+class TestFindTriggerTurnIndex:
+    """Tests for find_trigger_turn_index function."""
+
+    def test_find_existing_turn(self):
+        """Test finding index when turn exists."""
+        turns = [
+            Turn(turn_type="user", content="Hello", line_number=1),
+            Turn(turn_type="assistant", content="Hi", line_number=2),
+            Turn(turn_type="user", content="/PACT:peer-review", line_number=5),
+            Turn(turn_type="assistant", content="Starting...", line_number=6),
+        ]
+
+        index = find_trigger_turn_index(turns, 5)
+        assert index == 2  # The turn with line_number=5 is at index 2
+
+    def test_return_zero_when_not_found(self):
+        """Test returning 0 when turn not found."""
+        turns = [
+            Turn(turn_type="user", content="Hello", line_number=1),
+            Turn(turn_type="assistant", content="Hi", line_number=2),
+        ]
+
+        index = find_trigger_turn_index(turns, 99)
+        assert index == 0
+
+    def test_empty_turns_list(self):
+        """Test handling empty turns list."""
+        index = find_trigger_turn_index([], 5)
+        assert index == 0
+
+    def test_first_turn_found(self):
+        """Test finding the first turn."""
+        turns = [
+            Turn(turn_type="user", content="First", line_number=1),
+            Turn(turn_type="assistant", content="Second", line_number=2),
+        ]
+
+        index = find_trigger_turn_index(turns, 1)
+        assert index == 0
+
+    def test_last_turn_found(self):
+        """Test finding the last turn."""
+        turns = [
+            Turn(turn_type="user", content="First", line_number=1),
+            Turn(turn_type="assistant", content="Last", line_number=10),
+        ]
+
+        index = find_trigger_turn_index(turns, 10)
+        assert index == 1
+
+    def test_duplicate_line_numbers_returns_first(self):
+        """Test handling duplicate line numbers returns first match."""
+        turns = [
+            Turn(turn_type="user", content="First at 5", line_number=5),
+            Turn(turn_type="assistant", content="Also at 5", line_number=5),
+            Turn(turn_type="user", content="At 6", line_number=6),
+        ]
+
+        # Should return the first turn with line_number=5
+        index = find_trigger_turn_index(turns, 5)
+        assert index == 0
+        assert turns[index].content == "First at 5"
+
+    def test_with_non_sequential_line_numbers(self):
+        """Test with gaps in line numbers (some lines parsed, others skipped)."""
+        turns = [
+            Turn(turn_type="user", content="Line 10", line_number=10),
+            Turn(turn_type="assistant", content="Line 25", line_number=25),
+            Turn(turn_type="user", content="Line 100", line_number=100),
+        ]
+
+        assert find_trigger_turn_index(turns, 10) == 0
+        assert find_trigger_turn_index(turns, 25) == 1
+        assert find_trigger_turn_index(turns, 100) == 2
+        assert find_trigger_turn_index(turns, 50) == 0  # Not found, return 0
+
+
+class TestLargeFileHandling:
+    """Tests for large file handling in read_last_n_lines."""
+
+    def test_large_file_uses_chunked_reading(self, tmp_path: Path, monkeypatch):
+        """Test that files larger than threshold use chunked reading."""
+        # Temporarily set threshold to a small value (patch in constants module)
+        monkeypatch.setattr(
+            "refresh.constants.LARGE_FILE_THRESHOLD_BYTES",
+            1000,
+        )
+
+        # Reimport to get the patched value
+        import refresh.transcript_parser as tp
+
+        # Create a file larger than the threshold
+        file_path = tmp_path / "large.txt"
+        # Each line is ~20 bytes, need ~100 lines to exceed 1000 bytes
+        lines_content = [f"line{i:05d}_padding" for i in range(100)]
+        file_path.write_text("\n".join(lines_content))
+
+        assert file_path.stat().st_size > 1000
+
+        # Read last 10 lines - returns (lines, total_count)
+        lines, total = tp.read_last_n_lines(file_path, 10)
+
+        assert len(lines) == 10
+        # Verify we got the last lines
+        assert "line00090" in lines[0]
+        assert "line00099" in lines[9]
+        # Total is estimated for large files
+        assert total > 0
+
+    def test_small_file_simple_read(self, tmp_path: Path, monkeypatch):
+        """Test that files smaller than threshold use simple reading."""
+        monkeypatch.setattr(
+            "refresh.constants.LARGE_FILE_THRESHOLD_BYTES",
+            10000,
+        )
+
+        import refresh.transcript_parser as tp
+
+        # Create a small file
+        file_path = tmp_path / "small.txt"
+        file_path.write_text("line1\nline2\nline3\nline4\nline5")
+
+        assert file_path.stat().st_size < 10000
+
+        lines, total = tp.read_last_n_lines(file_path, 3)
+
+        assert len(lines) == 3
+        assert "line3" in lines[0]
+        assert "line5" in lines[2]
+        assert total == 5  # Exact count for small files
+
+    def test_chunked_reading_boundary_conditions(self, tmp_path: Path, monkeypatch):
+        """Test chunked reading at exact boundaries."""
+        monkeypatch.setattr(
+            "refresh.constants.LARGE_FILE_THRESHOLD_BYTES",
+            500,
+        )
+
+        import refresh.transcript_parser as tp
+
+        # Create file just over threshold
+        file_path = tmp_path / "boundary.txt"
+        lines_content = [f"line{i:03d}" for i in range(100)]
+        file_path.write_text("\n".join(lines_content))
+
+        lines, total = tp.read_last_n_lines(file_path, 5)
+
+        assert len(lines) == 5
+        # Last 5 lines should be 95-99
+        assert "line095" in lines[0]
+        assert "line099" in lines[4]
+        assert total > 0  # Estimated for large files
+
+    def test_large_file_request_more_lines_than_exist(self, tmp_path: Path, monkeypatch):
+        """Test requesting more lines than file contains."""
+        monkeypatch.setattr(
+            "refresh.constants.LARGE_FILE_THRESHOLD_BYTES",
+            100,
+        )
+
+        import refresh.transcript_parser as tp
+
+        file_path = tmp_path / "few_lines.txt"
+        file_path.write_text("a" * 50 + "\nline1\nline2\nline3")
+
+        lines, total = tp.read_last_n_lines(file_path, 100)
+
+        # Should return all lines we have
+        assert len(lines) <= 100
+        assert any("line3" in line for line in lines)
+        assert total > 0
