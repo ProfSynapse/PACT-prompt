@@ -11,4 +11,6 @@ skills-research/
 **/pact-memory/tests/
 __pycache__/
 .pytest_cache/
-*.pyc.hypothesis/
+*.pyc
+.hypothesis/
+**/.hypothesis/
