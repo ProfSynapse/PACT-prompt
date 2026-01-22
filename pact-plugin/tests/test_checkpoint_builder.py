@@ -313,25 +313,26 @@ class TestCheckpointToRefreshMessage:
     """Tests for checkpoint_to_refresh_message function."""
 
     def test_refresh_message_format(self, sample_checkpoint):
-        """Test compact refresh message contains expected elements."""
+        """Test directive prompt refresh message contains expected elements."""
         message = checkpoint_to_refresh_message(sample_checkpoint)
 
-        # Check new compact format
-        assert "[REFRESH]" in message
+        # Check new directive prompt format
+        assert "[WORKFLOW REFRESH]" in message
+        assert "Context auto-compaction occurred" in message
+        assert "You are resuming:" in message
         assert "peer-review" in message
         assert "pr-64" in message
+        assert "State:" in message
         assert "recommendations" in message
-        assert "0.9" in message
-        # Check compact format structure
-        assert "@" in message  # step separator
-        assert "conf:" in message  # confidence prefix
+        assert "Confidence: 0.9" in message
+        # Check guidance line
+        assert "Verify with user if context seems outdated" in message
 
     def test_refresh_message_with_pending_action(self, sample_checkpoint):
-        """Test refresh message includes pending action in compact format."""
+        """Test refresh message includes pending action as Action line."""
         message = checkpoint_to_refresh_message(sample_checkpoint)
 
-        assert "Next:" in message
-        assert "AskUserQuestion" in message
+        assert "Action:" in message
         assert "Would you like to review" in message
 
     def test_refresh_message_with_context(self, sample_checkpoint):
@@ -352,7 +353,7 @@ class TestCheckpointToRefreshMessage:
         assert message == ""
 
     def test_refresh_message_confidence_values(self):
-        """Test confidence value is displayed correctly."""
+        """Test confidence value is displayed correctly in guidance line."""
         checkpoint = {
             "workflow": {
                 "name": "peer-review",
@@ -366,11 +367,12 @@ class TestCheckpointToRefreshMessage:
 
         message = checkpoint_to_refresh_message(checkpoint)
 
-        # Compact format shows numeric confidence, not labels
-        assert "conf: 0.5" in message
+        # Directive format shows confidence in guidance line
+        assert "Confidence: 0.5" in message
+        assert "Verify with user if context seems outdated" in message
 
     def test_refresh_message_no_pending_action(self):
-        """Test refresh message without pending action."""
+        """Test refresh message without pending action omits Action line."""
         checkpoint = {
             "workflow": {
                 "name": "orchestrate",
@@ -385,10 +387,12 @@ class TestCheckpointToRefreshMessage:
         message = checkpoint_to_refresh_message(checkpoint)
 
         assert "orchestrate" in message
-        assert "Next:" not in message
+        assert "Action:" not in message
+        # Should still have guidance line
+        assert "Verify with user if context seems outdated" in message
 
     def test_refresh_message_no_context(self):
-        """Test refresh message without context."""
+        """Test refresh message without context omits Context line."""
         checkpoint = {
             "workflow": {
                 "name": "orchestrate",
@@ -405,9 +409,13 @@ class TestCheckpointToRefreshMessage:
         # Empty context means no "Context:" line
         assert "Context:" not in message
         assert isinstance(message, str)
+        # Should still have required lines
+        assert "[WORKFLOW REFRESH]" in message
+        assert "You are resuming:" in message
+        assert "State:" in message
 
-    def test_refresh_message_compact_format(self):
-        """Test the exact compact format structure."""
+    def test_refresh_message_directive_format(self):
+        """Test the exact directive prompt format structure."""
         checkpoint = {
             "workflow": {
                 "name": "peer-review",
@@ -425,19 +433,24 @@ class TestCheckpointToRefreshMessage:
         message = checkpoint_to_refresh_message(checkpoint)
         lines = message.split("\n")
 
-        # Should have 3 lines
-        assert len(lines) == 3
-        # Line 1: [REFRESH] workflow @ step (conf: X.X)
-        assert lines[0].startswith("[REFRESH]")
-        assert "peer-review PR#88 @ awaiting_user_decision" in lines[0]
-        assert "conf: 0.8" in lines[0]
-        # Line 2: Next action
-        assert lines[1].startswith("Next:")
-        assert "User Decision" in lines[1]
-        # Line 3: Context
-        assert lines[2].startswith("Context:")
-        assert "reviewers=3" in lines[2]
-        assert "blocking=0" in lines[2]
+        # Should have 7 lines (header, explanatory, resuming, state, context, action, guidance)
+        assert len(lines) == 7
+        # Line 1: [WORKFLOW REFRESH]
+        assert lines[0] == "[WORKFLOW REFRESH]"
+        # Line 2: Explanatory line
+        assert lines[1] == "Context auto-compaction occurred. This information helps you resume the PACT workflow in progress."
+        # Line 3: You are resuming: workflow (id)
+        assert lines[2] == "You are resuming: peer-review (PR#88)"
+        # Line 4: State
+        assert lines[3] == "State: awaiting_user_decision"
+        # Line 5: Context
+        assert lines[4].startswith("Context:")
+        assert "reviewers=3" in lines[4]
+        assert "blocking=0" in lines[4]
+        # Line 6: Action
+        assert lines[5] == "Action: Waiting for user to authorize merge"
+        # Line 7: Guidance
+        assert lines[6] == "Confidence: 0.8. Verify with user if context seems outdated."
 
 
 class TestEdgeCases:
@@ -505,8 +518,10 @@ class TestEdgeCases:
         # Should not raise
         message = checkpoint_to_refresh_message(checkpoint)
 
+        assert "[WORKFLOW REFRESH]" in message
         assert "peer-review" in message
         assert "unknown" in message  # Default step name
+        assert "Verify with user if context seems outdated" in message  # Guidance line always present
 
 
 class TestCheckpointSchemaRoundTrip:

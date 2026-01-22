@@ -141,27 +141,30 @@ class TestBuildRefreshMessage:
     """Tests for build_refresh_message function."""
 
     def test_build_complete_message(self, sample_checkpoint):
-        """Test building compact refresh message with all fields."""
+        """Test building directive prompt refresh message with all fields."""
         from compaction_refresh import build_refresh_message
 
         message = build_refresh_message(sample_checkpoint)
 
-        # Check compact format
-        assert "[REFRESH]" in message
+        # Check directive prompt format
+        assert "[WORKFLOW REFRESH]" in message
+        assert "Context auto-compaction occurred" in message
+        assert "You are resuming:" in message
         assert "peer-review" in message
         assert "pr-64" in message
+        assert "State:" in message
         assert "recommendations" in message
-        assert "0.9" in message
-        assert "conf:" in message
+        assert "Confidence: 0.9" in message
+        assert "Verify with user if context seems outdated" in message
 
     def test_build_message_with_pending_action(self, sample_checkpoint):
-        """Test refresh message includes pending action in compact format."""
+        """Test refresh message includes pending action as Action line."""
         from compaction_refresh import build_refresh_message
 
         message = build_refresh_message(sample_checkpoint)
 
-        assert "Next:" in message
-        assert "AskUserQuestion" in message
+        assert "Action:" in message
+        assert "Would you like to review" in message
 
     def test_build_message_with_context(self, sample_checkpoint):
         """Test refresh message includes context in compact key=value format."""
@@ -173,7 +176,7 @@ class TestBuildRefreshMessage:
         assert "pr_number=64" in message
 
     def test_build_message_confidence_values(self):
-        """Test confidence values are displayed numerically."""
+        """Test confidence values are displayed in guidance line."""
         from compaction_refresh import build_refresh_message
 
         checkpoint = {
@@ -185,8 +188,9 @@ class TestBuildRefreshMessage:
 
         message = build_refresh_message(checkpoint)
 
-        # Compact format shows numeric confidence
-        assert "conf: 0.5" in message
+        # Directive format shows confidence in guidance line
+        assert "Confidence: 0.5" in message
+        assert "Verify with user if context seems outdated" in message
 
 
 class TestCompactionRefreshMain:
@@ -221,7 +225,7 @@ class TestCompactionRefreshMain:
 
         assert "hookSpecificOutput" in result
         refresh_msg = result["hookSpecificOutput"]["additionalContext"]
-        assert "[REFRESH]" in refresh_msg
+        assert "[WORKFLOW REFRESH]" in refresh_msg
         assert "peer-review" in refresh_msg
 
     def test_main_with_no_workflow(self, tmp_path: Path):
@@ -456,7 +460,7 @@ class TestEndToEndRefresh:
         result = json.loads(output)
         refresh_msg = result["hookSpecificOutput"]["additionalContext"]
 
-        assert "[REFRESH]" in refresh_msg
+        assert "[WORKFLOW REFRESH]" in refresh_msg
         assert "peer-review" in refresh_msg
         assert "recommendations" in refresh_msg or "pr-99" in refresh_msg
 
@@ -601,7 +605,7 @@ class TestExceptionHandlingPaths:
         message = build_refresh_message(minimal_checkpoint)
 
         # Should not crash and should produce valid message
-        assert "[REFRESH]" in message
+        assert "[WORKFLOW REFRESH]" in message
         assert "peer-review" in message
 
     def test_build_refresh_message_with_empty_context(self):
@@ -618,7 +622,7 @@ class TestExceptionHandlingPaths:
         message = build_refresh_message(checkpoint)
 
         # Should not crash
-        assert "[REFRESH]" in message
+        assert "[WORKFLOW REFRESH]" in message
 
     def test_get_encoded_project_path_from_env_empty_string(self):
         """Test handling of empty string CLAUDE_PROJECT_DIR."""

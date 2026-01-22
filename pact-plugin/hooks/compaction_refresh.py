@@ -138,15 +138,24 @@ def validate_checkpoint(checkpoint: dict, current_session_id: str) -> bool:
 
 def _build_refresh_message_fallback(checkpoint: dict) -> str:
     """
-    Fallback: Build the compact refresh message for the orchestrator (~50 tokens).
+    Fallback: Build the directive prompt refresh message for the orchestrator (~50-60 tokens).
 
     Used when refresh package is not available.
+
+    Format:
+        [WORKFLOW REFRESH]
+        Context auto-compaction occurred. This information helps you resume the PACT workflow in progress.
+        You are resuming: {workflow_name} ({workflow_id})
+        State: {step_name}
+        Context: key=value, ... (only if context exists)
+        Action: {pending_action.instruction} (only if pending action exists)
+        Confidence: X.X. Verify with user if context seems outdated.
 
     Args:
         checkpoint: The validated checkpoint data
 
     Returns:
-        Compact formatted refresh message string
+        Directive prompt formatted refresh message string
     """
     workflow = checkpoint.get("workflow", {})
     workflow_name = workflow.get("name", "unknown")
@@ -161,25 +170,33 @@ def _build_refresh_message_fallback(checkpoint: dict) -> str:
     context = checkpoint.get("context", {})
     pending_action = checkpoint.get("pending_action", {})
 
-    # Build workflow identifier with optional ID
-    workflow_display = workflow_name
+    lines = ["[WORKFLOW REFRESH]"]
+
+    # Line 2: Explanatory line
+    lines.append("Context auto-compaction occurred. This information helps you resume the PACT workflow in progress.")
+
+    # Line 3: You are resuming: workflow (id)
     if workflow_id:
-        workflow_display = f"{workflow_name} {workflow_id}"
+        lines.append(f"You are resuming: {workflow_name} ({workflow_id})")
+    else:
+        lines.append(f"You are resuming: {workflow_name}")
 
-    # Line 1: [REFRESH] workflow @ step (conf: X.X)
-    lines = [f"[REFRESH] {workflow_display} @ {step_name} (conf: {confidence:.1f})"]
+    # Line 4: State
+    lines.append(f"State: {step_name}")
 
-    # Line 2: Next action if present
-    if pending_action:
-        action_type = pending_action.get("type", "")
-        instruction = pending_action.get("instruction", "")
-        if action_type and instruction:
-            lines.append(f"Next: {action_type} - {instruction}")
-
-    # Line 3: Context in compact key=value format
+    # Line 5: Context (only if present)
     if context:
         context_parts = [f"{k}={v}" for k, v in context.items()]
         lines.append(f"Context: {', '.join(context_parts)}")
+
+    # Line 6: Action (only if pending action exists)
+    if pending_action:
+        instruction = pending_action.get("instruction", "")
+        if instruction:
+            lines.append(f"Action: {instruction}")
+
+    # Line 7: Confidence guidance
+    lines.append(f"Confidence: {confidence:.1f}. Verify with user if context seems outdated.")
 
     return "\n".join(lines)
 
