@@ -46,7 +46,8 @@ Select the domain coder based on PR focus:
 
 **After all reviews complete**:
 1. Synthesize findings into a unified review summary with consolidated recommendations
-2. Present **all** findings to user as a table **before asking any questions** (blocking, minor, and future):
+2. Present **all** findings to user as a **markdown table** **before asking any questions** (blocking, minor, and future):
+
    | Recommendation | Severity | Reviewer |
    |----------------|----------|----------|
    | [the finding]  | Blocking / Minor / Future | architect / test / backend / etc. |
