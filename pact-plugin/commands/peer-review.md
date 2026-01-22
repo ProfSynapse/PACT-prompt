@@ -83,3 +83,7 @@ Select the domain coder based on PR focus:
 4. State merge readiness (only after ALL blocking fixes complete AND minor/future item handling is done): "Ready to merge" or "Changes requested: [specifics]"
 
 5. Present to user and **stop** — merging requires explicit user authorization (S5 policy)
+
+---
+
+**After user-authorized merge**: Run `/PACT:pin-memory` to update the project `CLAUDE.md` with the latest changes.
