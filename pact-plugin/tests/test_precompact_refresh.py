@@ -1,0 +1,432 @@
+"""
+Integration tests for the PreCompact hook (precompact_refresh.py).
+
+Tests the full flow of transcript parsing to checkpoint creation.
+"""
+
+import json
+import os
+import sys
+import tempfile
+from io import StringIO
+from pathlib import Path
+from unittest.mock import patch, MagicMock
+
+import pytest
+
+# Add hooks and tests directory to path
+sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
+sys.path.insert(0, str(Path(__file__).parent))
+
+from conftest import (
+    create_peer_review_transcript,
+    create_orchestrate_transcript,
+    create_no_workflow_transcript,
+    create_terminated_workflow_transcript,
+    create_malformed_transcript,
+)
+
+
+class TestGetEncodedProjectPath:
+    """Tests for get_encoded_project_path function in precompact_refresh."""
+
+    def test_extract_valid_path(self):
+        """Test extracting path from valid transcript path."""
+        from precompact_refresh import get_encoded_project_path
+
+        transcript_path = "/Users/test/.claude/projects/-Users-test-myproject/session-uuid/session.jsonl"
+        encoded = get_encoded_project_path(transcript_path)
+
+        assert encoded == "-Users-test-myproject"
+
+    def test_extract_fails_invalid_path(self):
+        """Test extraction fails for invalid path."""
+        from precompact_refresh import get_encoded_project_path
+
+        result = get_encoded_project_path("/invalid/path/no/projects")
+
+        assert result is None
+
+
+class TestGetCheckpointPath:
+    """Tests for get_checkpoint_path function."""
+
+    def test_checkpoint_path_format(self):
+        """Test checkpoint path is correctly formatted."""
+        from precompact_refresh import get_checkpoint_path
+
+        path = get_checkpoint_path("-Users-test-project")
+
+        assert path == Path.home() / ".claude" / "pact-refresh" / "-Users-test-project.json"
+
+
+class TestWriteCheckpointAtomic:
+    """Tests for write_checkpoint_atomic function."""
+
+    def test_write_creates_directory(self, tmp_path: Path):
+        """Test that write creates parent directory if needed."""
+        from precompact_refresh import write_checkpoint_atomic
+
+        checkpoint_path = tmp_path / "subdir" / "checkpoint.json"
+        data = {"test": "data"}
+
+        success = write_checkpoint_atomic(checkpoint_path, data)
+
+        assert success is True
+        assert checkpoint_path.exists()
+        assert json.loads(checkpoint_path.read_text()) == data
+
+    def test_write_overwrites_existing(self, tmp_path: Path):
+        """Test that write overwrites existing checkpoint."""
+        from precompact_refresh import write_checkpoint_atomic
+
+        checkpoint_path = tmp_path / "checkpoint.json"
+        checkpoint_path.write_text('{"old": "data"}')
+
+        new_data = {"new": "data"}
+        success = write_checkpoint_atomic(checkpoint_path, new_data)
+
+        assert success is True
+        assert json.loads(checkpoint_path.read_text()) == new_data
+
+    def test_write_is_atomic(self, tmp_path: Path):
+        """Test that write uses atomic rename pattern."""
+        from precompact_refresh import write_checkpoint_atomic
+
+        checkpoint_path = tmp_path / "checkpoint.json"
+        checkpoint_path.write_text('{"original": "data"}')
+
+        # Write new data
+        new_data = {"atomic": "write"}
+        success = write_checkpoint_atomic(checkpoint_path, new_data)
+
+        assert success is True
+        # No temp files should remain
+        temp_files = list(tmp_path.glob("checkpoint_*.tmp"))
+        assert len(temp_files) == 0
+
+
+class TestBuildCheckpointFunction:
+    """Tests for build_checkpoint function in precompact_refresh."""
+
+    def test_build_with_workflow_state(self):
+        """Test building checkpoint from workflow state."""
+        from precompact_refresh import build_checkpoint
+
+        workflow_state = {
+            "workflow": {"name": "peer-review", "id": "pr-64"},
+            "step": {"name": "recommendations", "sequence": 5},
+            "pending_action": {"type": "AskUserQuestion", "instruction": "Proceed?"},
+            "context": {"pr_number": 64},
+            "extraction": {"confidence": 0.9, "notes": "clear trigger"},
+        }
+
+        checkpoint = build_checkpoint(
+            workflow_state=workflow_state,
+            session_id="test-session",
+            transcript_path="/test/path",
+            lines_scanned=150,
+        )
+
+        assert checkpoint["version"] == "1.0"
+        assert checkpoint["session_id"] == "test-session"
+        assert checkpoint["workflow"]["name"] == "peer-review"
+        assert checkpoint["step"]["name"] == "recommendations"
+        assert checkpoint["pending_action"]["type"] == "AskUserQuestion"
+        assert "created_at" in checkpoint
+
+    def test_build_without_workflow_state(self):
+        """Test building checkpoint when no workflow detected."""
+        from precompact_refresh import build_checkpoint
+
+        checkpoint = build_checkpoint(
+            workflow_state=None,
+            session_id="test-session",
+            transcript_path="/test/path",
+            lines_scanned=500,
+        )
+
+        assert checkpoint["workflow"]["name"] == "none"
+        assert checkpoint["extraction"]["confidence"] == 1.0
+        assert checkpoint["extraction"]["notes"] == "No active workflow detected"
+
+
+class TestPrecompactMain:
+    """Integration tests for the main() function."""
+
+    def test_main_with_active_workflow(self, tmp_path: Path):
+        """Test full flow with active peer-review workflow."""
+        # Create transcript
+        transcript_content = create_peer_review_transcript(
+            step="recommendations",
+            include_pr_number=64,
+            include_pending_question=True,
+        )
+        projects_dir = tmp_path / ".claude" / "projects"
+        encoded_path = "-test-project"
+        session_dir = projects_dir / encoded_path / "session-uuid"
+        session_dir.mkdir(parents=True)
+        transcript_path = session_dir / "session.jsonl"
+        transcript_path.write_text(transcript_content)
+
+        # Create checkpoint directory
+        checkpoint_dir = tmp_path / ".claude" / "pact-refresh"
+        checkpoint_dir.mkdir(parents=True)
+
+        # Mock input and environment
+        input_data = json.dumps({"transcript_path": str(transcript_path)})
+
+        with patch("sys.stdin", StringIO(input_data)), \
+             patch.dict(os.environ, {"CLAUDE_SESSION_ID": "test-session"}), \
+             patch("pathlib.Path.home", return_value=tmp_path):
+
+            # Import and run main
+            from precompact_refresh import main
+
+            # Capture output
+            with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
+                with pytest.raises(SystemExit) as exc_info:
+                    main()
+                assert exc_info.value.code == 0
+                output = mock_stdout.getvalue()
+
+        # Parse output
+        result = json.loads(output)
+
+        assert "hookSpecificOutput" in result
+        assert "Checkpoint saved" in result["hookSpecificOutput"]["additionalContext"]
+        assert "peer-review" in result["hookSpecificOutput"]["additionalContext"]
+
+        # Verify checkpoint was written
+        checkpoint_path = checkpoint_dir / f"{encoded_path}.json"
+        assert checkpoint_path.exists()
+
+        checkpoint = json.loads(checkpoint_path.read_text())
+        assert checkpoint["workflow"]["name"] == "peer-review"
+        assert checkpoint["session_id"] == "test-session"
+
+    def test_main_with_no_workflow(self, tmp_path: Path):
+        """Test flow when no workflow is active."""
+        # Create transcript without workflow
+        transcript_content = create_no_workflow_transcript()
+        projects_dir = tmp_path / ".claude" / "projects"
+        encoded_path = "-test-project"
+        session_dir = projects_dir / encoded_path / "session-uuid"
+        session_dir.mkdir(parents=True)
+        transcript_path = session_dir / "session.jsonl"
+        transcript_path.write_text(transcript_content)
+
+        # Create checkpoint directory
+        checkpoint_dir = tmp_path / ".claude" / "pact-refresh"
+        checkpoint_dir.mkdir(parents=True)
+
+        input_data = json.dumps({"transcript_path": str(transcript_path)})
+
+        with patch("sys.stdin", StringIO(input_data)), \
+             patch.dict(os.environ, {"CLAUDE_SESSION_ID": "test-session"}), \
+             patch("pathlib.Path.home", return_value=tmp_path):
+
+            from precompact_refresh import main
+
+            with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
+                with pytest.raises(SystemExit) as exc_info:
+                    main()
+                assert exc_info.value.code == 0
+                output = mock_stdout.getvalue()
+
+        result = json.loads(output)
+
+        # Should still save checkpoint (with workflow=none)
+        assert "Checkpoint saved" in result["hookSpecificOutput"]["additionalContext"]
+        assert "none" in result["hookSpecificOutput"]["additionalContext"]
+
+    def test_main_without_transcript_path(self, tmp_path: Path):
+        """Test handling missing transcript path in input."""
+        input_data = json.dumps({})
+
+        with patch("sys.stdin", StringIO(input_data)), \
+             patch("pathlib.Path.home", return_value=tmp_path):
+
+            from precompact_refresh import main
+
+            with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
+                with pytest.raises(SystemExit) as exc_info:
+                    main()
+                assert exc_info.value.code == 0
+                output = mock_stdout.getvalue()
+
+        result = json.loads(output)
+
+        assert "Skipped" in result["hookSpecificOutput"]["additionalContext"]
+
+    def test_main_with_invalid_json_input(self, tmp_path: Path):
+        """Test handling invalid JSON input."""
+        with patch("sys.stdin", StringIO("not valid json")), \
+             patch("pathlib.Path.home", return_value=tmp_path):
+
+            from precompact_refresh import main
+
+            with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
+                with pytest.raises(SystemExit) as exc_info:
+                    main()
+                assert exc_info.value.code == 0
+                output = mock_stdout.getvalue()
+
+        # Should handle gracefully and output valid JSON
+        result = json.loads(output)
+        assert "hookSpecificOutput" in result
+
+    def test_main_never_raises(self, tmp_path: Path):
+        """Test that main() never raises exceptions (always exits 0)."""
+        # Simulate various failure conditions
+        input_data = json.dumps({"transcript_path": "/nonexistent/path/session.jsonl"})
+
+        with patch("sys.stdin", StringIO(input_data)), \
+             patch("pathlib.Path.home", return_value=tmp_path):
+
+            from precompact_refresh import main
+
+            # Should not raise even with nonexistent path
+            with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
+                # main() calls sys.exit(0), which we expect
+                with pytest.raises(SystemExit) as exc_info:
+                    main()
+                assert exc_info.value.code == 0
+
+    def test_main_with_terminated_workflow(self, tmp_path: Path):
+        """Test flow with terminated workflow."""
+        transcript_content = create_terminated_workflow_transcript()
+        projects_dir = tmp_path / ".claude" / "projects"
+        encoded_path = "-test-project"
+        session_dir = projects_dir / encoded_path / "session-uuid"
+        session_dir.mkdir(parents=True)
+        transcript_path = session_dir / "session.jsonl"
+        transcript_path.write_text(transcript_content)
+
+        checkpoint_dir = tmp_path / ".claude" / "pact-refresh"
+        checkpoint_dir.mkdir(parents=True)
+
+        input_data = json.dumps({"transcript_path": str(transcript_path)})
+
+        with patch("sys.stdin", StringIO(input_data)), \
+             patch.dict(os.environ, {"CLAUDE_SESSION_ID": "test-session"}), \
+             patch("pathlib.Path.home", return_value=tmp_path):
+
+            from precompact_refresh import main
+
+            with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
+                with pytest.raises(SystemExit) as exc_info:
+                    main()
+                assert exc_info.value.code == 0
+                output = mock_stdout.getvalue()
+
+        result = json.loads(output)
+
+        # Terminated workflow results in "none" or low confidence
+        # The exact behavior depends on confidence threshold
+        assert "hookSpecificOutput" in result
+
+
+class TestIntegrationScenarios:
+    """Integration tests for specific scenarios."""
+
+    def test_orchestrate_code_phase_refresh(self, tmp_path: Path):
+        """Test refresh checkpoint for orchestrate workflow in CODE phase."""
+        transcript_content = create_orchestrate_transcript(
+            phase="code",
+            include_task="implement auth",
+            include_agent_calls=True,
+        )
+        projects_dir = tmp_path / ".claude" / "projects"
+        encoded_path = "-test-project"
+        session_dir = projects_dir / encoded_path / "session-uuid"
+        session_dir.mkdir(parents=True)
+        transcript_path = session_dir / "session.jsonl"
+        transcript_path.write_text(transcript_content)
+
+        checkpoint_dir = tmp_path / ".claude" / "pact-refresh"
+        checkpoint_dir.mkdir(parents=True)
+
+        input_data = json.dumps({"transcript_path": str(transcript_path)})
+
+        with patch("sys.stdin", StringIO(input_data)), \
+             patch.dict(os.environ, {"CLAUDE_SESSION_ID": "test-session"}), \
+             patch("pathlib.Path.home", return_value=tmp_path):
+
+            from precompact_refresh import main
+
+            with patch("sys.stdout", new_callable=StringIO):
+                with pytest.raises(SystemExit) as exc_info:
+                    main()
+                assert exc_info.value.code == 0
+
+        checkpoint_path = checkpoint_dir / f"{encoded_path}.json"
+        checkpoint = json.loads(checkpoint_path.read_text())
+
+        assert checkpoint["workflow"]["name"] == "orchestrate"
+
+    def test_malformed_transcript_handling(self, tmp_path: Path):
+        """Test handling of transcript with malformed lines."""
+        transcript_content = create_malformed_transcript()
+        projects_dir = tmp_path / ".claude" / "projects"
+        encoded_path = "-test-project"
+        session_dir = projects_dir / encoded_path / "session-uuid"
+        session_dir.mkdir(parents=True)
+        transcript_path = session_dir / "session.jsonl"
+        transcript_path.write_text(transcript_content)
+
+        checkpoint_dir = tmp_path / ".claude" / "pact-refresh"
+        checkpoint_dir.mkdir(parents=True)
+
+        input_data = json.dumps({"transcript_path": str(transcript_path)})
+
+        with patch("sys.stdin", StringIO(input_data)), \
+             patch.dict(os.environ, {"CLAUDE_SESSION_ID": "test-session"}), \
+             patch("pathlib.Path.home", return_value=tmp_path):
+
+            from precompact_refresh import main
+
+            # Should handle gracefully without crashing
+            with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
+                with pytest.raises(SystemExit) as exc_info:
+                    main()
+                assert exc_info.value.code == 0
+                output = mock_stdout.getvalue()
+
+        result = json.loads(output)
+        assert "hookSpecificOutput" in result
+
+    def test_checkpoint_overwrite(self, tmp_path: Path):
+        """Test that new checkpoint overwrites old one."""
+        # Create old checkpoint
+        checkpoint_dir = tmp_path / ".claude" / "pact-refresh"
+        checkpoint_dir.mkdir(parents=True)
+        old_checkpoint_path = checkpoint_dir / "-test-project.json"
+        old_checkpoint_path.write_text(json.dumps({"old": "checkpoint"}))
+
+        # Create new transcript
+        transcript_content = create_peer_review_transcript()
+        projects_dir = tmp_path / ".claude" / "projects"
+        encoded_path = "-test-project"
+        session_dir = projects_dir / encoded_path / "session-uuid"
+        session_dir.mkdir(parents=True)
+        transcript_path = session_dir / "session.jsonl"
+        transcript_path.write_text(transcript_content)
+
+        input_data = json.dumps({"transcript_path": str(transcript_path)})
+
+        with patch("sys.stdin", StringIO(input_data)), \
+             patch.dict(os.environ, {"CLAUDE_SESSION_ID": "new-session"}), \
+             patch("pathlib.Path.home", return_value=tmp_path):
+
+            from precompact_refresh import main
+
+            with patch("sys.stdout", new_callable=StringIO):
+                with pytest.raises(SystemExit) as exc_info:
+                    main()
+                assert exc_info.value.code == 0
+
+        # Verify checkpoint was overwritten
+        new_checkpoint = json.loads(old_checkpoint_path.read_text())
+        assert new_checkpoint.get("session_id") == "new-session"
+        assert "old" not in new_checkpoint
