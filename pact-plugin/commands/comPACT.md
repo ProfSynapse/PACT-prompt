@@ -1,10 +1,10 @@
 ---
-description: Delegate within a single domain—parallel agents for independent sub-tasks
+description: Delegate within a single domain—concurrent agents for independent sub-tasks
 argument-hint: [backend|frontend|database|prepare|test|architect] <task>
 ---
 Delegate this focused task within a single PACT domain: $ARGUMENTS
 
-**Default: parallel for independent sub-tasks.** If the task contains multiple independent items (bugs, endpoints, components), invoke multiple specialists of the same type in parallel unless they share files.
+**Default: invoke concurrently for independent sub-tasks.** If the task contains multiple independent items (bugs, endpoints, components), dispatch multiple specialists of the same type together unless they share files.
 
 > ⚠️ **Single domain ≠ single agent.** "Backend domain" with 3 bugs = 3 backend-coders in parallel. The domain is singular; the agents are not.
 
@@ -46,11 +46,11 @@ If the first word isn't a recognized shorthand, treat the entire argument as the
 
 ---
 
-## When to Parallelize (Same-Domain)
+## When to Invoke Multiple Specialists
 
-**Default: parallel unless tasks share files.**
+**Default: dispatch concurrently unless tasks share files.**
 
-Parallelize when:
+Invoke concurrently when:
 - Multiple independent items (bugs, components, endpoints)
 - No shared files between sub-tasks
 - Same patterns/conventions apply to all
@@ -58,20 +58,20 @@ Parallelize when:
 **Examples:**
 | Task | Agents Invoked |
 |------|----------------|
-| "Fix 3 backend bugs" | 3 backend-coders (parallel) |
-| "Add validation to 5 endpoints" | Multiple backend-coders |
-| "Update styling on 3 components" | Multiple frontend-coders |
+| "Fix 3 backend bugs" | 3 backend-coders at once |
+| "Add validation to 5 endpoints" | Multiple backend-coders simultaneously |
+| "Update styling on 3 components" | Multiple frontend-coders together |
 
-**Do NOT parallelize when:**
+**Do NOT invoke concurrently when:**
 - Sub-tasks modify the same files
 - Sub-tasks have dependencies on each other
-- Conventions haven't been established yet (run one first, then parallelize)
+- Conventions haven't been established yet (run one first to set patterns, then dispatch the rest together)
 
 ---
 
-## S2 Light Coordination (Required Before Parallel Invocation)
+## S2 Light Coordination (Required Before Concurrent Dispatch)
 
-Before invoking multiple specialists in parallel, perform this coordination check:
+Before invoking multiple specialists concurrently, perform this coordination check:
 
 1. **Identify potential conflicts**
    - List files each sub-task will touch
@@ -85,7 +85,7 @@ Before invoking multiple specialists in parallel, perform this coordination chec
    - Clearly state which sub-task handles which files/components
    - Include this in each specialist's prompt
 
-**If conflicts cannot be resolved**: Sequence the work instead of parallelizing.
+**If conflicts cannot be resolved**: Sequence the work instead of dispatching concurrently.
 
 ---
 
@@ -96,7 +96,7 @@ Before invoking multiple specialists in parallel, perform this coordination chec
 | Internal (don't show) | External (show) |
 |----------------------|-----------------|
 | S2 coordination analysis, conflict checking | `Delegating to backend coder` |
-| Parallelization reasoning, file boundary decisions | `Invoking 3 frontend coders in parallel` |
+| Concurrency reasoning, file boundary decisions | `Invoking 3 frontend coders in parallel` |
 | Specialist selection logic | `Auto-selected: database (SQL keywords detected)` |
 
 **User can always ask** for details (e.g., "Why that specialist?" or "Show me the conflict analysis").
@@ -104,7 +104,7 @@ Before invoking multiple specialists in parallel, perform this coordination chec
 | Verbose (avoid) | Concise (prefer) |
 |-----------------|------------------|
 | "Let me check if these sub-tasks share files..." | (just do it, report result) |
-| "I'm analyzing whether to parallelize..." | `Parallel: no shared files` |
+| "I'm analyzing whether to invoke concurrently..." | `Concurrent: no shared files` |
 
 ---
 
@@ -112,12 +112,12 @@ Before invoking multiple specialists in parallel, perform this coordination chec
 
 **Create feature branch** if not already on one (recommended for behavior changes; optional for trivial).
 
-### Parallel Specialist Agents (Default)
+### Multiple Specialists Concurrently (Default)
 
-When the task contains multiple independent items, invoke multiple specialists in parallel with boundary context:
+When the task contains multiple independent items, invoke multiple specialists together with boundary context:
 
 ```
-comPACT mode (parallel): You are one of [N] specialists working in parallel.
+comPACT mode (concurrent): You are one of [N] specialists working concurrently.
 
 YOUR SCOPE: [specific sub-task and files this agent owns]
 OTHER AGENTS' SCOPE: [what other agents are handling - do not touch]
@@ -137,7 +137,7 @@ If you hit a blocker or need to modify files outside your scope, STOP and report
 Task: [this agent's specific sub-task]
 ```
 
-**After all parallel agents complete**: Verify no conflicts occurred, run full test suite.
+**After all concurrent agents complete**: Verify no conflicts occurred, run full test suite.
 
 ### Single Specialist Agent (When Required)
 
@@ -183,7 +183,7 @@ Examples of blockers:
 - Missing dependencies, access, or information
 - Same error persists after multiple fix attempts
 - Scope exceeds single-domain capability (needs cross-domain coordination)
-- Parallel agents have unresolvable conflicts
+- Concurrent agents have unresolvable conflicts
 
 When blocker is reported:
 1. Receive blocker report from specialist

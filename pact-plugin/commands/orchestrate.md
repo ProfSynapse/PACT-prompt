@@ -96,15 +96,15 @@ Before running orchestration, assess task variety using the protocol in [pact-va
 
 ## Execution Philosophy
 
-**Default: Parallel unless proven dependent.**
+**Default: Invoke concurrently unless proven dependent.**
 
 This applies across ALL phases, not just CODE:
-- PREPARE with multiple research areas → parallel preparers
-- ARCHITECT with independent component designs → parallel architects
-- CODE with multiple domains or independent tasks → parallel coders
-- TEST with independent test suites → parallel test engineers
+- PREPARE with multiple research areas → multiple preparers at once
+- ARCHITECT with independent component designs → multiple architects simultaneously
+- CODE with multiple domains or independent tasks → multiple coders together
+- TEST with independent test suites → multiple test engineers concurrently
 
-Sequential execution is the exception requiring explicit justification. When assessing any phase, ask: "Can parts of this run in parallel?" The answer is usually yes.
+Sequential execution is the exception requiring explicit justification. When assessing any phase, ask: "Can specialists be invoked concurrently?" The answer is usually yes.
 
 ---
 
@@ -197,7 +197,7 @@ Each specialist should end with a structured handoff:
 - [ ] If blocker reported → `/PACT:imPACT`
 - [ ] **S4 Checkpoint** (see [pact-s4-checkpoints.md](../protocols/pact-s4-checkpoints.md)): Environment stable? Model aligned? Plan viable?
 
-**Parallel within PREPARE**: If research spans multiple independent areas (e.g., "research auth options AND caching strategies"), invoke multiple preparers in parallel with clear scope boundaries.
+**Concurrent dispatch within PREPARE**: If research spans multiple independent areas (e.g., "research auth options AND caching strategies"), invoke multiple preparers together with clear scope boundaries.
 
 ---
 
@@ -236,7 +236,7 @@ If PREPARE ran and ARCHITECT was marked "Skip," compare PREPARE's recommended ap
 - [ ] If blocker reported → `/PACT:imPACT`
 - [ ] **S4 Checkpoint**: Environment stable? Model aligned? Plan viable?
 
-**Parallel within ARCHITECT**: If designing multiple independent components (e.g., "design user service AND notification service"), invoke multiple architects in parallel. Ensure interface contracts between components are defined as a coordination checkpoint.
+**Concurrent dispatch within ARCHITECT**: If designing multiple independent components (e.g., "design user service AND notification service"), invoke multiple architects simultaneously. Ensure interface contracts between components are defined as a coordination checkpoint.
 
 ---
 
@@ -261,18 +261,18 @@ If PREPARE ran and ARCHITECT was marked "Skip," compare PREPARE's recommended ap
 - `pact-frontend-coder` — UI, client-side
 - `pact-database-engineer` — schema, queries, migrations
 
-#### Parallel-First Philosophy
+#### Invoke Concurrently by Default
 
-**Default stance**: Parallel unless proven dependent. Sequential requires explicit justification.
+**Default stance**: Dispatch specialists together unless proven dependent. Sequential requires explicit justification.
 
 **Required decision output** (no exceptions):
-- "**Parallel**: [groupings]" — the expected outcome
+- "**Concurrent**: [groupings]" — the expected outcome
 - "**Sequential because [specific reason]**: [ordering]" — requires explicit justification
-- "**Mixed**: [parallel groupings], then [sequential dependencies]" — when genuinely mixed
+- "**Mixed**: [concurrent groupings], then [sequential dependencies]" — when genuinely mixed
 
-**Deviation from parallel requires articulated reasoning.** "I'm not sure" defaults to parallel with S2 coordination, not sequential.
+**Deviation from concurrent dispatch requires articulated reasoning.** "I'm not sure" defaults to concurrent with S2 coordination, not sequential.
 
-**Analysis should complete quickly.** Use the Quick Dependency Checklist (QDCL) below. If QDCL analysis takes more than 2 minutes, you're likely over-analyzing independent tasks—default to parallel with S2 coordination.
+**Analysis should complete quickly.** Use the Quick Dependency Checklist (QDCL) below. If QDCL analysis takes more than 2 minutes, you're likely over-analyzing independent tasks—default to concurrent dispatch with S2 coordination.
 
 ---
 
@@ -285,16 +285,16 @@ If PREPARE ran and ARCHITECT was marked "Skip," compare PREPARE's recommended ap
 For each pair of work units, check:
 - Same file modified? → Sequential (or define strict boundaries)
 - A's output is B's input? → Sequential (A first)
-- Shared interface undefined? → Define interface first, then parallel
-- None of above? → Parallel
+- Shared interface undefined? → Define interface first, then concurrent
+- None of above? → Concurrent
 
 **Output format**: Decision only. Example: `Invoking backend + frontend coders in parallel` or `Sequential: database first, then backend (schema dependency)`
 
-**If QDCL shows no dependencies**: Parallel is your answer. Don't second-guess.
+**If QDCL shows no dependencies**: Concurrent is your answer. Don't second-guess.
 
-#### S2 Pre-Parallel Coordination
+#### S2 Pre-Dispatch Coordination
 
-Before parallel invocation, check internally: shared files? shared interfaces? conventions established?
+Before concurrent dispatch, check internally: shared files? shared interfaces? conventions established?
 
 - **Shared files**: Sequence those agents OR assign clear boundaries
 - **Conventions**: First agent's choice becomes standard; propagate to others
@@ -302,7 +302,7 @@ Before parallel invocation, check internally: shared files? shared interfaces? c
 
 **Output**: Silent if no conflicts; only mention if conflicts found (e.g., `S2 check: types.ts shared — backend writes, frontend reads`).
 
-**Include in parallel prompts**: "You are working in parallel. Your scope is [files]. Do not modify files outside your scope."
+**Include in prompts for concurrent specialists**: "You are working concurrently with other specialists. Your scope is [files]. Do not modify files outside your scope."
 
 **Invoke coder(s) with**:
 - Task description
@@ -357,7 +357,7 @@ If a sub-task emerges that is too complex for a single specialist invocation:
 - [ ] Specialist handoff received (see Handoff Format above)
 - [ ] If blocker reported → `/PACT:imPACT`
 
-**Parallel within TEST**: If test suites are independent (e.g., "unit tests AND E2E tests" or "API tests AND UI tests"), invoke multiple test engineers in parallel with clear suite boundaries.
+**Concurrent dispatch within TEST**: If test suites are independent (e.g., "unit tests AND E2E tests" or "API tests AND UI tests"), invoke multiple test engineers at once with clear suite boundaries.
 
 ---
 

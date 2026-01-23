@@ -244,6 +244,21 @@ Explicit user override ("you code this, don't delegate") should be honored; casu
 
 **If in doubt, delegate!**
 
+#### Invoke Multiple Specialists Concurrently
+
+> ⚠️ **DEFAULT TO CONCURRENT**: When delegating, dispatch multiple specialists together in a single response unless tasks share files or have explicit dependencies. This is not optional—it's the expected mode of orchestration.
+
+**Core Principle**: If specialist tasks can run independently, invoke them at once. Sequential dispatch is only for tasks with true dependencies.
+
+**How**: Include multiple `Task` tool calls in a single response. Each specialist runs concurrently.
+
+| Scenario | Action |
+|----------|--------|
+| Same phase, independent tasks | Dispatch multiple specialists simultaneously |
+| Same domain, multiple items (3 bugs, 5 endpoints) | Invoke multiple specialists of same type at once |
+| Different domains touched | Dispatch specialists across domains together |
+| Tasks share files or have dependencies | Dispatch sequentially (exception, not default) |
+
 ### What Is "Application Code"?
 
 The delegation rule applies to **application code**. Here's what that means:
@@ -305,7 +320,7 @@ When delegating a task, these specialist agents are available to execute PACT ph
 **Why always background?**
 - Agent work should never block the user conversation
 - The orchestrator can continue coordinating while agents execute
-- Multiple agents can run in parallel
+- Multiple specialists can run concurrently
 - Results are reported back when ready
 
 ```python
@@ -368,9 +383,9 @@ To invoke specialist agents, follow this sequence:
 3. **CODE Phase**: Invoke relevant coders (includes smoke tests + decision log)
 4. **TEST Phase**: Invoke `pact-test-engineer` (for all substantive testing)
 
-Within each phase, invoke **multiple agents in parallel** for non-conflicting tasks.
+Within each phase, invoke **multiple specialists concurrently** for non-conflicting tasks.
 
-> ⚠️ **Single domain ≠ single agent.** "Backend domain" with 3 bugs = 3 backend-coders in parallel. Default to parallel unless tasks share files or have dependencies.
+> ⚠️ **Single domain ≠ single agent.** "Backend domain" with 3 bugs = 3 backend-coders in parallel. Default to concurrent dispatch unless tasks share files or have dependencies.
 
 **After all phases complete**: Run `/PACT:peer-review` to create a PR.
 
