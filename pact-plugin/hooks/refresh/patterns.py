@@ -68,6 +68,7 @@ TRIGGER_PATTERNS = {
     "plan-mode": re.compile(r"/PACT:plan-mode", re.IGNORECASE),
     "comPACT": re.compile(r"/PACT:comPACT", re.IGNORECASE),
     "rePACT": re.compile(r"/PACT:rePACT", re.IGNORECASE),
+    "imPACT": re.compile(r"/PACT:imPACT", re.IGNORECASE),
 }
 
 # Step markers for each workflow (appear in assistant messages)
@@ -106,6 +107,12 @@ STEP_MARKERS = {
         "nested-code",
         "nested-test",
     ],
+    "imPACT": [
+        "triage",
+        "assessing-redo",
+        "selecting-agents",
+        "resolution-path",
+    ],
 }
 
 # Termination signals (indicate workflow has completed)
@@ -137,6 +144,14 @@ TERMINATION_SIGNALS = {
     "rePACT": [
         r"nested\s+cycle\s+complete",
         r"rePACT\s+complete",
+    ],
+    "imPACT": [
+        r"redo\s+solo",
+        r"redo\s+with\s+help",
+        r"proceed\s+with\s+help",
+        r"imPACT\s+resolved",
+        r"returning\s+to\s+(?:main\s+)?workflow",
+        r"blocker\s+resolved",
     ],
 }
 

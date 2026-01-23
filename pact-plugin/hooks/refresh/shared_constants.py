@@ -40,6 +40,11 @@ STEP_DESCRIPTIONS = {
     "nested-architect": "Running nested ARCHITECT phase",
     "nested-code": "Running nested CODE phase",
     "nested-test": "Running nested TEST phase",
+    # imPACT (triage/blocker) steps
+    "triage": "Triaging blocker - determining resolution path",
+    "assessing-redo": "Assessing whether to redo prior phase",
+    "selecting-agents": "Selecting agents to assist with resolution",
+    "resolution-path": "Executing resolution path",
 }
 
 
@@ -186,6 +191,42 @@ def _prose_nested_test(ctx: dict) -> str:
     return "Was running nested TEST phase."
 
 
+def _prose_triage(ctx: dict) -> str:
+    """Generate prose for triage step."""
+    blocker = ctx.get("blocker", "")
+    if blocker:
+        return f"Was triaging blocker: {blocker}"
+    return "Was triaging a blocker to determine resolution path."
+
+
+def _prose_assessing_redo(ctx: dict) -> str:
+    """Generate prose for assessing-redo step."""
+    prior_phase = ctx.get("prior_phase", "")
+    if prior_phase:
+        return f"Was assessing whether to redo {prior_phase} phase."
+    return "Was assessing whether to redo a prior phase."
+
+
+def _prose_selecting_agents(ctx: dict) -> str:
+    """Generate prose for selecting-agents step."""
+    agents = ctx.get("agents", "")
+    if agents:
+        return f"Was selecting agents to assist: {agents}."
+    return "Was selecting agents to assist with resolution."
+
+
+def _prose_resolution_path(ctx: dict) -> str:
+    """Generate prose for resolution-path step."""
+    outcome = ctx.get("outcome", "")
+    if outcome == "redo_solo":
+        return "Resolution: redo prior phase solo."
+    elif outcome == "redo_with_help":
+        return "Resolution: redo prior phase with agent assistance."
+    elif outcome == "proceed_with_help":
+        return "Resolution: proceed with agent assistance."
+    return "Was executing resolution path for blocker."
+
+
 # === PROSE CONTEXT TEMPLATES DICT ===
 # Maps step names to their prose generator functions
 
@@ -217,4 +258,9 @@ PROSE_CONTEXT_TEMPLATES = {
     "nested-architect": _prose_nested_architect,
     "nested-code": _prose_nested_code,
     "nested-test": _prose_nested_test,
+    # imPACT (triage/blocker) steps
+    "triage": _prose_triage,
+    "assessing-redo": _prose_assessing_redo,
+    "selecting-agents": _prose_selecting_agents,
+    "resolution-path": _prose_resolution_path,
 }

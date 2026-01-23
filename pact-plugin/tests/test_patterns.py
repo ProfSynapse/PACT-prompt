@@ -74,6 +74,7 @@ class TestCompileWorkflowPatterns:
             "plan-mode",
             "comPACT",
             "rePACT",
+            "imPACT",
         ]
         for workflow in expected_workflows:
             assert workflow in patterns, f"Missing workflow: {workflow}"
@@ -127,7 +128,7 @@ class TestWorkflowPatternsConstant:
 
     def test_workflow_patterns_contains_expected_keys(self):
         """Test WORKFLOW_PATTERNS has expected workflow types."""
-        expected_keys = {"peer-review", "orchestrate", "plan-mode", "comPACT", "rePACT"}
+        expected_keys = {"peer-review", "orchestrate", "plan-mode", "comPACT", "rePACT", "imPACT"}
         assert expected_keys.issubset(set(WORKFLOW_PATTERNS.keys()))
 
     def test_peer_review_pattern(self):
@@ -486,15 +487,15 @@ class TestConstants:
 
     def test_trigger_patterns_keys(self):
         """Test trigger patterns have expected workflow keys."""
-        expected_keys = {"peer-review", "orchestrate", "plan-mode", "comPACT", "rePACT"}
+        expected_keys = {"peer-review", "orchestrate", "plan-mode", "comPACT", "rePACT", "imPACT"}
         assert set(TRIGGER_PATTERNS.keys()) == expected_keys
 
     def test_step_markers_keys(self):
         """Test step markers have expected workflow keys."""
-        expected_keys = {"peer-review", "orchestrate", "plan-mode", "comPACT", "rePACT"}
+        expected_keys = {"peer-review", "orchestrate", "plan-mode", "comPACT", "rePACT", "imPACT"}
         assert set(STEP_MARKERS.keys()) == expected_keys
 
     def test_termination_signals_keys(self):
         """Test termination signals have expected workflow keys."""
-        expected_keys = {"peer-review", "orchestrate", "plan-mode", "comPACT", "rePACT"}
+        expected_keys = {"peer-review", "orchestrate", "plan-mode", "comPACT", "rePACT", "imPACT"}
         assert set(TERMINATION_SIGNALS.keys()) == expected_keys
