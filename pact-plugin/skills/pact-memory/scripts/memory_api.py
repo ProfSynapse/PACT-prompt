@@ -11,8 +11,11 @@ with the memory system.
 
 Used by:
 - SKILL.md: Documents API usage for skill invocation
-- Hooks: memory_prompt.py and session_init.py
+- Hooks: memory_prompt.py for file tracking
 - Agents: Direct memory operations during PACT phases
+
+Note: Memory initialization is lazy-loaded on first use via memory_init.py,
+eliminating startup cost for non-memory users.
 """
 
 import logging
@@ -72,9 +75,29 @@ from .working_memory import (
     _format_memory_entry,
     _parse_working_memory_section,
 )
+from .memory_init import ensure_memory_ready
 
 # Configure logging
 logger = logging.getLogger(__name__)
+
+
+def _ensure_ready() -> None:
+    """
+    Ensure the memory system is initialized before database operations.
+
+    This wrapper exists as:
+    - A single injection point for all API methods (centralized initialization)
+    - A testing seam (can be mocked to skip initialization in tests)
+    - An abstraction layer if initialization logic needs to change
+
+    Handles lazily on first use:
+    - Dependency installation
+    - Embedding migration
+    - Pending embedding catch-up
+
+    The initialization only runs once per session.
+    """
+    ensure_memory_ready()
 
 
 class PACTMemory:
@@ -196,6 +219,9 @@ class PACTMemory:
         Returns:
             The ID of the saved memory.
         """
+        # Ensure memory system is ready (lazy initialization)
+        _ensure_ready()
+
         # Add project/session context if not provided
         if "project_id" not in memory or memory["project_id"] is None:
             memory["project_id"] = self._project_id
@@ -325,6 +351,9 @@ class PACTMemory:
         Returns:
             List of matching MemoryObject instances.
         """
+        # Ensure memory system is ready (lazy initialization)
+        _ensure_ready()
+
         results = graph_enhanced_search(
             query,
             current_file=current_file,
@@ -360,6 +389,9 @@ class PACTMemory:
         Returns:
             List of related MemoryObject instances.
         """
+        # Ensure memory system is ready (lazy initialization)
+        _ensure_ready()
+
         return search_by_file(file_path, self._project_id, limit)
 
     def get(self, memory_id: str) -> Optional[MemoryObject]:
@@ -372,6 +404,9 @@ class PACTMemory:
         Returns:
             MemoryObject if found, None otherwise.
         """
+        # Ensure memory system is ready (lazy initialization)
+        _ensure_ready()
+
         with db_connection(self._db_path) as conn:
             ensure_initialized(conn)
 
@@ -396,6 +431,9 @@ class PACTMemory:
         Returns:
             True if updated, False if memory not found.
         """
+        # Ensure memory system is ready (lazy initialization)
+        _ensure_ready()
+
         with db_connection(self._db_path) as conn:
             ensure_initialized(conn)
 
@@ -421,6 +459,9 @@ class PACTMemory:
         Returns:
             True if deleted, False if not found.
         """
+        # Ensure memory system is ready (lazy initialization)
+        _ensure_ready()
+
         with db_connection(self._db_path) as conn:
             ensure_initialized(conn)
 
@@ -450,6 +491,9 @@ class PACTMemory:
         Returns:
             List of MemoryObject instances ordered by creation time.
         """
+        # Ensure memory system is ready (lazy initialization)
+        _ensure_ready()
+
         with db_connection(self._db_path) as conn:
             ensure_initialized(conn)
 
@@ -477,6 +521,9 @@ class PACTMemory:
         Returns:
             Dictionary with database stats and capabilities.
         """
+        # Ensure memory system is ready (lazy initialization)
+        _ensure_ready()
+
         from .database import get_memory_count
         from .graph import get_graph_stats
 

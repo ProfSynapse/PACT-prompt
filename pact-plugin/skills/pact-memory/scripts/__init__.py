@@ -129,6 +129,16 @@ from .embedding_catchup import (
     embed_pending_memories,
 )
 
+# Lazy Initialization
+from .memory_init import (
+    ensure_memory_ready,
+    reset_initialization,
+    is_initialized,
+    check_and_install_dependencies,
+    maybe_migrate_embeddings,
+    maybe_embed_pending,
+)
+
 # Setup utilities
 from .setup_memory import (
     check_dependencies,
@@ -235,6 +245,14 @@ __all__ = [
     "get_unembedded_memories",
     "embed_single_memory",
     "embed_pending_memories",
+
+    # Lazy Initialization
+    "ensure_memory_ready",
+    "reset_initialization",
+    "is_initialized",
+    "check_and_install_dependencies",
+    "maybe_migrate_embeddings",
+    "maybe_embed_pending",
 
     # Setup
     "check_dependencies",
