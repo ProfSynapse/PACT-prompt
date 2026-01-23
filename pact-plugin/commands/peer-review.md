@@ -66,21 +66,26 @@ Select the domain coder based on PR focus:
      - After all fixes complete, re-run review to verify fixes only (not a full PR re-review)
      - **Termination**: If blocking items persist after 2 fix-verify cycles → escalate via `/PACT:imPACT`
    - **Minor + Future**:
-     - **Before proceeding**: Use `AskUserQuestion` tool: "Would you like to review the minor and future recommendations?"
+
+     **Step A — Initial Gate Question** (Yes/No only):
+     - Use `AskUserQuestion` tool: "Would you like to review the minor and future recommendations?"
        - Options: **Yes** (review each item) / **No** (skip to merge readiness)
      - If **No**: Skip to step 4 directly
-     - If **Yes**: Continue with recommendation review flow below:
-       - Use `AskUserQuestion` tool with one question per recommendation (table from step 2 provides context):
-         - Each minor: "Address [recommendation] now?" with options:
-           - **Yes** — Fix it in this PR
-           - **No** — Skip for now
-           - **More context** — Get additional details about this recommendation before deciding
-         - Each future: "What would you like to do with [recommendation]?" with options:
-           - **Create GitHub issue** — Track for future work
-           - **Skip** — Don't track or address
-           - **Address now** — Fix it in this PR
-           - **More context** — Get additional details about this recommendation before deciding
-         - Note: Tool supports 2-4 options per question and 1-4 questions per call. If >4 recommendations exist, make multiple `AskUserQuestion` calls to cover all items.
+     - If **Yes**: Continue to Step B
+
+     **Step B — Per-Recommendation Questions** (different options than gate question):
+     - Use `AskUserQuestion` tool with one question per recommendation (table from step 2 provides context)
+     - **Important**: These questions have MORE options than the gate question — each includes "More context"
+     - For each **minor** recommendation, ask "Address [recommendation] now?" with options:
+       - **Yes** — Fix it in this PR
+       - **No** — Skip for now
+       - **More context** — Get additional details about this recommendation before deciding
+     - For each **future** recommendation, ask "What would you like to do with [recommendation]?" with options:
+       - **Create GitHub issue** — Track for future work
+       - **Skip** — Don't track or address
+       - **Address now** — Fix it in this PR
+       - **More context** — Get additional details about this recommendation before deciding
+     - Note: Tool supports 2-4 options per question and 1-4 questions per call. If >4 recommendations exist, make multiple `AskUserQuestion` calls to cover all items.
        - **Handling "More context" responses**:
          - When user selects "More context" for any recommendation, provide expanded explanation including:
            - Why it matters (impact on code quality, maintainability, security, performance)
