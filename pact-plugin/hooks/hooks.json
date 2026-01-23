@@ -36,11 +36,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/validate_handoff.py\""
-          },
-          {
-            "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/memory_enforce.py\""
+            "command": "echo '🧠 MEMORY CHECKPOINT: Agent completed. Save context if meaningful work was done.'"
           }
         ]
       }
@@ -64,6 +60,15 @@
       }
     ],
     "PostToolUse": [
+      {
+        "matcher": "Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":\"🧠 MEMORY CHECK: A PACT agent just completed. Consider saving context via pact-memory-agent if meaningful work was done.\"}}'"
+          }
+        ]
+      },
       {
         "matcher": "Edit",
         "hooks": [
