@@ -6,10 +6,6 @@ Used by: refresh/__init__.py and PreCompact hook.
 Assembles a checkpoint dict following the schema defined in the
 refresh plan, suitable for writing to disk and later refresh.
 Also provides shared utilities for checkpoint path resolution.
-
-Item 13 Note: This module uses Pydantic BaseModel when available for
-validation, with dataclass fallback. To enable Pydantic features,
-install pydantic: pip install pydantic
 """
 
 import os
@@ -22,227 +18,107 @@ from .workflow_detector import WorkflowInfo
 from .step_extractor import StepInfo
 from .constants import (
     CHECKPOINT_VERSION,
-    CONFIDENCE_LABEL_HIGH,
-    CONFIDENCE_LABEL_MEDIUM,
+    CONFIDENCE_AUTO_PROCEED_THRESHOLD,
     STEP_DESCRIPTIONS,
     PROSE_CONTEXT_TEMPLATES,
 )
 
-# Mapping of terse context keys to verbose equivalents for refresh messages
-# This helps AI understand what each key means when resuming after compaction
-CONTEXT_KEY_VERBOSE = {
-    "reviewers": "reviewers_completed",
-    "blocking": "blocking_issues",
-    "round": "review_round",
-    "pr_number": "pr_number",  # already clear
-    "phase": "current_phase",
-    "feature": "feature_name",
-    "branch": "branch_name",
-    "plan_file": "plan_file",  # already clear
-    "has_blocking": "has_blocking_issues",
-    "minor_count": "minor_issues_count",
-    "future_count": "future_recommendations_count",
-}
+from dataclasses import dataclass, field
 
-# Item 13: Try to use Pydantic, fall back to dataclass
-try:
-    from pydantic import BaseModel, Field
 
-    class CheckpointSchema(BaseModel):
-        """
-        Item 13: Pydantic model for checkpoint data structure.
+@dataclass
+class CheckpointSchema:
+    """
+    Dataclass for checkpoint data structure.
 
-        Provides automatic validation, serialization, and type checking.
-        Uses model_dump() and model_validate() for dict conversion.
-        """
-        version: str = CHECKPOINT_VERSION
-        session_id: str
-        workflow_name: str
-        workflow_id: str = ""
-        workflow_started_at: str = ""
-        step_name: str = ""
-        step_sequence: int = 0
-        step_started_at: str = ""
-        pending_action_type: str | None = None
-        pending_action_instruction: str | None = None
-        pending_action_data: dict[str, Any] = Field(default_factory=dict)
-        context: dict[str, Any] = Field(default_factory=dict)
-        confidence: float = 0.0
-        extraction_notes: str = ""
-        transcript_lines_scanned: int = 0
-        created_at: str = ""
+    Provides type-safe access to checkpoint fields and serves as
+    documentation for the checkpoint format.
+    """
+    version: str = CHECKPOINT_VERSION
+    session_id: str = ""
+    workflow_name: str = ""
+    workflow_id: str = ""
+    workflow_started_at: str = ""
+    step_name: str = ""
+    step_sequence: int = 0
+    step_started_at: str = ""
+    pending_action_type: str | None = None
+    pending_action_instruction: str | None = None
+    pending_action_data: dict[str, Any] = field(default_factory=dict)
+    context: dict[str, Any] = field(default_factory=dict)
+    confidence: float = 0.0
+    extraction_notes: str = ""
+    transcript_lines_scanned: int = 0
+    created_at: str = ""
 
-        def to_dict(self) -> dict[str, Any]:
-            """Convert to checkpoint dict format (compatibility method)."""
-            pending_action = None
-            if self.pending_action_type:
-                pending_action = {
-                    "type": self.pending_action_type,
-                    "instruction": self.pending_action_instruction or "",
-                    "data": self.pending_action_data,
-                }
-
-            return {
-                "version": self.version,
-                "session_id": self.session_id,
-                "workflow": {
-                    "name": self.workflow_name,
-                    "id": self.workflow_id,
-                    "started_at": self.workflow_started_at,
-                },
-                "step": {
-                    "name": self.step_name,
-                    "sequence": self.step_sequence,
-                    "started_at": self.step_started_at,
-                },
-                "pending_action": pending_action,
-                "context": self.context,
-                "extraction": {
-                    "confidence": self.confidence,
-                    "notes": self.extraction_notes,
-                    "transcript_lines_scanned": self.transcript_lines_scanned,
-                },
-                "created_at": self.created_at,
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to checkpoint dict format."""
+        pending_action = None
+        if self.pending_action_type:
+            pending_action = {
+                "type": self.pending_action_type,
+                "instruction": self.pending_action_instruction or "",
+                "data": self.pending_action_data,
             }
 
-        @classmethod
-        def from_dict(cls, data: dict[str, Any]) -> "CheckpointSchema":
-            """Create from checkpoint dict format (compatibility method)."""
-            # Item 10: Version compatibility check
-            version = data.get("version", CHECKPOINT_VERSION)
-            if version != CHECKPOINT_VERSION:
-                print(
-                    f"Warning: Checkpoint version {version} differs from current {CHECKPOINT_VERSION}. "
-                    "Attempting to use anyway. Migration may be needed for future versions.",
-                    file=sys.stderr,
-                )
+        return {
+            "version": self.version,
+            "session_id": self.session_id,
+            "workflow": {
+                "name": self.workflow_name,
+                "id": self.workflow_id,
+                "started_at": self.workflow_started_at,
+            },
+            "step": {
+                "name": self.step_name,
+                "sequence": self.step_sequence,
+                "started_at": self.step_started_at,
+            },
+            "pending_action": pending_action,
+            "context": self.context,
+            "extraction": {
+                "confidence": self.confidence,
+                "notes": self.extraction_notes,
+                "transcript_lines_scanned": self.transcript_lines_scanned,
+            },
+            "created_at": self.created_at,
+        }
 
-            workflow = data.get("workflow", {})
-            step = data.get("step", {})
-            extraction = data.get("extraction", {})
-            pending = data.get("pending_action") or {}
-
-            return cls(
-                version=version,
-                session_id=data.get("session_id", ""),
-                workflow_name=workflow.get("name", "none"),
-                workflow_id=workflow.get("id", ""),
-                workflow_started_at=workflow.get("started_at", ""),
-                step_name=step.get("name", ""),
-                step_sequence=step.get("sequence", 0),
-                step_started_at=step.get("started_at", ""),
-                pending_action_type=pending.get("type") if pending else None,
-                pending_action_instruction=pending.get("instruction") if pending else None,
-                pending_action_data=pending.get("data", {}) if pending else {},
-                context=data.get("context", {}),
-                confidence=extraction.get("confidence", 0.0),
-                extraction_notes=extraction.get("notes", ""),
-                transcript_lines_scanned=extraction.get("transcript_lines_scanned", 0),
-                created_at=data.get("created_at", ""),
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "CheckpointSchema":
+        """Create from checkpoint dict format."""
+        # Version compatibility check
+        version = data.get("version", CHECKPOINT_VERSION)
+        if version != CHECKPOINT_VERSION:
+            print(
+                f"Warning: Checkpoint version {version} differs from current {CHECKPOINT_VERSION}. "
+                "Attempting to use anyway. Migration may be needed for future versions.",
+                file=sys.stderr,
             )
 
-    _USING_PYDANTIC = True
+        workflow = data.get("workflow", {})
+        step = data.get("step", {})
+        extraction = data.get("extraction", {})
+        pending = data.get("pending_action") or {}
 
-except ImportError:
-    # Fall back to dataclass when Pydantic not available
-    from dataclasses import dataclass, field
-
-    @dataclass
-    class CheckpointSchema:
-        """
-        Dataclass fallback for checkpoint data structure.
-
-        Provides type-safe access to checkpoint fields and serves as
-        documentation for the checkpoint format. Install pydantic for
-        automatic validation features.
-        """
-        version: str = CHECKPOINT_VERSION
-        session_id: str = ""
-        workflow_name: str = ""
-        workflow_id: str = ""
-        workflow_started_at: str = ""
-        step_name: str = ""
-        step_sequence: int = 0
-        step_started_at: str = ""
-        pending_action_type: str | None = None
-        pending_action_instruction: str | None = None
-        pending_action_data: dict[str, Any] = field(default_factory=dict)
-        context: dict[str, Any] = field(default_factory=dict)
-        confidence: float = 0.0
-        extraction_notes: str = ""
-        transcript_lines_scanned: int = 0
-        created_at: str = ""
-
-        def to_dict(self) -> dict[str, Any]:
-            """Convert to checkpoint dict format."""
-            pending_action = None
-            if self.pending_action_type:
-                pending_action = {
-                    "type": self.pending_action_type,
-                    "instruction": self.pending_action_instruction or "",
-                    "data": self.pending_action_data,
-                }
-
-            return {
-                "version": self.version,
-                "session_id": self.session_id,
-                "workflow": {
-                    "name": self.workflow_name,
-                    "id": self.workflow_id,
-                    "started_at": self.workflow_started_at,
-                },
-                "step": {
-                    "name": self.step_name,
-                    "sequence": self.step_sequence,
-                    "started_at": self.step_started_at,
-                },
-                "pending_action": pending_action,
-                "context": self.context,
-                "extraction": {
-                    "confidence": self.confidence,
-                    "notes": self.extraction_notes,
-                    "transcript_lines_scanned": self.transcript_lines_scanned,
-                },
-                "created_at": self.created_at,
-            }
-
-        @classmethod
-        def from_dict(cls, data: dict[str, Any]) -> "CheckpointSchema":
-            """Create from checkpoint dict format."""
-            # Item 10: Version compatibility check
-            version = data.get("version", CHECKPOINT_VERSION)
-            if version != CHECKPOINT_VERSION:
-                print(
-                    f"Warning: Checkpoint version {version} differs from current {CHECKPOINT_VERSION}. "
-                    "Attempting to use anyway. Migration may be needed for future versions.",
-                    file=sys.stderr,
-                )
-
-            workflow = data.get("workflow", {})
-            step = data.get("step", {})
-            extraction = data.get("extraction", {})
-            pending = data.get("pending_action") or {}
-
-            return cls(
-                version=version,
-                session_id=data.get("session_id", ""),
-                workflow_name=workflow.get("name", "none"),
-                workflow_id=workflow.get("id", ""),
-                workflow_started_at=workflow.get("started_at", ""),
-                step_name=step.get("name", ""),
-                step_sequence=step.get("sequence", 0),
-                step_started_at=step.get("started_at", ""),
-                pending_action_type=pending.get("type") if pending else None,
-                pending_action_instruction=pending.get("instruction") if pending else None,
-                pending_action_data=pending.get("data", {}) if pending else {},
-                context=data.get("context", {}),
-                confidence=extraction.get("confidence", 0.0),
-                extraction_notes=extraction.get("notes", ""),
-                transcript_lines_scanned=extraction.get("transcript_lines_scanned", 0),
-                created_at=data.get("created_at", ""),
-            )
-
-    _USING_PYDANTIC = False
+        return cls(
+            version=version,
+            session_id=data.get("session_id", ""),
+            workflow_name=workflow.get("name", "none"),
+            workflow_id=workflow.get("id", ""),
+            workflow_started_at=workflow.get("started_at", ""),
+            step_name=step.get("name", ""),
+            step_sequence=step.get("sequence", 0),
+            step_started_at=step.get("started_at", ""),
+            pending_action_type=pending.get("type") if pending else None,
+            pending_action_instruction=pending.get("instruction") if pending else None,
+            pending_action_data=pending.get("data", {}) if pending else {},
+            context=data.get("context", {}),
+            confidence=extraction.get("confidence", 0.0),
+            extraction_notes=extraction.get("notes", ""),
+            transcript_lines_scanned=extraction.get("transcript_lines_scanned", 0),
+            created_at=data.get("created_at", ""),
+        )
 
 
 def get_checkpoint_path(encoded_path: str) -> Path:
@@ -283,6 +159,8 @@ def get_encoded_project_path(transcript_path: str) -> str:
 
     Returns:
         Encoded project path segment (e.g., "-Users-mj-Sites-project")
+        Note: The leading dash is intentional - it matches Claude Code's folder
+        naming convention where /Users/mj/Sites/project becomes -Users-mj-Sites-project
     """
     parts = transcript_path.split("/")
     try:
@@ -293,7 +171,8 @@ def get_encoded_project_path(transcript_path: str) -> str:
         project_dir = os.environ.get("CLAUDE_PROJECT_DIR", "")
         if project_dir:
             # Convert /Users/mj/Sites/project to -Users-mj-Sites-project
-            return project_dir.replace("/", "-").lstrip("-")
+            # Keep the leading dash to match Claude Code's folder naming convention
+            return project_dir.replace("/", "-")
         return "unknown-project"
 
 
@@ -522,7 +401,7 @@ def checkpoint_to_refresh_message(checkpoint: dict[str, Any]) -> str:
     if pending_action:
         instruction = pending_action.get("instruction", "")
         if instruction:
-            if confidence < CONFIDENCE_LABEL_HIGH:
+            if confidence < CONFIDENCE_AUTO_PROCEED_THRESHOLD:
                 lines.append(f"Next Step: {instruction}. **Get user approval before acting.**")
             else:
                 lines.append(f"Next Step: {instruction}")

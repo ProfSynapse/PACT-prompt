@@ -15,7 +15,7 @@ from typing import Pattern
 # Import configuration constants from centralized location (Item 12)
 from .constants import (
     CONFIDENCE_THRESHOLD,
-    CONFIDENCE_LABEL_HIGH,
+    CONFIDENCE_AUTO_PROCEED_THRESHOLD,
     CONFIDENCE_LABEL_MEDIUM,
     PENDING_ACTION_INSTRUCTION_MAX_LENGTH,
     REVIEW_PROMPT_INSTRUCTION_MAX_LENGTH,
@@ -26,7 +26,7 @@ from .constants import (
 # Re-export for backwards compatibility
 __all__ = [
     "CONFIDENCE_THRESHOLD",
-    "CONFIDENCE_LABEL_HIGH",
+    "CONFIDENCE_AUTO_PROCEED_THRESHOLD",
     "CONFIDENCE_LABEL_MEDIUM",
     "PENDING_ACTION_INSTRUCTION_MAX_LENGTH",
     "REVIEW_PROMPT_INSTRUCTION_MAX_LENGTH",

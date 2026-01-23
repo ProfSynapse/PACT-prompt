@@ -30,127 +30,111 @@ if str(_hooks_dir) not in sys.path:
 
 # Import constants for consistent thresholds (Item 3)
 try:
-    from refresh.constants import CONFIDENCE_LABEL_HIGH, CONFIDENCE_LABEL_MEDIUM
+    from refresh.constants import CONFIDENCE_AUTO_PROCEED_THRESHOLD
 except ImportError:
-    # Fallback thresholds if constants not available
-    CONFIDENCE_LABEL_HIGH = 0.8
-    CONFIDENCE_LABEL_MEDIUM = 0.5
+    # Fallback threshold if constants not available
+    CONFIDENCE_AUTO_PROCEED_THRESHOLD = 0.8
 
-# Mapping of terse context keys to verbose equivalents for refresh messages
-# This helps AI understand what each key means when resuming after compaction
-# Duplicated here for fallback when refresh package not available
-CONTEXT_KEY_VERBOSE = {
-    "reviewers": "reviewers_completed",
-    "blocking": "blocking_issues",
-    "round": "review_round",
-    "pr_number": "pr_number",  # already clear
-    "phase": "current_phase",
-    "feature": "feature_name",
-    "branch": "branch_name",
-    "plan_file": "plan_file",  # already clear
-    "has_blocking": "has_blocking_issues",
-    "minor_count": "minor_issues_count",
-    "future_count": "future_recommendations_count",
-}
+# Try to import shared constants, fall back to local definitions only if unavailable
+try:
+    from refresh.shared_constants import STEP_DESCRIPTIONS, PROSE_CONTEXT_TEMPLATES
+    _USE_SHARED_CONSTANTS = True
+except ImportError:
+    _USE_SHARED_CONSTANTS = False
 
-# Step descriptions for refresh messages (fallback when refresh package not available)
-# Duplicated from refresh.constants for standalone use
-STEP_DESCRIPTIONS_FALLBACK = {
-    # peer-review steps
-    "commit": "Committing changes to git",
-    "create-pr": "Creating pull request",
-    "invoke-reviewers": "Launching reviewer agents in parallel",
-    "synthesize": "Synthesizing reviewer findings",
-    "recommendations": "Processing review recommendations",
-    "merge-ready": "All reviews complete, PR ready for merge authorization",
-    "awaiting-merge": "Waiting for user to authorize merge",
-    "awaiting_user_decision": "Waiting for user decision",
-    # orchestrate steps
-    "variety-assess": "Assessing task complexity and variety",
-    "prepare": "Running PREPARE phase - research and requirements",
-    "architect": "Running ARCHITECT phase - system design",
-    "code": "Running CODE phase - implementation",
-    "test": "Running TEST phase - testing and QA",
-    # plan-mode steps
-    "analyze": "Analyzing scope and selecting specialists",
-    "consult": "Consulting specialists for planning perspectives",
-    "present": "Presenting plan for user approval",
-    # comPACT steps
-    "invoking-specialist": "Delegating to specialist agent",
-    "specialist-completed": "Specialist work completed",
-    # rePACT (nested) steps
-    "nested-prepare": "Running nested PREPARE phase",
-    "nested-architect": "Running nested ARCHITECT phase",
-    "nested-code": "Running nested CODE phase",
-    "nested-test": "Running nested TEST phase",
-}
+    # Fallback: Step descriptions for refresh messages
+    # Only used if shared_constants import fails
+    STEP_DESCRIPTIONS = {
+        # peer-review steps
+        "commit": "Committing changes to git",
+        "create-pr": "Creating pull request",
+        "invoke-reviewers": "Launching reviewer agents in parallel",
+        "synthesize": "Synthesizing reviewer findings",
+        "recommendations": "Processing review recommendations",
+        "merge-ready": "All reviews complete, PR ready for merge authorization",
+        "awaiting-merge": "Waiting for user to authorize merge",
+        "awaiting_user_decision": "Waiting for user decision",
+        # orchestrate steps
+        "variety-assess": "Assessing task complexity and variety",
+        "prepare": "Running PREPARE phase - research and requirements",
+        "architect": "Running ARCHITECT phase - system design",
+        "code": "Running CODE phase - implementation",
+        "test": "Running TEST phase - testing and QA",
+        # plan-mode steps
+        "analyze": "Analyzing scope and selecting specialists",
+        "consult": "Consulting specialists for planning perspectives",
+        "present": "Presenting plan for user approval",
+        # comPACT steps
+        "invoking-specialist": "Delegating to specialist agent",
+        "specialist-completed": "Specialist work completed",
+        # rePACT (nested) steps
+        "nested-prepare": "Running nested PREPARE phase",
+        "nested-architect": "Running nested ARCHITECT phase",
+        "nested-code": "Running nested CODE phase",
+        "nested-test": "Running nested TEST phase",
+    }
 
+    # Fallback: Prose context generators
+    def _prose_invoke_reviewers_fb(ctx: dict) -> str:
+        """Generate prose for invoke-reviewers step."""
+        reviewers = ctx.get("reviewers", "")
+        blocking = ctx.get("blocking", "0")
+        if "/" in str(reviewers):
+            completed, total = str(reviewers).split("/")
+            return f"Launched {total} reviewer agents; {completed} had completed with {blocking} blocking issues."
+        elif reviewers:
+            return f"Launched reviewer agents; {reviewers} had completed with {blocking} blocking issues."
+        return "Was launching reviewer agents."
 
-# Prose context generators for fallback (duplicated from refresh.constants)
-def _prose_invoke_reviewers_fb(ctx: dict) -> str:
-    """Generate prose for invoke-reviewers step."""
-    reviewers = ctx.get("reviewers", "")
-    blocking = ctx.get("blocking", "0")
-    if "/" in str(reviewers):
-        completed, total = str(reviewers).split("/")
-        return f"Launched {total} reviewer agents; {completed} had completed with {blocking} blocking issues."
-    elif reviewers:
-        return f"Launched reviewer agents; {reviewers} had completed with {blocking} blocking issues."
-    return "Was launching reviewer agents."
+    def _prose_synthesize_fb(ctx: dict) -> str:
+        """Generate prose for synthesize step."""
+        blocking = ctx.get("blocking", ctx.get("has_blocking", "0"))
+        minor = ctx.get("minor_count", "0")
+        future = ctx.get("future_count", "0")
+        if blocking in (False, "False", "0", 0):
+            return f"Completed synthesis with no blocking issues; {minor} minor, {future} future recommendations."
+        return f"Completed synthesis with {blocking} blocking issues."
 
+    def _prose_recommendations_fb(ctx: dict) -> str:
+        """Generate prose for recommendations step."""
+        blocking = ctx.get("has_blocking", ctx.get("blocking", False))
+        minor = ctx.get("minor_count", 0)
+        future = ctx.get("future_count", 0)
+        if blocking in (False, "False", "0", 0):
+            return f"Processing recommendations; no blocking issues, {minor} minor, {future} future."
+        return "Processing recommendations with blocking issues to address."
 
-def _prose_synthesize_fb(ctx: dict) -> str:
-    """Generate prose for synthesize step."""
-    blocking = ctx.get("blocking", ctx.get("has_blocking", "0"))
-    minor = ctx.get("minor_count", "0")
-    future = ctx.get("future_count", "0")
-    if blocking in (False, "False", "0", 0):
-        return f"Completed synthesis with no blocking issues; {minor} minor, {future} future recommendations."
-    return f"Completed synthesis with {blocking} blocking issues."
+    def _prose_merge_ready_fb(ctx: dict) -> str:
+        """Generate prose for merge-ready step."""
+        blocking = ctx.get("blocking", ctx.get("has_blocking", 0))
+        if blocking in (False, "False", "0", 0):
+            return "Completed review with no blocking issues; PR ready for merge."
+        return "Review complete; awaiting resolution of blocking issues."
 
-
-def _prose_recommendations_fb(ctx: dict) -> str:
-    """Generate prose for recommendations step."""
-    blocking = ctx.get("has_blocking", ctx.get("blocking", False))
-    minor = ctx.get("minor_count", 0)
-    future = ctx.get("future_count", 0)
-    if blocking in (False, "False", "0", 0):
-        return f"Processing recommendations; no blocking issues, {minor} minor, {future} future."
-    return "Processing recommendations with blocking issues to address."
-
-
-def _prose_merge_ready_fb(ctx: dict) -> str:
-    """Generate prose for merge-ready step."""
-    blocking = ctx.get("blocking", ctx.get("has_blocking", 0))
-    if blocking in (False, "False", "0", 0):
-        return "Completed review with no blocking issues; PR ready for merge."
-    return "Review complete; awaiting resolution of blocking issues."
-
-
-PROSE_CONTEXT_TEMPLATES_FALLBACK = {
-    "commit": lambda ctx: "Was committing changes to git.",
-    "create-pr": lambda ctx: f"Was creating PR #{ctx.get('pr_number', '')}." if ctx.get("pr_number") else "Was creating pull request.",
-    "invoke-reviewers": _prose_invoke_reviewers_fb,
-    "synthesize": _prose_synthesize_fb,
-    "recommendations": _prose_recommendations_fb,
-    "merge-ready": _prose_merge_ready_fb,
-    "awaiting-merge": lambda ctx: "Was waiting for user decision.",
-    "awaiting_user_decision": lambda ctx: "Was waiting for user decision.",
-    "variety-assess": lambda ctx: "Was assessing task complexity.",
-    "prepare": lambda ctx: f"Was running PREPARE phase for: {ctx.get('feature', '')}." if ctx.get("feature") else "Was running PREPARE phase.",
-    "architect": lambda ctx: "Was running ARCHITECT phase.",
-    "code": lambda ctx: f"Was running CODE phase ({ctx.get('phase', '')})." if ctx.get("phase") else "Was running CODE phase.",
-    "test": lambda ctx: "Was running TEST phase.",
-    "analyze": lambda ctx: "Was analyzing scope and selecting specialists.",
-    "consult": lambda ctx: "Was consulting specialists for planning perspectives.",
-    "present": lambda ctx: f"Was presenting plan ({ctx.get('plan_file', '')}) for approval." if ctx.get("plan_file") else "Was presenting plan for user approval.",
-    "invoking-specialist": lambda ctx: "Was delegating to specialist agent.",
-    "specialist-completed": lambda ctx: "Specialist work had completed.",
-    "nested-prepare": lambda ctx: "Was running nested PREPARE phase.",
-    "nested-architect": lambda ctx: "Was running nested ARCHITECT phase.",
-    "nested-code": lambda ctx: "Was running nested CODE phase.",
-    "nested-test": lambda ctx: "Was running nested TEST phase.",
-}
+    PROSE_CONTEXT_TEMPLATES = {
+        "commit": lambda ctx: "Was committing changes to git.",
+        "create-pr": lambda ctx: f"Was creating PR #{ctx.get('pr_number', '')}." if ctx.get("pr_number") else "Was creating pull request.",
+        "invoke-reviewers": _prose_invoke_reviewers_fb,
+        "synthesize": _prose_synthesize_fb,
+        "recommendations": _prose_recommendations_fb,
+        "merge-ready": _prose_merge_ready_fb,
+        "awaiting-merge": lambda ctx: "Was waiting for user decision.",
+        "awaiting_user_decision": lambda ctx: "Was waiting for user decision.",
+        "variety-assess": lambda ctx: "Was assessing task complexity.",
+        "prepare": lambda ctx: f"Was running PREPARE phase for: {ctx.get('feature', '')}." if ctx.get("feature") else "Was running PREPARE phase.",
+        "architect": lambda ctx: "Was running ARCHITECT phase.",
+        "code": lambda ctx: f"Was running CODE phase ({ctx.get('phase', '')})." if ctx.get("phase") else "Was running CODE phase.",
+        "test": lambda ctx: "Was running TEST phase.",
+        "analyze": lambda ctx: "Was analyzing scope and selecting specialists.",
+        "consult": lambda ctx: "Was consulting specialists for planning perspectives.",
+        "present": lambda ctx: f"Was presenting plan ({ctx.get('plan_file', '')}) for approval." if ctx.get("plan_file") else "Was presenting plan for user approval.",
+        "invoking-specialist": lambda ctx: "Was delegating to specialist agent.",
+        "specialist-completed": lambda ctx: "Specialist work had completed.",
+        "nested-prepare": lambda ctx: "Was running nested PREPARE phase.",
+        "nested-architect": lambda ctx: "Was running nested ARCHITECT phase.",
+        "nested-code": lambda ctx: "Was running nested CODE phase.",
+        "nested-test": lambda ctx: "Was running nested TEST phase.",
+    }
 
 # Item 4 & 9: Explicit type annotation for get_checkpoint_path
 # Restructured to avoid defining unused fallback when shared utils are available
@@ -265,7 +249,7 @@ def _build_prose_context_fallback(step_name: str, context: dict) -> str:
     Returns:
         Prose sentence describing action + progress
     """
-    template_fn = PROSE_CONTEXT_TEMPLATES_FALLBACK.get(step_name)
+    template_fn = PROSE_CONTEXT_TEMPLATES.get(step_name)
     if template_fn:
         try:
             return template_fn(context)
@@ -273,6 +257,7 @@ def _build_prose_context_fallback(step_name: str, context: dict) -> str:
             pass  # Fall through to generic
 
     # Generic fallback
+    step_desc = STEP_DESCRIPTIONS.get(step_name, step_name)
     if context:
         context_parts = [f"{k}={v}" for k, v in context.items()]
         return f"Was in {step_name} step ({', '.join(context_parts)})."
@@ -330,7 +315,7 @@ def _build_refresh_message_fallback(checkpoint: dict) -> str:
     if pending_action:
         instruction = pending_action.get("instruction", "")
         if instruction:
-            if confidence < CONFIDENCE_LABEL_HIGH:
+            if confidence < CONFIDENCE_AUTO_PROCEED_THRESHOLD:
                 lines.append(f"Next Step: {instruction}. **Get user approval before acting.**")
             else:
                 lines.append(f"Next Step: {instruction}")

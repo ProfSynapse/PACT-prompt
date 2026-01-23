@@ -15,6 +15,8 @@ import pytest
 
 # Add hooks directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
+# Add tests directory to path for helpers module
+sys.path.insert(0, str(Path(__file__).parent))
 
 
 class TestGetEncodedProjectPathFromEnv:
@@ -420,7 +422,7 @@ class TestEndToEndRefresh:
     def test_precompact_to_sessionstart_flow(self, tmp_path: Path):
         """Test complete flow from PreCompact to SessionStart."""
         # Step 1: Simulate PreCompact writing checkpoint
-        from conftest import create_peer_review_transcript
+        from helpers import create_peer_review_transcript
 
         transcript_content = create_peer_review_transcript(
             step="recommendations",
@@ -490,7 +492,7 @@ class TestEndToEndRefresh:
 
     def test_terminated_workflow_no_refresh(self, tmp_path: Path):
         """Test that terminated workflow doesn't trigger refresh."""
-        from conftest import create_terminated_workflow_transcript
+        from helpers import create_terminated_workflow_transcript
 
         transcript_content = create_terminated_workflow_transcript()
 

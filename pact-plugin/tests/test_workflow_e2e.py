@@ -92,7 +92,7 @@ class TestPlanModeWorkflowE2E:
         result = json.loads(output)
         refresh_msg = result["hookSpecificOutput"]["additionalContext"]
 
-        assert "[WORKFLOW REFRESH]" in refresh_msg
+        assert "[POST-COMPACTION CHECKPOINT]" in refresh_msg
         assert "plan-mode" in refresh_msg
 
     def test_plan_mode_present_phase_with_pending_question(self, tmp_path: Path):
@@ -231,7 +231,7 @@ class TestComPACTWorkflowE2E:
         result = json.loads(output)
         refresh_msg = result["hookSpecificOutput"]["additionalContext"]
 
-        assert "[WORKFLOW REFRESH]" in refresh_msg
+        assert "[POST-COMPACTION CHECKPOINT]" in refresh_msg
         assert "comPACT" in refresh_msg
 
     def test_compact_frontend_specialist(self, tmp_path: Path):
@@ -407,7 +407,7 @@ class TestRePACTWorkflowE2E:
         result = json.loads(output)
         refresh_msg = result["hookSpecificOutput"]["additionalContext"]
 
-        assert "[WORKFLOW REFRESH]" in refresh_msg
+        assert "[POST-COMPACTION CHECKPOINT]" in refresh_msg
         assert "rePACT" in refresh_msg
 
     def test_repact_nested_architect_phase(self, tmp_path: Path):

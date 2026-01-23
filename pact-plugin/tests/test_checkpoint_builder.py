@@ -76,7 +76,8 @@ class TestGetEncodedProjectPath:
         with patch.dict(os.environ, {"CLAUDE_PROJECT_DIR": "/Users/test/myproject"}):
             encoded = get_encoded_project_path(transcript_path)
 
-        assert encoded == "Users-test-myproject"
+        # Now keeps the leading dash to match Claude Code's folder naming convention
+        assert encoded == "-Users-test-myproject"
 
     def test_fallback_unknown_project(self):
         """Test fallback to 'unknown-project' when all else fails."""
