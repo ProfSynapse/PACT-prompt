@@ -85,7 +85,12 @@ def _ensure_ready() -> None:
     """
     Ensure the memory system is initialized before database operations.
 
-    This is called lazily on first use, handling:
+    This wrapper exists as:
+    - A single injection point for all API methods (centralized initialization)
+    - A testing seam (can be mocked to skip initialization in tests)
+    - An abstraction layer if initialization logic needs to change
+
+    Handles lazily on first use:
     - Dependency installation
     - Embedding migration
     - Pending embedding catch-up

@@ -19,7 +19,6 @@ Used by:
 Thread-safety: Uses threading.Lock for the session-scoped initialization flag.
 """
 
-import json
 import logging
 import os
 import struct
@@ -27,12 +26,15 @@ import subprocess
 import sys
 import threading
 from pathlib import Path
-from typing import Optional
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
 # Session-scoped initialization state
+# Two state mechanisms exist:
+# 1. _initialized (in-memory): Controls overall lazy init, reset per process
+# 2. Session marker file (in _get_embedding_attempted_path): Controls maybe_embed_pending()
+#    specifically, persists across process restarts within the same session
 _init_lock = threading.Lock()
 _initialized = False
 
@@ -108,7 +110,8 @@ def maybe_migrate_embeddings() -> dict:
             from .database import get_connection
             from .embeddings import get_embedding_service, generate_embedding_text, EMBEDDING_DIM
         except ImportError:
-            return result
+            # Distinct status to differentiate from "nothing to migrate"
+            return {"status": "skipped_deps", "message": "Dependencies not available"}
 
         # Get expected dimension
         expected_dim = EMBEDDING_DIM
