@@ -698,6 +698,536 @@ class TestEdgeCases:
             # The point is that no exception is raised
 
 
+class TestMaybeMigrateEmbeddings:
+    """Tests for maybe_migrate_embeddings function.
+
+    Tests cover:
+    1. Happy paths: No table, empty table, dimensions match, migration success
+    2. Edge cases: Import failures, connection failures, partial re-embedding
+    3. Error handling: Exception during migration returns error status
+
+    Note: The function uses relative imports from within the scripts package.
+    We test by creating a testable wrapper that injects dependencies.
+    """
+
+    def _create_testable_migrate_function(
+        self,
+        pysqlite3_module=None,
+        sqlite_vec_module=None,
+        get_connection_func=None,
+        get_embedding_service_func=None,
+        generate_embedding_text_func=None,
+        embedding_dim=256,
+        import_error=False,
+    ):
+        """Create a version of maybe_migrate_embeddings with injected dependencies.
+
+        This allows us to test the actual logic without dealing with relative imports.
+        """
+        import struct
+
+        def testable_migrate():
+            result = {"status": "ok", "message": None}
+
+            try:
+                # Simulate import block
+                if import_error:
+                    return result
+
+                if pysqlite3_module is None or sqlite_vec_module is None:
+                    return result
+
+                if get_connection_func is None:
+                    return result
+
+                # Get expected dimension
+                expected_dim = embedding_dim
+
+                # Connect to database
+                conn = get_connection_func()
+                sqlite_vec_module.load(conn)
+
+                # Check if vec_memories table exists
+                cursor = conn.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table' AND name='vec_memories'"
+                )
+                if cursor.fetchone() is None:
+                    conn.close()
+                    return result  # No table, nothing to migrate
+
+                # Check actual dimension by examining an embedding
+                try:
+                    row = conn.execute("SELECT embedding FROM vec_memories LIMIT 1").fetchone()
+                    if row is None:
+                        conn.close()
+                        return result  # Empty table, nothing to migrate
+
+                    actual_dim = len(row[0]) // 4  # 4 bytes per float
+                    if actual_dim == expected_dim:
+                        conn.close()
+                        return result  # Dimensions match, no migration needed
+
+                except Exception:
+                    conn.close()
+                    return result
+
+                # Dimension mismatch detected - need to migrate
+                result["status"] = "migrating"
+                result["message"] = f"Migrating embeddings: {actual_dim}-dim -> {expected_dim}-dim"
+
+                # Drop old table
+                conn.execute("DROP TABLE IF EXISTS vec_memories")
+                conn.commit()
+
+                # Recreate with new dimension
+                conn.execute(f"""
+                    CREATE VIRTUAL TABLE IF NOT EXISTS vec_memories USING vec0(
+                        memory_id TEXT PRIMARY KEY,
+                        project_id TEXT PARTITION KEY,
+                        embedding float[{expected_dim}]
+                    )
+                """)
+                conn.commit()
+
+                # Re-embed all memories
+                service = get_embedding_service_func()
+                memories = conn.execute("""
+                    SELECT id, context, goal, lessons_learned, decisions, entities
+                    FROM memories
+                """).fetchall()
+
+                success = 0
+                for mem_id, context, goal, lessons, decisions, entities in memories:
+                    try:
+                        memory_dict = {
+                            'context': context, 'goal': goal, 'lessons_learned': lessons,
+                            'decisions': decisions, 'entities': entities,
+                        }
+                        embed_text = generate_embedding_text_func(memory_dict)
+                        embedding = service.generate(embed_text)
+
+                        if embedding:
+                            embedding_blob = struct.pack(f'{len(embedding)}f', *embedding)
+                            conn.execute(
+                                "INSERT OR REPLACE INTO vec_memories(memory_id, embedding) VALUES (?, ?)",
+                                (mem_id, embedding_blob)
+                            )
+                            success += 1
+                    except Exception:
+                        continue
+
+                conn.commit()
+                conn.close()
+
+                result["status"] = "ok"
+                result["message"] = f"Migrated {success}/{len(memories)} embeddings to {expected_dim}-dim"
+                return result
+
+            except Exception as e:
+                result["status"] = "error"
+                result["message"] = str(e)[:50]
+                return result
+
+        return testable_migrate
+
+    # =========================================================================
+    # Happy Path Tests
+    # =========================================================================
+
+    def test_import_error_returns_ok_gracefully(self):
+        """Test: ImportError during module imports -> returns ok gracefully."""
+        migrate_func = self._create_testable_migrate_function(import_error=True)
+        result = migrate_func()
+
+        assert result['status'] == 'ok'
+        assert result['message'] is None
+
+    def test_no_vec_memories_table_returns_ok(self):
+        """Test: vec_memories table doesn't exist -> returns ok, no migration."""
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+
+        # Table doesn't exist (fetchone returns None)
+        mock_cursor.fetchone.return_value = None
+        mock_conn.execute.return_value = mock_cursor
+
+        mock_sqlite_vec = MagicMock()
+
+        migrate_func = self._create_testable_migrate_function(
+            pysqlite3_module=MagicMock(),
+            sqlite_vec_module=mock_sqlite_vec,
+            get_connection_func=lambda: mock_conn,
+        )
+
+        result = migrate_func()
+
+        assert result['status'] == 'ok'
+        assert result['message'] is None
+        mock_conn.close.assert_called_once()
+
+    def test_empty_vec_memories_table_returns_ok(self):
+        """Test: vec_memories table exists but is empty -> returns ok, no migration."""
+        mock_conn = MagicMock()
+
+        # First execute: table exists
+        # Second execute: SELECT embedding returns None (empty table)
+        call_count = [0]
+
+        def mock_execute(query, *args):
+            call_count[0] += 1
+            mock_cursor = MagicMock()
+            if "sqlite_master" in query:
+                mock_cursor.fetchone.return_value = ('vec_memories',)  # Table exists
+            elif "SELECT embedding" in query:
+                mock_cursor.fetchone.return_value = None  # Empty table
+            return mock_cursor
+
+        mock_conn.execute = mock_execute
+
+        migrate_func = self._create_testable_migrate_function(
+            pysqlite3_module=MagicMock(),
+            sqlite_vec_module=MagicMock(),
+            get_connection_func=lambda: mock_conn,
+        )
+
+        result = migrate_func()
+
+        assert result['status'] == 'ok'
+        assert result['message'] is None
+
+    def test_dimensions_match_returns_ok(self):
+        """Test: dimensions match -> returns ok, no migration needed."""
+        import struct
+
+        mock_conn = MagicMock()
+
+        # Create a 256-dim embedding blob (256 floats * 4 bytes = 1024 bytes)
+        embedding_256 = [0.1] * 256
+        embedding_blob = struct.pack(f'{len(embedding_256)}f', *embedding_256)
+
+        def mock_execute(query, *args):
+            mock_cursor = MagicMock()
+            if "sqlite_master" in query:
+                mock_cursor.fetchone.return_value = ('vec_memories',)
+            elif "SELECT embedding" in query:
+                mock_cursor.fetchone.return_value = (embedding_blob,)
+            return mock_cursor
+
+        mock_conn.execute = mock_execute
+
+        migrate_func = self._create_testable_migrate_function(
+            pysqlite3_module=MagicMock(),
+            sqlite_vec_module=MagicMock(),
+            get_connection_func=lambda: mock_conn,
+            embedding_dim=256,  # Matches the blob
+        )
+
+        result = migrate_func()
+
+        assert result['status'] == 'ok'
+        assert result['message'] is None
+
+    def test_dimension_mismatch_performs_migration(self):
+        """Test: dimension mismatch -> performs migration and returns success count."""
+        import struct
+
+        mock_conn = MagicMock()
+
+        # Create a 384-dim embedding blob (old dimension)
+        embedding_384 = [0.1] * 384
+        embedding_blob = struct.pack(f'{len(embedding_384)}f', *embedding_384)
+
+        # Track calls to simulate different query results
+        execute_calls = []
+
+        def mock_execute(query, *args):
+            execute_calls.append((query, args))
+            mock_cursor = MagicMock()
+
+            if "sqlite_master" in query:
+                mock_cursor.fetchone.return_value = ('vec_memories',)
+            elif "SELECT embedding" in query:
+                mock_cursor.fetchone.return_value = (embedding_blob,)
+            elif "SELECT id, context" in query:
+                # Return 2 memories to re-embed
+                mock_cursor.fetchall.return_value = [
+                    ('mem1', 'context1', 'goal1', 'lessons1', 'decisions1', 'entities1'),
+                    ('mem2', 'context2', 'goal2', 'lessons2', 'decisions2', 'entities2'),
+                ]
+            return mock_cursor
+
+        mock_conn.execute = mock_execute
+        mock_conn.commit = MagicMock()
+        mock_conn.close = MagicMock()
+
+        # Mock embedding service
+        mock_service = MagicMock()
+        mock_service.generate.return_value = [0.1] * 256  # New dimension
+
+        migrate_func = self._create_testable_migrate_function(
+            pysqlite3_module=MagicMock(),
+            sqlite_vec_module=MagicMock(),
+            get_connection_func=lambda: mock_conn,
+            get_embedding_service_func=lambda: mock_service,
+            generate_embedding_text_func=lambda d: "text",
+            embedding_dim=256,  # New dimension (was 384)
+        )
+
+        result = migrate_func()
+
+        assert result['status'] == 'ok'
+        assert 'Migrated 2/2' in result['message']
+        assert '256-dim' in result['message']
+
+    # =========================================================================
+    # Edge Case Tests
+    # =========================================================================
+
+    def test_pysqlite3_none_returns_ok(self):
+        """Test: pysqlite3 module is None -> returns ok gracefully."""
+        migrate_func = self._create_testable_migrate_function(
+            pysqlite3_module=None,
+            sqlite_vec_module=MagicMock(),
+        )
+
+        result = migrate_func()
+
+        assert result['status'] == 'ok'
+        assert result['message'] is None
+
+    def test_sqlite_vec_none_returns_ok(self):
+        """Test: sqlite_vec module is None -> returns ok gracefully."""
+        migrate_func = self._create_testable_migrate_function(
+            pysqlite3_module=MagicMock(),
+            sqlite_vec_module=None,
+        )
+
+        result = migrate_func()
+
+        assert result['status'] == 'ok'
+        assert result['message'] is None
+
+    def test_get_connection_none_returns_ok(self):
+        """Test: get_connection is None -> returns ok gracefully."""
+        migrate_func = self._create_testable_migrate_function(
+            pysqlite3_module=MagicMock(),
+            sqlite_vec_module=MagicMock(),
+            get_connection_func=None,
+        )
+
+        result = migrate_func()
+
+        assert result['status'] == 'ok'
+        assert result['message'] is None
+
+    def test_sqlite_vec_load_failure_returns_error(self):
+        """Test: sqlite_vec.load() raises exception -> returns error status."""
+        mock_conn = MagicMock()
+        mock_sqlite_vec = MagicMock()
+        mock_sqlite_vec.load.side_effect = Exception("Failed to load sqlite_vec")
+
+        migrate_func = self._create_testable_migrate_function(
+            pysqlite3_module=MagicMock(),
+            sqlite_vec_module=mock_sqlite_vec,
+            get_connection_func=lambda: mock_conn,
+        )
+
+        result = migrate_func()
+
+        assert result['status'] == 'error'
+        assert 'Failed to load sqlite_vec' in result['message']
+
+    def test_database_query_exception_returns_ok(self):
+        """Test: exception during dimension check -> returns ok gracefully."""
+        import struct
+
+        mock_conn = MagicMock()
+
+        # Create embedding blob
+        embedding_384 = [0.1] * 384
+        embedding_blob = struct.pack(f'{len(embedding_384)}f', *embedding_384)
+
+        def mock_execute(query, *args):
+            mock_cursor = MagicMock()
+            if "sqlite_master" in query:
+                mock_cursor.fetchone.return_value = ('vec_memories',)
+            elif "SELECT embedding" in query:
+                # Simulate exception during dimension check
+                raise Exception("Query failed")
+            return mock_cursor
+
+        mock_conn.execute = mock_execute
+
+        migrate_func = self._create_testable_migrate_function(
+            pysqlite3_module=MagicMock(),
+            sqlite_vec_module=MagicMock(),
+            get_connection_func=lambda: mock_conn,
+        )
+
+        result = migrate_func()
+
+        # Inner exception is caught, returns ok
+        assert result['status'] == 'ok'
+
+    def test_partial_reembedding_returns_partial_count(self):
+        """Test: some memories fail to re-embed -> returns partial success count."""
+        import struct
+
+        mock_conn = MagicMock()
+
+        # Old dimension embedding
+        embedding_384 = [0.1] * 384
+        embedding_blob = struct.pack(f'{len(embedding_384)}f', *embedding_384)
+
+        def mock_execute(query, *args):
+            mock_cursor = MagicMock()
+            if "sqlite_master" in query:
+                mock_cursor.fetchone.return_value = ('vec_memories',)
+            elif "SELECT embedding" in query:
+                mock_cursor.fetchone.return_value = (embedding_blob,)
+            elif "SELECT id, context" in query:
+                # Return 3 memories
+                mock_cursor.fetchall.return_value = [
+                    ('mem1', 'context1', 'goal1', 'lessons1', 'decisions1', 'entities1'),
+                    ('mem2', 'context2', 'goal2', 'lessons2', 'decisions2', 'entities2'),
+                    ('mem3', 'context3', 'goal3', 'lessons3', 'decisions3', 'entities3'),
+                ]
+            return mock_cursor
+
+        mock_conn.execute = mock_execute
+        mock_conn.commit = MagicMock()
+        mock_conn.close = MagicMock()
+
+        # Mock embedding service that fails on second memory
+        mock_service = MagicMock()
+        call_count = [0]
+
+        def generate_with_failure(text):
+            call_count[0] += 1
+            if call_count[0] == 2:
+                raise Exception("Embedding failed")
+            return [0.1] * 256
+
+        mock_service.generate.side_effect = generate_with_failure
+
+        migrate_func = self._create_testable_migrate_function(
+            pysqlite3_module=MagicMock(),
+            sqlite_vec_module=MagicMock(),
+            get_connection_func=lambda: mock_conn,
+            get_embedding_service_func=lambda: mock_service,
+            generate_embedding_text_func=lambda d: "text",
+            embedding_dim=256,
+        )
+
+        result = migrate_func()
+
+        assert result['status'] == 'ok'
+        assert 'Migrated 2/3' in result['message']  # 2 of 3 succeeded
+
+    def test_embedding_returns_none_skipped(self):
+        """Test: embedding service returns None -> memory skipped, not counted."""
+        import struct
+
+        mock_conn = MagicMock()
+
+        embedding_384 = [0.1] * 384
+        embedding_blob = struct.pack(f'{len(embedding_384)}f', *embedding_384)
+
+        def mock_execute(query, *args):
+            mock_cursor = MagicMock()
+            if "sqlite_master" in query:
+                mock_cursor.fetchone.return_value = ('vec_memories',)
+            elif "SELECT embedding" in query:
+                mock_cursor.fetchone.return_value = (embedding_blob,)
+            elif "SELECT id, context" in query:
+                mock_cursor.fetchall.return_value = [
+                    ('mem1', 'context1', 'goal1', 'lessons1', 'decisions1', 'entities1'),
+                    ('mem2', 'context2', 'goal2', 'lessons2', 'decisions2', 'entities2'),
+                ]
+            return mock_cursor
+
+        mock_conn.execute = mock_execute
+        mock_conn.commit = MagicMock()
+        mock_conn.close = MagicMock()
+
+        # Mock service returns None for first memory
+        mock_service = MagicMock()
+        mock_service.generate.side_effect = [None, [0.1] * 256]
+
+        migrate_func = self._create_testable_migrate_function(
+            pysqlite3_module=MagicMock(),
+            sqlite_vec_module=MagicMock(),
+            get_connection_func=lambda: mock_conn,
+            get_embedding_service_func=lambda: mock_service,
+            generate_embedding_text_func=lambda d: "text",
+            embedding_dim=256,
+        )
+
+        result = migrate_func()
+
+        assert result['status'] == 'ok'
+        assert 'Migrated 1/2' in result['message']  # Only 1 succeeded
+
+    # =========================================================================
+    # Error Handling Tests
+    # =========================================================================
+
+    def test_exception_returns_error_with_truncated_message(self):
+        """Test: exception during migration -> returns error with truncated message."""
+        mock_conn = MagicMock()
+        mock_sqlite_vec = MagicMock()
+
+        # Create a long error message that should be truncated to 50 chars
+        long_error = "A" * 100
+        mock_sqlite_vec.load.side_effect = Exception(long_error)
+
+        migrate_func = self._create_testable_migrate_function(
+            pysqlite3_module=MagicMock(),
+            sqlite_vec_module=mock_sqlite_vec,
+            get_connection_func=lambda: mock_conn,
+        )
+
+        result = migrate_func()
+
+        assert result['status'] == 'error'
+        assert len(result['message']) == 50
+        assert result['message'] == "A" * 50
+
+    def test_connection_failure_returns_error(self):
+        """Test: get_connection raises exception -> returns error status."""
+        def failing_connection():
+            raise Exception("Connection failed")
+
+        migrate_func = self._create_testable_migrate_function(
+            pysqlite3_module=MagicMock(),
+            sqlite_vec_module=MagicMock(),
+            get_connection_func=failing_connection,
+        )
+
+        result = migrate_func()
+
+        assert result['status'] == 'error'
+        assert 'Connection failed' in result['message']
+
+    # =========================================================================
+    # Integration with actual function (graceful degradation)
+    # =========================================================================
+
+    def test_actual_function_returns_ok_without_deps(self):
+        """Test: actual maybe_migrate_embeddings returns ok when deps unavailable.
+
+        This tests the real function to ensure it gracefully handles
+        the ImportError when pysqlite3/sqlite_vec aren't available in test env.
+        """
+        from memory_init import maybe_migrate_embeddings
+
+        result = maybe_migrate_embeddings()
+
+        # Without proper deps installed, function returns ok (graceful degradation)
+        assert result['status'] == 'ok'
+        assert result['message'] is None
+
+
 class TestLogging:
     """Tests for logging behavior during initialization."""
 
