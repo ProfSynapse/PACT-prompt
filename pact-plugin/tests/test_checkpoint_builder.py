@@ -327,9 +327,9 @@ class TestCheckpointToRefreshMessage:
         assert "recommendations" in message
         # Check step description is included
         assert "Processing review recommendations" in message
-        assert "Confidence: 0.9" in message
-        # Check guidance line
-        assert "Verify with user if context seems outdated" in message
+        # High confidence (0.9) should NOT show warning line
+        assert "Low confidence" not in message
+        assert "Verify workflow state" not in message
 
     def test_refresh_message_with_pending_action(self, sample_checkpoint):
         """Test refresh message includes pending action as Action line."""
@@ -362,8 +362,8 @@ class TestCheckpointToRefreshMessage:
 
         assert message == ""
 
-    def test_refresh_message_confidence_values(self):
-        """Test confidence value is displayed correctly in guidance line."""
+    def test_refresh_message_low_confidence_shows_warning(self):
+        """Test low confidence shows warning line."""
         checkpoint = {
             "workflow": {
                 "name": "peer-review",
@@ -377,9 +377,28 @@ class TestCheckpointToRefreshMessage:
 
         message = checkpoint_to_refresh_message(checkpoint)
 
-        # Directive format shows confidence in guidance line
-        assert "Confidence: 0.5" in message
-        assert "Verify with user if context seems outdated" in message
+        # Low confidence (< 0.8) should show warning
+        assert "Low confidence (0.5)" in message
+        assert "Verify workflow state with user before proceeding" in message
+
+    def test_refresh_message_high_confidence_no_warning(self):
+        """Test high confidence does NOT show warning line."""
+        checkpoint = {
+            "workflow": {
+                "name": "peer-review",
+                "id": "",
+            },
+            "step": {"name": "commit"},
+            "extraction": {"confidence": 0.9},
+            "context": {},
+            "pending_action": None,
+        }
+
+        message = checkpoint_to_refresh_message(checkpoint)
+
+        # High confidence (>= 0.8) should NOT show warning
+        assert "Low confidence" not in message
+        assert "Verify workflow state" not in message
 
     def test_refresh_message_no_pending_action(self):
         """Test refresh message without pending action omits Action line."""
@@ -398,8 +417,8 @@ class TestCheckpointToRefreshMessage:
 
         assert "orchestrate" in message
         assert "Action:" not in message
-        # Should still have guidance line
-        assert "Verify with user if context seems outdated" in message
+        # Low confidence (0.7) should show warning
+        assert "Low confidence (0.7)" in message
 
     def test_refresh_message_no_context(self):
         """Test refresh message without context omits Context line."""
@@ -409,7 +428,7 @@ class TestCheckpointToRefreshMessage:
                 "id": "",
             },
             "step": {"name": "code"},
-            "extraction": {"confidence": 0.7},
+            "extraction": {"confidence": 0.9},  # High confidence - no warning
             "context": {},
             "pending_action": None,
         }
@@ -423,16 +442,18 @@ class TestCheckpointToRefreshMessage:
         assert "[WORKFLOW REFRESH]" in message
         assert "You are resuming:" in message
         assert "State:" in message
+        # High confidence - no warning line
+        assert "Low confidence" not in message
 
-    def test_refresh_message_directive_format(self):
-        """Test the exact directive prompt format structure with verbose keys."""
+    def test_refresh_message_directive_format_high_confidence(self):
+        """Test the exact directive prompt format structure with high confidence (no warning)."""
         checkpoint = {
             "workflow": {
                 "name": "peer-review",
                 "id": "PR#88",
             },
             "step": {"name": "awaiting_user_decision"},
-            "extraction": {"confidence": 0.8},
+            "extraction": {"confidence": 0.9},  # High confidence - no warning line
             "context": {"reviewers": 3, "blocking": 0},
             "pending_action": {
                 "type": "User Decision",
@@ -443,7 +464,44 @@ class TestCheckpointToRefreshMessage:
         message = checkpoint_to_refresh_message(checkpoint)
         lines = message.split("\n")
 
-        # Should have 7 lines (header, explanatory, resuming, state, context, action, guidance)
+        # Should have 6 lines (header, explanatory, resuming, state, context, action) - NO guidance for high confidence
+        assert len(lines) == 6
+        # Line 1: [WORKFLOW REFRESH]
+        assert lines[0] == "[WORKFLOW REFRESH]"
+        # Line 2: Explanatory line with framework emphasis
+        assert lines[1] == "Context auto-compaction occurred. Resume the PACT workflow below, following framework protocols."
+        # Line 3: You are resuming: workflow (id)
+        assert lines[2] == "You are resuming: peer-review (PR#88)"
+        # Line 4: State with description
+        assert lines[3] == "State: awaiting_user_decision — Waiting for user decision"
+        # Line 5: Context - now uses verbose keys
+        assert lines[4].startswith("Context:")
+        assert "reviewers_completed=3" in lines[4]
+        assert "blocking_issues=0" in lines[4]
+        # Line 6: Action
+        assert lines[5] == "Action: Waiting for user to authorize merge"
+        # No confidence warning line for high confidence
+
+    def test_refresh_message_directive_format_low_confidence(self):
+        """Test the exact directive prompt format structure with low confidence (shows warning)."""
+        checkpoint = {
+            "workflow": {
+                "name": "peer-review",
+                "id": "PR#88",
+            },
+            "step": {"name": "awaiting_user_decision"},
+            "extraction": {"confidence": 0.6},  # Low confidence - shows warning line
+            "context": {"reviewers": 3, "blocking": 0},
+            "pending_action": {
+                "type": "User Decision",
+                "instruction": "Waiting for user to authorize merge",
+            },
+        }
+
+        message = checkpoint_to_refresh_message(checkpoint)
+        lines = message.split("\n")
+
+        # Should have 7 lines (header, explanatory, resuming, state, context, action, warning)
         assert len(lines) == 7
         # Line 1: [WORKFLOW REFRESH]
         assert lines[0] == "[WORKFLOW REFRESH]"
@@ -459,8 +517,8 @@ class TestCheckpointToRefreshMessage:
         assert "blocking_issues=0" in lines[4]
         # Line 6: Action
         assert lines[5] == "Action: Waiting for user to authorize merge"
-        # Line 7: Guidance
-        assert lines[6] == "Confidence: 0.8. Verify with user if context seems outdated."
+        # Line 7: Warning for low confidence
+        assert lines[6] == "⚠️ Low confidence (0.6). Verify workflow state with user before proceeding."
 
 
 class TestEdgeCases:
@@ -531,7 +589,9 @@ class TestEdgeCases:
         assert "[WORKFLOW REFRESH]" in message
         assert "peer-review" in message
         assert "unknown" in message  # Default step name
-        assert "Verify with user if context seems outdated" in message  # Guidance line always present
+        # Low confidence (0.5) should show warning
+        assert "Low confidence (0.5)" in message
+        assert "Verify workflow state with user before proceeding" in message
 
 
 class TestCheckpointSchemaRoundTrip:

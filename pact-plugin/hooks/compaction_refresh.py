@@ -251,8 +251,9 @@ def _build_refresh_message_fallback(checkpoint: dict) -> str:
         if instruction:
             lines.append(f"Action: {instruction}")
 
-    # Line 7: Confidence guidance
-    lines.append(f"Confidence: {confidence:.1f}. Verify with user if context seems outdated.")
+    # Line 7: Confidence warning (only for low confidence)
+    if confidence < CONFIDENCE_LABEL_HIGH:
+        lines.append(f"⚠️ Low confidence ({confidence:.1f}). Verify workflow state with user before proceeding.")
 
     return "\n".join(lines)
 

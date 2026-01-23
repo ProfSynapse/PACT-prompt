@@ -157,8 +157,9 @@ class TestBuildRefreshMessage:
         assert "recommendations" in message
         # Check step description is included
         assert "Processing review recommendations" in message
-        assert "Confidence: 0.9" in message
-        assert "Verify with user if context seems outdated" in message
+        # High confidence (0.9) should NOT show warning line
+        assert "Low confidence" not in message
+        assert "Verify workflow state" not in message
 
     def test_build_message_with_pending_action(self, sample_checkpoint):
         """Test refresh message includes pending action as Action line."""
@@ -185,8 +186,8 @@ class TestBuildRefreshMessage:
         # future_count becomes future_recommendations_count
         assert "future_recommendations_count=1" in message
 
-    def test_build_message_confidence_values(self):
-        """Test confidence values are displayed in guidance line."""
+    def test_build_message_low_confidence_shows_warning(self):
+        """Test low confidence shows warning line."""
         from compaction_refresh import build_refresh_message
 
         checkpoint = {
@@ -198,9 +199,26 @@ class TestBuildRefreshMessage:
 
         message = build_refresh_message(checkpoint)
 
-        # Directive format shows confidence in guidance line
-        assert "Confidence: 0.5" in message
-        assert "Verify with user if context seems outdated" in message
+        # Low confidence (< 0.8) should show warning
+        assert "Low confidence (0.5)" in message
+        assert "Verify workflow state with user before proceeding" in message
+
+    def test_build_message_high_confidence_no_warning(self):
+        """Test high confidence does NOT show warning line."""
+        from compaction_refresh import build_refresh_message
+
+        checkpoint = {
+            "workflow": {"name": "peer-review", "id": ""},
+            "step": {"name": "commit"},
+            "extraction": {"confidence": 0.9},
+            "context": {},
+        }
+
+        message = build_refresh_message(checkpoint)
+
+        # High confidence (>= 0.8) should NOT show warning
+        assert "Low confidence" not in message
+        assert "Verify workflow state" not in message
 
 
 class TestCompactionRefreshMain:
