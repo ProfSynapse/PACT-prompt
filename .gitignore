@@ -12,3 +12,6 @@ skills-research/
 __pycache__/
 .pytest_cache/
 *.pyc
+.hypothesis/
+**/.hypothesis/
+.coverage
