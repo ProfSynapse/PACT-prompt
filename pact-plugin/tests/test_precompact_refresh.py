@@ -178,19 +178,20 @@ class TestPrecompactMain:
             # Import and run main
             from precompact_refresh import main
 
-            # Capture output
-            with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
+            # Capture output (stdout for JSON, stderr for status)
+            with patch("sys.stdout", new_callable=StringIO) as mock_stdout, \
+                 patch("sys.stderr", new_callable=StringIO) as mock_stderr:
                 with pytest.raises(SystemExit) as exc_info:
                     main()
                 assert exc_info.value.code == 0
                 output = mock_stdout.getvalue()
+                stderr_output = mock_stderr.getvalue()
 
-        # Parse output
+        # Parse output - should have systemMessage with workflow name
         result = json.loads(output)
-
-        assert "hookSpecificOutput" in result
-        assert "Checkpoint saved" in result["hookSpecificOutput"]["additionalContext"]
-        assert "peer-review" in result["hookSpecificOutput"]["additionalContext"]
+        assert "systemMessage" in result
+        assert "PACT: checkpoint saved" in result["systemMessage"]
+        assert "peer-review" in result["systemMessage"]
 
         # Verify checkpoint was written
         checkpoint_path = checkpoint_dir / f"{encoded_path}.json"
@@ -223,17 +224,18 @@ class TestPrecompactMain:
 
             from precompact_refresh import main
 
-            with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
+            with patch("sys.stdout", new_callable=StringIO) as mock_stdout, \
+                 patch("sys.stderr", new_callable=StringIO) as mock_stderr:
                 with pytest.raises(SystemExit) as exc_info:
                     main()
                 assert exc_info.value.code == 0
                 output = mock_stdout.getvalue()
+                stderr_output = mock_stderr.getvalue()
 
         result = json.loads(output)
-
-        # Should still save checkpoint (with workflow=none)
-        assert "Checkpoint saved" in result["hookSpecificOutput"]["additionalContext"]
-        assert "none" in result["hookSpecificOutput"]["additionalContext"]
+        assert "systemMessage" in result
+        # No workflow = no parenthetical suffix
+        assert result["systemMessage"] == "PACT: checkpoint saved"
 
     def test_main_without_transcript_path(self, tmp_path: Path):
         """Test handling missing transcript path in input."""
@@ -244,15 +246,17 @@ class TestPrecompactMain:
 
             from precompact_refresh import main
 
-            with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
+            with patch("sys.stdout", new_callable=StringIO) as mock_stdout, \
+                 patch("sys.stderr", new_callable=StringIO) as mock_stderr:
                 with pytest.raises(SystemExit) as exc_info:
                     main()
                 assert exc_info.value.code == 0
                 output = mock_stdout.getvalue()
+                stderr_output = mock_stderr.getvalue()
 
         result = json.loads(output)
-
-        assert "Skipped" in result["hookSpecificOutput"]["additionalContext"]
+        assert "systemMessage" in result
+        assert result["systemMessage"] == "PACT: checkpoint skipped"
 
     def test_main_with_invalid_json_input(self, tmp_path: Path):
         """Test handling invalid JSON input."""
@@ -267,9 +271,11 @@ class TestPrecompactMain:
                 assert exc_info.value.code == 0
                 output = mock_stdout.getvalue()
 
-        # Should handle gracefully and output valid JSON
+        # Should handle gracefully - invalid JSON leads to empty transcript_path
+        # which means unknown-project, so checkpoint skipped
         result = json.loads(output)
-        assert "hookSpecificOutput" in result
+        assert "systemMessage" in result
+        assert result["systemMessage"] == "PACT: checkpoint skipped"
 
     def test_main_never_raises(self, tmp_path: Path):
         """Test that main() never raises exceptions (always exits 0)."""
@@ -317,9 +323,9 @@ class TestPrecompactMain:
 
         result = json.loads(output)
 
-        # Terminated workflow results in "none" or low confidence
-        # The exact behavior depends on confidence threshold
-        assert "hookSpecificOutput" in result
+        # Terminated workflow still saves checkpoint (with workflow state or none)
+        assert "systemMessage" in result
+        assert "PACT: checkpoint saved" in result["systemMessage"]
 
 
 class TestIntegrationScenarios:
@@ -389,7 +395,8 @@ class TestIntegrationScenarios:
                 output = mock_stdout.getvalue()
 
         result = json.loads(output)
-        assert "hookSpecificOutput" in result
+        assert "systemMessage" in result
+        assert "PACT: checkpoint saved" in result["systemMessage"]
 
     def test_checkpoint_overwrite(self, tmp_path: Path):
         """Test that new checkpoint overwrites old one."""
@@ -465,9 +472,9 @@ class TestExceptionHandlingPaths:
                 assert exc_info.value.code == 0
                 output = mock_stdout.getvalue()
 
-        # Should still produce valid output
+        # Should still produce valid JSON output with systemMessage
         result = json.loads(output)
-        assert "hookSpecificOutput" in result
+        assert "systemMessage" in result
 
     def test_extract_workflow_state_exception_handling(self, tmp_path: Path):
         """Test that exceptions during transcript parsing are handled.
@@ -510,7 +517,7 @@ class TestExceptionHandlingPaths:
                 output = mock_stdout.getvalue()
 
         result = json.loads(output)
-        assert "hookSpecificOutput" in result
+        assert "systemMessage" in result
 
     def test_file_permission_error_on_checkpoint_write(self, tmp_path: Path):
         """Test handling of file permission errors when writing checkpoint.
@@ -541,19 +548,21 @@ class TestExceptionHandlingPaths:
             from precompact_refresh import main, write_checkpoint_atomic
 
             with patch("precompact_refresh.write_checkpoint_atomic", return_value=False):
-                with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
+                with patch("sys.stdout", new_callable=StringIO) as mock_stdout, \
+                     patch("sys.stderr", new_callable=StringIO) as mock_stderr:
                     with pytest.raises(SystemExit) as exc_info:
                         main()
 
                     # Should exit 0 even with write failure
                     assert exc_info.value.code == 0
                     output = mock_stdout.getvalue()
+                    stderr_output = mock_stderr.getvalue()
 
         result = json.loads(output)
-        assert "hookSpecificOutput" in result
-        # Should mention write failure
-        assert "Warning" in result["hookSpecificOutput"]["additionalContext"] or \
-               "failed" in result["hookSpecificOutput"]["additionalContext"]
+        assert "systemMessage" in result
+        assert result["systemMessage"] == "PACT: checkpoint failed"
+        # Should mention write failure in stderr
+        assert "failed" in stderr_output
 
     def test_outer_exception_handling(self, tmp_path: Path):
         """Test that outer try/except in main() catches all exceptions.

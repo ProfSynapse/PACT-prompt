@@ -12,7 +12,8 @@ inject refresh instructions into the resumed session.
 Input: JSON from stdin with:
   - transcript_path: Path to the JSONL conversation transcript
 
-Output: JSON with hookSpecificOutput.additionalContext (status message)
+Output: JSON with systemMessage to stdout for concise status feedback.
+Error messages are logged to stderr for debugging.
 
 Checkpoint location: ~/.claude/pact-refresh/{encoded-path}.json
 """
@@ -132,12 +133,7 @@ def main():
         encoded_path = get_encoded_project_path(transcript_path)
         if encoded_path == "unknown-project":
             # Cannot determine project, skip checkpoint
-            print(json.dumps({
-                "hookSpecificOutput": {
-                    "hookEventName": "PreCompact",
-                    "additionalContext": "Skipped: could not extract project path"
-                }
-            }))
+            print(json.dumps({"systemMessage": "PACT: checkpoint skipped"}))
             sys.exit(0)
 
         # Try to extract workflow state using the refresh package
@@ -177,29 +173,21 @@ def main():
 
         success = write_checkpoint_atomic(checkpoint_path, checkpoint)
 
+        workflow_name = checkpoint.get("workflow", {}).get("name", "none")
         if success:
-            workflow_name = checkpoint.get("workflow", {}).get("name", "none")
-            confidence = checkpoint.get("extraction", {}).get("confidence", 0)
-            output = {
-                "hookSpecificOutput": {
-                    "hookEventName": "PreCompact",
-                    "additionalContext": f"Checkpoint saved: workflow={workflow_name}, confidence={confidence:.1f}"
-                }
-            }
+            if workflow_name == "none":
+                print(json.dumps({"systemMessage": "PACT: checkpoint saved"}))
+            else:
+                print(json.dumps({"systemMessage": f"PACT: checkpoint saved ({workflow_name})"}))
         else:
-            output = {
-                "hookSpecificOutput": {
-                    "hookEventName": "PreCompact",
-                    "additionalContext": "Warning: checkpoint write failed"
-                }
-            }
-
-        print(json.dumps(output))
+            print("PreCompact: checkpoint write failed", file=sys.stderr)
+            print(json.dumps({"systemMessage": "PACT: checkpoint failed"}))
         sys.exit(0)
 
     except Exception as e:
         # Never fail the hook - log and exit cleanly
-        print(f"PreCompact hook warning: {e}", file=sys.stderr)
+        print(f"PreCompact hook error: {e}", file=sys.stderr)
+        print(json.dumps({"systemMessage": "PACT: checkpoint error"}))
         sys.exit(0)
 
 
