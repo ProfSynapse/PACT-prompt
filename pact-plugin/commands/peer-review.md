@@ -80,13 +80,15 @@ Select the domain coder based on PR focus:
            - **Skip** — Don't track or address
            - **Address now** — Fix it in this PR
            - **More context** — Get additional details about this recommendation before deciding
-         - Note: Tool supports up to 4 options per question. If >4 recommendations exist, make multiple `AskUserQuestion` calls to cover all items.
+         - Note: Tool supports 2-4 options per question and 1-4 questions per call. If >4 recommendations exist, make multiple `AskUserQuestion` calls to cover all items.
        - **Handling "More context" responses**:
          - When user selects "More context" for any recommendation, provide expanded explanation including:
            - Why it matters (impact on code quality, maintainability, security, performance)
            - What the change would involve (scope, affected areas)
            - Trade-offs of addressing vs. not addressing
+           - If the recommendation is self-explanatory, acknowledge briefly and proceed to re-ask
          - After providing context, re-ask the same question for that specific recommendation (without the "More context" option, since context was already provided)
+         - Handle "More context" inline: provide context immediately, get the answer, then continue to the next recommendation
        - **Collect all answers first**, then batch work:
          - Group all minor=Yes items AND future="Address now" items → Select workflow based on combined scope:
            - Single-domain items → `/PACT:comPACT` (parallelize if independent)
