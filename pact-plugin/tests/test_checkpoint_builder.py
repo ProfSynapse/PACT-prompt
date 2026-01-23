@@ -319,11 +319,14 @@ class TestCheckpointToRefreshMessage:
         # Check new directive prompt format
         assert "[WORKFLOW REFRESH]" in message
         assert "Context auto-compaction occurred" in message
+        assert "following framework protocols" in message
         assert "You are resuming:" in message
         assert "peer-review" in message
         assert "pr-64" in message
         assert "State:" in message
         assert "recommendations" in message
+        # Check step description is included
+        assert "Processing review recommendations" in message
         assert "Confidence: 0.9" in message
         # Check guidance line
         assert "Verify with user if context seems outdated" in message
@@ -336,11 +339,18 @@ class TestCheckpointToRefreshMessage:
         assert "Would you like to review" in message
 
     def test_refresh_message_with_context(self, sample_checkpoint):
-        """Test refresh message includes context in compact key=value format."""
+        """Test refresh message includes context with verbose key names."""
         message = checkpoint_to_refresh_message(sample_checkpoint)
 
         assert "Context:" in message
+        # pr_number stays the same (already clear)
         assert "pr_number=64" in message
+        # has_blocking becomes has_blocking_issues
+        assert "has_blocking_issues=False" in message
+        # minor_count becomes minor_issues_count
+        assert "minor_issues_count=0" in message
+        # future_count becomes future_recommendations_count
+        assert "future_recommendations_count=1" in message
 
     def test_refresh_message_no_workflow(self):
         """Test no refresh message for 'none' workflow."""
@@ -415,7 +425,7 @@ class TestCheckpointToRefreshMessage:
         assert "State:" in message
 
     def test_refresh_message_directive_format(self):
-        """Test the exact directive prompt format structure."""
+        """Test the exact directive prompt format structure with verbose keys."""
         checkpoint = {
             "workflow": {
                 "name": "peer-review",
@@ -437,16 +447,16 @@ class TestCheckpointToRefreshMessage:
         assert len(lines) == 7
         # Line 1: [WORKFLOW REFRESH]
         assert lines[0] == "[WORKFLOW REFRESH]"
-        # Line 2: Explanatory line
-        assert lines[1] == "Context auto-compaction occurred. This information helps you resume the PACT workflow in progress."
+        # Line 2: Explanatory line with framework emphasis
+        assert lines[1] == "Context auto-compaction occurred. Resume the PACT workflow below, following framework protocols."
         # Line 3: You are resuming: workflow (id)
         assert lines[2] == "You are resuming: peer-review (PR#88)"
-        # Line 4: State
-        assert lines[3] == "State: awaiting_user_decision"
-        # Line 5: Context
+        # Line 4: State with description
+        assert lines[3] == "State: awaiting_user_decision — Waiting for user decision"
+        # Line 5: Context - now uses verbose keys
         assert lines[4].startswith("Context:")
-        assert "reviewers=3" in lines[4]
-        assert "blocking=0" in lines[4]
+        assert "reviewers_completed=3" in lines[4]
+        assert "blocking_issues=0" in lines[4]
         # Line 6: Action
         assert lines[5] == "Action: Waiting for user to authorize merge"
         # Line 7: Guidance

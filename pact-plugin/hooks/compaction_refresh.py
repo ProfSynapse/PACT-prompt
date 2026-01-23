@@ -36,6 +36,55 @@ except ImportError:
     CONFIDENCE_LABEL_HIGH = 0.8
     CONFIDENCE_LABEL_MEDIUM = 0.5
 
+# Mapping of terse context keys to verbose equivalents for refresh messages
+# This helps AI understand what each key means when resuming after compaction
+# Duplicated here for fallback when refresh package not available
+CONTEXT_KEY_VERBOSE = {
+    "reviewers": "reviewers_completed",
+    "blocking": "blocking_issues",
+    "round": "review_round",
+    "pr_number": "pr_number",  # already clear
+    "phase": "current_phase",
+    "feature": "feature_name",
+    "branch": "branch_name",
+    "plan_file": "plan_file",  # already clear
+    "has_blocking": "has_blocking_issues",
+    "minor_count": "minor_issues_count",
+    "future_count": "future_recommendations_count",
+}
+
+# Step descriptions for refresh messages (fallback when refresh package not available)
+# Duplicated from refresh.constants for standalone use
+STEP_DESCRIPTIONS_FALLBACK = {
+    # peer-review steps
+    "commit": "Committing changes to git",
+    "create-pr": "Creating pull request",
+    "invoke-reviewers": "Launching reviewer agents in parallel",
+    "synthesize": "Synthesizing reviewer findings",
+    "recommendations": "Processing review recommendations",
+    "merge-ready": "All reviews complete, PR ready for merge authorization",
+    "awaiting-merge": "Waiting for user to authorize merge",
+    "awaiting_user_decision": "Waiting for user decision",
+    # orchestrate steps
+    "variety-assess": "Assessing task complexity and variety",
+    "prepare": "Running PREPARE phase - research and requirements",
+    "architect": "Running ARCHITECT phase - system design",
+    "code": "Running CODE phase - implementation",
+    "test": "Running TEST phase - testing and QA",
+    # plan-mode steps
+    "analyze": "Analyzing scope and selecting specialists",
+    "consult": "Consulting specialists for planning perspectives",
+    "present": "Presenting plan for user approval",
+    # comPACT steps
+    "invoking-specialist": "Delegating to specialist agent",
+    "specialist-completed": "Specialist work completed",
+    # rePACT (nested) steps
+    "nested-prepare": "Running nested PREPARE phase",
+    "nested-architect": "Running nested ARCHITECT phase",
+    "nested-code": "Running nested CODE phase",
+    "nested-test": "Running nested TEST phase",
+}
+
 # Item 4 & 9: Explicit type annotation for get_checkpoint_path
 # Restructured to avoid defining unused fallback when shared utils are available
 get_checkpoint_path: Callable[[str], Path]
@@ -144,9 +193,9 @@ def _build_refresh_message_fallback(checkpoint: dict) -> str:
 
     Format:
         [WORKFLOW REFRESH]
-        Context auto-compaction occurred. This information helps you resume the PACT workflow in progress.
+        Context auto-compaction occurred. Resume the PACT workflow below, following framework protocols.
         You are resuming: {workflow_name} ({workflow_id})
-        State: {step_name}
+        State: {step_name} — {step_description}
         Context: key=value, ... (only if context exists)
         Action: {pending_action.instruction} (only if pending action exists)
         Confidence: X.X. Verify with user if context seems outdated.
@@ -172,8 +221,8 @@ def _build_refresh_message_fallback(checkpoint: dict) -> str:
 
     lines = ["[WORKFLOW REFRESH]"]
 
-    # Line 2: Explanatory line
-    lines.append("Context auto-compaction occurred. This information helps you resume the PACT workflow in progress.")
+    # Line 2: Explanatory line with framework emphasis
+    lines.append("Context auto-compaction occurred. Resume the PACT workflow below, following framework protocols.")
 
     # Line 3: You are resuming: workflow (id)
     if workflow_id:
@@ -181,12 +230,19 @@ def _build_refresh_message_fallback(checkpoint: dict) -> str:
     else:
         lines.append(f"You are resuming: {workflow_name}")
 
-    # Line 4: State
-    lines.append(f"State: {step_name}")
+    # Line 4: State with description (if available)
+    step_desc = STEP_DESCRIPTIONS_FALLBACK.get(step_name)
+    if step_desc:
+        lines.append(f"State: {step_name} — {step_desc}")
+    else:
+        lines.append(f"State: {step_name}")
 
-    # Line 5: Context (only if present)
+    # Line 5: Context (only if present) - use verbose key names
     if context:
-        context_parts = [f"{k}={v}" for k, v in context.items()]
+        context_parts = [
+            f"{CONTEXT_KEY_VERBOSE.get(k, k)}={v}"
+            for k, v in context.items()
+        ]
         lines.append(f"Context: {', '.join(context_parts)}")
 
     # Line 6: Action (only if pending action exists)

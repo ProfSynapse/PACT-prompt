@@ -24,7 +24,24 @@ from .constants import (
     CHECKPOINT_VERSION,
     CONFIDENCE_LABEL_HIGH,
     CONFIDENCE_LABEL_MEDIUM,
+    STEP_DESCRIPTIONS,
 )
+
+# Mapping of terse context keys to verbose equivalents for refresh messages
+# This helps AI understand what each key means when resuming after compaction
+CONTEXT_KEY_VERBOSE = {
+    "reviewers": "reviewers_completed",
+    "blocking": "blocking_issues",
+    "round": "review_round",
+    "pr_number": "pr_number",  # already clear
+    "phase": "current_phase",
+    "feature": "feature_name",
+    "branch": "branch_name",
+    "plan_file": "plan_file",  # already clear
+    "has_blocking": "has_blocking_issues",
+    "minor_count": "minor_issues_count",
+    "future_count": "future_recommendations_count",
+}
 
 # Item 13: Try to use Pydantic, fall back to dataclass
 try:
@@ -429,9 +446,9 @@ def checkpoint_to_refresh_message(checkpoint: dict[str, Any]) -> str:
 
     Format:
         [WORKFLOW REFRESH]
-        Context auto-compaction occurred. This information helps you resume the PACT workflow in progress.
+        Context auto-compaction occurred. Resume the PACT workflow below, following framework protocols.
         You are resuming: {workflow_name} ({workflow_id})
-        State: {step_name}
+        State: {step_name} — {step_description}
         Context: key=value, ... (only if context exists)
         Action: {pending_action.instruction} (only if pending action exists)
         Confidence: X.X. Verify with user if context seems outdated.
@@ -458,8 +475,8 @@ def checkpoint_to_refresh_message(checkpoint: dict[str, Any]) -> str:
 
     lines = ["[WORKFLOW REFRESH]"]
 
-    # Line 2: Explanatory line
-    lines.append("Context auto-compaction occurred. This information helps you resume the PACT workflow in progress.")
+    # Line 2: Explanatory line with framework emphasis
+    lines.append("Context auto-compaction occurred. Resume the PACT workflow below, following framework protocols.")
 
     # Line 3: You are resuming: workflow (id)
     if workflow_id:
@@ -467,12 +484,19 @@ def checkpoint_to_refresh_message(checkpoint: dict[str, Any]) -> str:
     else:
         lines.append(f"You are resuming: {workflow_name}")
 
-    # Line 4: State
-    lines.append(f"State: {step_name}")
+    # Line 4: State with description (if available)
+    step_desc = STEP_DESCRIPTIONS.get(step_name)
+    if step_desc:
+        lines.append(f"State: {step_name} — {step_desc}")
+    else:
+        lines.append(f"State: {step_name}")
 
-    # Line 5: Context (only if present)
+    # Line 5: Context (only if present) - use verbose key names
     if context:
-        context_parts = [f"{k}={v}" for k, v in context.items()]
+        context_parts = [
+            f"{CONTEXT_KEY_VERBOSE.get(k, k)}={v}"
+            for k, v in context.items()
+        ]
         lines.append(f"Context: {', '.join(context_parts)}")
 
     # Line 6: Action (only if pending action exists)

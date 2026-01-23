@@ -42,3 +42,37 @@ CHECKPOINT_VERSION = "1.0"
 
 # Checkpoint file expiration in days (Item 11)
 CHECKPOINT_MAX_AGE_DAYS = 7
+
+# === STEP DESCRIPTIONS ===
+# Human-readable descriptions for workflow steps, used in refresh messages
+# to help the AI understand what each state means when resuming after compaction
+
+STEP_DESCRIPTIONS = {
+    # peer-review steps
+    "commit": "Committing changes to git",
+    "create-pr": "Creating pull request",
+    "invoke-reviewers": "Launching reviewer agents in parallel",
+    "synthesize": "Synthesizing reviewer findings",
+    "recommendations": "Processing review recommendations",
+    "merge-ready": "All reviews complete, PR ready for merge authorization",
+    "awaiting-merge": "Waiting for user to authorize merge",
+    "awaiting_user_decision": "Waiting for user decision",
+    # orchestrate steps
+    "variety-assess": "Assessing task complexity and variety",
+    "prepare": "Running PREPARE phase - research and requirements",
+    "architect": "Running ARCHITECT phase - system design",
+    "code": "Running CODE phase - implementation",
+    "test": "Running TEST phase - testing and QA",
+    # plan-mode steps
+    "analyze": "Analyzing scope and selecting specialists",
+    "consult": "Consulting specialists for planning perspectives",
+    "present": "Presenting plan for user approval",
+    # comPACT steps
+    "invoking-specialist": "Delegating to specialist agent",
+    "specialist-completed": "Specialist work completed",
+    # rePACT (nested) steps
+    "nested-prepare": "Running nested PREPARE phase",
+    "nested-architect": "Running nested ARCHITECT phase",
+    "nested-code": "Running nested CODE phase",
+    "nested-test": "Running nested TEST phase",
+}

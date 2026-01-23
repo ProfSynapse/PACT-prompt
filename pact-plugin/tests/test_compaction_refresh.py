@@ -149,11 +149,14 @@ class TestBuildRefreshMessage:
         # Check directive prompt format
         assert "[WORKFLOW REFRESH]" in message
         assert "Context auto-compaction occurred" in message
+        assert "following framework protocols" in message
         assert "You are resuming:" in message
         assert "peer-review" in message
         assert "pr-64" in message
         assert "State:" in message
         assert "recommendations" in message
+        # Check step description is included
+        assert "Processing review recommendations" in message
         assert "Confidence: 0.9" in message
         assert "Verify with user if context seems outdated" in message
 
@@ -167,13 +170,20 @@ class TestBuildRefreshMessage:
         assert "Would you like to review" in message
 
     def test_build_message_with_context(self, sample_checkpoint):
-        """Test refresh message includes context in compact key=value format."""
+        """Test refresh message includes context with verbose key names."""
         from compaction_refresh import build_refresh_message
 
         message = build_refresh_message(sample_checkpoint)
 
         assert "Context:" in message
+        # pr_number stays the same (already clear)
         assert "pr_number=64" in message
+        # has_blocking becomes has_blocking_issues
+        assert "has_blocking_issues=False" in message
+        # minor_count becomes minor_issues_count
+        assert "minor_issues_count=0" in message
+        # future_count becomes future_recommendations_count
+        assert "future_recommendations_count=1" in message
 
     def test_build_message_confidence_values(self):
         """Test confidence values are displayed in guidance line."""
