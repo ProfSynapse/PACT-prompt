@@ -79,15 +79,6 @@
     ],
     "PostToolUse": [
       {
-        "matcher": "Task",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "echo '{\"decision\":\"block\",\"reason\":\"🧠 MEMORY CHECK: Agent completed. Save context if meaningful work was done.\"}'"
-          }
-        ]
-      },
-      {
         "matcher": "Edit",
         "hooks": [
           {

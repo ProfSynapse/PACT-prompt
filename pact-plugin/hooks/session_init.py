@@ -275,87 +275,6 @@ def maybe_embed_pending() -> dict:
         return result
 
 
-def setup_permissions() -> str | None:
-    """
-    Merge PACT permission settings into ~/.claude/settings.json.
-
-    PACT agents running in background need pre-authorized permissions.
-    This function merges PACT's permissions with existing user settings
-    without overwriting other configuration.
-
-    Returns:
-        Status message or None if no changes needed
-    """
-    plugin_root = Path(os.environ.get("CLAUDE_PLUGIN_ROOT", ""))
-    if not plugin_root.exists():
-        return None
-
-    pact_settings_file = plugin_root / ".claude" / "settings.json"
-    if not pact_settings_file.exists():
-        return None
-
-    user_settings_file = Path.home() / ".claude" / "settings.json"
-
-    try:
-        # Load PACT permissions
-        pact_settings = json.loads(pact_settings_file.read_text(encoding='utf-8'))
-        pact_permissions = pact_settings.get("permissions", {})
-
-        if not pact_permissions:
-            return None
-
-        # Load existing user settings (or create empty)
-        if user_settings_file.exists():
-            user_settings = json.loads(user_settings_file.read_text(encoding='utf-8'))
-        else:
-            user_settings = {}
-
-        # Get or create user permissions
-        user_permissions = user_settings.setdefault("permissions", {})
-
-        # Track what we're adding
-        added_allow = 0
-        added_deny = 0
-
-        # Merge allow rules (add PACT rules that don't exist)
-        pact_allow = set(pact_permissions.get("allow", []))
-        user_allow = set(user_permissions.get("allow", []))
-        new_allow = pact_allow - user_allow
-        if new_allow:
-            user_permissions["allow"] = list(user_allow | pact_allow)
-            added_allow = len(new_allow)
-
-        # Merge deny rules (add PACT rules that don't exist)
-        pact_deny = set(pact_permissions.get("deny", []))
-        user_deny = set(user_permissions.get("deny", []))
-        new_deny = pact_deny - user_deny
-        if new_deny:
-            user_permissions["deny"] = list(user_deny | pact_deny)
-            added_deny = len(new_deny)
-
-        # Set defaultMode only if not already set
-        if "defaultMode" not in user_permissions and "defaultMode" in pact_permissions:
-            user_permissions["defaultMode"] = pact_permissions["defaultMode"]
-
-        # Write back if changes were made
-        if added_allow or added_deny:
-            user_settings_file.write_text(
-                json.dumps(user_settings, indent=2) + "\n",
-                encoding='utf-8'
-            )
-            parts = []
-            if added_allow:
-                parts.append(f"{added_allow} allow rules")
-            if added_deny:
-                parts.append(f"{added_deny} deny rules")
-            return f"PACT permissions merged: {', '.join(parts)}"
-
-        return None
-
-    except (json.JSONDecodeError, IOError) as e:
-        return f"PACT permissions setup failed: {str(e)[:30]}"
-
-
 def setup_plugin_symlinks() -> str | None:
     """
     Create symlinks for plugin resources to ~/.claude/.
@@ -605,13 +524,12 @@ def main():
 
     Performs PACT environment initialization:
     0. Creates plugin symlinks for @reference resolution
-    1. Merges PACT permissions for background agent support
-    2. Checks for active plans
-    3. Updates ~/.claude/CLAUDE.md (merges/installs PACT Orchestrator)
-    4. Ensures project CLAUDE.md exists with memory sections
-    5. Auto-installs pact-memory dependencies
-    6. Migrates embeddings if dimension changed
-    7. Processes any unembedded memories (catch-up)
+    1. Checks for active plans
+    2. Updates ~/.claude/CLAUDE.md (merges/installs PACT Orchestrator)
+    3. Ensures project CLAUDE.md exists with memory sections
+    4. Auto-installs pact-memory dependencies
+    5. Migrates embeddings if dimension changed
+    6. Processes any unembedded memories (catch-up)
     """
     try:
         try:
@@ -630,14 +548,7 @@ def main():
         elif symlink_result:
             context_parts.append(symlink_result)
 
-        # 1. Merge PACT permissions for background agent support
-        permissions_result = setup_permissions()
-        if permissions_result and "failed" in permissions_result.lower():
-            system_messages.append(permissions_result)
-        elif permissions_result:
-            context_parts.append(permissions_result)
-
-        # 2. Check for active plans
+        # 1. Check for active plans
         active_plans = find_active_plans(project_dir)
         if active_plans:
             plan_list = ", ".join(active_plans[:3])
@@ -645,7 +556,7 @@ def main():
                 plan_list += f" (+{len(active_plans) - 3} more)"
             context_parts.append(f"Active plans: {plan_list}")
 
-        # 3. Updates ~/.claude/CLAUDE.md (merges/installs PACT Orchestrator)
+        # 2. Updates ~/.claude/CLAUDE.md (merges/installs PACT Orchestrator)
         claude_md_msg = update_claude_md()
         if claude_md_msg:
             if "failed" in claude_md_msg.lower() or "unmanaged" in claude_md_msg.lower():
@@ -653,7 +564,7 @@ def main():
             else:
                 context_parts.append(claude_md_msg)
 
-        # 4. Ensure project has CLAUDE.md with memory sections
+        # 3. Ensure project has CLAUDE.md with memory sections
         project_md_msg = ensure_project_memory_md()
         if project_md_msg:
             if "failed" in project_md_msg.lower():
@@ -661,7 +572,7 @@ def main():
             else:
                 context_parts.append(project_md_msg)
 
-        # 6. Check and install dependencies
+        # 4. Check and install dependencies
         deps_result = check_and_install_dependencies()
         if deps_result['installed']:
             context_parts.append(
@@ -672,12 +583,12 @@ def main():
                 f"Failed to install: {', '.join(deps_result['failed'])}"
             )
 
-        # 7. Migrate embeddings if dimension changed
+        # 5. Migrate embeddings if dimension changed
         migrate_result = maybe_migrate_embeddings()
         if migrate_result.get("message") and "Migrated" in migrate_result["message"]:
             context_parts.append(migrate_result["message"])
 
-        # 8. Process any unembedded memories (catch-up)
+        # 6. Process any unembedded memories (catch-up)
         embed_result = maybe_embed_pending()
         if embed_result.get("message"):
             if embed_result["status"] == "ok" and "Embedded" in embed_result["message"]:
