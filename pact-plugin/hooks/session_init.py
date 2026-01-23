@@ -524,13 +524,12 @@ def main():
 
     Performs PACT environment initialization:
     0. Creates plugin symlinks for @reference resolution
-    1. Merges PACT permissions for background agent support
-    2. Checks for active plans
-    3. Updates ~/.claude/CLAUDE.md (merges/installs PACT Orchestrator)
-    4. Ensures project CLAUDE.md exists with memory sections
-    5. Auto-installs pact-memory dependencies
-    6. Migrates embeddings if dimension changed
-    7. Processes any unembedded memories (catch-up)
+    1. Checks for active plans
+    2. Updates ~/.claude/CLAUDE.md (merges/installs PACT Orchestrator)
+    3. Ensures project CLAUDE.md exists with memory sections
+    4. Auto-installs pact-memory dependencies
+    5. Migrates embeddings if dimension changed
+    6. Processes any unembedded memories (catch-up)
     """
     try:
         try:
@@ -573,7 +572,7 @@ def main():
             else:
                 context_parts.append(project_md_msg)
 
-        # 6. Check and install dependencies
+        # 4. Check and install dependencies
         deps_result = check_and_install_dependencies()
         if deps_result['installed']:
             context_parts.append(
@@ -584,12 +583,12 @@ def main():
                 f"Failed to install: {', '.join(deps_result['failed'])}"
             )
 
-        # 7. Migrate embeddings if dimension changed
+        # 5. Migrate embeddings if dimension changed
         migrate_result = maybe_migrate_embeddings()
         if migrate_result.get("message") and "Migrated" in migrate_result["message"]:
             context_parts.append(migrate_result["message"])
 
-        # 8. Process any unembedded memories (catch-up)
+        # 6. Process any unembedded memories (catch-up)
         embed_result = maybe_embed_pending()
         if embed_result.get("message"):
             if embed_result["status"] == "ok" and "Embedded" in embed_result["message"]:
