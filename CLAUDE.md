@@ -34,17 +34,6 @@ PreCompact and SessionStart hooks that preserve PACT workflow state across conte
 
 Enables seamless workflow resumption when Claude Code auto-compacts mid-session.
 
-### Lazy Memory Initialization (PR #101)
-Memory system initialization is now lazy-loaded on first use instead of at session start:
-- `skills/pact-memory/scripts/memory_init.py` - Lazy init with thread-safe double-checked locking
-- Non-memory users pay zero startup cost
-- Handles: dependency installation, embedding migration, pending embedding catch-up
-- 47 tests covering thread safety, graceful degradation, and integration
-
-**Key detail**: Two state mechanisms exist:
-1. `_initialized` (in-memory): Overall lazy init flag, reset per process
-2. Session marker file: Controls `maybe_embed_pending()`, persists within session
-
 ## Retrieved Context
 <!-- Auto-managed by pact-memory skill. Last 3 retrieved memories shown. -->
 
