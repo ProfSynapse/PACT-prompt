@@ -340,10 +340,14 @@ def reset_initialization() -> None:
     Reset the initialization state.
 
     Useful for testing or when forcing re-initialization.
+    Clears both the in-memory flag and the session marker file.
     """
     global _initialized
     with _init_lock:
         _initialized = False
+        # Also clear the session marker file so maybe_embed_pending() can run again
+        marker_path = _get_embedding_attempted_path()
+        marker_path.unlink(missing_ok=True)
 
 
 def is_initialized() -> bool:
