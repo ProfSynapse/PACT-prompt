@@ -30,30 +30,9 @@ if str(_hooks_dir) not in sys.path:
 # Import checkpoint utilities from refresh package (always available - same directory)
 from refresh.checkpoint_builder import (
     get_checkpoint_path,
+    get_encoded_project_path,
     checkpoint_to_refresh_message,
 )
-
-
-def get_encoded_project_path_from_env() -> str | None:
-    """
-    Derive the encoded project path from CLAUDE_PROJECT_DIR.
-
-    Converts /Users/mj/Sites/collab/PACT-prompt to -Users-mj-Sites-collab-PACT-prompt
-
-    Note: The leading dash is intentional - it matches how Claude Code encodes
-    project paths in the ~/.claude/projects/ directory structure.
-
-    Returns:
-        The encoded project path, or None if CLAUDE_PROJECT_DIR not set
-    """
-    project_dir = os.environ.get("CLAUDE_PROJECT_DIR", "")
-    if not project_dir:
-        return None
-
-    # Convert path to encoded form: replace all / with -
-    # This preserves the leading dash from "/Users/..." -> "-Users-..."
-    encoded = project_dir.replace("/", "-")
-    return encoded
 
 
 def read_checkpoint(checkpoint_path: Path) -> dict | None:
@@ -148,10 +127,11 @@ def main():
             sys.exit(0)
 
         # Get session ID and project path
+        # Use empty transcript path to trigger fallback to CLAUDE_PROJECT_DIR
         session_id = os.environ.get("CLAUDE_SESSION_ID", "unknown")
-        encoded_path = get_encoded_project_path_from_env()
+        encoded_path = get_encoded_project_path("")
 
-        if not encoded_path:
+        if encoded_path == "unknown-project":
             # Cannot determine project, skip refresh
             print(json.dumps({
                 "hookSpecificOutput": {

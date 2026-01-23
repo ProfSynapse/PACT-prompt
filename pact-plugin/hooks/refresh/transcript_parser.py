@@ -132,12 +132,8 @@ def parse_line(line: str, line_number: int) -> Turn | None:
                 elif block_type == "tool_result":
                     # Tool results are expected, skip silently
                     pass
-                else:
-                    # Item 5: Log unexpected block types for debugging
-                    print(
-                        f"Debug: Unexpected content block type '{block_type}' at line {line_number}",
-                        file=sys.stderr,
-                    )
+                # Note: Unknown block types are silently ignored as they're
+                # typically benign (e.g., image blocks, thinking blocks)
             elif isinstance(block, str):
                 text_parts.append(block)
         content = "\n".join(text_parts)

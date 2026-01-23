@@ -22,52 +22,19 @@ import os
 import sys
 import tempfile
 import time
-from datetime import datetime, timezone
 from pathlib import Path
 
-from refresh.constants import CHECKPOINT_MAX_AGE_DAYS, CHECKPOINT_VERSION
-
-# Import shared utilities from refresh package (Item 1: use shared checkpoint_builder)
-# Using absolute import via package - refresh is a sibling directory
+# Add hooks directory to path for refresh package imports
 _hooks_dir = Path(__file__).parent
 if str(_hooks_dir) not in sys.path:
     sys.path.insert(0, str(_hooks_dir))
 
-# Track which utilities are available from the shared package
-_SHARED_UTILS_AVAILABLE = False
-try:
-    from refresh.checkpoint_builder import (
-        get_checkpoint_path,
-        build_no_workflow_checkpoint,
-    )
-    _SHARED_UTILS_AVAILABLE = True
-except ImportError:
-    # Fallback if refresh package not available yet
-    _SHARED_UTILS_AVAILABLE = False
-
-    def get_checkpoint_path(encoded_path: str) -> Path:
-        return Path.home() / ".claude" / "pact-refresh" / f"{encoded_path}.json"
-
-
-def get_encoded_project_path(transcript_path: str) -> str | None:
-    """
-    Extract the encoded project path from the transcript path.
-
-    The transcript path follows this structure:
-    ~/.claude/projects/{encoded-path}/{session-uuid}/session.jsonl
-
-    Args:
-        transcript_path: Full path to the transcript file
-
-    Returns:
-        The encoded project path segment, or None if extraction fails
-    """
-    try:
-        parts = transcript_path.split("/")
-        projects_idx = parts.index("projects")
-        return parts[projects_idx + 1]
-    except (ValueError, IndexError):
-        return None
+from refresh.constants import CHECKPOINT_MAX_AGE_DAYS
+from refresh.checkpoint_builder import (
+    get_checkpoint_path,
+    get_encoded_project_path,
+    build_no_workflow_checkpoint,
+)
 
 
 def write_checkpoint_atomic(checkpoint_path: Path, data: dict) -> bool:
@@ -144,75 +111,6 @@ def cleanup_old_checkpoints(checkpoint_dir: Path) -> int:
     return cleaned
 
 
-def _build_checkpoint_fallback(
-    workflow_state: dict | None,
-    session_id: str,
-    transcript_path: str,
-    lines_scanned: int = 0
-) -> dict:
-    """
-    Fallback checkpoint builder when shared utils are not available.
-
-    Item 1 & 9: Only used when checkpoint_builder package is unavailable,
-    avoiding duplicate code when shared utils are present.
-
-    Args:
-        workflow_state: Extracted workflow state from refresh package, or None
-        session_id: Current session ID
-        transcript_path: Path to transcript that was parsed
-        lines_scanned: Number of transcript lines scanned
-
-    Returns:
-        Checkpoint dictionary ready for JSON serialization
-    """
-    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-
-    if workflow_state is None:
-        # No active workflow detected
-        return {
-            "version": CHECKPOINT_VERSION,
-            "session_id": session_id,
-            "workflow": {
-                "name": "none"
-            },
-            "extraction": {
-                "confidence": 1.0,
-                "notes": "No active workflow detected",
-                "transcript_lines_scanned": lines_scanned
-            },
-            "created_at": now
-        }
-
-    # Build full checkpoint from extracted state
-    checkpoint = {
-        "version": CHECKPOINT_VERSION,
-        "session_id": session_id,
-        "workflow": workflow_state.get("workflow", {"name": "none"}),
-        "created_at": now
-    }
-
-    # Add step if present
-    if "step" in workflow_state:
-        checkpoint["step"] = workflow_state["step"]
-
-    # Add pending_action if present
-    if "pending_action" in workflow_state:
-        checkpoint["pending_action"] = workflow_state["pending_action"]
-
-    # Add context if present
-    if "context" in workflow_state:
-        checkpoint["context"] = workflow_state["context"]
-
-    # Add extraction metadata
-    checkpoint["extraction"] = workflow_state.get("extraction", {
-        "confidence": 0.5,
-        "notes": "State extracted from transcript",
-        "transcript_lines_scanned": lines_scanned
-    })
-
-    return checkpoint
-
-
 def main():
     """
     Main entry point for the PreCompact hook.
@@ -232,7 +130,7 @@ def main():
 
         # Extract encoded project path
         encoded_path = get_encoded_project_path(transcript_path)
-        if not encoded_path:
+        if encoded_path == "unknown-project":
             # Cannot determine project, skip checkpoint
             print(json.dumps({
                 "hookSpecificOutput": {
@@ -263,22 +161,13 @@ def main():
             pass
 
         # Build fallback checkpoint if extraction failed or returned None
-        # Item 1 & 9: Use shared utils when available, fallback otherwise
         if checkpoint is None:
-            if _SHARED_UTILS_AVAILABLE:
-                checkpoint = build_no_workflow_checkpoint(
-                    transcript_path=transcript_path,
-                    lines_scanned=0,
-                    reason="No active workflow detected"
-                )
-                checkpoint["session_id"] = session_id
-            else:
-                checkpoint = _build_checkpoint_fallback(
-                    workflow_state=None,
-                    session_id=session_id,
-                    transcript_path=transcript_path,
-                    lines_scanned=0
-                )
+            checkpoint = build_no_workflow_checkpoint(
+                transcript_path=transcript_path,
+                lines_scanned=0,
+                reason="No active workflow detected"
+            )
+            checkpoint["session_id"] = session_id
 
         # Write checkpoint atomically
         checkpoint_path = get_checkpoint_path(encoded_path)

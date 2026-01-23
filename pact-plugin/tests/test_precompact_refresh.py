@@ -28,24 +28,29 @@ from conftest import (
 
 
 class TestGetEncodedProjectPath:
-    """Tests for get_encoded_project_path function in precompact_refresh."""
+    """Tests for get_encoded_project_path used by precompact_refresh.
+
+    Note: The function is now shared from checkpoint_builder.py.
+    """
 
     def test_extract_valid_path(self):
         """Test extracting path from valid transcript path."""
-        from precompact_refresh import get_encoded_project_path
+        from refresh.checkpoint_builder import get_encoded_project_path
 
         transcript_path = "/Users/test/.claude/projects/-Users-test-myproject/session-uuid/session.jsonl"
         encoded = get_encoded_project_path(transcript_path)
 
         assert encoded == "-Users-test-myproject"
 
-    def test_extract_fails_invalid_path(self):
-        """Test extraction fails for invalid path."""
-        from precompact_refresh import get_encoded_project_path
+    def test_extract_invalid_path_returns_unknown_project(self):
+        """Test extraction returns 'unknown-project' for invalid path with no env fallback."""
+        from refresh.checkpoint_builder import get_encoded_project_path
 
-        result = get_encoded_project_path("/invalid/path/no/projects")
+        with patch.dict(os.environ, {}, clear=True):
+            os.environ.pop("CLAUDE_PROJECT_DIR", None)
+            result = get_encoded_project_path("/invalid/path/no/projects")
 
-        assert result is None
+        assert result == "unknown-project"
 
 
 class TestGetCheckpointPath:
@@ -106,50 +111,38 @@ class TestWriteCheckpointAtomic:
         assert len(temp_files) == 0
 
 
-class TestBuildCheckpointFunction:
-    """Tests for build_checkpoint function in precompact_refresh."""
+class TestBuildNoWorkflowCheckpoint:
+    """Tests for build_no_workflow_checkpoint used by precompact_refresh.
 
-    def test_build_with_workflow_state(self):
-        """Test building checkpoint from workflow state using fallback function."""
-        # Item 1: Renamed to _build_checkpoint_fallback, test the fallback
-        from precompact_refresh import _build_checkpoint_fallback
+    Note: The fallback function was removed from precompact_refresh.
+    Now uses build_no_workflow_checkpoint from checkpoint_builder.py.
+    """
 
-        workflow_state = {
-            "workflow": {"name": "peer-review", "id": "pr-64"},
-            "step": {"name": "recommendations", "sequence": 5},
-            "pending_action": {"type": "AskUserQuestion", "instruction": "Proceed?"},
-            "context": {"pr_number": 64},
-            "extraction": {"confidence": 0.9, "notes": "clear trigger"},
-        }
+    def test_build_no_workflow_checkpoint(self):
+        """Test building checkpoint when no workflow detected."""
+        from refresh.checkpoint_builder import build_no_workflow_checkpoint
 
-        checkpoint = _build_checkpoint_fallback(
-            workflow_state=workflow_state,
-            session_id="test-session",
-            transcript_path="/test/path",
-            lines_scanned=150,
-        )
-
-        assert checkpoint["version"] == "1.0"
-        assert checkpoint["session_id"] == "test-session"
-        assert checkpoint["workflow"]["name"] == "peer-review"
-        assert checkpoint["step"]["name"] == "recommendations"
-        assert checkpoint["pending_action"]["type"] == "AskUserQuestion"
-        assert "created_at" in checkpoint
-
-    def test_build_without_workflow_state(self):
-        """Test building checkpoint when no workflow detected using fallback."""
-        # Item 1: Renamed to _build_checkpoint_fallback, test the fallback
-        from precompact_refresh import _build_checkpoint_fallback
-
-        checkpoint = _build_checkpoint_fallback(
-            workflow_state=None,
-            session_id="test-session",
+        checkpoint = build_no_workflow_checkpoint(
             transcript_path="/test/path",
             lines_scanned=500,
+            reason="No active workflow detected",
         )
 
         assert checkpoint["workflow"]["name"] == "none"
         assert checkpoint["extraction"]["confidence"] == 1.0
+        assert checkpoint["extraction"]["notes"] == "No active workflow detected"
+        assert "created_at" in checkpoint
+
+    def test_build_no_workflow_checkpoint_default_reason(self):
+        """Test building checkpoint uses default reason when not provided."""
+        from refresh.checkpoint_builder import build_no_workflow_checkpoint
+
+        checkpoint = build_no_workflow_checkpoint(
+            transcript_path="/test/path",
+            lines_scanned=100,
+        )
+
+        assert checkpoint["workflow"]["name"] == "none"
         assert checkpoint["extraction"]["notes"] == "No active workflow detected"
 
 

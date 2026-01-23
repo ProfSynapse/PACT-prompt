@@ -19,36 +19,42 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 sys.path.insert(0, str(Path(__file__).parent))
 
 
-class TestGetEncodedProjectPathFromEnv:
-    """Tests for get_encoded_project_path_from_env function."""
+class TestGetEncodedProjectPath:
+    """Tests for get_encoded_project_path used by compaction_refresh.
 
-    def test_encodes_project_path(self):
-        """Test encoding project path from environment."""
-        from compaction_refresh import get_encoded_project_path_from_env
+    Note: The function is now shared from checkpoint_builder.py.
+    These tests verify the usage pattern in compaction_refresh where
+    an empty transcript path is passed to trigger the env var fallback.
+    """
+
+    def test_encodes_project_path_from_env(self):
+        """Test encoding project path from environment when transcript path is empty."""
+        from refresh.checkpoint_builder import get_encoded_project_path
 
         with patch.dict(os.environ, {"CLAUDE_PROJECT_DIR": "/Users/test/myproject"}):
-            encoded = get_encoded_project_path_from_env()
+            # compaction_refresh passes empty string to use env fallback
+            encoded = get_encoded_project_path("")
 
         assert encoded == "-Users-test-myproject"
 
     def test_handles_nested_path(self):
         """Test encoding deeply nested project path."""
-        from compaction_refresh import get_encoded_project_path_from_env
+        from refresh.checkpoint_builder import get_encoded_project_path
 
         with patch.dict(os.environ, {"CLAUDE_PROJECT_DIR": "/home/user/code/org/repo"}):
-            encoded = get_encoded_project_path_from_env()
+            encoded = get_encoded_project_path("")
 
         assert encoded == "-home-user-code-org-repo"
 
-    def test_returns_none_when_not_set(self):
-        """Test returns None when CLAUDE_PROJECT_DIR not set."""
-        from compaction_refresh import get_encoded_project_path_from_env
+    def test_returns_unknown_project_when_not_set(self):
+        """Test returns 'unknown-project' when CLAUDE_PROJECT_DIR not set."""
+        from refresh.checkpoint_builder import get_encoded_project_path
 
         with patch.dict(os.environ, {}, clear=True):
             os.environ.pop("CLAUDE_PROJECT_DIR", None)
-            encoded = get_encoded_project_path_from_env()
+            encoded = get_encoded_project_path("")
 
-        assert encoded is None
+        assert encoded == "unknown-project"
 
 
 class TestReadCheckpoint:
@@ -650,11 +656,12 @@ class TestExceptionHandlingPaths:
         # Should not crash
         assert "[POST-COMPACTION CHECKPOINT]" in message
 
-    def test_get_encoded_project_path_from_env_empty_string(self):
-        """Test handling of empty string CLAUDE_PROJECT_DIR."""
-        from compaction_refresh import get_encoded_project_path_from_env
+    def test_get_encoded_project_path_empty_env_string(self):
+        """Test handling of empty string CLAUDE_PROJECT_DIR returns unknown-project."""
+        from refresh.checkpoint_builder import get_encoded_project_path
 
         with patch.dict(os.environ, {"CLAUDE_PROJECT_DIR": ""}):
-            result = get_encoded_project_path_from_env()
+            result = get_encoded_project_path("")
 
-        assert result is None
+        # Empty env var triggers "unknown-project" fallback
+        assert result == "unknown-project"
