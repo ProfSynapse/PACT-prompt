@@ -76,3 +76,176 @@ STEP_DESCRIPTIONS = {
     "nested-code": "Running nested CODE phase",
     "nested-test": "Running nested TEST phase",
 }
+
+# === PROSE CONTEXT TEMPLATES ===
+# Templates for generating prose context lines that combine step action with context values
+# Keys are step names; values are callables that take context dict and return prose string
+
+def _prose_invoke_reviewers(ctx: dict) -> str:
+    """Generate prose for invoke-reviewers step."""
+    reviewers = ctx.get("reviewers", "")
+    blocking = ctx.get("blocking", "0")
+    # Parse reviewers like "2/3" to extract completed and total
+    if "/" in str(reviewers):
+        completed, total = str(reviewers).split("/")
+        return f"Launched {total} reviewer agents; {completed} had completed with {blocking} blocking issues."
+    elif reviewers:
+        return f"Launched reviewer agents; {reviewers} had completed with {blocking} blocking issues."
+    else:
+        return "Was launching reviewer agents."
+
+
+def _prose_synthesize(ctx: dict) -> str:
+    """Generate prose for synthesize step."""
+    blocking = ctx.get("blocking", ctx.get("has_blocking", "0"))
+    minor = ctx.get("minor_count", "0")
+    future = ctx.get("future_count", "0")
+    if blocking in (False, "False", "0", 0):
+        return f"Completed synthesis with no blocking issues; {minor} minor, {future} future recommendations."
+    return f"Completed synthesis with {blocking} blocking issues."
+
+
+def _prose_recommendations(ctx: dict) -> str:
+    """Generate prose for recommendations step."""
+    blocking = ctx.get("has_blocking", ctx.get("blocking", False))
+    minor = ctx.get("minor_count", 0)
+    future = ctx.get("future_count", 0)
+    if blocking in (False, "False", "0", 0):
+        return f"Processing recommendations; no blocking issues, {minor} minor, {future} future."
+    return f"Processing recommendations with blocking issues to address."
+
+
+def _prose_merge_ready(ctx: dict) -> str:
+    """Generate prose for merge-ready step."""
+    blocking = ctx.get("blocking", ctx.get("has_blocking", 0))
+    if blocking in (False, "False", "0", 0):
+        return "Completed review with no blocking issues; PR ready for merge."
+    return "Review complete; awaiting resolution of blocking issues."
+
+
+def _prose_awaiting_user_decision(ctx: dict) -> str:
+    """Generate prose for awaiting_user_decision step."""
+    return "Was waiting for user decision."
+
+
+def _prose_commit(ctx: dict) -> str:
+    """Generate prose for commit step."""
+    return "Was committing changes to git."
+
+
+def _prose_create_pr(ctx: dict) -> str:
+    """Generate prose for create-pr step."""
+    pr_number = ctx.get("pr_number", "")
+    if pr_number:
+        return f"Was creating PR #{pr_number}."
+    return "Was creating pull request."
+
+
+def _prose_variety_assess(ctx: dict) -> str:
+    """Generate prose for variety-assess step."""
+    return "Was assessing task complexity."
+
+
+def _prose_prepare(ctx: dict) -> str:
+    """Generate prose for prepare step."""
+    feature = ctx.get("feature", "")
+    if feature:
+        return f"Was running PREPARE phase for: {feature}."
+    return "Was running PREPARE phase."
+
+
+def _prose_architect(ctx: dict) -> str:
+    """Generate prose for architect step."""
+    return "Was running ARCHITECT phase."
+
+
+def _prose_code(ctx: dict) -> str:
+    """Generate prose for code step."""
+    phase = ctx.get("phase", "")
+    if phase:
+        return f"Was running CODE phase ({phase})."
+    return "Was running CODE phase."
+
+
+def _prose_test(ctx: dict) -> str:
+    """Generate prose for test step."""
+    return "Was running TEST phase."
+
+
+def _prose_analyze(ctx: dict) -> str:
+    """Generate prose for analyze step."""
+    return "Was analyzing scope and selecting specialists."
+
+
+def _prose_consult(ctx: dict) -> str:
+    """Generate prose for consult step."""
+    return "Was consulting specialists for planning perspectives."
+
+
+def _prose_present(ctx: dict) -> str:
+    """Generate prose for present step."""
+    plan_file = ctx.get("plan_file", "")
+    if plan_file:
+        return f"Was presenting plan ({plan_file}) for approval."
+    return "Was presenting plan for user approval."
+
+
+def _prose_invoking_specialist(ctx: dict) -> str:
+    """Generate prose for invoking-specialist step."""
+    return "Was delegating to specialist agent."
+
+
+def _prose_specialist_completed(ctx: dict) -> str:
+    """Generate prose for specialist-completed step."""
+    return "Specialist work had completed."
+
+
+def _prose_nested_prepare(ctx: dict) -> str:
+    """Generate prose for nested-prepare step."""
+    return "Was running nested PREPARE phase."
+
+
+def _prose_nested_architect(ctx: dict) -> str:
+    """Generate prose for nested-architect step."""
+    return "Was running nested ARCHITECT phase."
+
+
+def _prose_nested_code(ctx: dict) -> str:
+    """Generate prose for nested-code step."""
+    return "Was running nested CODE phase."
+
+
+def _prose_nested_test(ctx: dict) -> str:
+    """Generate prose for nested-test step."""
+    return "Was running nested TEST phase."
+
+
+PROSE_CONTEXT_TEMPLATES = {
+    # peer-review steps
+    "commit": _prose_commit,
+    "create-pr": _prose_create_pr,
+    "invoke-reviewers": _prose_invoke_reviewers,
+    "synthesize": _prose_synthesize,
+    "recommendations": _prose_recommendations,
+    "merge-ready": _prose_merge_ready,
+    "awaiting-merge": _prose_awaiting_user_decision,
+    "awaiting_user_decision": _prose_awaiting_user_decision,
+    # orchestrate steps
+    "variety-assess": _prose_variety_assess,
+    "prepare": _prose_prepare,
+    "architect": _prose_architect,
+    "code": _prose_code,
+    "test": _prose_test,
+    # plan-mode steps
+    "analyze": _prose_analyze,
+    "consult": _prose_consult,
+    "present": _prose_present,
+    # comPACT steps
+    "invoking-specialist": _prose_invoking_specialist,
+    "specialist-completed": _prose_specialist_completed,
+    # rePACT (nested) steps
+    "nested-prepare": _prose_nested_prepare,
+    "nested-architect": _prose_nested_architect,
+    "nested-code": _prose_nested_code,
+    "nested-test": _prose_nested_test,
+}

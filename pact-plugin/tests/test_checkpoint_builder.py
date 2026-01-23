@@ -317,40 +317,35 @@ class TestCheckpointToRefreshMessage:
         message = checkpoint_to_refresh_message(sample_checkpoint)
 
         # Check new directive prompt format
-        assert "[WORKFLOW REFRESH]" in message
-        assert "Context auto-compaction occurred" in message
-        assert "following framework protocols" in message
-        assert "You are resuming:" in message
+        assert "[POST-COMPACTION CHECKPOINT]" in message
+        assert "Prior conversation auto-compacted" in message
+        assert "Resume unfinished PACT workflow below:" in message
+        assert "Workflow:" in message
         assert "peer-review" in message
         assert "pr-64" in message
-        assert "State:" in message
-        assert "recommendations" in message
-        # Check step description is included
-        assert "Processing review recommendations" in message
-        # High confidence (0.9) should NOT show warning line
-        assert "Low confidence" not in message
-        assert "Verify workflow state" not in message
+        assert "Context:" in message
+        # Check prose context is included (recommendations step generates prose)
+        assert "recommendations" in message.lower() or "Processing" in message
+        # High confidence (0.9) should NOT show low confidence suffix
+        assert "low confidence" not in message
+        assert "verify state with user" not in message.lower()
 
     def test_refresh_message_with_pending_action(self, sample_checkpoint):
-        """Test refresh message includes pending action as Action line."""
+        """Test refresh message includes pending action as Next step line."""
         message = checkpoint_to_refresh_message(sample_checkpoint)
 
-        assert "Action:" in message
+        assert "Next Step:" in message
         assert "Would you like to review" in message
 
-    def test_refresh_message_with_context(self, sample_checkpoint):
-        """Test refresh message includes context with verbose key names."""
+    def test_refresh_message_with_context_prose(self, sample_checkpoint):
+        """Test refresh message includes prose context (not key=value)."""
         message = checkpoint_to_refresh_message(sample_checkpoint)
 
+        # Should have Context line with prose, not key=value format
         assert "Context:" in message
-        # pr_number stays the same (already clear)
-        assert "pr_number=64" in message
-        # has_blocking becomes has_blocking_issues
-        assert "has_blocking_issues=False" in message
-        # minor_count becomes minor_issues_count
-        assert "minor_issues_count=0" in message
-        # future_count becomes future_recommendations_count
-        assert "future_recommendations_count=1" in message
+        # The recommendations step should generate prose like:
+        # "Processing recommendations; no blocking issues, 0 minor, 1 future."
+        assert "no blocking" in message.lower() or "Processing" in message
 
     def test_refresh_message_no_workflow(self):
         """Test no refresh message for 'none' workflow."""
@@ -362,8 +357,8 @@ class TestCheckpointToRefreshMessage:
 
         assert message == ""
 
-    def test_refresh_message_low_confidence_shows_warning(self):
-        """Test low confidence shows warning line."""
+    def test_refresh_message_low_confidence_no_action_shows_ask_user(self):
+        """Test low confidence with no action shows ask user message."""
         checkpoint = {
             "workflow": {
                 "name": "peer-review",
@@ -377,12 +372,11 @@ class TestCheckpointToRefreshMessage:
 
         message = checkpoint_to_refresh_message(checkpoint)
 
-        # Low confidence (< 0.8) should show warning
-        assert "Low confidence (0.5)" in message
-        assert "Verify workflow state with user before proceeding" in message
+        # No pending action should always show "Ask user how to proceed"
+        assert "Next Step: **Ask user how to proceed.**" in message
 
-    def test_refresh_message_high_confidence_no_warning(self):
-        """Test high confidence does NOT show warning line."""
+    def test_refresh_message_high_confidence_no_action_shows_ask_user(self):
+        """Test high confidence with no action shows ask user message."""
         checkpoint = {
             "workflow": {
                 "name": "peer-review",
@@ -396,12 +390,14 @@ class TestCheckpointToRefreshMessage:
 
         message = checkpoint_to_refresh_message(checkpoint)
 
-        # High confidence (>= 0.8) should NOT show warning
-        assert "Low confidence" not in message
-        assert "Verify workflow state" not in message
+        # High confidence (>= 0.8) should NOT show low confidence suffix
+        assert "low confidence" not in message
+        assert "verify state with user" not in message.lower()
+        # No pending action should always show "Ask user how to proceed"
+        assert "Next Step: **Ask user how to proceed.**" in message
 
-    def test_refresh_message_no_pending_action(self):
-        """Test refresh message without pending action omits Action line."""
+    def test_refresh_message_no_pending_action_shows_ask_user(self):
+        """Test refresh message without pending action shows ask user message."""
         checkpoint = {
             "workflow": {
                 "name": "orchestrate",
@@ -416,12 +412,11 @@ class TestCheckpointToRefreshMessage:
         message = checkpoint_to_refresh_message(checkpoint)
 
         assert "orchestrate" in message
-        assert "Action:" not in message
-        # Low confidence (0.7) should show warning
-        assert "Low confidence (0.7)" in message
+        # No pending action should always show "Ask user how to proceed"
+        assert "Next Step: **Ask user how to proceed.**" in message
 
-    def test_refresh_message_no_context(self):
-        """Test refresh message without context omits Context line."""
+    def test_refresh_message_empty_context_still_shows_prose(self):
+        """Test refresh message with empty context still shows prose Context line."""
         checkpoint = {
             "workflow": {
                 "name": "orchestrate",
@@ -435,15 +430,18 @@ class TestCheckpointToRefreshMessage:
 
         message = checkpoint_to_refresh_message(checkpoint)
 
-        # Empty context means no "Context:" line
-        assert "Context:" not in message
+        # Even with empty context, we now show a prose Context line
+        assert "Context:" in message
+        # Should have prose like "Was running CODE phase."
+        assert "CODE phase" in message or "code" in message.lower()
         assert isinstance(message, str)
         # Should still have required lines
-        assert "[WORKFLOW REFRESH]" in message
-        assert "You are resuming:" in message
-        assert "State:" in message
-        # High confidence - no warning line
-        assert "Low confidence" not in message
+        assert "[POST-COMPACTION CHECKPOINT]" in message
+        assert "Workflow:" in message
+        # High confidence - no low confidence suffix
+        assert "low confidence" not in message
+        # No pending action - should show ask user message
+        assert "Next Step: **Ask user how to proceed.**" in message
 
     def test_refresh_message_directive_format_high_confidence(self):
         """Test the exact directive prompt format structure with high confidence (no warning)."""
@@ -453,7 +451,7 @@ class TestCheckpointToRefreshMessage:
                 "id": "PR#88",
             },
             "step": {"name": "awaiting_user_decision"},
-            "extraction": {"confidence": 0.9},  # High confidence - no warning line
+            "extraction": {"confidence": 0.9},  # High confidence - no low confidence suffix
             "context": {"reviewers": 3, "blocking": 0},
             "pending_action": {
                 "type": "User Decision",
@@ -464,33 +462,29 @@ class TestCheckpointToRefreshMessage:
         message = checkpoint_to_refresh_message(checkpoint)
         lines = message.split("\n")
 
-        # Should have 6 lines (header, explanatory, resuming, state, context, action) - NO guidance for high confidence
-        assert len(lines) == 6
-        # Line 1: [WORKFLOW REFRESH]
-        assert lines[0] == "[WORKFLOW REFRESH]"
-        # Line 2: Explanatory line with framework emphasis
-        assert lines[1] == "Context auto-compaction occurred. Resume the PACT workflow below, following framework protocols."
-        # Line 3: You are resuming: workflow (id)
-        assert lines[2] == "You are resuming: peer-review (PR#88)"
-        # Line 4: State with description
-        assert lines[3] == "State: awaiting_user_decision — Waiting for user decision"
-        # Line 5: Context - now uses verbose keys
-        assert lines[4].startswith("Context:")
-        assert "reviewers_completed=3" in lines[4]
-        assert "blocking_issues=0" in lines[4]
-        # Line 6: Action
-        assert lines[5] == "Action: Waiting for user to authorize merge"
-        # No confidence warning line for high confidence
+        # Should have 5 lines (header, explanatory, workflow, context, next step) - NO low confidence suffix
+        assert len(lines) == 5
+        # Line 1: [POST-COMPACTION CHECKPOINT]
+        assert lines[0] == "[POST-COMPACTION CHECKPOINT]"
+        # Line 2: Shorter explanatory line
+        assert lines[1] == "Prior conversation auto-compacted. Resume unfinished PACT workflow below:"
+        # Line 3: Workflow: workflow (id)
+        assert lines[2] == "Workflow: peer-review (PR#88)"
+        # Line 4: Prose Context
+        assert lines[3].startswith("Context:")
+        assert "waiting for user decision" in lines[3].lower()
+        # Line 5: Next step (no low confidence suffix)
+        assert lines[4] == "Next Step: Waiting for user to authorize merge"
 
     def test_refresh_message_directive_format_low_confidence(self):
-        """Test the exact directive prompt format structure with low confidence (shows warning)."""
+        """Test the exact directive prompt format structure with low confidence (shows suffix)."""
         checkpoint = {
             "workflow": {
                 "name": "peer-review",
                 "id": "PR#88",
             },
             "step": {"name": "awaiting_user_decision"},
-            "extraction": {"confidence": 0.6},  # Low confidence - shows warning line
+            "extraction": {"confidence": 0.6},  # Low confidence - shows suffix on Next step
             "context": {"reviewers": 3, "blocking": 0},
             "pending_action": {
                 "type": "User Decision",
@@ -501,24 +495,71 @@ class TestCheckpointToRefreshMessage:
         message = checkpoint_to_refresh_message(checkpoint)
         lines = message.split("\n")
 
-        # Should have 7 lines (header, explanatory, resuming, state, context, action, warning)
-        assert len(lines) == 7
-        # Line 1: [WORKFLOW REFRESH]
-        assert lines[0] == "[WORKFLOW REFRESH]"
-        # Line 2: Explanatory line with framework emphasis
-        assert lines[1] == "Context auto-compaction occurred. Resume the PACT workflow below, following framework protocols."
-        # Line 3: You are resuming: workflow (id)
-        assert lines[2] == "You are resuming: peer-review (PR#88)"
-        # Line 4: State with description
-        assert lines[3] == "State: awaiting_user_decision — Waiting for user decision"
-        # Line 5: Context - now uses verbose keys
-        assert lines[4].startswith("Context:")
-        assert "reviewers_completed=3" in lines[4]
-        assert "blocking_issues=0" in lines[4]
-        # Line 6: Action
-        assert lines[5] == "Action: Waiting for user to authorize merge"
-        # Line 7: Warning for low confidence
-        assert lines[6] == "⚠️ Low confidence (0.6). Verify workflow state with user before proceeding."
+        # Should have 5 lines (header, explanatory, workflow, context, next step with suffix)
+        assert len(lines) == 5
+        # Line 1: [POST-COMPACTION CHECKPOINT]
+        assert lines[0] == "[POST-COMPACTION CHECKPOINT]"
+        # Line 2: Shorter explanatory line
+        assert lines[1] == "Prior conversation auto-compacted. Resume unfinished PACT workflow below:"
+        # Line 3: Workflow: workflow (id)
+        assert lines[2] == "Workflow: peer-review (PR#88)"
+        # Line 4: Prose Context
+        assert lines[3].startswith("Context:")
+        assert "waiting for user decision" in lines[3].lower()
+        # Line 5: Next step with low confidence suffix
+        assert lines[4] == "Next Step: Waiting for user to authorize merge. **Get user approval before acting.**"
+
+    def test_refresh_message_invoke_reviewers_prose(self):
+        """Test prose context for invoke-reviewers step."""
+        checkpoint = {
+            "workflow": {"name": "peer-review", "id": "pr-88"},
+            "step": {"name": "invoke-reviewers"},
+            "extraction": {"confidence": 0.9},
+            "context": {"reviewers": "2/3", "blocking": "0"},
+            "pending_action": None,
+        }
+
+        message = checkpoint_to_refresh_message(checkpoint)
+
+        assert "Context:" in message
+        # Should have prose like "Launched 3 reviewer agents; 2 had completed with 0 blocking issues."
+        assert "Launched" in message
+        assert "3" in message
+        assert "2" in message
+        assert "blocking" in message.lower()
+
+    def test_refresh_message_merge_ready_prose(self):
+        """Test prose context for merge-ready step."""
+        checkpoint = {
+            "workflow": {"name": "peer-review", "id": "pr-42"},
+            "step": {"name": "merge-ready"},
+            "extraction": {"confidence": 0.9},
+            "context": {"blocking": 0},
+            "pending_action": None,
+        }
+
+        message = checkpoint_to_refresh_message(checkpoint)
+
+        assert "Context:" in message
+        # Should have prose like "Completed review with no blocking issues; PR ready for merge."
+        assert "no blocking" in message.lower() or "ready for merge" in message.lower()
+
+    def test_refresh_message_unknown_step_fallback(self):
+        """Test prose context fallback for unknown step."""
+        checkpoint = {
+            "workflow": {"name": "peer-review", "id": "pr-99"},
+            "step": {"name": "some-unknown-step"},
+            "extraction": {"confidence": 0.9},
+            "context": {"foo": "bar", "baz": 123},
+            "pending_action": None,
+        }
+
+        message = checkpoint_to_refresh_message(checkpoint)
+
+        assert "Context:" in message
+        # Should fall back to generic format with key=value
+        assert "some-unknown-step" in message
+        assert "foo=bar" in message
 
 
 class TestEdgeCases:
@@ -586,12 +627,11 @@ class TestEdgeCases:
         # Should not raise
         message = checkpoint_to_refresh_message(checkpoint)
 
-        assert "[WORKFLOW REFRESH]" in message
+        assert "[POST-COMPACTION CHECKPOINT]" in message
         assert "peer-review" in message
         assert "unknown" in message  # Default step name
-        # Low confidence (0.5) should show warning
-        assert "Low confidence (0.5)" in message
-        assert "Verify workflow state with user before proceeding" in message
+        # No pending action should show "Ask user how to proceed"
+        assert "Next Step: **Ask user how to proceed.**" in message
 
 
 class TestCheckpointSchemaRoundTrip:

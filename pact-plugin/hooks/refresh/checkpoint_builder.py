@@ -25,6 +25,7 @@ from .constants import (
     CONFIDENCE_LABEL_HIGH,
     CONFIDENCE_LABEL_MEDIUM,
     STEP_DESCRIPTIONS,
+    PROSE_CONTEXT_TEMPLATES,
 )
 
 # Mapping of terse context keys to verbose equivalents for refresh messages
@@ -437,6 +438,37 @@ def validate_checkpoint(checkpoint: dict[str, Any]) -> tuple[bool, str]:
     return True, ""
 
 
+def _build_prose_context(step_name: str, context: dict[str, Any]) -> str:
+    """
+    Build a prose context line combining step action with context values.
+
+    Takes step name and context dict and returns a natural prose sentence
+    describing the action and progress in past tense.
+
+    Args:
+        step_name: The workflow step name (e.g., "invoke-reviewers")
+        context: Dict of context values (e.g., {"reviewers": "2/3", "blocking": "0"})
+
+    Returns:
+        Prose sentence describing action + progress
+    """
+    # Get template function for this step
+    template_fn = PROSE_CONTEXT_TEMPLATES.get(step_name)
+    if template_fn:
+        try:
+            return template_fn(context)
+        except Exception:
+            pass  # Fall through to generic
+
+    # Generic fallback: describe step with available context
+    step_desc = STEP_DESCRIPTIONS.get(step_name, step_name)
+    if context:
+        # Build simple key=value summary for unknown steps
+        context_parts = [f"{k}={v}" for k, v in context.items()]
+        return f"Was in {step_name} step ({', '.join(context_parts)})."
+    return f"Was in {step_name} step."
+
+
 def checkpoint_to_refresh_message(checkpoint: dict[str, Any]) -> str:
     """
     Convert a checkpoint to a directive prompt refresh message (~50-60 tokens).
@@ -445,13 +477,11 @@ def checkpoint_to_refresh_message(checkpoint: dict[str, Any]) -> str:
     instructions injected after compaction.
 
     Format:
-        [WORKFLOW REFRESH]
-        Context auto-compaction occurred. Resume the PACT workflow below, following framework protocols.
-        You are resuming: {workflow_name} ({workflow_id})
-        State: {step_name} — {step_description}
-        Context: key=value, ... (only if context exists)
-        Action: {pending_action.instruction} (only if pending action exists)
-        Confidence: X.X. Verify with user if context seems outdated.
+        [POST-COMPACTION CHECKPOINT]
+        Prior conversation auto-compacted. Resume unfinished PACT workflow below:
+        Workflow: {workflow_name} ({workflow_id})
+        Context: {prose description of action + progress}
+        Next Step: {pending_action.instruction} [. **Get user approval before acting.**]
 
     Args:
         checkpoint: Valid checkpoint dict
@@ -473,40 +503,34 @@ def checkpoint_to_refresh_message(checkpoint: dict[str, Any]) -> str:
     context = checkpoint.get("context", {})
     pending_action = checkpoint.get("pending_action")
 
-    lines = ["[WORKFLOW REFRESH]"]
+    lines = ["[POST-COMPACTION CHECKPOINT]"]
 
-    # Line 2: Explanatory line with framework emphasis
-    lines.append("Context auto-compaction occurred. Resume the PACT workflow below, following framework protocols.")
+    # Line 2: Shorter explanatory line
+    lines.append("Prior conversation auto-compacted. Resume unfinished PACT workflow below:")
 
-    # Line 3: You are resuming: workflow (id)
+    # Line 3: Workflow: workflow (id)
     if workflow_id:
-        lines.append(f"You are resuming: {workflow_name} ({workflow_id})")
+        lines.append(f"Workflow: {workflow_name} ({workflow_id})")
     else:
-        lines.append(f"You are resuming: {workflow_name}")
+        lines.append(f"Workflow: {workflow_name}")
 
-    # Line 4: State with description (if available)
-    step_desc = STEP_DESCRIPTIONS.get(step_name)
-    if step_desc:
-        lines.append(f"State: {step_name} — {step_desc}")
-    else:
-        lines.append(f"State: {step_name}")
+    # Line 4: Prose Context - combines action and progress in natural language
+    prose_context = _build_prose_context(step_name, context)
+    lines.append(f"Context: {prose_context}")
 
-    # Line 5: Context (only if present) - use verbose key names
-    if context:
-        context_parts = [
-            f"{CONTEXT_KEY_VERBOSE.get(k, k)}={v}"
-            for k, v in context.items()
-        ]
-        lines.append(f"Context: {', '.join(context_parts)}")
-
-    # Line 6: Action (only if pending action exists)
+    # Line 5: Next step
     if pending_action:
         instruction = pending_action.get("instruction", "")
         if instruction:
-            lines.append(f"Action: {instruction}")
-
-    # Line 7: Confidence warning (only for low confidence)
-    if confidence < CONFIDENCE_LABEL_HIGH:
-        lines.append(f"⚠️ Low confidence ({confidence:.1f}). Verify workflow state with user before proceeding.")
+            if confidence < CONFIDENCE_LABEL_HIGH:
+                lines.append(f"Next Step: {instruction}. **Get user approval before acting.**")
+            else:
+                lines.append(f"Next Step: {instruction}")
+        else:
+            # Has pending_action but no instruction
+            lines.append("Next Step: **Ask user how to proceed.**")
+    else:
+        # No pending_action at all
+        lines.append("Next Step: **Ask user how to proceed.**")
 
     return "\n".join(lines)

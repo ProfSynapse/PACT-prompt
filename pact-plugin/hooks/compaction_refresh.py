@@ -85,6 +85,73 @@ STEP_DESCRIPTIONS_FALLBACK = {
     "nested-test": "Running nested TEST phase",
 }
 
+
+# Prose context generators for fallback (duplicated from refresh.constants)
+def _prose_invoke_reviewers_fb(ctx: dict) -> str:
+    """Generate prose for invoke-reviewers step."""
+    reviewers = ctx.get("reviewers", "")
+    blocking = ctx.get("blocking", "0")
+    if "/" in str(reviewers):
+        completed, total = str(reviewers).split("/")
+        return f"Launched {total} reviewer agents; {completed} had completed with {blocking} blocking issues."
+    elif reviewers:
+        return f"Launched reviewer agents; {reviewers} had completed with {blocking} blocking issues."
+    return "Was launching reviewer agents."
+
+
+def _prose_synthesize_fb(ctx: dict) -> str:
+    """Generate prose for synthesize step."""
+    blocking = ctx.get("blocking", ctx.get("has_blocking", "0"))
+    minor = ctx.get("minor_count", "0")
+    future = ctx.get("future_count", "0")
+    if blocking in (False, "False", "0", 0):
+        return f"Completed synthesis with no blocking issues; {minor} minor, {future} future recommendations."
+    return f"Completed synthesis with {blocking} blocking issues."
+
+
+def _prose_recommendations_fb(ctx: dict) -> str:
+    """Generate prose for recommendations step."""
+    blocking = ctx.get("has_blocking", ctx.get("blocking", False))
+    minor = ctx.get("minor_count", 0)
+    future = ctx.get("future_count", 0)
+    if blocking in (False, "False", "0", 0):
+        return f"Processing recommendations; no blocking issues, {minor} minor, {future} future."
+    return "Processing recommendations with blocking issues to address."
+
+
+def _prose_merge_ready_fb(ctx: dict) -> str:
+    """Generate prose for merge-ready step."""
+    blocking = ctx.get("blocking", ctx.get("has_blocking", 0))
+    if blocking in (False, "False", "0", 0):
+        return "Completed review with no blocking issues; PR ready for merge."
+    return "Review complete; awaiting resolution of blocking issues."
+
+
+PROSE_CONTEXT_TEMPLATES_FALLBACK = {
+    "commit": lambda ctx: "Was committing changes to git.",
+    "create-pr": lambda ctx: f"Was creating PR #{ctx.get('pr_number', '')}." if ctx.get("pr_number") else "Was creating pull request.",
+    "invoke-reviewers": _prose_invoke_reviewers_fb,
+    "synthesize": _prose_synthesize_fb,
+    "recommendations": _prose_recommendations_fb,
+    "merge-ready": _prose_merge_ready_fb,
+    "awaiting-merge": lambda ctx: "Was waiting for user decision.",
+    "awaiting_user_decision": lambda ctx: "Was waiting for user decision.",
+    "variety-assess": lambda ctx: "Was assessing task complexity.",
+    "prepare": lambda ctx: f"Was running PREPARE phase for: {ctx.get('feature', '')}." if ctx.get("feature") else "Was running PREPARE phase.",
+    "architect": lambda ctx: "Was running ARCHITECT phase.",
+    "code": lambda ctx: f"Was running CODE phase ({ctx.get('phase', '')})." if ctx.get("phase") else "Was running CODE phase.",
+    "test": lambda ctx: "Was running TEST phase.",
+    "analyze": lambda ctx: "Was analyzing scope and selecting specialists.",
+    "consult": lambda ctx: "Was consulting specialists for planning perspectives.",
+    "present": lambda ctx: f"Was presenting plan ({ctx.get('plan_file', '')}) for approval." if ctx.get("plan_file") else "Was presenting plan for user approval.",
+    "invoking-specialist": lambda ctx: "Was delegating to specialist agent.",
+    "specialist-completed": lambda ctx: "Specialist work had completed.",
+    "nested-prepare": lambda ctx: "Was running nested PREPARE phase.",
+    "nested-architect": lambda ctx: "Was running nested ARCHITECT phase.",
+    "nested-code": lambda ctx: "Was running nested CODE phase.",
+    "nested-test": lambda ctx: "Was running nested TEST phase.",
+}
+
 # Item 4 & 9: Explicit type annotation for get_checkpoint_path
 # Restructured to avoid defining unused fallback when shared utils are available
 get_checkpoint_path: Callable[[str], Path]
@@ -185,6 +252,33 @@ def validate_checkpoint(checkpoint: dict, current_session_id: str) -> bool:
     return True
 
 
+def _build_prose_context_fallback(step_name: str, context: dict) -> str:
+    """
+    Build a prose context line combining step action with context values.
+
+    Fallback implementation when refresh package is not available.
+
+    Args:
+        step_name: The workflow step name (e.g., "invoke-reviewers")
+        context: Dict of context values
+
+    Returns:
+        Prose sentence describing action + progress
+    """
+    template_fn = PROSE_CONTEXT_TEMPLATES_FALLBACK.get(step_name)
+    if template_fn:
+        try:
+            return template_fn(context)
+        except Exception:
+            pass  # Fall through to generic
+
+    # Generic fallback
+    if context:
+        context_parts = [f"{k}={v}" for k, v in context.items()]
+        return f"Was in {step_name} step ({', '.join(context_parts)})."
+    return f"Was in {step_name} step."
+
+
 def _build_refresh_message_fallback(checkpoint: dict) -> str:
     """
     Fallback: Build the directive prompt refresh message for the orchestrator (~50-60 tokens).
@@ -192,13 +286,11 @@ def _build_refresh_message_fallback(checkpoint: dict) -> str:
     Used when refresh package is not available.
 
     Format:
-        [WORKFLOW REFRESH]
-        Context auto-compaction occurred. Resume the PACT workflow below, following framework protocols.
-        You are resuming: {workflow_name} ({workflow_id})
-        State: {step_name} — {step_description}
-        Context: key=value, ... (only if context exists)
-        Action: {pending_action.instruction} (only if pending action exists)
-        Confidence: X.X. Verify with user if context seems outdated.
+        [POST-COMPACTION CHECKPOINT]
+        Prior conversation auto-compacted. Resume unfinished PACT workflow below:
+        Workflow: {workflow_name} ({workflow_id})
+        Context: {prose description of action + progress}
+        Next Step: {pending_action.instruction} [. **Get user approval before acting.**]
 
     Args:
         checkpoint: The validated checkpoint data
@@ -219,41 +311,35 @@ def _build_refresh_message_fallback(checkpoint: dict) -> str:
     context = checkpoint.get("context", {})
     pending_action = checkpoint.get("pending_action", {})
 
-    lines = ["[WORKFLOW REFRESH]"]
+    lines = ["[POST-COMPACTION CHECKPOINT]"]
 
-    # Line 2: Explanatory line with framework emphasis
-    lines.append("Context auto-compaction occurred. Resume the PACT workflow below, following framework protocols.")
+    # Line 2: Shorter explanatory line
+    lines.append("Prior conversation auto-compacted. Resume unfinished PACT workflow below:")
 
-    # Line 3: You are resuming: workflow (id)
+    # Line 3: Workflow: workflow (id)
     if workflow_id:
-        lines.append(f"You are resuming: {workflow_name} ({workflow_id})")
+        lines.append(f"Workflow: {workflow_name} ({workflow_id})")
     else:
-        lines.append(f"You are resuming: {workflow_name}")
+        lines.append(f"Workflow: {workflow_name}")
 
-    # Line 4: State with description (if available)
-    step_desc = STEP_DESCRIPTIONS_FALLBACK.get(step_name)
-    if step_desc:
-        lines.append(f"State: {step_name} — {step_desc}")
-    else:
-        lines.append(f"State: {step_name}")
+    # Line 4: Prose Context - combines action and progress in natural language
+    prose_context = _build_prose_context_fallback(step_name, context)
+    lines.append(f"Context: {prose_context}")
 
-    # Line 5: Context (only if present) - use verbose key names
-    if context:
-        context_parts = [
-            f"{CONTEXT_KEY_VERBOSE.get(k, k)}={v}"
-            for k, v in context.items()
-        ]
-        lines.append(f"Context: {', '.join(context_parts)}")
-
-    # Line 6: Action (only if pending action exists)
+    # Line 5: Next step
     if pending_action:
         instruction = pending_action.get("instruction", "")
         if instruction:
-            lines.append(f"Action: {instruction}")
-
-    # Line 7: Confidence warning (only for low confidence)
-    if confidence < CONFIDENCE_LABEL_HIGH:
-        lines.append(f"⚠️ Low confidence ({confidence:.1f}). Verify workflow state with user before proceeding.")
+            if confidence < CONFIDENCE_LABEL_HIGH:
+                lines.append(f"Next Step: {instruction}. **Get user approval before acting.**")
+            else:
+                lines.append(f"Next Step: {instruction}")
+        else:
+            # Has pending_action but no instruction
+            lines.append("Next Step: **Ask user how to proceed.**")
+    else:
+        # No pending_action at all
+        lines.append("Next Step: **Ask user how to proceed.**")
 
     return "\n".join(lines)
 

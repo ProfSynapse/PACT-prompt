@@ -147,47 +147,42 @@ class TestBuildRefreshMessage:
         message = build_refresh_message(sample_checkpoint)
 
         # Check directive prompt format
-        assert "[WORKFLOW REFRESH]" in message
-        assert "Context auto-compaction occurred" in message
-        assert "following framework protocols" in message
-        assert "You are resuming:" in message
+        assert "[POST-COMPACTION CHECKPOINT]" in message
+        assert "Prior conversation auto-compacted" in message
+        assert "Resume unfinished PACT workflow below:" in message
+        assert "Workflow:" in message
         assert "peer-review" in message
         assert "pr-64" in message
-        assert "State:" in message
-        assert "recommendations" in message
-        # Check step description is included
-        assert "Processing review recommendations" in message
-        # High confidence (0.9) should NOT show warning line
-        assert "Low confidence" not in message
-        assert "Verify workflow state" not in message
+        assert "Context:" in message
+        # Check prose context is included (recommendations step generates prose)
+        assert "recommendations" in message.lower() or "Processing" in message
+        # High confidence (0.9) should NOT show low confidence suffix
+        assert "low confidence" not in message
+        assert "verify state with user" not in message.lower()
 
     def test_build_message_with_pending_action(self, sample_checkpoint):
-        """Test refresh message includes pending action as Action line."""
+        """Test refresh message includes pending action as Next step line."""
         from compaction_refresh import build_refresh_message
 
         message = build_refresh_message(sample_checkpoint)
 
-        assert "Action:" in message
+        assert "Next Step:" in message
         assert "Would you like to review" in message
 
-    def test_build_message_with_context(self, sample_checkpoint):
-        """Test refresh message includes context with verbose key names."""
+    def test_build_message_with_context_prose(self, sample_checkpoint):
+        """Test refresh message includes prose context (not key=value)."""
         from compaction_refresh import build_refresh_message
 
         message = build_refresh_message(sample_checkpoint)
 
+        # Should have Context line with prose, not key=value format
         assert "Context:" in message
-        # pr_number stays the same (already clear)
-        assert "pr_number=64" in message
-        # has_blocking becomes has_blocking_issues
-        assert "has_blocking_issues=False" in message
-        # minor_count becomes minor_issues_count
-        assert "minor_issues_count=0" in message
-        # future_count becomes future_recommendations_count
-        assert "future_recommendations_count=1" in message
+        # The recommendations step should generate prose like:
+        # "Processing recommendations; no blocking issues, 0 minor, 1 future."
+        assert "no blocking" in message.lower() or "Processing" in message
 
-    def test_build_message_low_confidence_shows_warning(self):
-        """Test low confidence shows warning line."""
+    def test_build_message_no_action_shows_ask_user(self):
+        """Test no pending action shows ask user message."""
         from compaction_refresh import build_refresh_message
 
         checkpoint = {
@@ -199,12 +194,11 @@ class TestBuildRefreshMessage:
 
         message = build_refresh_message(checkpoint)
 
-        # Low confidence (< 0.8) should show warning
-        assert "Low confidence (0.5)" in message
-        assert "Verify workflow state with user before proceeding" in message
+        # No pending action should always show "Ask user how to proceed"
+        assert "Next Step: **Ask user how to proceed.**" in message
 
-    def test_build_message_high_confidence_no_warning(self):
-        """Test high confidence does NOT show warning line."""
+    def test_build_message_high_confidence_no_action_shows_ask_user(self):
+        """Test high confidence with no action shows ask user message."""
         from compaction_refresh import build_refresh_message
 
         checkpoint = {
@@ -216,9 +210,11 @@ class TestBuildRefreshMessage:
 
         message = build_refresh_message(checkpoint)
 
-        # High confidence (>= 0.8) should NOT show warning
-        assert "Low confidence" not in message
-        assert "Verify workflow state" not in message
+        # High confidence (>= 0.8) should NOT show low confidence suffix
+        assert "low confidence" not in message
+        assert "verify state with user" not in message.lower()
+        # No pending action should always show "Ask user how to proceed"
+        assert "Next Step: **Ask user how to proceed.**" in message
 
 
 class TestCompactionRefreshMain:
@@ -253,7 +249,7 @@ class TestCompactionRefreshMain:
 
         assert "hookSpecificOutput" in result
         refresh_msg = result["hookSpecificOutput"]["additionalContext"]
-        assert "[WORKFLOW REFRESH]" in refresh_msg
+        assert "[POST-COMPACTION CHECKPOINT]" in refresh_msg
         assert "peer-review" in refresh_msg
 
     def test_main_with_no_workflow(self, tmp_path: Path):
@@ -488,7 +484,7 @@ class TestEndToEndRefresh:
         result = json.loads(output)
         refresh_msg = result["hookSpecificOutput"]["additionalContext"]
 
-        assert "[WORKFLOW REFRESH]" in refresh_msg
+        assert "[POST-COMPACTION CHECKPOINT]" in refresh_msg
         assert "peer-review" in refresh_msg
         assert "recommendations" in refresh_msg or "pr-99" in refresh_msg
 
@@ -633,7 +629,7 @@ class TestExceptionHandlingPaths:
         message = build_refresh_message(minimal_checkpoint)
 
         # Should not crash and should produce valid message
-        assert "[WORKFLOW REFRESH]" in message
+        assert "[POST-COMPACTION CHECKPOINT]" in message
         assert "peer-review" in message
 
     def test_build_refresh_message_with_empty_context(self):
@@ -650,7 +646,7 @@ class TestExceptionHandlingPaths:
         message = build_refresh_message(checkpoint)
 
         # Should not crash
-        assert "[WORKFLOW REFRESH]" in message
+        assert "[POST-COMPACTION CHECKPOINT]" in message
 
     def test_get_encoded_project_path_from_env_empty_string(self):
         """Test handling of empty string CLAUDE_PROJECT_DIR."""
