@@ -280,26 +280,26 @@ If PREPARE ran and ARCHITECT was marked "Skip," compare PREPARE's recommended ap
 
 **Before dispatching specialists**, complete this internal checkpoint:
 
-| Answer to "Why not parallel?" | Valid? | Action |
-|-------------------------------|--------|--------|
-| "They're small tasks" | **NO** | Small = cheap to parallelize. Split. |
-| "They're related" | **NO** | Related ≠ dependent. Split. |
-| "One agent can handle it" | **NO** | Can ≠ should. Split. |
-| "Coordination overhead" | **NO** | QDCL takes 30 seconds. Split. |
-| "Simpler to track" | **NO** | Simpler ≠ faster. Split. |
-| "File X is modified by both" | **YES** | Sequence or define boundaries. |
-| "A's output feeds B's input" | **YES** | Sequence them. |
-| "Shared interface undefined" | **YES** | Define interface first, then parallel. |
+| Answer to "Why not parallel?"  | Valid?  | Action                                  |
+|--------------------------------|---------|-----------------------------------------|
+| "They're small tasks"          | **NO**  | Small = cheap to parallelize. Split.    |
+| "They're related"              | **NO**  | Related ≠ dependent. Split.             |
+| "One agent can handle it"      | **NO**  | Can ≠ should. Split.                    |
+| "Coordination overhead"        | **NO**  | QDCL takes 30 seconds. Split.           |
+| "Simpler to track"             | **NO**  | Simpler ≠ faster. Split.                |
+| "File X is modified by both"   | **YES** | Sequence or define boundaries.          |
+| "A's output feeds B's input"   | **YES** | Sequence them.                          |
+| "Shared interface undefined"   | **YES** | Define interface first, then parallel.  |
 
 **Rule**: If you cannot cite a valid reason from this table, parallel dispatch is MANDATORY.
 
 #### Batch-Size Heuristic
 
-| Item Count | Default Action |
-|------------|----------------|
-| 1 | Single specialist (comPACT appropriate) |
-| 2-3 | Check QDCL; likely parallel |
-| 4+ | **Parallel dispatch MANDATORY** (no exceptions unless file conflicts) |
+| Item Count | Default Action                                                      |
+|------------|---------------------------------------------------------------------|
+| 1          | Single specialist (comPACT appropriate)                             |
+| 2-3        | Check QDCL; likely parallel                                         |
+| 4+         | **Parallel dispatch MANDATORY** (no exceptions unless file conflicts) |
 
 If you have 4+ independent items and dispatch a single agent, you are violating this heuristic.
 
