@@ -61,7 +61,7 @@ verify "pact-s1-autonomy.md" "S1 Autonomy (lines 508-581)" "508,581"
 verify "pact-variety.md" "Variety (lines 626-686)" "626,686"
 
 # Combined-range extracts
-verify "pact-s2-coordination.md" "S2 Coordination (lines 365-506 + 815-824)" "365,506" "815,824"
+verify "pact-s2-coordination.md" "S2 Coordination (lines 365-506 + 826-840)" "365,506" "826,840"
 verify "pact-workflows.md" "Workflows (lines 688-813)" "688,813"
 verify "pact-phase-transitions.md" "Phase Transitions (lines 815-824 + 841-917)" "815,824" "841,917"
 verify "pact-documentation.md" "Documentation (lines 919-942)" "919,942"

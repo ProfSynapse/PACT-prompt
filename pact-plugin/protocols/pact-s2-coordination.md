@@ -140,13 +140,18 @@ After each specialist completes work:
 This transforms implicit knowledge into explicit coordination, reducing "surprise" conflicts.
 
 ---
-## Phase Handoffs
+## Backend ↔ Database Boundary
 
-**On completing any phase, state**:
-1. What you produced (with file paths)
-2. Key decisions made
-3. What the next agent needs to know
+**Sequence**: Database delivers schema → Backend implements ORM.
 
-Keep it brief. No templates required.
+| Database Engineer Owns | Backend Engineer Owns |
+|------------------------|----------------------|
+| Schema design, DDL | ORM models |
+| Migrations | Repository/DAL layer |
+| Complex SQL queries | Application queries via ORM |
+| Indexes | Connection pooling |
+
+**Collaboration**: If Backend needs a complex query, ask Database. If Database needs to know access patterns, ask Backend.
 
 ---
+
