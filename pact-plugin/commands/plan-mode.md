@@ -172,7 +172,7 @@ After collecting all specialist outputs, use extended thinking to synthesize:
 
 3. **Determine Sequencing**
    - What's the optimal order of phases?
-   - What can be parallelized?
+   - What can be invoked concurrently?
    - What are the dependencies?
 
 4. **Assess Cross-Cutting Concerns**

@@ -85,7 +85,7 @@ comPACT handles tasks within ONE specialist domain. For independent sub-tasks, i
 - *Clear task* → Auto-select (domain keywords, file types, single-domain action)
 - *Ambiguous task* → Ask user which specialist
 
-### When to Parallelize (Same-Domain)
+### When to Invoke Multiple Specialists
 
 **MANDATORY: parallel unless tasks share files.** comPACT invokes multiple agents of the same type for independent items.
 

@@ -68,7 +68,7 @@ When "first agent's choice becomes standard," subsequent agents need to discover
 
 3. **For truly parallel invocation** (all start simultaneously):
    - Orchestrator pre-defines conventions in all prompts
-   - Or: Run one agent first to establish conventions, then parallelize the rest
+   - Or: Run one agent first to establish conventions, then invoke the rest concurrently
    - **Tie-breaker**: If agents complete simultaneously and no first-agent convention exists, use alphabetical domain order (backend, database, frontend) for convention precedence
 
 ### Shared Language
@@ -86,7 +86,7 @@ All agents operating in parallel must:
 | **Over-parallelization** | Coordination overhead; convention drift | Limit parallel agents; use S2 coordination |
 | **Analysis paralysis** | QDCL takes longer than the work | Time-box to 1 minute; default to parallel if unclear |
 | **Single agent for batch** | 4 bugs → 1 coder instead of 2-4 coders | **4+ items = multiple agents** (no exceptions) |
-| **"Simpler to track" rationalization** | Sounds reasonable, wastes time | Not a valid justification; parallelize anyway |
+| **"Simpler to track" rationalization** | Sounds reasonable, wastes time | Not a valid justification; invoke concurrently anyway |
 | **"Related tasks" conflation** | "Related" ≠ "dependent"; false equivalence | Related is NOT blocked; only file/data dependencies block |
 | **"One agent can handle it" excuse** | Can ≠ should; missed efficiency | Capability is not justification for sequential |
 
@@ -98,7 +98,7 @@ When you find yourself thinking these thoughts, STOP—you're rationalizing sequ
 
 | Thought | Reality |
 |---------|---------|
-| "They're small tasks" | Small = cheap to parallelize. Split. |
+| "They're small tasks" | Small = cheap to invoke together. Split. |
 | "They're related" | Related ≠ dependent. Split. |
 | "One agent can handle it" | Can ≠ should. Split. |
 | "Coordination overhead" | QDCL takes 30 seconds. Split. |

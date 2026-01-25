@@ -96,7 +96,7 @@ Before running orchestration, assess task variety using the protocol in [pact-va
 
 ## Execution Philosophy
 
-**MANDATORY: Invoke concurrently unless blocked.** The burden of proof is on sequential dispatch. If you cannot cite a specific file conflict or data dependency, you MUST parallelize.
+**MANDATORY: Invoke concurrently unless blocked.** The burden of proof is on sequential dispatch. If you cannot cite a specific file conflict or data dependency, you MUST invoke them concurrently.
 
 This applies across ALL phases, not just CODE:
 - PREPARE with multiple research areas → multiple preparers at once
@@ -282,7 +282,7 @@ If PREPARE ran and ARCHITECT was marked "Skip," compare PREPARE's recommended ap
 
 | Answer to "Why not parallel?"  | Valid?  | Action                                  |
 |--------------------------------|---------|-----------------------------------------|
-| "They're small tasks"          | **NO**  | Small = cheap to parallelize. Split.    |
+| "They're small tasks"          | **NO**  | Small = cheap to invoke together. Split.    |
 | "They're related"              | **NO**  | Related ≠ dependent. Split.             |
 | "One agent can handle it"      | **NO**  | Can ≠ should. Split.                    |
 | "Coordination overhead"        | **NO**  | QDCL takes 30 seconds. Split.           |
