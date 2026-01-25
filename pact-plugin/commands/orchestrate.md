@@ -96,7 +96,7 @@ Before running orchestration, assess task variety using the protocol in [pact-va
 
 ## Execution Philosophy
 
-**Default: Invoke concurrently unless proven dependent.**
+**MANDATORY: Invoke concurrently unless blocked.** The burden of proof is on sequential dispatch. If you cannot cite a specific file conflict or data dependency, you MUST parallelize.
 
 This applies across ALL phases, not just CODE:
 - PREPARE with multiple research areas → multiple preparers at once
@@ -273,6 +273,35 @@ If PREPARE ran and ARCHITECT was marked "Skip," compare PREPARE's recommended ap
 **Deviation from concurrent dispatch requires articulated reasoning.** "I'm not sure" defaults to concurrent with S2 coordination, not sequential.
 
 **Analysis should complete quickly.** Use the Quick Dependency Checklist (QDCL) below. If QDCL analysis takes more than 2 minutes, you're likely over-analyzing independent tasks—default to concurrent dispatch with S2 coordination.
+
+---
+
+#### Why NOT Parallel? Checkpoint
+
+**Before dispatching specialists**, complete this internal checkpoint:
+
+| Answer to "Why not parallel?" | Valid? | Action |
+|-------------------------------|--------|--------|
+| "They're small tasks" | **NO** | Small = cheap to parallelize. Split. |
+| "They're related" | **NO** | Related ≠ dependent. Split. |
+| "One agent can handle it" | **NO** | Can ≠ should. Split. |
+| "Coordination overhead" | **NO** | QDCL takes 30 seconds. Split. |
+| "Simpler to track" | **NO** | Simpler ≠ faster. Split. |
+| "File X is modified by both" | **YES** | Sequence or define boundaries. |
+| "A's output feeds B's input" | **YES** | Sequence them. |
+| "Shared interface undefined" | **YES** | Define interface first, then parallel. |
+
+**Rule**: If you cannot cite a valid reason from this table, parallel dispatch is MANDATORY.
+
+#### Batch-Size Heuristic
+
+| Item Count | Default Action |
+|------------|----------------|
+| 1 | Single specialist (comPACT appropriate) |
+| 2-3 | Check QDCL; likely parallel |
+| 4+ | **Parallel dispatch MANDATORY** (no exceptions unless file conflicts) |
+
+If you have 4+ independent items and dispatch a single agent, you are violating this heuristic.
 
 ---
 
