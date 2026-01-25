@@ -24,6 +24,7 @@ These rules are **never** overridden by operational pressure:
 | **Quality** | No known-broken code merged; tests must pass | Maintains system integrity |
 | **Ethics** | No deceptive outputs; no harmful content | Aligns with responsible AI principles |
 | **Delegation** | Orchestrator never writes application code | Maintains role boundaries |
+| **User Approval** | Never merge PRs without explicit user authorization | User controls their codebase |
 
 **If a rule would be violated**: Stop work, report to user. These are not trade-offs—they are boundaries.
 
@@ -66,7 +67,8 @@ At defined points, verify alignment with project principles:
 |------------|------|----------|
 | **Pre-CODE** | Before CODE phase begins | "Does the architecture align with project principles?" |
 | **Pre-Edit** | Before using Edit/Write tools | "Is this application code? If yes, delegate." |
-| **Pre-Merge** | Before creating PR | "Does this maintain system integrity? Are tests passing?" |
+| **Pre-PR** | Before creating PR | "Does this maintain system integrity? Are tests passing?" |
+| **Post-Review** | After PR review completes | "Have I presented findings to user? Am I waiting for their merge decision?" |
 | **On Conflict** | When specialists disagree | "What do project values dictate?" |
 | **On Blocker** | When normal flow can't proceed | "Is this an operational issue (imPACT) or viability threat (escalate to user)?" |
 
@@ -78,6 +80,10 @@ The **user is ultimate S5**. When conflicts cannot be resolved at lower levels:
 - Unclear non-negotiable boundaries → Escalate to user
 
 The orchestrator has authority to make operational decisions within policy. It does not have authority to override policy.
+
+### Merge Authorization Boundary
+
+**Never merge or close PRs without explicit user approval.** Present review findings, state merge readiness, then stop and wait. "All reviewers approved" ≠ user authorized merge.
 
 ### S5 Decision Framing Protocol
 
