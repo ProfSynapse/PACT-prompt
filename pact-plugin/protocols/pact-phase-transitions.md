@@ -8,7 +8,6 @@
 Keep it brief. No templates required.
 
 ---
-
 ## Test Engagement
 
 | Test Type | Owner |
@@ -86,4 +85,3 @@ For complex features, before Code phase:
 Skip for simple features or when "just build it."
 
 ---
-

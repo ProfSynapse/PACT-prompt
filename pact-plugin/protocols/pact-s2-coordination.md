@@ -120,18 +120,33 @@ If agents produce contradictory outputs (each "fixing" the other's work):
    - Technical disagreement → Architect arbitrates
    - Requirements ambiguity → User (S5) clarifies
 5. **Document**: Note resolution in handoff for future reference
-- Complex cross-domain coordination needed
-- Specialist reports a blocker (run `/PACT:imPACT` first)
+6. **Resume**: Only after documented resolution
 
-**If blocker reported**:
-1. Receive blocker from specialist
-2. Run `/PACT:imPACT` to triage
-3. May escalate to `/PACT:orchestrate` if task exceeds single-specialist scope
+**Detection Signals**:
+- Agent A modifies what Agent B just created
+- Both agents claim ownership of same interface
+- Output contradicts established convention
+- Repeated "fix" cycles in same file/component
+
+**Heuristic**: Consider it oscillation if the same file is modified by different agents 2+ times in rapid succession.
+
+### Routine Information Sharing
+
+After each specialist completes work:
+1. **Extract** key decisions, conventions, interfaces established
+2. **Propagate** to subsequent agents in their prompts
+3. **Update** shared context for any agents still running in parallel
+
+This transforms implicit knowledge into explicit coordination, reducing "surprise" conflicts.
 
 ---
-
 ## Phase Handoffs
 
 **On completing any phase, state**:
 1. What you produced (with file paths)
 2. Key decisions made
+3. What the next agent needs to know
+
+Keep it brief. No templates required.
+
+---

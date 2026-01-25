@@ -59,4 +59,3 @@ At phase transitions, briefly assess:
 **Who performs checkpoints**: Orchestrator, at S4 mode transitions (between phases).
 
 ---
-

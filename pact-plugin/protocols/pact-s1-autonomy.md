@@ -72,4 +72,3 @@ While specialists can invoke nested cycles autonomously, the orchestrator can al
 See [rePACT.md](../commands/rePACT.md) for full command documentation.
 
 ---
-

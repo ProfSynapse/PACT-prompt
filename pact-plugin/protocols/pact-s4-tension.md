@@ -62,4 +62,3 @@ S4 Checkpoints are natural points to assess S3/S4 tension:
 When a checkpoint surfaces tension, apply the Resolution Protocol above.
 
 ---
-

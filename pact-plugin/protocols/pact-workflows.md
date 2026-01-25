@@ -1,24 +1,3 @@
-- Constrain to well-understood territory
-- Use standards to reduce decision space
-
-**Amplify** (increase response capacity):
-- Invoke additional specialists
-- Enable parallel execution (primary CODE phase strategy; use QDCL from orchestrate.md)
-- Invoke nested PACT (`/PACT:rePACT`) for complex sub-components
-- Run PREPARE phase to build understanding
-- Apply risk-tiered testing (CRITICAL/HIGH) for high-risk areas
-
-### Variety Checkpoints
-
-At phase transitions, briefly assess:
-- "Has variety increased?" → Consider amplifying (more specialists, nested PACT)
-- "Has variety decreased?" → Consider simplifying (skip phases, fewer agents)
-- "Are we matched?" → Continue as planned
-
-**Who performs checkpoints**: Orchestrator, at S4 mode transitions (between phases).
-
----
-
 ## The PACT Workflow Family
 
 | Workflow | When to Use | Key Idea |
@@ -125,3 +104,23 @@ Invoke multiple specialists of the same type when:
 
 1. **Check for conflicts** — Do any sub-tasks touch the same files?
 2. **Assign boundaries** — If conflicts exist, sequence or define clear boundaries
+3. **Set convention authority** — First agent's choices become standard for the batch
+
+### Light ceremony instructions (injected when invoking specialist)
+
+- Work directly from task description
+- Check docs/plans/, docs/preparation/, docs/architecture/ briefly if they exist—reference relevant context
+- Do not create new documentation artifacts
+- Smoke tests only: Verify it compiles, runs, and happy path doesn't crash (no comprehensive unit tests—that's TEST phase work)
+
+**Escalate to `/PACT:orchestrate` when**:
+- Task spans multiple specialist domains
+- Complex cross-domain coordination needed
+- Specialist reports a blocker (run `/PACT:imPACT` first)
+
+**If blocker reported**:
+1. Receive blocker from specialist
+2. Run `/PACT:imPACT` to triage
+3. May escalate to `/PACT:orchestrate` if task exceeds single-specialist scope
+
+---
