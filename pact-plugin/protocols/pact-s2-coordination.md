@@ -85,8 +85,29 @@ All agents operating in parallel must:
 | **Ignoring shared files** | Merge conflicts; wasted work | QDCL catches this; sequence or assign boundaries |
 | **Over-parallelization** | Coordination overhead; convention drift | Limit parallel agents; use S2 coordination |
 | **Analysis paralysis** | QDCL takes longer than the work | Time-box to 1 minute; default to parallel if unclear |
+| **Single agent for batch** | 4 bugs → 1 coder instead of 2-4 coders | **4+ items = multiple agents** (no exceptions) |
+| **"Simpler to track" rationalization** | Sounds reasonable, wastes time | Not a valid justification; parallelize anyway |
+| **"Related tasks" conflation** | "Related" ≠ "dependent"; false equivalence | Related is NOT blocked; only file/data dependencies block |
+| **"One agent can handle it" excuse** | Can ≠ should; missed efficiency | Capability is not justification for sequential |
 
 **Recovery**: If in doubt, default to parallel with S2 coordination active. Conflicts are recoverable; lost time is not.
+
+### Rationalization Detection
+
+When you find yourself thinking these thoughts, STOP—you're rationalizing sequential dispatch:
+
+| Thought | Reality |
+|---------|---------|
+| "They're small tasks" | Small = cheap to parallelize. Split. |
+| "They're related" | Related ≠ dependent. Split. |
+| "One agent can handle it" | Can ≠ should. Split. |
+| "Coordination overhead" | QDCL takes 30 seconds. Split. |
+| "Simpler to track" | Simpler ≠ faster. Split. |
+
+**Valid reasons to sequence** (cite explicitly when choosing sequential):
+- "File X is modified by both" → Sequence or define boundaries
+- "A's output feeds B's input" → Sequence them
+- "Shared interface undefined" → Define interface first, then parallel
 
 ### Anti-Oscillation Protocol
 
@@ -99,39 +120,18 @@ If agents produce contradictory outputs (each "fixing" the other's work):
    - Technical disagreement → Architect arbitrates
    - Requirements ambiguity → User (S5) clarifies
 5. **Document**: Note resolution in handoff for future reference
-6. **Resume**: Only after documented resolution
+- Complex cross-domain coordination needed
+- Specialist reports a blocker (run `/PACT:imPACT` first)
 
-**Detection Signals**:
-- Agent A modifies what Agent B just created
-- Both agents claim ownership of same interface
-- Output contradicts established convention
-- Repeated "fix" cycles in same file/component
-
-**Heuristic**: Consider it oscillation if the same file is modified by different agents 2+ times in rapid succession.
-
-### Routine Information Sharing
-
-After each specialist completes work:
-1. **Extract** key decisions, conventions, interfaces established
-2. **Propagate** to subsequent agents in their prompts
-3. **Update** shared context for any agents still running in parallel
-
-This transforms implicit knowledge into explicit coordination, reducing "surprise" conflicts.
+**If blocker reported**:
+1. Receive blocker from specialist
+2. Run `/PACT:imPACT` to triage
+3. May escalate to `/PACT:orchestrate` if task exceeds single-specialist scope
 
 ---
 
-## Backend ↔ Database Boundary
+## Phase Handoffs
 
-**Sequence**: Database delivers schema → Backend implements ORM.
-
-| Database Engineer Owns | Backend Engineer Owns |
-|------------------------|----------------------|
-| Schema design, DDL | ORM models |
-| Migrations | Repository/DAL layer |
-| Complex SQL queries | Application queries via ORM |
-| Indexes | Connection pooling |
-
-**Collaboration**: If Backend needs a complex query, ask Database. If Database needs to know access patterns, ask Backend.
-
----
-
+**On completing any phase, state**:
+1. What you produced (with file paths)
+2. Key decisions made
