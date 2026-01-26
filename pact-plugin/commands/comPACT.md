@@ -48,7 +48,7 @@ If the first word isn't a recognized shorthand, treat the entire argument as the
 
 ## When to Invoke Multiple Specialists
 
-**MANDATORY: dispatch concurrently unless tasks share files.** The burden of proof is on sequential dispatch.
+**MANDATORY: invoke concurrently unless tasks share files.** The burden of proof is on sequential dispatch.
 
 Invoke concurrently when:
 - Multiple independent items (bugs, components, endpoints)
