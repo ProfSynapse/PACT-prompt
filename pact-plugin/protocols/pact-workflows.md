@@ -100,6 +100,11 @@ Invoke multiple specialists of the same type when:
 | "Add validation to 5 endpoints" | Multiple backend-coders (parallel) |
 | "Update styling on 3 components" | Multiple frontend-coders (parallel) |
 
+### Pre-Invocation (Required)
+
+1. **Feature branch check** — If on `main`/`master`, create feature branch first
+2. **S2 coordination** (if concurrent) — Check for file conflicts, assign boundaries
+
 ### S2 Light Coordination (for parallel comPACT)
 
 1. **Check for conflicts** — Do any sub-tasks touch the same files?
@@ -117,6 +122,12 @@ Invoke multiple specialists of the same type when:
 - Task spans multiple specialist domains
 - Complex cross-domain coordination needed
 - Specialist reports a blocker (run `/PACT:imPACT` first)
+
+### After Specialist Completes
+
+1. **Run tests** — Verify work with appropriate test command
+2. **Create atomic commit(s)** — Stage and commit work before proceeding
+3. **Report to user** — Present completion and next step options
 
 **If blocker reported**:
 1. Receive blocker from specialist

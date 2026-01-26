@@ -108,9 +108,14 @@ Before invoking multiple specialists concurrently, perform this coordination che
 
 ---
 
-## Invocation
+## Pre-Invocation (Required)
 
-**Create feature branch** if not already on one (recommended for behavior changes; optional for trivial).
+1. **Feature branch** — If on `main`/`master`, create feature branch first
+2. **S2 coordination** (if concurrent) — Check for file conflicts, assign boundaries
+
+---
+
+## Invocation
 
 ### Multiple Specialists Concurrently (Default)
 
@@ -169,12 +174,14 @@ Task: [user's task description]
 
 ## After Specialist Completes
 
-- Receive handoff from specialist
-- Report completion to user
+1. **Receive handoff** from specialist(s)
+2. **Run tests** — verify work passes
+3. **Create atomic commit(s)** — stage and commit before proceeding
 
 **Next steps** (user decides):
-- Trivial changes → commit directly
-- Behavior changes → consider `/PACT:peer-review` for review and PR
+- Done → work is committed
+- Review needed → `/PACT:peer-review`
+- More work → continue with comPACT or orchestrate
 
 **If blocker reported**:
 

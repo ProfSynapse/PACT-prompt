@@ -74,7 +74,7 @@ Before running orchestration, assess task variety using the protocol in [pact-va
 
 | If task appears... | Variety Level | Action |
 |-------------------|---------------|--------|
-| Single file, one domain, routine | Low (4-6) | Offer comPACT: "This could be handled by a single specialist. Use comPACT?" |
+| Single file, one domain, routine | Low (4-6) | Offer comPACT using `AskUserQuestion` tool (see below) |
 | Multiple files, one domain, familiar | Low-Medium | Proceed with orchestrate, consider skipping PREPARE |
 | Multiple domains, some ambiguity | Medium (7-10) | Standard orchestrate with all phases |
 | Greenfield, architectural decisions, unknowns | High (11-14) | Recommend plan-mode first |
@@ -91,6 +91,14 @@ Before running orchestration, assess task variety using the protocol in [pact-va
 **When uncertain**: Default to standard orchestrate. Variety can be reassessed at phase transitions.
 
 **User override**: User can always specify their preferred workflow regardless of assessment.
+
+### Offering comPACT for Low-Variety Tasks
+
+When variety is Low (4-6), use `AskUserQuestion`:
+- Question: "This task appears routine. Which workflow?"
+- Options: "comPACT (Recommended)" / "Full orchestrate"
+
+If comPACT selected, hand off to `/PACT:comPACT`.
 
 ---
 
@@ -315,6 +323,7 @@ Before concurrent dispatch, check internally: shared files? shared interfaces? c
 - [ ] All tests passing (full test suite; fix any tests your changes break)
 - [ ] Specialist handoff(s) received (see Handoff Format above)
 - [ ] If blocker reported → `/PACT:imPACT`
+- [ ] **Create atomic commit(s)** of CODE phase work
 - [ ] **S4 Checkpoint**: Environment stable? Model aligned? Plan viable?
 
 #### Handling Complex Sub-Tasks During CODE
@@ -354,6 +363,7 @@ If a sub-task emerges that is too complex for a single specialist invocation:
 - [ ] All tests passing
 - [ ] Specialist handoff received (see Handoff Format above)
 - [ ] If blocker reported → `/PACT:imPACT`
+- [ ] **Create atomic commit(s)** of TEST phase work (new/modified tests)
 
 **Concurrent dispatch within TEST**: If test suites are independent (e.g., "unit tests AND E2E tests" or "API tests AND UI tests"), invoke multiple test engineers at once with clear suite boundaries.
 
@@ -364,7 +374,8 @@ If a sub-task emerges that is too complex for a single specialist invocation:
 > **S5 Policy Checkpoint (Pre-PR)**: Before creating PR, verify: "Do all tests pass? Is system integrity maintained? Have S5 non-negotiables been respected throughout?"
 
 1. **Update plan status** (if plan exists): IN_PROGRESS → IMPLEMENTED
-2. **Run `/PACT:peer-review`** to commit, create PR, and get multi-agent review
-3. **Present review summary and stop** — orchestrator never merges (S5 policy)
-4. **S4 Retrospective** (after user decides): Briefly note—what worked well? What should we adapt for next time?
-5. **High-variety audit trail** (variety 10+ only): Delegate to `pact-memory-agent` to save key orchestration decisions, S3/S4 tensions resolved, and lessons learned
+2. **Verify all work is committed** — CODE and TEST phase commits should already exist; if any uncommitted changes remain, commit them now
+3. **Run `/PACT:peer-review`** to create PR and get multi-agent review
+4. **Present review summary and stop** — orchestrator never merges (S5 policy)
+5. **S4 Retrospective** (after user decides): Briefly note—what worked well? What should we adapt for next time?
+6. **High-variety audit trail** (variety 10+ only): Delegate to `pact-memory-agent` to save key orchestration decisions, S3/S4 tensions resolved, and lessons learned
