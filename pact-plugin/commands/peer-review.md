@@ -86,13 +86,14 @@ Select the domain coder based on PR focus:
      - For each **minor** recommendation, ask "Address [recommendation] now?" with options:
        - **Yes** — Fix it in this PR
        - **No** — Skip for now
+       - **More context** — Get additional details (if preemptive context wasn't sufficient)
      - For each **future** recommendation, ask "What would you like to do with [recommendation]?" with options:
        - **Create GitHub issue** — Track for future work
        - **Skip** — Don't track or address
        - **Address now** — Fix it in this PR
        - **More context** — Get additional details (if preemptive context wasn't sufficient)
      - Note: Tool supports 2-4 options per question and 1-4 questions per call. If >4 recommendations exist, make multiple `AskUserQuestion` calls to cover all items.
-       - **Handling "More context" responses** (future recommendations only):
+       - **Handling "More context" responses**:
          - When user selects "More context", provide deeper explanation beyond the preemptive context (e.g., implementation specifics, examples, related patterns)
          - After providing additional context, re-ask the same question for that specific recommendation (without the "More context" option)
          - Handle inline: provide context immediately, get the answer, then continue to the next recommendation
