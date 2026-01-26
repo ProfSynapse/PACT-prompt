@@ -94,9 +94,14 @@ Before running orchestration, assess task variety using the protocol in [pact-va
 
 ### Offering comPACT for Low-Variety Tasks
 
-When variety is Low (4-6), use `AskUserQuestion`:
-- Question: "This task appears routine. Which workflow?"
-- Options: "comPACT (Recommended)" / "Full orchestrate"
+When variety is Low (4-6), offer the user a choice using `AskUserQuestion` tool:
+
+```
+AskUserQuestion(
+  question: "This task appears routine. Which workflow?",
+  options: ["comPACT (Recommended)", "Full orchestrate"]
+)
+```
 
 If comPACT selected, hand off to `/PACT:comPACT`.
 
@@ -323,7 +328,7 @@ Before concurrent dispatch, check internally: shared files? shared interfaces? c
 - [ ] All tests passing (full test suite; fix any tests your changes break)
 - [ ] Specialist handoff(s) received (see Handoff Format above)
 - [ ] If blocker reported → `/PACT:imPACT`
-- [ ] **Create atomic commit(s)** of CODE phase work
+- [ ] **Create atomic commit(s)** of CODE phase work (preserves work before strategic re-assessment)
 - [ ] **S4 Checkpoint**: Environment stable? Model aligned? Plan viable?
 
 #### Handling Complex Sub-Tasks During CODE
@@ -363,7 +368,7 @@ If a sub-task emerges that is too complex for a single specialist invocation:
 - [ ] All tests passing
 - [ ] Specialist handoff received (see Handoff Format above)
 - [ ] If blocker reported → `/PACT:imPACT`
-- [ ] **Create atomic commit(s)** of TEST phase work (new/modified tests)
+- [ ] **Create atomic commit(s)** of TEST phase work (preserves work before strategic re-assessment)
 
 **Concurrent dispatch within TEST**: If test suites are independent (e.g., "unit tests AND E2E tests" or "API tests AND UI tests"), invoke multiple test engineers at once with clear suite boundaries.
 

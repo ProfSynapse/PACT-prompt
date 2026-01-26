@@ -810,10 +810,13 @@ Invoke multiple specialists of the same type when:
 ### After Specialist Completes
 
 1. **Receive handoff** from specialist(s)
-2. **Run tests** — verify work passes
+2. **Run tests** — verify work passes. If tests fail → return to specialist for fixes before committing.
 3. **Create atomic commit(s)** — stage and commit before proceeding
 
-**Next steps** (user decides): Done | `/PACT:peer-review` | continue with more work
+**Next steps** (user decides):
+- Done → work is committed
+- Review needed → `/PACT:peer-review`
+- More work → continue with comPACT or orchestrate
 
 **If blocker reported**:
 1. Receive blocker from specialist
