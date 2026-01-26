@@ -124,3 +124,4 @@ Invoke multiple specialists of the same type when:
 3. May escalate to `/PACT:orchestrate` if task exceeds single-specialist scope
 
 ---
+

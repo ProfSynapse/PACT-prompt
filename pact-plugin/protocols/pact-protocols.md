@@ -463,10 +463,7 @@ When you find yourself thinking these thoughts, STOP—you're rationalizing sequ
 | Thought | Reality |
 |---------|---------|
 | "They're small tasks" | Small = cheap to invoke together. Split. |
-| "They're related" | Related ≠ dependent. Split. |
-| "One agent can handle it" | Can ≠ should. Split. |
 | "Coordination overhead" | QDCL takes 30 seconds. Split. |
-| "Simpler to track" | Simpler ≠ faster. Split. |
 
 **Valid reasons to sequence** (cite explicitly when choosing sequential):
 - "File X is modified by both" → Sequence or define boundaries
