@@ -79,19 +79,21 @@ Select the domain coder based on PR focus:
        - Why it matters (impact on code quality, maintainability, security, performance)
        - What the change would involve (scope, affected areas)
        - Trade-offs of addressing vs. not addressing
-     - Present as a formatted list (one entry per recommendation) so user can review all context at once
+     - Keep each entry concise (2-3 sentences per bullet).
+     - Present as a formatted list (one entry per recommendation) so user can review all context at once.
+     - After presenting all context, proceed to Step C.
 
      **Step C — Per-Recommendation Questions** (after context presented):
      - Use `AskUserQuestion` tool with one question per recommendation
      - For each **minor** recommendation, ask "Address [recommendation] now?" with options:
        - **Yes** — Fix it in this PR
        - **No** — Skip for now
-       - **More context** — Get additional details (if preemptive context wasn't sufficient)
+       - **More context** — Get additional details (if more detail is needed)
      - For each **future** recommendation, ask "What would you like to do with [recommendation]?" with options:
        - **Create GitHub issue** — Track for future work
        - **Skip** — Don't track or address
        - **Address now** — Fix it in this PR
-       - **More context** — Get additional details (if preemptive context wasn't sufficient)
+       - **More context** — Get additional details (if more detail is needed)
      - Note: Tool supports 2-4 options per question and 1-4 questions per call. If >4 recommendations exist, make multiple `AskUserQuestion` calls to cover all items.
        - **Handling "More context" responses**:
          - When user selects "More context", provide deeper explanation beyond the preemptive context (e.g., implementation specifics, examples, related patterns)
