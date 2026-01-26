@@ -102,7 +102,7 @@ Invoke multiple specialists of the same type when:
 
 ### Pre-Invocation (Required)
 
-1. **Feature branch check** — If on `main`/`master`, create feature branch first
+1. **Feature branch** — If on `main`/`master`, create feature branch first; if already on feature branch, proceed
 2. **S2 coordination** (if concurrent) — Check for file conflicts, assign boundaries
 
 ### S2 Light Coordination (for parallel comPACT)
@@ -125,9 +125,11 @@ Invoke multiple specialists of the same type when:
 
 ### After Specialist Completes
 
-1. **Run tests** — Verify work with appropriate test command
-2. **Create atomic commit(s)** — Stage and commit work before proceeding
-3. **Report to user** — Present completion and next step options
+1. **Receive handoff** from specialist(s)
+2. **Run tests** — verify work passes
+3. **Create atomic commit(s)** — stage and commit before proceeding
+
+**Next steps** (user decides): Done | `/PACT:peer-review` | continue with more work
 
 **If blocker reported**:
 1. Receive blocker from specialist

@@ -110,7 +110,7 @@ Before invoking multiple specialists concurrently, perform this coordination che
 
 ## Pre-Invocation (Required)
 
-1. **Feature branch** — If on `main`/`master`, create feature branch first
+1. **Feature branch** — If on `main`/`master`, create feature branch first; if already on feature branch, proceed
 2. **S2 coordination** (if concurrent) — Check for file conflicts, assign boundaries
 
 ---
