@@ -71,4 +71,3 @@ The Environment Model is the baseline against which S4 checkpoints assess:
 - "Plan viable" → Constraints in model still valid for current approach
 
 ---
-

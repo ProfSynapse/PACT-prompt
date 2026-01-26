@@ -138,4 +138,3 @@ C) Other (specify)
 5. **Keep context brief** — User can ask for more
 
 ---
-

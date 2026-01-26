@@ -96,7 +96,7 @@ Before running orchestration, assess task variety using the protocol in [pact-va
 
 ## Execution Philosophy
 
-**Default: Invoke concurrently unless proven dependent.**
+**MANDATORY: Invoke concurrently unless blocked.** The burden of proof is on sequential dispatch. If you cannot cite a specific file conflict or data dependency, you MUST invoke them concurrently.
 
 This applies across ALL phases, not just CODE:
 - PREPARE with multiple research areas → multiple preparers at once
@@ -273,8 +273,6 @@ If PREPARE ran and ARCHITECT was marked "Skip," compare PREPARE's recommended ap
 **Deviation from concurrent dispatch requires articulated reasoning.** "I'm not sure" defaults to concurrent with S2 coordination, not sequential.
 
 **Analysis should complete quickly.** Use the Quick Dependency Checklist (QDCL) below. If QDCL analysis takes more than 2 minutes, you're likely over-analyzing independent tasks—default to concurrent dispatch with S2 coordination.
-
----
 
 #### Execution Strategy Analysis
 

@@ -4,7 +4,7 @@ argument-hint: [backend|frontend|database|prepare|test|architect] <task>
 ---
 Delegate this focused task within a single PACT domain: $ARGUMENTS
 
-**Default: invoke concurrently for independent sub-tasks.** If the task contains multiple independent items (bugs, endpoints, components), dispatch multiple specialists of the same type together unless they share files.
+**MANDATORY: invoke concurrently for independent sub-tasks.** Sequential requires explicit file conflict or data dependency. If the task contains multiple independent items (bugs, endpoints, components), dispatch multiple specialists of the same type together unless they share files.
 
 > ⚠️ **Single domain ≠ single agent.** "Backend domain" with 3 bugs = 3 backend-coders in parallel. The domain is singular; the agents are not.
 
@@ -48,7 +48,7 @@ If the first word isn't a recognized shorthand, treat the entire argument as the
 
 ## When to Invoke Multiple Specialists
 
-**Default: dispatch concurrently unless tasks share files.**
+**MANDATORY: invoke concurrently unless tasks share files.** The burden of proof is on sequential dispatch.
 
 Invoke concurrently when:
 - Multiple independent items (bugs, components, endpoints)

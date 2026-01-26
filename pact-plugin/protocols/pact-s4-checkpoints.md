@@ -69,4 +69,3 @@ S4 Checkpoints complement Variety Checkpoints (see Variety Management):
 Both occur at phase transitions but ask different questions.
 
 ---
-

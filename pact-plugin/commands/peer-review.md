@@ -60,7 +60,7 @@ Select the domain coder based on PR focus:
    - **No recommendations**: If the table is empty (no blocking, minor, or future items), proceed directly to step 4.
    - **Blocking**: Automatically address all blocking items:
      - Batch fixes by selecting appropriate workflow(s) based on combined scope:
-       - Single-domain items → `/PACT:comPACT` (parallelize if independent)
+       - Single-domain items → `/PACT:comPACT` (invoke concurrently if independent)
        - Multi-domain items → `/PACT:orchestrate`
        - Mixed (both single and multi-domain) → Use `/PACT:comPACT` for the single-domain batch AND `/PACT:orchestrate` for the multi-domain batch (can run in parallel if independent)
      - After all fixes complete, re-run review to verify fixes only (not a full PR re-review)
@@ -96,7 +96,7 @@ Select the domain coder based on PR focus:
          - Handle "More context" inline: provide context immediately, get the answer, then continue to the next recommendation
        - **Collect all answers first**, then batch work:
          - Group all minor=Yes items AND future="Address now" items → Select workflow based on combined scope:
-           - Single-domain items → `/PACT:comPACT` (parallelize if independent)
+           - Single-domain items → `/PACT:comPACT` (invoke concurrently if independent)
            - Multi-domain items → `/PACT:orchestrate`
          - Group all future="Create GitHub issue" items → Create GitHub issues
        - If any items fixed (minor or future addressed now) → re-run review to verify fixes only (not a full PR re-review)
