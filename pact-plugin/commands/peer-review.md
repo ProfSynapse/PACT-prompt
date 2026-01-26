@@ -73,27 +73,32 @@ Select the domain coder based on PR focus:
      - If **No**: Skip to step 4 directly
      - If **Yes**: Continue to Step B
 
-     **Step B — Per-Recommendation Questions** (different options than gate question):
-     - Use `AskUserQuestion` tool with one question per recommendation (table from step 2 provides context)
-     - **Important**: These questions have MORE options than the gate question — each includes "More context"
+     **Step B — Preemptive Context Gathering**:
+     - Before asking per-recommendation questions, gather and present context for ALL minor and future recommendations
+     - For each recommendation, provide:
+       - Why it matters (impact on code quality, maintainability, security, performance)
+       - What the change would involve (scope, affected areas)
+       - Trade-offs of addressing vs. not addressing
+     - Keep each entry concise (2-3 sentences per bullet).
+     - Present as a formatted list (one entry per recommendation) so user can review all context at once.
+     - After presenting all context, proceed to Step C.
+
+     **Step C — Per-Recommendation Questions** (after context presented):
+     - Use `AskUserQuestion` tool with one question per recommendation
      - For each **minor** recommendation, ask "Address [recommendation] now?" with options:
        - **Yes** — Fix it in this PR
        - **No** — Skip for now
-       - **More context** — Get additional details about this recommendation before deciding
+       - **More context** — Get additional details (if more detail is needed)
      - For each **future** recommendation, ask "What would you like to do with [recommendation]?" with options:
        - **Create GitHub issue** — Track for future work
        - **Skip** — Don't track or address
        - **Address now** — Fix it in this PR
-       - **More context** — Get additional details about this recommendation before deciding
+       - **More context** — Get additional details (if more detail is needed)
      - Note: Tool supports 2-4 options per question and 1-4 questions per call. If >4 recommendations exist, make multiple `AskUserQuestion` calls to cover all items.
        - **Handling "More context" responses**:
-         - When user selects "More context" for any recommendation, provide expanded explanation including:
-           - Why it matters (impact on code quality, maintainability, security, performance)
-           - What the change would involve (scope, affected areas)
-           - Trade-offs of addressing vs. not addressing
-           - If the recommendation is self-explanatory, acknowledge briefly and proceed to re-ask
-         - After providing context, re-ask the same question for that specific recommendation (without the "More context" option, since context was already provided)
-         - Handle "More context" inline: provide context immediately, get the answer, then continue to the next recommendation
+         - When user selects "More context", provide deeper explanation beyond the preemptive context (e.g., implementation specifics, examples, related patterns)
+         - After providing additional context, re-ask the same question for that specific recommendation (without the "More context" option)
+         - Handle inline: provide context immediately, get the answer, then continue to the next recommendation
        - **Collect all answers first**, then batch work:
          - Group all minor=Yes items AND future="Address now" items → Select workflow based on combined scope:
            - Single-domain items → `/PACT:comPACT` (invoke concurrently if independent)
