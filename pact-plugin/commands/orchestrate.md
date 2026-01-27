@@ -218,12 +218,12 @@ Each specialist should end with a structured handoff:
 
 ```
 1. **Produced**: Files created/modified
-2. **Key context**: Decisions made, patterns used, assumptions
-3. **Areas of uncertainty**: Where bugs might hide, tricky parts, things to watch
-4. **Open questions**: Anything unresolved
+2. **Decisions**: Key choices made with rationale (patterns used, assumptions)
+3. **Uncertainties**: Where bugs might hide, tricky parts (helps TEST phase)
+4. **Open Questions**: Anything unresolved
 ```
 
-**Example**: `1. Produced: src/middleware/rateLimiter.ts. 2. Key context: Used token bucket with Redis. 3. Areas of uncertainty: Edge case with concurrent resets. 4. Open questions: None.`
+**Example**: `1. Produced: src/middleware/rateLimiter.ts. 2. Decisions: Used token bucket with Redis for distributed rate limiting. 3. Uncertainties: Edge case with concurrent resets. 4. Open Questions: None.`
 
 ---
 

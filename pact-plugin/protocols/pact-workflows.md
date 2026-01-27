@@ -8,31 +8,11 @@
 | **rePACT** | Complex sub-tasks within orchestration | Recursive nested P→A→C→T cycle (single or multi-domain) |
 | **imPACT** | When blocked or need to iterate | Triage: Redo prior phase? Additional agents needed? |
 
-**Task integration**: All workflows use Claude Code's native Task system. See SSOT "Task System Integration" for metadata schemas, naming conventions, and command summaries.
-
----
-
-## PACT (orchestrate) Protocol
-
-**Purpose**: Full multi-phase orchestration for complex/greenfield work.
-
-**Task structure**: 4 phase tasks (`PREPARE` → `ARCHITECT` → `CODE` → `TEST`) with sequential dependencies. Each phase task can have parallel specialist subtasks. Phase tasks use `blockedBy` to enforce sequencing; subtasks use `phaseTaskId` to link back.
-
-**Flow**:
-1. Create feature branch
-2. Execute phases sequentially (each with concurrent specialists where applicable)
-3. Auto-commit after CODE and TEST phases
-4. Run `/PACT:peer-review` when complete
-
-**Skipped phases**: Create task, immediately mark `completed` with `metadata: { skipped: true, skipReason: "..." }`
-
 ---
 
 ## plan-mode Protocol
 
 **Purpose**: Multi-agent planning consultation before implementation. Get specialist perspectives synthesized into an actionable plan.
-
-**Task structure**: 4 phase tasks (`Plan: Analyze` → `Plan: Consult` → `Plan: Synthesize` → `Plan: Present`) + planner subtasks during Consult phase. See SSOT Task Integration for metadata schemas.
 
 **When to use**:
 - Complex features where upfront alignment prevents rework
@@ -70,8 +50,6 @@
 
 **Trigger when**: Blocked; get similar errors repeatedly; or prior phase output is wrong.
 
-**Task structure**: Modifies existing tasks rather than creating new ones. Tracks `imPACTHistory` in task metadata with outcomes and phase changes. See SSOT Task Integration.
-
 **Two questions**:
 1. **Redo prior phase?** — Is the issue upstream in P→A→C→T?
 2. **Additional agents needed?** — Do I need subagents to assist?
@@ -90,8 +68,6 @@ If neither question is "Yes," you're not blocked—continue.
 ## comPACT Protocol
 
 **Core idea**: Single-DOMAIN delegation with light ceremony.
-
-**Task structure**: 1 workflow task (`taskType: "workflow"`) + parallel specialist subtasks. Subtasks linked via `subtaskIds`; workflow task uses `blockedBy` for dependency tracking. See SSOT Task Integration for metadata schemas.
 
 comPACT handles tasks within ONE specialist domain. For independent sub-tasks, it can invoke MULTIPLE specialists of the same type in parallel.
 
@@ -162,25 +138,6 @@ Invoke multiple specialists of the same type when:
 1. Receive blocker from specialist
 2. Run `/PACT:imPACT` to triage
 3. May escalate to `/PACT:orchestrate` if task exceeds single-specialist scope
-
----
-
-## rePACT Protocol
-
-**Purpose**: Recursive nested PACT cycle for complex sub-tasks discovered during orchestration.
-
-**Task structure**: Nested phase tasks with `rePACT:` prefix (e.g., `rePACT: PREPARE`, `rePACT: CODE`). Parent task uses `blockedBy` linking to nested `rePACT: TEST` task. Max nesting: 2 levels.
-
-**When to use**:
-- Complex sub-component discovered during CODE phase
-- Sub-task needs its own P→A→C→T cycle
-- Single or multi-domain nested work
-
-**Key rules**:
-- Declare nested cycle before starting
-- Parent task blocks until nested TEST completes
-- Nested tasks inherit `featureBranch` from parent
-- Results integrate back into parent workflow
 
 ---
 
