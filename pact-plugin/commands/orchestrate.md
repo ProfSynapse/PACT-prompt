@@ -223,7 +223,13 @@ Each specialist should end with a structured handoff:
 4. **Open Questions**: Anything unresolved
 ```
 
-**Example**: `1. Produced: src/middleware/rateLimiter.ts. 2. Decisions: Used token bucket with Redis for distributed rate limiting. 3. Uncertainties: Edge case with concurrent resets. 4. Open Questions: None.`
+**Example**:
+```
+1. **Produced**: src/auth/token-manager.ts, src/auth/middleware.ts
+2. **Decisions**: Used JWT with 15min expiry; refresh tokens stored in httpOnly cookies
+3. **Uncertainties**: [HIGH] Race condition possible during concurrent token refresh
+4. **Open Questions**: Should refresh tokens use rotation?
+```
 
 ---
 

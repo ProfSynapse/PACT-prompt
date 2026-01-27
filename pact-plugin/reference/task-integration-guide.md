@@ -243,6 +243,75 @@ CODE handoff → TEST receives nextPhaseContext (especially uncertainties)
 - **MEDIUM**: "Not 100% confident" — TEST should cover
 - **LOW**: "Edge case I thought of" — TEST discretion
 
+### Handoff Example: CODE to TEST
+
+A realistic CODE phase handoff showing how context flows to TEST:
+
+```javascript
+// Backend coder completes auth middleware implementation
+codePhaseHandoff = {
+  produced: [
+    "/src/auth/middleware.ts",
+    "/src/auth/tokens.ts",
+    "/src/auth/types.ts"
+  ],
+  decisions: [
+    "Used jose library for JWT (faster than jsonwebtoken)",
+    "Token refresh uses sliding window (15min inactive = re-auth)",
+    "Rate limiting at 100 req/min per user, stored in Redis"
+  ],
+  uncertainties: [
+    {
+      priority: "HIGH",
+      description: "Race condition possible if two refresh requests arrive simultaneously",
+      location: "/src/auth/tokens.ts:45-60",
+      suggestedTest: "Concurrent refresh token requests with same token"
+    },
+    {
+      priority: "MEDIUM",
+      description: "Redis connection pool size (10) may be insufficient under load",
+      location: "/src/auth/middleware.ts:12",
+      suggestedTest: "Load test with 500+ concurrent users"
+    },
+    {
+      priority: "LOW",
+      description: "Clock skew between servers could affect token expiry",
+      suggestedTest: "Token validation with various iat/exp edge cases"
+    }
+  ],
+  openQuestions: [
+    "Should failed auth attempts be logged to separate audit log?"
+  ]
+};
+```
+
+**How TEST phase uses this handoff**:
+
+```javascript
+// Test engineer receives handoff and prioritizes
+testPlan = {
+  mustCover: [
+    // From HIGH uncertainty
+    "test_concurrent_token_refresh_race_condition",
+  ],
+  shouldCover: [
+    // From MEDIUM uncertainty
+    "test_redis_pool_exhaustion_under_load",
+    // Standard coverage for produced files
+    "test_middleware_rejects_expired_token",
+    "test_middleware_rejects_malformed_token"
+  ],
+  mayDefer: [
+    // From LOW uncertainty
+    "test_clock_skew_tolerance"
+  ],
+  flagForOrchestrator: [
+    // From openQuestions - needs decision, not testing
+    "Audit logging decision needed before security tests"
+  ]
+};
+```
+
 ---
 
 ## Best Practices
@@ -338,6 +407,64 @@ Task system supports S2 coordination:
 2. **Subtask independence**: Parallel subtasks have no `blockedBy` between them
 3. **Convention propagation**: First subtask's decisions noted in metadata for others
 
+#### File Conflict Detection
+
+Before dispatching parallel subtasks, orchestrator checks for shared files:
+
+```javascript
+// Pre-dispatch analysis
+const subtasks = [
+  { domain: "backend", files: ["src/auth/middleware.ts", "src/auth/tokens.ts"] },
+  { domain: "backend", files: ["src/api/users.ts"] },
+  { domain: "backend", files: ["src/auth/middleware.ts", "src/api/health.ts"] }
+];
+
+// Detect conflicts: subtasks 1 and 3 both touch middleware.ts
+const conflicts = detectFileOverlap(subtasks);
+// Result: [{ files: ["src/auth/middleware.ts"], between: [1, 3] }]
+```
+
+**When conflicts detected**:
+- **Option A**: Sequence conflicting subtasks (subtask 3 `blockedBy` subtask 1)
+- **Option B**: Assign clear boundaries ("subtask 1 owns auth exports, subtask 3 owns auth imports only")
+- **Option C**: Merge into single subtask if conflict is substantial
+
+#### Boundary Assignment Example
+
+```javascript
+// Conflict: Two subtasks need to modify user service
+// Resolution: Assign clear boundaries
+
+subtask1.metadata = {
+  assignedBoundary: "UserService.create(), UserService.update()",
+  conventionAuthority: true  // First agent sets patterns
+};
+
+subtask2.metadata = {
+  assignedBoundary: "UserService.delete(), UserService.archive()",
+  followConventions: "subtask1"  // Adopt subtask1's patterns
+};
+```
+
+#### Convention Propagation
+
+First subtask to complete sets conventions for the batch:
+
+```javascript
+// Subtask 1 completes first
+subtask1.handoff = {
+  conventions: {
+    errorFormat: "{ code: string, message: string, details?: object }",
+    loggingPattern: "logger.info({ action, userId, metadata })",
+    validationLib: "zod"
+  }
+};
+
+// Orchestrator propagates to in-progress subtasks
+subtask2.metadata.inheritedConventions = subtask1.handoff.conventions;
+subtask3.metadata.inheritedConventions = subtask1.handoff.conventions;
+```
+
 ---
 
 ## Troubleshooting
@@ -350,6 +477,29 @@ Task system supports S2 coordination:
 - Subtask completed but status not updated
 - Circular dependency (shouldn't happen with PACT structure)
 - Subtask failed and wasn't handled
+
+#### Edge Case: Subtask Completes But Phase Remains Blocked
+
+**Scenario**: Specialist returns handoff, but orchestrator doesn't update task status (e.g., agent thread ended, context compaction, orchestrator distraction).
+
+**Detection**:
+```javascript
+// Signs of stale blocked state
+const staleIndicators = {
+  blockedByAllComplete: blockedBy.every(t => t.status === "completed"),
+  lastUpdate: "> 5 minutes ago",
+  noActiveAgentThreads: true,
+  phaseStillBlocked: status === "blocked"
+};
+```
+
+**Recovery**:
+1. Verify subtask handoffs are captured in task metadata
+2. If handoffs present: Mark phase `in_progress`, process handoffs, mark `completed`
+3. If handoffs missing: Check agent thread output, reconstruct handoff, or re-run subtask
+4. Update task status to unblock downstream phases
+
+**Prevention**: Orchestrator should process subtask completion within same turn as receiving handoff. Avoid context-switching between subtask completion and status update.
 
 ### Missing Handoff Data
 
@@ -366,6 +516,46 @@ Task system supports S2 coordination:
 **Check**: Is `awaitingAcknowledgment` or `awaitingDecision` set to `true`?
 
 **Protocol**: Algedonic signals must surface immediately. If task shows signal but user wasn't notified, this is a bug in orchestrator behavior.
+
+### Circular Dependency Detection
+
+**Context**: PACT's phase structure (PREPARE → ARCHITECT → CODE → TEST) inherently prevents circular dependencies. However, `comPACT` and `rePACT` workflows with manual `blockedBy` assignments could theoretically create cycles.
+
+**Detection**:
+```javascript
+// Check for circular blockedBy before adding dependency
+function wouldCreateCycle(taskId, newBlockerId, allTasks) {
+  const visited = new Set();
+  const stack = [newBlockerId];
+
+  while (stack.length > 0) {
+    const current = stack.pop();
+    if (current === taskId) return true; // Cycle detected
+    if (visited.has(current)) continue;
+    visited.add(current);
+
+    const task = allTasks.get(current);
+    if (task?.blockedBy) {
+      stack.push(...task.blockedBy);
+    }
+  }
+  return false;
+}
+```
+
+**How cycles could theoretically occur**:
+- `rePACT` nested cycle creates subtask that blocks its own parent phase
+- `comPACT` with manual dependency adds A → B → C → A chain
+- Orchestrator error setting `blockedBy` to wrong task ID
+
+**Resolution if detected**:
+1. Identify the cycle path (A → B → C → A)
+2. Determine which dependency is erroneous (usually the most recently added)
+3. Remove the incorrect `blockedBy` relationship
+4. Document the error in task metadata for debugging
+5. If unclear which is erroneous, escalate to user
+
+**Prevention**: Standard PACT workflows don't allow arbitrary `blockedBy` assignment. Only orchestrator sets dependencies, following phase sequencing rules. If implementing custom blocking logic, always run cycle detection before adding relationships.
 
 ---
 

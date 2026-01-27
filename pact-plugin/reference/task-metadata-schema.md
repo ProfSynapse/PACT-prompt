@@ -37,6 +37,8 @@ Phase tasks represent the four PACT phases (Prepare, Architect, Code, Test) or p
 
 ### Variety Object
 
+All fields are required when `variety` is present.
+
 | Field | Type | Range | Description |
 |-------|------|-------|-------------|
 | `novelty` | number | 1-4 | How new is this work? |
@@ -47,15 +49,17 @@ Phase tasks represent the four PACT phases (Prepare, Architect, Code, Test) or p
 
 ### Phase Handoff Object
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `summary` | string | Brief description of what was accomplished |
-| `produced` | string[] | Files or artifacts created/modified |
-| `keyDecisions` | string[] | Important decisions made during the phase |
-| `unresolvedItems` | array | Items needing attention (see below) |
-| `nextPhaseContext` | string | Context the next phase needs to know |
+| Field | Type | Req? | Description |
+|-------|------|------|-------------|
+| `summary` | string | Yes | Brief description of what was accomplished |
+| `produced` | string[] | Yes | Files or artifacts created/modified |
+| `keyDecisions` | string[] | No | Important decisions made during the phase |
+| `unresolvedItems` | array | No | Items needing attention (see below) |
+| `nextPhaseContext` | string | No | Context the next phase needs to know |
 
 ### Unresolved Item Object
+
+All fields required.
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -116,14 +120,16 @@ Specialist subtasks represent work delegated to individual specialist agents (co
 
 ### Specialist Handoff Object
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `produced` | string[] | Files created or modified |
-| `decisions` | string[] | Key implementation decisions with rationale |
-| `uncertainties` | array | Areas of uncertainty (see below) |
-| `openQuestions` | string[] | Unresolved questions for orchestrator |
+| Field | Type | Req? | Description |
+|-------|------|------|-------------|
+| `produced` | string[] | Yes | Files created or modified |
+| `decisions` | string[] | No | Key implementation decisions with rationale |
+| `uncertainties` | array | No | Areas of uncertainty (see below) |
+| `openQuestions` | string[] | No | Unresolved questions for orchestrator |
 
 ### Uncertainty Object
+
+All fields required.
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -181,21 +187,21 @@ Same structure as Specialist Handoff.
 
 ### Workflow Handoff Object (Peer Review)
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `verdict` | string | `"APPROVED"` \| `"CHANGES_REQUESTED"` \| `"NEEDS_DISCUSSION"` |
-| `findings` | array | Review findings (see below) |
-| `summary` | string | Overall review summary |
+| Field | Type | Req? | Description |
+|-------|------|------|-------------|
+| `verdict` | string | Yes | `"APPROVED"` \| `"CHANGES_REQUESTED"` \| `"NEEDS_DISCUSSION"` |
+| `findings` | array | Yes | Review findings (see below) |
+| `summary` | string | Yes | Overall review summary |
 
 ### Finding Object
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `reviewer` | string | Which reviewer found this |
-| `severity` | string | `"CRITICAL"` \| `"MAJOR"` \| `"MINOR"` \| `"SUGGESTION"` |
-| `category` | string | `"security"` \| `"performance"` \| `"design"` \| `"testing"` \| `"style"` |
-| `description` | string | What was found |
-| `location` | string | File and line (if applicable) |
+| Field | Type | Req? | Description |
+|-------|------|------|-------------|
+| `reviewer` | string | Yes | Which reviewer found this |
+| `severity` | string | Yes | `"CRITICAL"` \| `"MAJOR"` \| `"MINOR"` \| `"SUGGESTION"` |
+| `category` | string | Yes | `"SECURITY"` \| `"PERFORMANCE"` \| `"DESIGN"` \| `"TESTING"` \| `"STYLE"` |
+| `description` | string | Yes | What was found |
+| `location` | string | No | File and line (if applicable) |
 
 ### Example (comPACT)
 
@@ -228,14 +234,14 @@ Same structure as Specialist Handoff.
       {
         reviewer: "pact-architect",
         severity: "MAJOR",
-        category: "security",
+        category: "SECURITY",
         description: "JWT secret loaded from env but not validated at startup",
         location: "src/auth/config.ts:15"
       },
       {
         reviewer: "pact-test-engineer",
         severity: "MINOR",
-        category: "testing",
+        category: "TESTING",
         description: "Missing test for token expiry edge case",
         location: "src/auth/token-manager.test.ts"
       }
@@ -282,7 +288,7 @@ Algedonic signals annotate existing tasks rather than creating new ones. These f
 
 ### Active Halt Fields
 
-Added when a HALT signal is active (work stopped, awaiting user acknowledgment).
+Added when a HALT signal is active (work stopped, awaiting user acknowledgment). All fields required when `algedonicHalt` is present.
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -296,7 +302,7 @@ Added when a HALT signal is active (work stopped, awaiting user acknowledgment).
 
 ### Active Alert Fields
 
-Added when an ALERT signal is active (work paused, awaiting user decision).
+Added when an ALERT signal is active (work paused, awaiting user decision). All fields required when `algedonicAlert` is present.
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -308,16 +314,16 @@ Added when an ALERT signal is active (work paused, awaiting user decision).
 
 ### History Fields
 
-Tracks resolved algedonic signals for audit trail.
+Tracks resolved algedonic signals for audit trail. All fields required for each history entry.
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `algedonicHistory` | array | List of resolved signals |
 | `algedonicHistory[].type` | string | `"HALT"` \| `"ALERT"` |
-| `algedonicHistory[].category` | string | Signal category |
-| `algedonicHistory[].triggeredAt` | string | ISO timestamp |
-| `algedonicHistory[].resolvedAt` | string | ISO timestamp |
-| `algedonicHistory[].resolution` | string | How it was resolved |
+| `algedonicHistory[].category` | string | Signal category (matches active signal categories) |
+| `algedonicHistory[].triggeredAt` | string | ISO timestamp when signal was emitted |
+| `algedonicHistory[].resolvedAt` | string | ISO timestamp when user responded |
+| `algedonicHistory[].resolution` | string | How it was resolved (e.g., "Fixed and verified", "User override with justification") |
 
 ### Example
 
@@ -359,12 +365,14 @@ When `/PACT:imPACT` modifies existing tasks, it tracks the history in metadata.
 
 ### Fields
 
+All fields required for each history entry.
+
 | Field | Type | Description |
 |-------|------|-------------|
 | `imPACTHistory` | array | List of imPACT interventions |
 | `imPACTHistory[].timestamp` | string | When imPACT was invoked |
 | `imPACTHistory[].trigger` | string | What caused the blocker |
-| `imPACTHistory[].outcome` | string | `"redo-solo"` \| `"redo-with-help"` \| `"proceed-with-help"` |
+| `imPACTHistory[].outcome` | string | `"REDO-SOLO"` \| `"REDO-WITH-HELP"` \| `"PROCEED-WITH-HELP"` |
 | `imPACTHistory[].action` | string | What was done to resolve |
 
 ### Example
@@ -379,7 +387,7 @@ When `/PACT:imPACT` modifies existing tasks, it tracks the history in metadata.
     {
       timestamp: "2026-01-27T11:00:00Z",
       trigger: "Type errors after adding new dependency",
-      outcome: "redo-with-help",
+      outcome: "REDO-WITH-HELP",
       action: "Re-ran ARCHITECT phase with pact-architect to resolve type conflicts"
     }
   ]
@@ -444,3 +452,45 @@ Examples:
 | Plan-mode subtasks | `Plan: Domain perspective` | `Plan: Backend perspective` |
 | Nested (rePACT) | `rePACT: PHASE` | `rePACT: PREPARE`, `rePACT: CODE` |
 | Review subtasks | `Review: Focus` | `Review: Architecture`, `Review: Test coverage` |
+
+---
+
+## Best Practices
+
+### Task Metadata Management
+
+- **Keep metadata current**: Update task status as work progresses, don't batch updates at the end
+- **Use structured handoffs**: Always populate the handoff object when completing a task
+- **Track dependencies explicitly**: Use `blockedBy` to document task relationships
+
+### blockedBy Relationships
+
+The `blockedBy` field allows expressing task dependencies, but note:
+
+- **No auto-resolution**: Claude Code does not automatically resolve `blockedBy` relationships when blocking tasks complete
+- **Manual status management**: The orchestrator must check completion of blocking tasks and manually update dependent task status
+- **Clear blocking chain**: When unblocking a task, verify the full dependency chain is resolved
+
+---
+
+## Troubleshooting
+
+### Task Stuck in Blocked State
+
+**Symptom**: A task shows as blocked even though its blocking dependencies have completed.
+
+**Cause**: `blockedBy` relationships don't auto-resolve in Claude Code. The blocking task completing does not automatically update the blocked task's status.
+
+**Resolution**:
+1. Verify the blocking task(s) are actually complete
+2. Manually update the blocked task's status to reflect it's no longer blocked
+3. Consider removing or clearing the `blockedBy` field once dependencies are satisfied
+
+### Missing Handoff Data
+
+**Symptom**: Phase or specialist task completed but handoff object is empty or missing key fields.
+
+**Resolution**:
+1. Check that the agent was instructed to produce a structured handoff
+2. Review agent output for handoff content that may not have been captured
+3. Manually populate critical handoff fields (produced files, key decisions) if needed
