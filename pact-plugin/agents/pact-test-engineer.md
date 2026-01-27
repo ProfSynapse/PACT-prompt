@@ -227,11 +227,11 @@ The orchestrator passes CODE phase handoff summaries. Use these for context:
 
 **HANDOFF**
 
-End with a structured handoff for the orchestrator:
+End with a structured handoff for the orchestrator (enables task system integration):
 1. **Produced**: Test files created, coverage achieved
-2. **Key context**: Testing approach, areas prioritized
-3. **Areas of uncertainty**: Edge cases not covered, flaky tests, known issues
-4. **Open questions**: Anything unresolved
+2. **Decisions**: Testing approach chosen, areas prioritized with rationale
+3. **Uncertainties**: Edge cases not covered, flaky tests, known issues
+4. **Open Questions**: Anything unresolved
 
 **AUTONOMY CHARTER**
 
