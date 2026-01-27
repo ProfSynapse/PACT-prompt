@@ -620,6 +620,133 @@ For full protocol details, see [algedonic.md](algedonic.md).
 
 ---
 
+## Task System Integration
+
+PACT integrates with Claude Code's native Task system (v2.1.16+), using Task primitives as the **work tracking layer** while preserving PACT's **methodology layer** (VSM, phases, coordination protocols).
+
+### Hybrid Task Model
+
+**Phase tasks** (owned by orchestrator) + **Specialist subtasks** (owned by specialists)
+
+```
+Workflow:
+  PREPARE → ARCHITECT → CODE → TEST  (4 phase tasks, sequential dependencies)
+
+During CODE phase:
+  1. Orchestrator marks CODE in_progress
+  2. Creates subtasks: "Backend: Implement X", "Frontend: Add Y"
+  3. CODE task blockedBy subtasks
+  4. Specialists work in parallel
+  5. Subtasks complete → CODE auto-unblocks
+  6. Orchestrator marks CODE completed
+```
+
+### Naming Conventions
+
+| Task Type | Format | Example |
+|-----------|--------|---------|
+| Phase task | `PHASE` | `PREPARE`, `CODE`, `TEST` |
+| Specialist subtask | `Domain: Work` | `Backend: Implement auth` |
+| Workflow task | `Title Case` | `comPACT`, `Peer Review` |
+| Plan-mode phases | `Plan: Phase` | `Plan: Analyze`, `Plan: Consult` |
+| Nested (rePACT) | `rePACT: PHASE` | `rePACT: PREPARE` |
+
+### Metadata Schemas
+
+#### Phase Task
+
+```javascript
+{
+  taskType: "phase",
+  pactWorkflow: "orchestrate" | "plan-mode",
+  phase: "prepare" | "architect" | "code" | "test",
+  variety: { novelty, scope, uncertainty, risk, total },
+  featureBranch: "feature/...",
+  planRef: "docs/plans/...",
+  subtaskIds: ["4", "5"],
+  handoff: {
+    summary: "...",
+    produced: ["..."],
+    keyDecisions: ["..."],
+    unresolvedItems: [{ priority, description }],
+    nextPhaseContext: "..."
+  }
+}
+```
+
+#### Specialist Subtask
+
+```javascript
+{
+  taskType: "specialist",
+  phaseTaskId: "3",
+  domain: "backend" | "frontend" | "database",
+  specialist: "pact-backend-coder" | ...,
+  agentId: "agent-...",
+  handoff: {
+    produced: ["..."],
+    decisions: ["..."],
+    uncertainties: [{ priority, description }],
+    openQuestions: ["..."]
+  }
+}
+```
+
+#### Workflow Task (comPACT, Peer Review)
+
+```javascript
+{
+  taskType: "workflow",
+  pactWorkflow: "comPACT" | "peer-review",
+  domain: "backend",
+  subtaskIds: ["..."],
+  handoff: { ... }
+}
+```
+
+### Command Integration Summary
+
+| Command | Task Structure |
+|---------|----------------|
+| `/PACT:orchestrate` | 4 phase tasks (sequential) + specialist subtasks per phase |
+| `/PACT:comPACT` | 1 workflow task + parallel specialist subtasks |
+| `/PACT:peer-review` | 1 workflow task + parallel reviewer subtasks |
+| `/PACT:plan-mode` | 4 phase tasks (Analyze→Consult→Synthesize→Present) + planner subtasks |
+| `/PACT:rePACT` | Nested phase tasks with `rePACT:` prefix; parent blockedBy nested TEST |
+| `/PACT:imPACT` | Modifies existing tasks; tracks `imPACTHistory` in metadata |
+
+**Skipped phases**: Create task, immediately mark `completed` with `metadata: { skipped: true, skipReason: "..." }`
+
+### Algedonic Task Annotation
+
+Algedonic signals annotate existing tasks (don't create new):
+
+```javascript
+metadata: {
+  algedonicHalt: {
+    timestamp: "...",
+    category: "SECURITY",
+    issue: "...",
+    awaitingAcknowledgment: true
+  },
+  algedonicHistory: [{
+    type: "HALT",
+    category: "...",
+    triggeredAt: "...",
+    resolvedAt: "...",
+    resolution: "..."
+  }]
+}
+```
+
+### Key Principles
+
+- **Orchestrator owns transitions** — specialists don't update task status; orchestrator does
+- **Reference-based context** — use `planRef`, `phaseTaskId`, `blockedBy` chain; don't duplicate content
+- **Handoffs are structured** — `produced`, `decisions`, `uncertainties` format across all specialists
+
+---
+
 ## Variety Management
 
 Variety = complexity that must be matched with response capacity. Assess task variety before choosing a workflow.
