@@ -232,3 +232,32 @@ If answers lean toward "potential/normal/suspicion/concerning," consider imPACT 
   4. **Report**: Confirm to orchestrator: "HALT resolved: {one-line summary of fix}"
 - Document what was found and how it was resolved
 - Consider whether similar issues might exist elsewhere (orchestrator may request targeted audit)
+
+---
+
+## Task Annotation
+
+Algedonic signals annotate existing tasks rather than creating new ones. This maintains task continuity while recording the emergency event.
+
+### When Annotation Happens
+
+In the signal flow (see Signal Delivery Mechanism above):
+1. Agent emits algedonic signal
+2. Orchestrator receives and surfaces to user
+3. **Orchestrator annotates the current task** with signal metadata
+4. User responds; orchestrator updates annotation with resolution
+
+### Metadata Schema
+
+Tasks carry two algedonic fields:
+
+- **`algedonicHalt`**: Active HALT state (present only while awaiting acknowledgment)
+- **`algedonicHistory`**: Array of all past algedonic events on this task
+
+See [pact-protocols.md](pact-protocols.md#algedonic-task-annotation) for the full schema.
+
+### Why Annotate Tasks
+
+- **Audit trail**: History of viability threats encountered during work
+- **Context preservation**: Resolution details survive session boundaries
+- **Pattern detection**: Multiple algedonics on same task may indicate systemic issues
