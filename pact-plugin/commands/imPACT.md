@@ -99,3 +99,58 @@ If the blocker reveals that a sub-task is more complex than expected and needs i
 ```
 /PACT:rePACT backend "implement the OAuth2 token refresh that's blocking us"
 ```
+
+---
+
+## Task Integration
+
+imPACT is triage, not a new workflow. It modifies existing tasks rather than creating new ones.
+
+### Task Behavior
+
+| Action | Task Handling |
+|--------|---------------|
+| **Redo prior phase** | Update phase task status; add to `imPACTHistory` |
+| **Augment present phase** | Create new subtasks under current phase; add to `imPACTHistory` |
+| **Invoke rePACT** | Let rePACT create nested tasks; add to current task's `imPACTHistory` |
+| **Not truly blocked** | Add to `imPACTHistory` with outcome `"clarified"` |
+| **Escalate to user** | Add to `imPACTHistory` with outcome `"escalated"` |
+
+### imPACTHistory Tracking
+
+Every imPACT invocation is recorded in the affected task's metadata:
+
+```javascript
+metadata: {
+  // ... existing task metadata ...
+  imPACTHistory: [
+    {
+      triggeredAt: "2026-01-27T14:30:00Z",
+      outcome: "redo_phase",
+      reason: "Interface mismatch — ARCHITECT phase output incomplete",
+      redoPhase: "architect"
+    },
+    {
+      triggeredAt: "2026-01-27T15:45:00Z",
+      outcome: "augment",
+      reason: "Need parallel backend support for auth flow",
+      subtasksCreated: ["12", "13"]
+    }
+  ]
+}
+```
+
+### imPACTHistory Entry Schema
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `triggeredAt` | ISO timestamp | When imPACT was invoked |
+| `outcome` | enum | `"redo_phase"` \| `"augment"` \| `"repact"` \| `"clarified"` \| `"escalated"` |
+| `reason` | string | Brief explanation of diagnosis and decision |
+| `redoPhase` | string? | Which phase to redo (if `outcome: "redo_phase"`) |
+| `subtasksCreated` | string[]? | IDs of new subtasks (if `outcome: "augment"`) |
+| `rePACTTaskId` | string? | ID of nested rePACT task (if `outcome: "repact"`) |
+
+### META-BLOCK Detection
+
+If `imPACTHistory` reaches 3+ entries without resolution, this triggers an ALERT (META-BLOCK) algedonic signal. The orchestrator must escalate to user.

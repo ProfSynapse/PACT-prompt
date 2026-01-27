@@ -4,6 +4,63 @@ argument-hint: [e.g., feature X implementation]
 ---
 Review the current work: $ARGUMENTS
 
+---
+
+## Task Management
+
+**At workflow start**, create the workflow task and reviewer subtasks:
+
+```
+1. Create workflow task: "Peer Review"
+   - metadata: { taskType: "workflow", pactWorkflow: "peer-review" }
+
+2. Create reviewer subtasks (all parallel):
+   - "Review: Architecture" → pact-architect
+   - "Review: Test coverage" → pact-test-engineer
+   - "Review: {Domain}" → domain specialist (e.g., "Review: Backend")
+
+3. Set workflow task blockedBy all reviewer subtasks
+```
+
+**Reviewer subtask metadata**:
+```javascript
+{
+  taskType: "specialist",
+  workflowTaskId: "<workflow-task-id>",
+  reviewer: "pact-architect" | "pact-test-engineer" | "pact-backend-coder" | ...,
+  focus: "architecture" | "test-coverage" | "backend" | "frontend" | "database"
+}
+```
+
+**On reviewer completion**, capture structured handoff:
+```javascript
+{
+  handoff: {
+    verdict: "approve" | "request-changes" | "comment",
+    findings: [
+      { severity: "blocking" | "minor" | "future", description: "...", recommendation: "..." }
+    ],
+    summary: "One-line review summary"
+  }
+}
+```
+
+**On workflow completion**, aggregate in workflow task metadata:
+```javascript
+{
+  handoff: {
+    overallVerdict: "approve" | "request-changes",
+    reviewerVerdicts: { "architecture": "approve", "test-coverage": "request-changes", ... },
+    consolidatedFindings: [...],  // merged from all reviewers
+    mergeReady: true | false
+  }
+}
+```
+
+---
+
+## Workflow Steps
+
 1. Commit any uncommitted work
 2. Create a PR if one doesn't exist
 3. Review the PR

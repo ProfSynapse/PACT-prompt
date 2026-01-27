@@ -115,6 +115,29 @@ Before invoking multiple specialists concurrently, perform this coordination che
 
 ---
 
+## Task Management
+
+Create tasks to track workflow progress:
+
+1. **At start**: Create workflow task `comPACT`
+2. **Before dispatch**: Create specialist subtasks for each work item
+3. **Link**: Workflow `blockedBy` all subtasks (enables parallel execution)
+4. **On completion**: Mark workflow task completed when all subtasks done
+
+**Workflow task metadata**:
+```javascript
+{
+  taskType: "workflow",
+  pactWorkflow: "comPACT",
+  domain: "backend",  // or frontend, database, etc.
+  subtaskIds: ["4", "5"]
+}
+```
+
+**Specialist subtask metadata**: See specialist handoff format in agent definitions.
+
+---
+
 ## Invocation
 
 ### Multiple Specialists Concurrently (Default)

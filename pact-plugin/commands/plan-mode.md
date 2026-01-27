@@ -38,6 +38,64 @@ See [pact-variety.md](../protocols/pact-variety.md) for the Variety Management a
 
 ---
 
+## Task Management
+
+Plan-mode creates **phase tasks** to track planning progress and **planner subtasks** for specialist consultations. This is planning consultation only — no implementation tasks are created.
+
+### Phase Tasks
+
+Create 4 sequential phase tasks at the start of plan-mode:
+
+| Task Name | blockedBy | Description |
+|-----------|-----------|-------------|
+| `Plan: Analyze` | — | Orchestrator scope analysis |
+| `Plan: Consult` | `Plan: Analyze` | Parallel specialist consultation |
+| `Plan: Synthesize` | `Plan: Consult` | Orchestrator conflict resolution and roadmap |
+| `Plan: Present` | `Plan: Synthesize` | Save plan, resolve user decisions |
+
+### Planner Subtasks
+
+During the **Consult phase**, create subtasks for each specialist being consulted:
+
+| Subtask Name | Example |
+|--------------|---------|
+| `Plan: {Domain} perspective` | `Plan: Backend perspective` |
+| | `Plan: Architecture perspective` |
+| | `Plan: Testing perspective` |
+
+- All planner subtasks run **in parallel** (no inter-dependencies)
+- `Plan: Consult` task is `blockedBy` all its subtasks
+- When all subtasks complete, `Plan: Consult` auto-unblocks
+
+### Phase Task Metadata
+
+```javascript
+{
+  taskType: "phase",
+  pactWorkflow: "plan-mode",
+  phase: "analyze" | "consult" | "synthesize" | "present",
+  featureSlug: "user-auth-jwt",
+  planRef: "docs/plans/user-auth-jwt-plan.md",  // Set after plan is saved
+  subtaskIds: ["4", "5", "6"],  // For Consult phase only
+  handoff: {
+    summary: "Identified 3 specialists needed; 2 conflicts to resolve",
+    keyDecisions: ["Use JWT over sessions"],
+    unresolvedItems: [{ priority: "high", description: "Auth provider choice" }]
+  }
+}
+```
+
+### Key Differences from Orchestrate
+
+| Aspect | plan-mode | orchestrate |
+|--------|-----------|-------------|
+| Phase prefix | `Plan:` | None (`PREPARE`, `CODE`, etc.) |
+| Output | `planRef` to docs/plans/ | Implementation artifacts |
+| Subtask work | Planning analysis | Implementation code |
+| Creates implementation? | No | Yes |
+
+---
+
 ## Your Workflow
 
 ### Phase 0: Orchestrator Analysis

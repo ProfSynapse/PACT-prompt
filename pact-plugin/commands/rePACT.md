@@ -8,6 +8,60 @@ This command initiates a **nested P→A→C→T cycle** for a sub-task that is t
 
 ---
 
+## Task Management
+
+### Nested Task Structure
+
+When rePACT starts, create nested phase tasks with `rePACT:` prefix:
+
+```
+rePACT: PREPARE    (nested)
+rePACT: ARCHITECT  (nested)
+rePACT: CODE       (nested)
+rePACT: TEST       (nested)
+```
+
+The parent phase (from the outer orchestration) is `blockedBy` the nested `rePACT: TEST` task. This ensures the parent waits for the full nested cycle to complete.
+
+### Nested Task Metadata
+
+```javascript
+{
+  taskType: "phase",
+  pactWorkflow: "rePACT",
+  phase: "prepare" | "architect" | "code" | "test",
+  nestingLevel: 1 | 2,
+  parentPhaseId: "3",        // ID of the parent phase task that spawned this rePACT
+  parentWorkflow: "orchestrate",
+  domain: "backend" | "frontend" | "database" | null,  // null if multi-domain
+  handoff: { ... }
+}
+```
+
+### Parent-Child Linkage
+
+1. **At rePACT start**: Record `parentPhaseId` from the outer phase that invoked rePACT
+2. **Create 4 nested tasks**: `rePACT: PREPARE` → `rePACT: ARCHITECT` → `rePACT: CODE` → `rePACT: TEST`
+3. **Set dependencies**:
+   - Sequential within nested cycle: ARCH blockedBy PREP, CODE blockedBy ARCH, TEST blockedBy CODE
+   - Parent blocked: Parent phase `blockedBy` nested `rePACT: TEST`
+4. **On completion**: Nested TEST completes → parent phase auto-unblocks
+
+### Example Task Structure
+
+```
+Parent: CODE (id: 3, status: in_progress)
+  └── blockedBy: "7" (rePACT: TEST)
+
+Nested tasks:
+  rePACT: PREPARE   (id: 4, parentPhaseId: "3")
+  rePACT: ARCHITECT (id: 5, parentPhaseId: "3", blockedBy: "4")
+  rePACT: CODE      (id: 6, parentPhaseId: "3", blockedBy: "5")
+  rePACT: TEST      (id: 7, parentPhaseId: "3", blockedBy: "6")
+```
+
+---
+
 ## When to Use rePACT
 
 Use `/PACT:rePACT` when:

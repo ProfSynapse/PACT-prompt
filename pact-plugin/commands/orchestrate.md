@@ -64,6 +64,42 @@ See [algedonic.md](../protocols/algedonic.md) for signal format and full protoco
 
 ---
 
+## Task Management
+
+At workflow start, create phase tasks to track progress. Use `TodoWrite` to manage tasks throughout.
+
+### Initial Setup (Before Any Phase)
+
+Create 4 phase tasks with sequential dependencies:
+
+```
+TodoWrite([
+  { id: "1", title: "PREPARE", status: "pending", metadata: { taskType: "phase", pactWorkflow: "orchestrate", phase: "prepare" } },
+  { id: "2", title: "ARCHITECT", status: "pending", blockedBy: ["1"], metadata: { taskType: "phase", pactWorkflow: "orchestrate", phase: "architect" } },
+  { id: "3", title: "CODE", status: "pending", blockedBy: ["2"], metadata: { taskType: "phase", pactWorkflow: "orchestrate", phase: "code" } },
+  { id: "4", title: "TEST", status: "pending", blockedBy: ["3"], metadata: { taskType: "phase", pactWorkflow: "orchestrate", phase: "test" } }
+])
+```
+
+Add to metadata after variety assessment: `variety: { novelty, scope, uncertainty, risk, total }`, `featureBranch`, `planRef` (if plan exists).
+
+### Per-Phase Task Flow
+
+For each phase:
+1. Mark phase `in_progress`
+2. Create specialist subtasks (phase `blockedBy` subtasks)
+3. When subtasks complete, update phase `metadata.handoff` and mark `completed`
+
+### Skipped Phases
+
+When skipping a phase, still create the task but mark immediately completed:
+
+```
+TodoWrite([{ id: "1", title: "PREPARE", status: "completed", metadata: { taskType: "phase", pactWorkflow: "orchestrate", phase: "prepare", skipped: true, skipReason: "Approved plan exists" } }])
+```
+
+---
+
 ## Before Starting
 
 ### Task Variety Assessment
@@ -193,7 +229,12 @@ Each specialist should end with a structured handoff:
 
 ### Phase 1: PREPARE → `pact-preparer`
 
-**Skip criteria met?** → Proceed to Phase 2.
+**Skip criteria met?** → Mark PREPARE task completed with `skipped: true, skipReason: "..."` → Proceed to Phase 2.
+
+**Task management**:
+1. Mark PREPARE `in_progress`
+2. Create subtask(s): `TodoWrite([{ id: "1-1", title: "Research: {topic}", status: "pending", metadata: { taskType: "specialist", phaseTaskId: "1", domain: "prepare", specialist: "pact-preparer" } }])`
+3. Update PREPARE: `blockedBy: ["1-1"]` (and other subtask IDs)
 
 **Plan sections to pass** (if plan exists):
 - "Preparation Phase"
@@ -208,6 +249,8 @@ Each specialist should end with a structured handoff:
 - [ ] Outputs exist in `docs/preparation/`
 - [ ] Specialist handoff received (see Handoff Format below)
 - [ ] If blocker reported → `/PACT:imPACT`
+- [ ] **Update subtask(s)**: Mark `completed` with handoff in metadata
+- [ ] **Update PREPARE task**: Add `metadata.handoff`, mark `completed`
 - [ ] **S4 Checkpoint** (see [pact-s4-checkpoints.md](../protocols/pact-s4-checkpoints.md)): Environment stable? Model aligned? Plan viable?
 
 **Concurrent dispatch within PREPARE**: If research spans multiple independent areas (e.g., "research auth options AND caching strategies"), invoke multiple preparers together with clear scope boundaries.
@@ -230,7 +273,12 @@ If PREPARE ran and ARCHITECT was marked "Skip," compare PREPARE's recommended ap
 
 ### Phase 2: ARCHITECT → `pact-architect`
 
-**Skip criteria met (after re-assessment)?** → Proceed to Phase 3.
+**Skip criteria met (after re-assessment)?** → Mark ARCHITECT task completed with `skipped: true, skipReason: "..."` → Proceed to Phase 3.
+
+**Task management**:
+1. Mark ARCHITECT `in_progress`
+2. Create subtask(s): `TodoWrite([{ id: "2-1", title: "Design: {component}", status: "pending", metadata: { taskType: "specialist", phaseTaskId: "2", domain: "architect", specialist: "pact-architect" } }])`
+3. Update ARCHITECT: `blockedBy: ["2-1"]` (and other subtask IDs)
 
 **Plan sections to pass** (if plan exists):
 - "Architecture Phase"
@@ -247,6 +295,8 @@ If PREPARE ran and ARCHITECT was marked "Skip," compare PREPARE's recommended ap
 - [ ] Outputs exist in `docs/architecture/`
 - [ ] Specialist handoff received (see Handoff Format above)
 - [ ] If blocker reported → `/PACT:imPACT`
+- [ ] **Update subtask(s)**: Mark `completed` with handoff in metadata
+- [ ] **Update ARCHITECT task**: Add `metadata.handoff`, mark `completed`
 - [ ] **S4 Checkpoint**: Environment stable? Model aligned? Plan viable?
 
 **Concurrent dispatch within ARCHITECT**: If designing multiple independent components (e.g., "design user service AND notification service"), invoke multiple architects simultaneously. Ensure interface contracts between components are defined as a coordination checkpoint.
@@ -256,6 +306,17 @@ If PREPARE ran and ARCHITECT was marked "Skip," compare PREPARE's recommended ap
 ### Phase 3: CODE → `pact-*-coder(s)`
 
 **Always runs.** This is the core work.
+
+**Task management**:
+1. Mark CODE `in_progress`
+2. Create subtask(s) for each specialist:
+   ```
+   TodoWrite([
+     { id: "3-1", title: "Backend: {work}", status: "pending", metadata: { taskType: "specialist", phaseTaskId: "3", domain: "backend", specialist: "pact-backend-coder" } },
+     { id: "3-2", title: "Frontend: {work}", status: "pending", metadata: { taskType: "specialist", phaseTaskId: "3", domain: "frontend", specialist: "pact-frontend-coder" } }
+   ])
+   ```
+3. Update CODE: `blockedBy: ["3-1", "3-2"]` (all subtask IDs)
 
 > **S5 Policy Checkpoint (Pre-CODE)**: Before invoking coders, verify:
 > 1. "Does the architecture align with project principles?"
@@ -328,6 +389,8 @@ Before concurrent dispatch, check internally: shared files? shared interfaces? c
 - [ ] All tests passing (full test suite; fix any tests your changes break)
 - [ ] Specialist handoff(s) received (see Handoff Format above)
 - [ ] If blocker reported → `/PACT:imPACT`
+- [ ] **Update subtask(s)**: Mark `completed` with handoff in metadata
+- [ ] **Update CODE task**: Add `metadata.handoff`, mark `completed`
 - [ ] **Create atomic commit(s)** of CODE phase work (preserves work before strategic re-assessment)
 - [ ] **S4 Checkpoint**: Environment stable? Model aligned? Plan viable?
 
@@ -350,7 +413,12 @@ If a sub-task emerges that is too complex for a single specialist invocation:
 
 ### Phase 4: TEST → `pact-test-engineer`
 
-**Skip criteria met?** → Proceed to "After All Phases Complete."
+**Skip criteria met?** → Mark TEST task completed with `skipped: true, skipReason: "..."` → Proceed to "After All Phases Complete."
+
+**Task management**:
+1. Mark TEST `in_progress`
+2. Create subtask(s): `TodoWrite([{ id: "4-1", title: "Test: {suite}", status: "pending", metadata: { taskType: "specialist", phaseTaskId: "4", domain: "test", specialist: "pact-test-engineer" } }])`
+3. Update TEST: `blockedBy: ["4-1"]` (and other subtask IDs)
 
 **Plan sections to pass** (if plan exists):
 - "Test Phase"
@@ -368,6 +436,8 @@ If a sub-task emerges that is too complex for a single specialist invocation:
 - [ ] All tests passing
 - [ ] Specialist handoff received (see Handoff Format above)
 - [ ] If blocker reported → `/PACT:imPACT`
+- [ ] **Update subtask(s)**: Mark `completed` with handoff in metadata
+- [ ] **Update TEST task**: Add `metadata.handoff`, mark `completed`
 - [ ] **Create atomic commit(s)** of TEST phase work (preserves work before strategic re-assessment)
 
 **Concurrent dispatch within TEST**: If test suites are independent (e.g., "unit tests AND E2E tests" or "API tests AND UI tests"), invoke multiple test engineers at once with clear suite boundaries.
