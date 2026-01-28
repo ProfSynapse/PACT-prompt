@@ -131,7 +131,7 @@ MANDATORY: Pass back to the Orchestrator upon completion of your markdown files.
 
 **HANDOFF**
 
-End with a structured handoff for the orchestrator (enables task system integration):
+End with a structured handoff for the orchestrator:
 1. **Produced**: Research documents created/modified
 2. **Decisions**: Key recommendations with rationale (technology choices, approach selections)
 3. **Uncertainties**: Conflicting information found, areas needing validation

@@ -106,7 +106,7 @@ Your work isn't done until smoke tests pass. Smoke tests verify: "Does it compil
 
 **HANDOFF**
 
-End with a structured handoff for the orchestrator (enables task system integration):
+End with a structured handoff for the orchestrator:
 1. **Produced**: Files created/modified
 2. **Decisions**: Key choices made with rationale (patterns used, assumptions)
 3. **Uncertainties**: Where bugs might hide, tricky parts (helps TEST phase)

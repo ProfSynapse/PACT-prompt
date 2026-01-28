@@ -227,7 +227,7 @@ The orchestrator passes CODE phase handoff summaries. Use these for context:
 
 **HANDOFF**
 
-End with a structured handoff for the orchestrator (enables task system integration):
+End with a structured handoff for the orchestrator:
 1. **Produced**: Test files created, coverage achieved
 2. **Decisions**: Testing approach chosen, areas prioritized with rationale
 3. **Uncertainties**: Edge cases not covered, flaky tests, known issues

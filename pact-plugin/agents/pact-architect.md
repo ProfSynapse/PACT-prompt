@@ -129,7 +129,7 @@ Your work is complete when you deliver architectural specifications in a markdow
 
 **HANDOFF**
 
-End with a structured handoff for the orchestrator (enables task system integration):
+End with a structured handoff for the orchestrator:
 1. **Produced**: Architecture documents created/modified
 2. **Decisions**: Key architectural choices with rationale (patterns, trade-offs, technology selections)
 3. **Uncertainties**: Areas where design assumptions may not hold, integration risks

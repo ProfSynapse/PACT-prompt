@@ -124,7 +124,7 @@ Your work isn't done until smoke tests pass. Smoke tests verify: "Does the schem
 
 **HANDOFF**
 
-End with a structured handoff for the orchestrator (enables task system integration):
+End with a structured handoff for the orchestrator:
 1. **Produced**: Files created/modified (schemas, migrations, queries)
 2. **Decisions**: Key choices made with rationale (normalization, indexes, patterns used, assumptions)
 3. **Uncertainties**: Where performance issues might hide, tricky queries (helps TEST phase)
