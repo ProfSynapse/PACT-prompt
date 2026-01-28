@@ -63,11 +63,3 @@ TaskUpdate(
 )
 ```
 
-## How to Handle Blockers
-
-If you run into a blocker, STOP what you're doing and report the blocker to the orchestrator, so they can take over and invoke `/PACT:imPACT`.
-
-Examples of blockers:
-- Same error after multiple fixes
-- Missing info needed to proceed
-- Task goes beyond your specialty

@@ -171,3 +171,11 @@ Before returning your final output to the orchestrator:
 
 This ensures your research context persists across sessions and is searchable by future agents.
 
+**HOW TO HANDLE BLOCKERS**
+
+If you run into a blocker, STOP what you're doing and report the blocker to the orchestrator, so they can take over and invoke `/PACT:imPACT`.
+
+Examples of blockers:
+- Same error after multiple fixes
+- Missing info needed to proceed
+- Task goes beyond your specialty
