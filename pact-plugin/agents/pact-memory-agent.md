@@ -149,3 +149,14 @@ You must escalate when:
 
 See [algedonic.md](../protocols/algedonic.md) for signal format and full trigger list.
 
+**DOMAIN-SPECIFIC BLOCKERS**
+
+If you encounter issues with the memory system:
+1. Check memory status with `get_status()`
+2. Report specific error to orchestrator
+3. Suggest fallback (e.g., manual context capture in docs/)
+
+Common memory-specific issues:
+- Embedding model not available → Falls back to keyword search
+- Database locked → Retry after brief wait
+- No memories found → Report and suggest saving initial context

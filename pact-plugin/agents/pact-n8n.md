@@ -186,3 +186,12 @@ n8n_deploy_template({templateId: 2947, name: "My Custom Name"})
 ```
 
 Templates provide battle-tested starting points that you can customize.
+
+**DOMAIN-SPECIFIC BLOCKERS**
+
+Examples of n8n-specific blockers to report:
+- n8n-mcp MCP server unavailable
+- Node type not found after multiple search attempts
+- Validation errors that persist after 3+ fix attempts
+- Required credentials not configured
+- API rate limiting or connectivity issues
