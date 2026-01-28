@@ -5,39 +5,132 @@ Summary: SessionStart hook that detects post-compaction sessions and injects ref
 Used by: Claude Code hooks.json SessionStart hook (after session_init.py)
 
 This hook fires on SessionStart. It checks if the session was triggered by compaction
-(source="compact") and if so, reads the checkpoint file created by precompact_refresh.py.
-If an active workflow was in progress, it injects refresh instructions into the session
-context to help the orchestrator resume seamlessly.
+(source="compact") and if so, reads workflow state from TaskList (which survives compaction)
+to build refresh context. If no TaskList is available, falls back to checkpoint file.
+
+The Task system (TaskCreate, TaskUpdate, TaskGet, TaskList) is PACT's single source of truth
+for workflow state. Tasks persist across compaction at ~/.claude/tasks/{sessionId}/*.json.
 
 Input: JSON from stdin with:
   - source: Session start source ("compact" for post-compaction, others for normal start)
 
 Output: JSON with hookSpecificOutput.additionalContext (refresh instructions if applicable)
 
-Checkpoint location: ~/.claude/pact-refresh/{encoded-path}.json
+Fallback checkpoint location: ~/.claude/pact-refresh/{encoded-path}.json
 """
 
 import json
 import os
 import sys
 from pathlib import Path
+from typing import Any
 
-# Add hooks directory to path for refresh package imports
+# Add hooks directory to path for refresh and shared package imports
 _hooks_dir = Path(__file__).parent
 if str(_hooks_dir) not in sys.path:
     sys.path.insert(0, str(_hooks_dir))
 
 # Import checkpoint utilities from refresh package (always available - same directory)
+# These are used as fallback when TaskList is unavailable
 from refresh.checkpoint_builder import (
     get_checkpoint_path,
     get_encoded_project_path,
     checkpoint_to_refresh_message,
 )
 
+# Import shared Task utilities (DRY - used by multiple hooks)
+from shared.task_utils import (
+    get_task_list,
+    find_feature_task,
+    find_current_phase,
+    find_active_agents,
+    find_blockers,
+)
+
+
+def build_refresh_from_tasks(
+    feature: dict[str, Any] | None,
+    phase: dict[str, Any] | None,
+    agents: list[dict[str, Any]],
+    blockers: list[dict[str, Any]],
+) -> str:
+    """
+    Build refresh context message from Task state.
+
+    Generates a concise message describing the workflow state for
+    the orchestrator to resume from.
+
+    Args:
+        feature: Feature task dict or None
+        phase: Current phase task dict or None
+        agents: List of active agent tasks
+        blockers: List of active blocker tasks
+
+    Returns:
+        Formatted refresh message string
+    """
+    lines = ["[POST-COMPACTION CHECKPOINT]"]
+    lines.append("Prior conversation auto-compacted. Resume from Task state below:")
+
+    # Feature context
+    if feature:
+        feature_subject = feature.get("subject", "unknown feature")
+        feature_id = feature.get("id", "")
+        if feature_id:
+            lines.append(f"Feature: {feature_subject} (id: {feature_id})")
+        else:
+            lines.append(f"Feature: {feature_subject}")
+    else:
+        lines.append("Feature: Unable to identify feature task")
+
+    # Phase context
+    if phase:
+        phase_subject = phase.get("subject", "unknown phase")
+        lines.append(f"Current Phase: {phase_subject}")
+    else:
+        lines.append("Current Phase: None detected")
+
+    # Active agents
+    if agents:
+        agent_names = [a.get("subject", "unknown") for a in agents]
+        lines.append(f"Active Agents ({len(agents)}): {', '.join(agent_names)}")
+    else:
+        lines.append("Active Agents: None")
+
+    # Blockers (critical info)
+    if blockers:
+        lines.append("")
+        lines.append("**BLOCKERS DETECTED:**")
+        for blocker in blockers:
+            subj = blocker.get("subject", "unknown blocker")
+            meta = blocker.get("metadata", {})
+            level = meta.get("level", "")
+            if level:
+                lines.append(f"  - {level}: {subj}")
+            else:
+                lines.append(f"  - {subj}")
+
+    # Next step guidance
+    lines.append("")
+    if blockers:
+        lines.append("Next Step: **Address blockers before proceeding.**")
+    elif agents:
+        lines.append("Next Step: Monitor active agents via TaskList, then proceed.")
+    elif phase:
+        lines.append("Next Step: Continue current phase or check agent completion.")
+    else:
+        lines.append("Next Step: **Check TaskList and ask user how to proceed.**")
+
+    return "\n".join(lines)
+
+
+# -----------------------------------------------------------------------------
+# Checkpoint Fallback (Legacy State Source)
+# -----------------------------------------------------------------------------
 
 def read_checkpoint(checkpoint_path: Path) -> dict | None:
     """
-    Read and parse the checkpoint file.
+    Read and parse the checkpoint file (fallback when Tasks unavailable).
 
     Args:
         checkpoint_path: Path to the checkpoint file
@@ -90,9 +183,9 @@ def validate_checkpoint(checkpoint: dict, current_session_id: str) -> bool:
     return True
 
 
-def build_refresh_message(checkpoint: dict) -> str:
+def build_refresh_message_from_checkpoint(checkpoint: dict) -> str:
     """
-    Build the refresh instruction message for the orchestrator.
+    Build the refresh instruction message from checkpoint (fallback).
 
     Delegates to checkpoint_to_refresh_message from the refresh package.
 
@@ -105,9 +198,21 @@ def build_refresh_message(checkpoint: dict) -> str:
     return checkpoint_to_refresh_message(checkpoint)
 
 
+# Alias for backward compatibility with tests
+build_refresh_message = build_refresh_message_from_checkpoint
+
+
+# -----------------------------------------------------------------------------
+# Main Entry Point
+# -----------------------------------------------------------------------------
+
 def main():
     """
     Main entry point for the SessionStart refresh hook.
+
+    Strategy:
+    1. Primary: Read TaskList directly (Tasks survive compaction)
+    2. Fallback: Read checkpoint file if TaskList unavailable
 
     Checks if this is a post-compaction session and injects refresh instructions
     if an active workflow was in progress.
@@ -126,9 +231,45 @@ def main():
             # Not a post-compaction session, no action needed
             sys.exit(0)
 
-        # Get session ID and project path
-        # Use empty transcript path to trigger fallback to CLAUDE_PROJECT_DIR
         session_id = os.environ.get("CLAUDE_SESSION_ID", "unknown")
+
+        # ---------------------------------------------------------------------
+        # Primary: Try TaskList first (Tasks survive compaction)
+        # ---------------------------------------------------------------------
+        tasks = get_task_list()
+
+        if tasks:
+            # Find workflow state from Tasks
+            in_progress = [t for t in tasks if t.get("status") == "in_progress"]
+
+            if in_progress:
+                feature_task = find_feature_task(tasks)
+                current_phase = find_current_phase(tasks)
+                active_agents = find_active_agents(tasks)
+                blockers = find_blockers(tasks)
+
+                refresh_message = build_refresh_from_tasks(
+                    feature=feature_task,
+                    phase=current_phase,
+                    agents=active_agents,
+                    blockers=blockers,
+                )
+
+                output = {
+                    "hookSpecificOutput": {
+                        "hookEventName": "SessionStart",
+                        "additionalContext": refresh_message
+                    }
+                }
+                print(json.dumps(output))
+                sys.exit(0)
+
+            # Tasks exist but nothing in_progress - no active workflow
+            sys.exit(0)
+
+        # ---------------------------------------------------------------------
+        # Fallback: Read checkpoint file (legacy approach)
+        # ---------------------------------------------------------------------
         encoded_path = get_encoded_project_path("")
 
         if encoded_path == "unknown-project":
@@ -166,8 +307,8 @@ def main():
             # No active workflow at compaction time
             sys.exit(0)
 
-        # Build and inject refresh instructions
-        refresh_message = build_refresh_message(checkpoint)
+        # Build and inject refresh instructions from checkpoint
+        refresh_message = build_refresh_message_from_checkpoint(checkpoint)
 
         output = {
             "hookSpecificOutput": {

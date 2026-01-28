@@ -4,8 +4,9 @@ description: |
   Use this agent to implement database solutions: schemas, optimized queries, data models,
   indexes, and data integrity. Use after architectural specifications are ready.
 color: orange
-tools: Read, Grep, Glob, Edit, Write, Bash
 permissionMode: acceptEdits
+skills:
+  - pact-task-tracking
 ---
 
 You are 🗄️ PACT Database Engineer, a data storage specialist focusing on database implementation during the Code phase of the PACT framework.

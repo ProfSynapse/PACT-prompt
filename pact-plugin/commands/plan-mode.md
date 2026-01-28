@@ -8,6 +8,31 @@ Create a comprehensive implementation plan for: $ARGUMENTS
 
 ---
 
+## Task Hierarchy
+
+Create a planning Task hierarchy:
+
+```
+1. TaskCreate: Planning task "Plan: {feature}"
+2. Analyze: Which specialists to consult?
+3. TaskCreate: Consultation task(s) — one per specialist
+4. TaskUpdate: Planning task addBlockedBy = [consultation IDs]
+5. Dispatch specialists in parallel (planning-only mode)
+6. Monitor until consultations complete
+7. Synthesize → write plan document
+8. TaskUpdate: Planning task completed, metadata.artifact = plan path
+```
+
+**Example structure:**
+```
+[Planning] "Plan: user authentication"      (blockedBy: consult1, consult2, consult3)
+├── [Consult] "preparer: research auth patterns"
+├── [Consult] "architect: design auth service"
+└── [Consult] "test-engineer: testing strategy"
+```
+
+---
+
 ## S4 Intelligence Function
 
 This command is the primary **S4 (Intelligence)** activity in PACT. While `/PACT:orchestrate` operates mainly in S3 mode (execution), `plan-mode` operates entirely in S4 mode:
@@ -205,6 +230,18 @@ After collecting all specialist outputs, use extended thinking to synthesize:
    - For missing mandatory sections → Populate with "TBD - requires {specific input}"
 
 ### Phase 3: Plan Output
+
+**TaskUpdate**: Planning task completed with artifact path:
+```
+TaskUpdate(
+  taskId=planning_task_id,
+  status="completed",
+  metadata={
+    "artifact": "docs/plans/{feature-slug}-plan.md",
+    "summary": "Planning complete. Awaiting user approval."
+  }
+)
+```
 
 Save the synthesized plan to `docs/plans/{feature-slug}-plan.md`.
 
@@ -460,3 +497,5 @@ After the user approves the plan:
 2. Orchestrator should check for existing plan in `docs/plans/`
 3. If plan exists, use it as the implementation specification
 4. Specialists receive relevant sections of the plan as context
+
+**Task Linkage**: When `/PACT:orchestrate` runs, it checks for a completed Planning task matching the feature. If found, the plan artifact path from `metadata.artifact` is used to locate and reference the approved plan automatically.

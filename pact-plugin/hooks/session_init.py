@@ -9,6 +9,7 @@ Performs:
 2. Detects active plans and notifies user
 3. Updates ~/.claude/CLAUDE.md (merges/installs PACT Orchestrator)
 4. Ensures project CLAUDE.md exists with memory sections
+5. Checks for in_progress Tasks (resumption context via Task integration)
 
 Note: Memory-related initialization (dependency installation, embedding
 migration, pending embedding catch-up) is now lazy-loaded on first memory
@@ -23,6 +24,15 @@ import json
 import sys
 import os
 from pathlib import Path
+from typing import Any
+
+# Add hooks directory to path for shared package imports
+_hooks_dir = Path(__file__).parent
+if str(_hooks_dir) not in sys.path:
+    sys.path.insert(0, str(_hooks_dir))
+
+# Import shared Task utilities (DRY - used by multiple hooks)
+from shared.task_utils import get_task_list
 
 
 def setup_plugin_symlinks() -> str | None:
@@ -266,6 +276,74 @@ The global PACT Orchestrator is loaded from `~/.claude/CLAUDE.md`.
         return f"Project CLAUDE.md failed: {str(e)[:30]}"
 
 
+def check_resumption_context(tasks: list[dict[str, Any]]) -> str | None:
+    """
+    Check if there are in_progress Tasks indicating work to resume.
+
+    This helps users understand the current state when starting a new session
+    with a persistent task list (CLAUDE_CODE_TASK_LIST_ID set).
+
+    Args:
+        tasks: List of all tasks
+
+    Returns:
+        Status message describing resumption context, or None if nothing to report
+    """
+    in_progress = [t for t in tasks if t.get("status") == "in_progress"]
+    pending = [t for t in tasks if t.get("status") == "pending"]
+    completed = [t for t in tasks if t.get("status") == "completed"]
+
+    if not in_progress and not pending:
+        return None
+
+    # Count by type
+    feature_tasks = []
+    phase_tasks = []
+    agent_tasks = []
+    blocker_tasks = []
+
+    for task in in_progress:
+        subject = task.get("subject", "")
+        metadata = task.get("metadata", {})
+
+        if metadata.get("type") in ("blocker", "algedonic"):
+            blocker_tasks.append(task)
+        elif any(subject.startswith(p) for p in ("PREPARE:", "ARCHITECT:", "CODE:", "TEST:")):
+            phase_tasks.append(task)
+        elif any(subject.lower().startswith(p) for p in ("pact-",)):
+            agent_tasks.append(task)
+        else:
+            # Assume it's a feature task
+            feature_tasks.append(task)
+
+    parts = []
+
+    if feature_tasks:
+        names = [t.get("subject", "unknown")[:30] for t in feature_tasks[:2]]
+        if len(feature_tasks) > 2:
+            parts.append(f"Features: {', '.join(names)} (+{len(feature_tasks)-2} more)")
+        else:
+            parts.append(f"Features: {', '.join(names)}")
+
+    if phase_tasks:
+        phases = [t.get("subject", "").split(":")[0] for t in phase_tasks]
+        parts.append(f"Phases: {', '.join(phases)}")
+
+    if agent_tasks:
+        parts.append(f"Active agents: {len(agent_tasks)}")
+
+    if blocker_tasks:
+        parts.append(f"**Blockers: {len(blocker_tasks)}**")
+
+    if parts:
+        summary = f"Resumption context: {' | '.join(parts)}"
+        if pending:
+            summary += f" ({len(pending)} pending)"
+        return summary
+
+    return None
+
+
 def main():
     """
     Main entry point for the SessionStart hook.
@@ -275,6 +353,7 @@ def main():
     2. Checks for active plans
     3. Updates ~/.claude/CLAUDE.md (merges/installs PACT Orchestrator)
     4. Ensures project CLAUDE.md exists with memory sections
+    5. Checks for in_progress Tasks (resumption context via Task integration)
 
     Memory initialization (dependencies, migrations, embedding catch-up) is
     now lazy-loaded on first memory operation to reduce startup cost for
@@ -320,6 +399,17 @@ def main():
                 system_messages.append(project_md_msg)
             else:
                 context_parts.append(project_md_msg)
+
+        # 5. Check for in_progress Tasks (resumption context via Task integration)
+        tasks = get_task_list()
+        if tasks:
+            resumption_msg = check_resumption_context(tasks)
+            if resumption_msg:
+                # Blockers are critical - put in system message for visibility
+                if "**Blockers:" in resumption_msg:
+                    system_messages.append(resumption_msg)
+                else:
+                    context_parts.append(resumption_msg)
 
         # Build output
         output = {}

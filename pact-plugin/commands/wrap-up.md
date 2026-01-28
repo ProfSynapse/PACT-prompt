@@ -5,6 +5,37 @@ description: Perform end-of-session cleanup and documentation synchronization
 
 You are now entering the **Wrap-Up Phase**. Your goal is to ensure the workspace is clean and documentation is synchronized before the session ends or code is committed.
 
+## 0. Task Audit
+
+Before other cleanup, audit and optionally clean up Task state:
+
+```
+1. TaskList: Review all session tasks
+2. For abandoned in_progress tasks: complete or document reason
+3. Verify Feature task reflects final state
+4. Archive key context to memory (via pact-memory-agent)
+5. Report task summary: "Session has N tasks (X completed, Y pending)"
+6. IF multi-session mode (CLAUDE_CODE_TASK_LIST_ID set):
+   - Offer: "Clean up completed workflows? (Context archived to memory)"
+   - User confirms → delete completed feature hierarchies
+   - User declines → leave as-is
+```
+
+**Cleanup rules** (self-contained for command context):
+
+| Task State | Cleanup Action |
+|------------|----------------|
+| `completed` Feature task | Archive summary, then delete with children |
+| `in_progress` Feature task | Do NOT delete (workflow still active) |
+| Orphaned `in_progress` | Document abandonment reason, then delete |
+| `pending` blocked forever | Delete with note |
+
+**Why conservative:** Tasks are session-scoped by default (fresh on new session). Cleanup only matters for multi-session work, where user explicitly chose persistence via `CLAUDE_CODE_TASK_LIST_ID`.
+
+> Note: `hooks/stop_audit.py` performs automatic audit checks at session end. This table provides wrap-up command guidance for manual orchestrator-driven cleanup.
+
+---
+
 ## 1. Documentation Synchronization
 - **Scan** the workspace for recent code changes.
 - **Update** `docs/CHANGELOG.md` with a new entry for this session:
@@ -23,6 +54,7 @@ You are now entering the **Wrap-Up Phase**. Your goal is to ensure the workspace
 
 ## 3. Final Status Report
 - **Report** a summary of actions taken:
+    - **Tasks**: N total (X completed, Y pending, Z cleaned up)
     - Docs updated: [List files]
     - Files archived: [List files]
     - Temp files deleted: [List files]
