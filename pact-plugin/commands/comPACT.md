@@ -134,7 +134,15 @@ Create tasks to track workflow progress:
 }
 ```
 
-**Specialist subtask metadata**: See specialist handoff format in agent definitions.
+**Specialist subtask metadata**:
+```javascript
+{
+  taskType: "specialist",
+  workflowTaskId: "<workflow-id>",
+  domain: "backend",
+  specialist: "pact-backend-coder"
+}
+```
 
 ---
 
