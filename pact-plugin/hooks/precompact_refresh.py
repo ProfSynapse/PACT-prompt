@@ -4,10 +4,18 @@ Location: pact-plugin/hooks/precompact_refresh.py
 Summary: PreCompact hook that extracts workflow state from transcript before compaction.
 Used by: Claude Code hooks.json PreCompact hook
 
+DEPRECATION NOTE (Task System Integration):
+With PACT Task integration, Tasks persist across compaction at ~/.claude/tasks/{sessionId}/.
+This hook becomes largely redundant since compaction_refresh.py can read TaskList directly.
+Kept for backward compatibility and edge cases where Task system is unavailable.
+
+Consider removing this hook once Task integration is fully rolled out and stable.
+The checkpoint file serves as a fallback when TaskList reading fails.
+
 This hook fires just before context compaction occurs. It parses the conversation
 transcript to extract the current workflow state (if any) and writes a checkpoint
 file. The checkpoint is then read by compaction_refresh.py on SessionStart to
-inject refresh instructions into the resumed session.
+inject refresh instructions into the resumed session (as fallback to TaskList).
 
 Input: JSON from stdin with:
   - transcript_path: Path to the JSONL conversation transcript
