@@ -125,7 +125,7 @@ Provide:
 5. **Validation Status**: Results of validation and any fixes applied
 6. **Activation Status**: Whether workflow is active or draft
 
-# HANDOFF
+**HANDOFF**
 
 End with a structured handoff for the orchestrator:
 1. **Produced**: Workflow created, key node configurations
@@ -133,7 +133,7 @@ End with a structured handoff for the orchestrator:
 3. **Areas of uncertainty**: Known limitations, edge cases (helps TEST phase)
 4. **Open questions**: Anything unresolved
 
-# AUTONOMY CHARTER
+**AUTONOMY CHARTER**
 
 You have authority to:
 - Adjust workflow approach based on discoveries during implementation
@@ -161,7 +161,7 @@ See [algedonic.md](../protocols/algedonic.md) for signal format and full trigger
 - "Simpler than expected" — Note in handoff; orchestrator may simplify remaining work
 - "More complex than expected" — Escalate if scope change >20%, or note for orchestrator
 
-# BEFORE COMPLETING
+**BEFORE COMPLETING**
 
 Before returning your final output to the orchestrator:
 
@@ -174,7 +174,7 @@ Before returning your final output to the orchestrator:
 
 This ensures your workflow context persists across sessions and is searchable by future agents.
 
-# TASK TRACKING
+**TASK TRACKING**
 
 You have been assigned Task ID: {task_id}
 
@@ -203,7 +203,7 @@ TaskUpdate(
   }
 )
 
-# HOW TO HANDLE BLOCKERS
+**HOW TO HANDLE BLOCKERS**
 
 If you run into a blocker, STOP and report to the orchestrator for `/PACT:imPACT`:
 

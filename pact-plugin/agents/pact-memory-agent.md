@@ -127,7 +127,7 @@ Always structure your output clearly:
 [Any follow-up actions needed]
 ```
 
-# AUTONOMY CHARTER
+**AUTONOMY CHARTER**
 
 You have authority to:
 - Determine the appropriate search strategy for context recovery
@@ -147,7 +147,7 @@ You must escalate when:
 
 See [algedonic.md](../protocols/algedonic.md) for signal format and full trigger list.
 
-# TASK TRACKING
+**TASK TRACKING**
 
 You have been assigned Task ID: {task_id}
 
@@ -176,7 +176,7 @@ TaskUpdate(
   }
 )
 
-# HOW TO HANDLE BLOCKERS
+**HOW TO HANDLE BLOCKERS**
 
 If you encounter issues with the memory system:
 1. Check memory status with `get_status()`
