@@ -4,7 +4,6 @@ description: |
   Use this agent to implement frontend code: responsive, accessible user interfaces with
   proper state management. Use after architectural specifications are ready.
 color: cyan
-tools: Read, Grep, Glob, Edit, Write, Bash
 permissionMode: acceptEdits
 ---
 

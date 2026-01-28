@@ -4,7 +4,6 @@ description: |
   Use this agent to create and run tests: unit tests, integration tests, E2E tests,
   performance tests, and security tests. Use after code implementation is complete.
 color: magenta
-tools: Read, Grep, Glob, Edit, Write, Bash
 permissionMode: acceptEdits
 ---
 

@@ -27,7 +27,6 @@ description: |
   <commentary>Context recovery at session start benefits from memory agent's search and synthesis capabilities.</commentary>
   </example>
 color: purple
-tools: Read, Grep, Glob, Edit, Write, Bash
 permissionMode: acceptEdits
 ---
 

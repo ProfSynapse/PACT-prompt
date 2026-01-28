@@ -4,7 +4,6 @@ description: |
   Use this agent to design system architectures: component diagrams, API contracts,
   data flows, and implementation guidelines. Use after preparation/research is complete.
 color: green
-tools: Read, Grep, Glob, Write, Bash
 permissionMode: default
 ---
 

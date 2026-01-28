@@ -4,7 +4,6 @@ description: |
   Use this agent to implement database solutions: schemas, optimized queries, data models,
   indexes, and data integrity. Use after architectural specifications are ready.
 color: orange
-tools: Read, Grep, Glob, Edit, Write, Bash
 permissionMode: acceptEdits
 ---
 

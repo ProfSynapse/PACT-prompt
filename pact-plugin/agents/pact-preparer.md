@@ -4,7 +4,6 @@ description: |
   Use this agent to research and gather documentation: API docs, best practices,
   code examples, and technical information for development. First phase of PACT.
 color: blue
-tools: Read, Grep, Glob, WebFetch, WebSearch, Bash, Write
 permissionMode: default
 ---
 

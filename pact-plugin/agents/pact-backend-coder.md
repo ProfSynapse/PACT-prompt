@@ -4,7 +4,6 @@ description: |
   Use this agent to implement backend code: server-side components, APIs, business logic,
   and data processing. Use after architectural specifications are ready.
 color: yellow
-tools: Read, Grep, Glob, Edit, Write, Bash
 permissionMode: acceptEdits
 ---
 
