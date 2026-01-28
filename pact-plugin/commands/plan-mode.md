@@ -497,3 +497,5 @@ After the user approves the plan:
 2. Orchestrator should check for existing plan in `docs/plans/`
 3. If plan exists, use it as the implementation specification
 4. Specialists receive relevant sections of the plan as context
+
+**Task Linkage**: When `/PACT:orchestrate` runs, it checks for a completed Planning task matching the feature. If found, the plan artifact path from `metadata.artifact` is used to locate and reference the approved plan automatically.
