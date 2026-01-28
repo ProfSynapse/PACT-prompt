@@ -115,6 +115,70 @@ Before invoking multiple specialists concurrently, perform this coordination che
 
 ---
 
+## Task Management
+
+Create tasks to track workflow progress:
+
+1. **At start**: Create workflow task
+2. **Before dispatch**: Create specialist subtasks for each work item
+3. **Link**: Workflow `blockedBy` all subtasks (enables parallel execution)
+4. **On completion**: Mark workflow task completed with handoff
+
+**Create workflow task**:
+```javascript
+TaskCreate({
+  subject: "comPACT",
+  description: "Single-domain delegation for backend bug fixes",
+  activeForm: "Running comPACT",
+  metadata: { taskType: "workflow", pactWorkflow: "comPACT", domain: "backend" }
+})
+// Returns task ID, e.g., "1"
+```
+
+**Create specialist subtasks** (one per work item):
+```javascript
+TaskCreate({
+  subject: "Backend: Fix auth token validation",
+  description: "Fix authentication token expiry check",
+  activeForm: "Fixing auth bug",
+  metadata: { taskType: "specialist", workflowTaskId: "1", domain: "backend", specialist: "pact-backend-coder" }
+})
+// Returns task ID, e.g., "2"
+
+TaskCreate({
+  subject: "Backend: Fix rate limiter bypass",
+  description: "Fix rate limiting not applying to API routes",
+  activeForm: "Fixing rate limiter",
+  metadata: { taskType: "specialist", workflowTaskId: "1", domain: "backend", specialist: "pact-backend-coder" }
+})
+// Returns task ID, e.g., "3"
+```
+
+**Link workflow to subtasks**:
+```javascript
+TaskUpdate({
+  taskId: "1",
+  addBlockedBy: ["2", "3"]
+})
+```
+
+**On completion** (after all subtasks done):
+```javascript
+TaskUpdate({
+  taskId: "1",
+  status: "completed",
+  metadata: {
+    handoff: {
+      produced: ["src/auth/token.ts", "src/middleware/rateLimiter.ts"],
+      testsPass: true,
+      commitSha: "abc123"
+    }
+  }
+})
+```
+
+---
+
 ## Invocation
 
 ### Multiple Specialists Concurrently (Default)

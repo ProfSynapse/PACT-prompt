@@ -8,6 +8,153 @@ This command initiates a **nested P→A→C→T cycle** for a sub-task that is t
 
 ---
 
+## Task Management
+
+### Nested Task Structure
+
+When rePACT starts, create nested phase tasks with `rePACT:` prefix:
+
+```
+rePACT: PREPARE    (nested)
+rePACT: ARCHITECT  (nested)
+rePACT: CODE       (nested)
+rePACT: TEST       (nested)
+```
+
+The parent phase (from the outer orchestration) is `blockedBy` the nested `rePACT: TEST` task. This ensures the parent waits for the full nested cycle to complete.
+
+### Creating Nested Tasks
+
+When rePACT starts, create 4 nested phase tasks with parent linkage:
+
+```javascript
+// Nested PREPARE (first in cycle - no blockedBy within nested cycle)
+TaskCreate({
+  subject: "rePACT: PREPARE",
+  description: "Research OAuth2 token refresh patterns",
+  activeForm: "Running rePACT",
+  metadata: {
+    taskType: "phase",
+    pactWorkflow: "rePACT",
+    phase: "prepare",
+    nestingLevel: 1,
+    parentPhaseId: "3",        // ID of parent CODE phase that spawned this
+    parentWorkflow: "orchestrate",
+    domain: "backend"
+  }
+})  // Returns taskId: "4"
+
+// Nested ARCHITECT (blocked by nested PREPARE)
+TaskCreate({
+  subject: "rePACT: ARCHITECT",
+  description: "Design token refresh component",
+  activeForm: "Running rePACT",
+  addBlockedBy: ["4"],
+  metadata: {
+    taskType: "phase",
+    pactWorkflow: "rePACT",
+    phase: "architect",
+    nestingLevel: 1,
+    parentPhaseId: "3",
+    parentWorkflow: "orchestrate",
+    domain: "backend"
+  }
+})  // Returns taskId: "5"
+
+// Nested CODE (blocked by nested ARCHITECT)
+TaskCreate({
+  subject: "rePACT: CODE",
+  description: "Implement token refresh mechanism",
+  activeForm: "Running rePACT",
+  addBlockedBy: ["5"],
+  metadata: {
+    taskType: "phase",
+    pactWorkflow: "rePACT",
+    phase: "code",
+    nestingLevel: 1,
+    parentPhaseId: "3",
+    parentWorkflow: "orchestrate",
+    domain: "backend"
+  }
+})  // Returns taskId: "6"
+
+// Nested TEST (blocked by nested CODE)
+TaskCreate({
+  subject: "rePACT: TEST",
+  description: "Smoke test token refresh flow",
+  activeForm: "Running rePACT",
+  addBlockedBy: ["6"],
+  metadata: {
+    taskType: "phase",
+    pactWorkflow: "rePACT",
+    phase: "test",
+    nestingLevel: 1,
+    parentPhaseId: "3",
+    parentWorkflow: "orchestrate",
+    domain: "backend"
+  }
+})  // Returns taskId: "7"
+
+// Update parent phase to wait for nested cycle completion
+TaskUpdate({
+  taskId: "3",  // Parent CODE phase
+  addBlockedBy: ["7"],  // Blocked by nested TEST
+  metadata: {
+    // ... existing parent metadata preserved ...
+    nestedCycleId: "7"  // Track nested cycle's final task
+  }
+})
+```
+
+### Parent-Child Linkage
+
+1. **At rePACT start**: Record `parentPhaseId` from the outer phase that invoked rePACT
+2. **Create 4 nested tasks**: `rePACT: PREPARE` → `rePACT: ARCHITECT` → `rePACT: CODE` → `rePACT: TEST`
+3. **Set dependencies**:
+   - Sequential within nested cycle: ARCH blockedBy PREP, CODE blockedBy ARCH, TEST blockedBy CODE
+   - Parent blocked: Parent phase `blockedBy` nested `rePACT: TEST`
+4. **On completion**: Nested TEST completes → parent phase auto-unblocks
+
+### Nested Phase Completion
+
+When a nested phase completes, update with handoff:
+
+```javascript
+TaskUpdate({
+  taskId: "7",  // rePACT: TEST
+  status: "completed",
+  metadata: {
+    taskType: "phase",
+    pactWorkflow: "rePACT",
+    phase: "test",
+    nestingLevel: 1,
+    parentPhaseId: "3",
+    parentWorkflow: "orchestrate",
+    domain: "backend",
+    handoff: {
+      summary: "Token refresh implemented with 15-min expiry",
+      keyDecisions: ["Used refresh token rotation for security"],
+      areasOfUncertainty: ["Edge case: concurrent refresh requests"]
+    }
+  }
+})
+```
+
+### Example Task Structure
+
+```
+Parent: CODE (id: 3, status: in_progress)
+  └── blockedBy: "7" (rePACT: TEST)
+
+Nested tasks:
+  rePACT: PREPARE   (id: 4, parentPhaseId: "3")
+  rePACT: ARCHITECT (id: 5, parentPhaseId: "3", blockedBy: "4")
+  rePACT: CODE      (id: 6, parentPhaseId: "3", blockedBy: "5")
+  rePACT: TEST      (id: 7, parentPhaseId: "3", blockedBy: "6")
+```
+
+---
+
 ## When to Use rePACT
 
 Use `/PACT:rePACT` when:

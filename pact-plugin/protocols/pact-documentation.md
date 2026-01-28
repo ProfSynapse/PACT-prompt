@@ -22,4 +22,3 @@ If work spans sessions, update CLAUDE.md with:
 - Next steps
 
 ---
-

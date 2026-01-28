@@ -152,4 +152,3 @@ This transforms implicit knowledge into explicit coordination, reducing "surpris
 **Collaboration**: If Backend needs a complex query, ask Database. If Database needs to know access patterns, ask Backend.
 
 ---
-
