@@ -1,12 +1,17 @@
 ---
 name: pact-task-tracking
 description: |
-  Task tracking protocol for PACT specialist agents. Defines how to report progress,
-  blockers, algedonic signals, and completion status via TaskCreate/TaskUpdate tools.
-  Auto-loaded into agent context via frontmatter - no manual invocation needed.
+  Task tracking protocol for PACT specialist agents. Auto-loaded via agent frontmatter.
+  Defines how to report progress, blockers, and completion status via TaskCreate/TaskUpdate tools.
 ---
 
 # Task Tracking Protocol
+
+> **Architecture**: See [pact-task-hierarchy.md](../../protocols/pact-task-hierarchy.md) for the full hierarchy model.
+
+> **Reference**: See [Claude Code Task System](https://docs.anthropic.com/en/docs/claude-code/tasks) for full API documentation.
+
+> **Note**: The orchestrator passes your assigned task ID when dispatching you. Use this ID in all TaskUpdate calls.
 
 You have been assigned Task ID: {task_id}
 

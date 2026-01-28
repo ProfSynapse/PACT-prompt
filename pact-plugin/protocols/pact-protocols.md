@@ -836,6 +836,14 @@ Keep it brief. No templates required.
 
 ---
 
+## Task Hierarchy
+
+PACT uses Claude Code's Task system to track work at multiple levels: Feature → Phase → Agent.
+
+For full details on task ownership, states, blocking relationships, and metadata conventions, see [pact-task-hierarchy.md](pact-task-hierarchy.md).
+
+---
+
 ## Backend ↔ Database Boundary
 
 **Sequence**: Database delivers schema → Backend implements ORM.
