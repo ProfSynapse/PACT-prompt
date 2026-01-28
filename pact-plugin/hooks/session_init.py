@@ -26,6 +26,14 @@ import os
 from pathlib import Path
 from typing import Any
 
+# Add hooks directory to path for shared package imports
+_hooks_dir = Path(__file__).parent
+if str(_hooks_dir) not in sys.path:
+    sys.path.insert(0, str(_hooks_dir))
+
+# Import shared Task utilities (DRY - used by multiple hooks)
+from shared.task_utils import get_task_list
+
 
 def setup_plugin_symlinks() -> str | None:
     """
@@ -266,44 +274,6 @@ The global PACT Orchestrator is loaded from `~/.claude/CLAUDE.md`.
         return "Created project CLAUDE.md with memory sections"
     except Exception as e:
         return f"Project CLAUDE.md failed: {str(e)[:30]}"
-
-
-# -----------------------------------------------------------------------------
-# Task System Integration
-# -----------------------------------------------------------------------------
-
-def get_task_list() -> list[dict[str, Any]] | None:
-    """
-    Read TaskList from the Claude Task system.
-
-    Tasks are stored at ~/.claude/tasks/{sessionId}/*.json.
-
-    Returns:
-        List of task dicts, or None if tasks unavailable
-    """
-    session_id = os.environ.get("CLAUDE_SESSION_ID", "")
-    task_list_id = os.environ.get("CLAUDE_CODE_TASK_LIST_ID", session_id)
-
-    if not task_list_id:
-        return None
-
-    tasks_dir = Path.home() / ".claude" / "tasks" / task_list_id
-    if not tasks_dir.exists():
-        return None
-
-    tasks = []
-    try:
-        for task_file in tasks_dir.glob("*.json"):
-            try:
-                content = task_file.read_text(encoding='utf-8')
-                task = json.loads(content)
-                tasks.append(task)
-            except (IOError, json.JSONDecodeError):
-                continue
-    except Exception:
-        return None
-
-    return tasks if tasks else None
 
 
 def check_resumption_context(tasks: list[dict[str, Any]]) -> str | None:

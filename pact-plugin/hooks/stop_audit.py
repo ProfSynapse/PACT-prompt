@@ -21,39 +21,13 @@ import sys
 from pathlib import Path
 from typing import Any
 
+# Add hooks directory to path for shared package imports
+_hooks_dir = Path(__file__).parent
+if str(_hooks_dir) not in sys.path:
+    sys.path.insert(0, str(_hooks_dir))
 
-def get_task_list() -> list[dict[str, Any]] | None:
-    """
-    Read TaskList from the Claude Task system.
-
-    Tasks are stored at ~/.claude/tasks/{sessionId}/*.json.
-
-    Returns:
-        List of task dicts, or None if tasks unavailable
-    """
-    session_id = os.environ.get("CLAUDE_SESSION_ID", "")
-    task_list_id = os.environ.get("CLAUDE_CODE_TASK_LIST_ID", session_id)
-
-    if not task_list_id:
-        return None
-
-    tasks_dir = Path.home() / ".claude" / "tasks" / task_list_id
-    if not tasks_dir.exists():
-        return None
-
-    tasks = []
-    try:
-        for task_file in tasks_dir.glob("*.json"):
-            try:
-                content = task_file.read_text(encoding='utf-8')
-                task = json.loads(content)
-                tasks.append(task)
-            except (IOError, json.JSONDecodeError):
-                continue
-    except Exception:
-        return None
-
-    return tasks if tasks else None
+# Import shared Task utilities (DRY - used by multiple hooks)
+from shared.task_utils import get_task_list
 
 
 def audit_tasks(tasks: list[dict[str, Any]]) -> list[str]:
