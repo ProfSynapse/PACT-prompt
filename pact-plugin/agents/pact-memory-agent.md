@@ -148,6 +148,35 @@ You must escalate when:
 
 See [algedonic.md](../protocols/algedonic.md) for signal format and full trigger list.
 
+# TASK TRACKING
+
+You have been assigned Task ID: {task_id}
+
+**On start** (before any other work):
+TaskUpdate(taskId="{task_id}", status="in_progress")
+
+**On blocker** (if you cannot proceed):
+1. TaskCreate(subject="Resolve: {description}", metadata={"type": "blocker"})
+2. TaskUpdate(taskId="{task_id}", addBlockedBy=[blocker_id])
+3. Stop work and report: "BLOCKER: {description}"
+
+**On algedonic signal** (viability threat detected):
+1. TaskCreate(subject="⚠️ [HALT|ALERT]: {category}", metadata={"type": "algedonic", "level": "...", "category": "..."})
+2. TaskUpdate(taskId="{task_id}", addBlockedBy=[algedonic_id])
+3. Stop immediately
+4. Report signal to orchestrator
+
+**On completion** (after all work done):
+TaskUpdate(
+  taskId="{task_id}",
+  status="completed",
+  metadata={
+    "produced": ["file1.ts", "file2.ts"],
+    "decisions": ["key decisions made"],
+    "uncertainties": ["areas needing review"]
+  }
+)
+
 # HOW TO HANDLE BLOCKERS
 
 If you encounter issues with the memory system:
