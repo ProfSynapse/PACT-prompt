@@ -119,29 +119,62 @@ Before invoking multiple specialists concurrently, perform this coordination che
 
 Create tasks to track workflow progress:
 
-1. **At start**: Create workflow task `comPACT`
+1. **At start**: Create workflow task
 2. **Before dispatch**: Create specialist subtasks for each work item
 3. **Link**: Workflow `blockedBy` all subtasks (enables parallel execution)
-4. **On completion**: Mark workflow task completed when all subtasks done
+4. **On completion**: Mark workflow task completed with handoff
 
-**Workflow task metadata**:
+**Create workflow task**:
 ```javascript
-{
-  taskType: "workflow",
-  pactWorkflow: "comPACT",
-  domain: "backend",  // or frontend, database, etc.
-  subtaskIds: ["4", "5"]
-}
+TaskCreate({
+  subject: "comPACT",
+  description: "Single-domain delegation for backend bug fixes",
+  activeForm: "Running comPACT",
+  metadata: { taskType: "workflow", pactWorkflow: "comPACT", domain: "backend" }
+})
+// Returns task ID, e.g., "1"
 ```
 
-**Specialist subtask metadata**:
+**Create specialist subtasks** (one per work item):
 ```javascript
-{
-  taskType: "specialist",
-  workflowTaskId: "<workflow-id>",
-  domain: "backend",
-  specialist: "pact-backend-coder"
-}
+TaskCreate({
+  subject: "Backend: Fix auth token validation",
+  description: "Fix authentication token expiry check",
+  activeForm: "Fixing auth bug",
+  metadata: { taskType: "specialist", workflowTaskId: "1", domain: "backend", specialist: "pact-backend-coder" }
+})
+// Returns task ID, e.g., "2"
+
+TaskCreate({
+  subject: "Backend: Fix rate limiter bypass",
+  description: "Fix rate limiting not applying to API routes",
+  activeForm: "Fixing rate limiter",
+  metadata: { taskType: "specialist", workflowTaskId: "1", domain: "backend", specialist: "pact-backend-coder" }
+})
+// Returns task ID, e.g., "3"
+```
+
+**Link workflow to subtasks**:
+```javascript
+TaskUpdate({
+  taskId: "1",
+  addBlockedBy: ["2", "3"]
+})
+```
+
+**On completion** (after all subtasks done):
+```javascript
+TaskUpdate({
+  taskId: "1",
+  status: "completed",
+  metadata: {
+    handoff: {
+      produced: ["src/auth/token.ts", "src/middleware/rateLimiter.ts"],
+      testsPass: true,
+      commitSha: "abc123"
+    }
+  }
+})
 ```
 
 ---

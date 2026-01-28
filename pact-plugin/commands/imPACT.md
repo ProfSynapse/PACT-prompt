@@ -118,26 +118,73 @@ imPACT is triage, not a new workflow. It modifies existing tasks rather than cre
 
 ### imPACTHistory Tracking
 
-Every imPACT invocation is recorded in the affected task's metadata:
+Every imPACT invocation is recorded in the affected task's metadata using TaskUpdate:
 
 ```javascript
-metadata: {
-  // ... existing task metadata ...
-  imPACTHistory: [
-    {
-      triggeredAt: "2026-01-27T14:30:00Z",
-      outcome: "redo_phase",
-      reason: "Interface mismatch — ARCHITECT phase output incomplete",
-      redoPhase: "architect"
-    },
-    {
-      triggeredAt: "2026-01-27T15:45:00Z",
-      outcome: "augment",
-      reason: "Need parallel backend support for auth flow",
-      subtasksCreated: ["12", "13"]
-    }
-  ]
-}
+// Example: Redo prior phase outcome
+TaskUpdate({
+  taskId: "3",  // Current CODE phase task
+  metadata: {
+    // Preserve existing metadata fields
+    taskType: "phase",
+    pactWorkflow: "orchestrate",
+    phase: "code",
+    // Append to imPACTHistory
+    imPACTHistory: [
+      // ... any existing entries ...
+      {
+        triggeredAt: "2026-01-27T14:30:00Z",
+        outcome: "redo_phase",
+        reason: "Interface mismatch — ARCHITECT phase output incomplete",
+        redoPhase: "architect"
+      }
+    ]
+  }
+})
+
+// Example: Augment with parallel agents
+TaskUpdate({
+  taskId: "3",  // Current CODE phase task
+  metadata: {
+    taskType: "phase",
+    pactWorkflow: "orchestrate",
+    phase: "code",
+    imPACTHistory: [
+      // ... previous entries ...
+      {
+        triggeredAt: "2026-01-27T14:30:00Z",
+        outcome: "redo_phase",
+        reason: "Interface mismatch — ARCHITECT phase output incomplete",
+        redoPhase: "architect"
+      },
+      {
+        triggeredAt: "2026-01-27T15:45:00Z",
+        outcome: "augment",
+        reason: "Need parallel backend support for auth flow",
+        subtasksCreated: ["12", "13"]
+      }
+    ]
+  }
+})
+
+// Example: Escalate to user after 3+ cycles
+TaskUpdate({
+  taskId: "3",
+  metadata: {
+    taskType: "phase",
+    pactWorkflow: "orchestrate",
+    phase: "code",
+    imPACTHistory: [
+      { triggeredAt: "...", outcome: "redo_phase", reason: "..." },
+      { triggeredAt: "...", outcome: "augment", reason: "..." },
+      {
+        triggeredAt: "2026-01-27T16:30:00Z",
+        outcome: "escalated",
+        reason: "3rd imPACT cycle — systemic issue, escalating to user"
+      }
+    ]
+  }
+})
 ```
 
 ### imPACTHistory Entry Schema

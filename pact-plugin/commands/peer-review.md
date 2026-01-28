@@ -8,53 +8,83 @@ Review the current work: $ARGUMENTS
 
 ## Task Management
 
-**At workflow start**, create the workflow task and reviewer subtasks:
-
-```
-1. Create workflow task: "Peer Review"
-   - metadata: { taskType: "workflow", pactWorkflow: "peer-review" }
-
-2. Create reviewer subtasks (all parallel):
-   - "Review: Architecture" → pact-architect
-   - "Review: Test coverage" → pact-test-engineer
-   - "Review: {Domain}" → domain specialist (e.g., "Review: Backend")
-
-3. Set workflow task blockedBy all reviewer subtasks
-```
-
-**Reviewer subtask metadata**:
+**Create workflow task**:
 ```javascript
-{
-  taskType: "specialist",
-  workflowTaskId: "<workflow-task-id>",
-  reviewer: "pact-architect" | "pact-test-engineer" | "pact-backend-coder" | ...,
-  focus: "architecture" | "test-coverage" | "backend" | "frontend" | "database"
-}
+TaskCreate({
+  subject: "Peer Review",
+  description: "Multi-agent review of user auth feature",
+  activeForm: "Running peer review",
+  metadata: { taskType: "workflow", pactWorkflow: "peer-review" }
+})
+// Returns task ID, e.g., "1"
 ```
 
-**On reviewer completion**, capture structured handoff:
+**Create reviewer subtasks** (all dispatched in parallel):
 ```javascript
-{
-  handoff: {
-    verdict: "approve" | "request-changes" | "comment",
-    findings: [
-      { severity: "blocking" | "minor" | "future", description: "...", recommendation: "..." }
-    ],
-    summary: "One-line review summary"
+TaskCreate({
+  subject: "Review: Architecture",
+  description: "Review design coherence and patterns",
+  activeForm: "Reviewing architecture",
+  metadata: { taskType: "specialist", workflowTaskId: "1", reviewer: "pact-architect", focus: "architecture" }
+})
+// Returns task ID, e.g., "2"
+
+TaskCreate({
+  subject: "Review: Test coverage",
+  description: "Review test coverage and testability",
+  activeForm: "Reviewing tests",
+  metadata: { taskType: "specialist", workflowTaskId: "1", reviewer: "pact-test-engineer", focus: "test-coverage" }
+})
+// Returns task ID, e.g., "3"
+
+TaskCreate({
+  subject: "Review: Backend",
+  description: "Review server-side implementation quality",
+  activeForm: "Reviewing backend",
+  metadata: { taskType: "specialist", workflowTaskId: "1", reviewer: "pact-backend-coder", focus: "backend" }
+})
+// Returns task ID, e.g., "4"
+```
+
+**Link workflow to reviewer subtasks**:
+```javascript
+TaskUpdate({
+  taskId: "1",
+  addBlockedBy: ["2", "3", "4"]
+})
+```
+
+**On reviewer completion**, update subtask with structured handoff:
+```javascript
+TaskUpdate({
+  taskId: "2",  // architecture reviewer
+  status: "completed",
+  metadata: {
+    handoff: {
+      verdict: "approve",
+      findings: [
+        { severity: "minor", description: "Consider extracting auth middleware", recommendation: "Create shared middleware module" }
+      ],
+      summary: "Architecture sound, minor extraction opportunity"
+    }
   }
-}
+})
 ```
 
-**On workflow completion**, aggregate in workflow task metadata:
+**On workflow completion**, aggregate all reviewer findings:
 ```javascript
-{
-  handoff: {
-    overallVerdict: "approve" | "request-changes",
-    reviewerVerdicts: { "architecture": "approve", "test-coverage": "request-changes", ... },
-    consolidatedFindings: [...],  // merged from all reviewers
-    mergeReady: true | false
+TaskUpdate({
+  taskId: "1",
+  status: "completed",
+  metadata: {
+    handoff: {
+      overallVerdict: "approve",
+      reviewerVerdicts: { "architecture": "approve", "test-coverage": "approve", "backend": "approve" },
+      consolidatedFindings: [/* merged from all reviewers */],
+      mergeReady: true
+    }
   }
-}
+})
 ```
 
 ---

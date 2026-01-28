@@ -46,43 +46,134 @@ Plan-mode creates **phase tasks** to track planning progress and **planner subta
 
 Create 4 sequential phase tasks at the start of plan-mode:
 
-| Task Name | blockedBy | Description |
-|-----------|-----------|-------------|
-| `Plan: Analyze` | — | Orchestrator scope analysis |
-| `Plan: Consult` | `Plan: Analyze` | Parallel specialist consultation |
-| `Plan: Synthesize` | `Plan: Consult` | Orchestrator conflict resolution and roadmap |
-| `Plan: Present` | `Plan: Synthesize` | Save plan, resolve user decisions |
+```javascript
+// Phase 1: Analyze
+TaskCreate({
+  subject: "Plan: Analyze",
+  description: "Assess scope, determine specialists, derive feature slug",
+  activeForm: "Planning",
+  metadata: {
+    taskType: "phase",
+    pactWorkflow: "plan-mode",
+    phase: "analyze",
+    featureSlug: "user-auth-jwt"
+  }
+})  // Returns taskId: "1"
+
+// Phase 2: Consult (blocked by Analyze)
+TaskCreate({
+  subject: "Plan: Consult",
+  description: "Parallel specialist planning consultation",
+  activeForm: "Planning",
+  addBlockedBy: ["1"],
+  metadata: {
+    taskType: "phase",
+    pactWorkflow: "plan-mode",
+    phase: "consult",
+    featureSlug: "user-auth-jwt",
+    subtaskIds: []  // Populated when planner subtasks created
+  }
+})  // Returns taskId: "2"
+
+// Phase 3: Synthesize (blocked by Consult)
+TaskCreate({
+  subject: "Plan: Synthesize",
+  description: "Resolve conflicts, build unified roadmap",
+  activeForm: "Planning",
+  addBlockedBy: ["2"],
+  metadata: {
+    taskType: "phase",
+    pactWorkflow: "plan-mode",
+    phase: "synthesize",
+    featureSlug: "user-auth-jwt"
+  }
+})  // Returns taskId: "3"
+
+// Phase 4: Present (blocked by Synthesize)
+TaskCreate({
+  subject: "Plan: Present",
+  description: "Save plan to docs/plans/, resolve user decisions",
+  activeForm: "Planning",
+  addBlockedBy: ["3"],
+  metadata: {
+    taskType: "phase",
+    pactWorkflow: "plan-mode",
+    phase: "present",
+    featureSlug: "user-auth-jwt",
+    planRef: null  // Set to "docs/plans/user-auth-jwt-plan.md" after save
+  }
+})  // Returns taskId: "4"
+```
 
 ### Planner Subtasks
 
-During the **Consult phase**, create subtasks for each specialist being consulted:
+During the **Consult phase**, create subtasks for each specialist being consulted. All run in parallel:
 
-| Subtask Name | Example |
-|--------------|---------|
-| `Plan: {Domain} perspective` | `Plan: Backend perspective` |
-| | `Plan: Architecture perspective` |
-| | `Plan: Testing perspective` |
+```javascript
+// Backend perspective (no dependencies - runs in parallel)
+TaskCreate({
+  subject: "Plan: Backend perspective",
+  description: "Backend coder planning consultation for user-auth-jwt",
+  activeForm: "Planning",
+  metadata: {
+    taskType: "planner-subtask",
+    pactWorkflow: "plan-mode",
+    parentPhaseId: "2",
+    domain: "backend"
+  }
+})  // Returns taskId: "5"
+
+// Frontend perspective (no dependencies - runs in parallel)
+TaskCreate({
+  subject: "Plan: Frontend perspective",
+  description: "Frontend coder planning consultation for user-auth-jwt",
+  activeForm: "Planning",
+  metadata: {
+    taskType: "planner-subtask",
+    pactWorkflow: "plan-mode",
+    parentPhaseId: "2",
+    domain: "frontend"
+  }
+})  // Returns taskId: "6"
+
+// After creating subtasks, update Consult phase to track them and set blockedBy
+TaskUpdate({
+  taskId: "2",
+  addBlockedBy: ["5", "6"],
+  metadata: {
+    taskType: "phase",
+    pactWorkflow: "plan-mode",
+    phase: "consult",
+    featureSlug: "user-auth-jwt",
+    subtaskIds: ["5", "6"]
+  }
+})
+```
 
 - All planner subtasks run **in parallel** (no inter-dependencies)
 - `Plan: Consult` task is `blockedBy` all its subtasks
 - When all subtasks complete, `Plan: Consult` auto-unblocks
 
-### Phase Task Metadata
+### Phase Completion
+
+When a phase completes, update with handoff summary:
 
 ```javascript
-{
-  taskType: "phase",
-  pactWorkflow: "plan-mode",
-  phase: "analyze" | "consult" | "synthesize" | "present",
-  featureSlug: "user-auth-jwt",
-  planRef: "docs/plans/user-auth-jwt-plan.md",  // Set after plan is saved
-  subtaskIds: ["4", "5", "6"],  // For Consult phase only
-  handoff: {
-    summary: "Identified 3 specialists needed; 2 conflicts to resolve",
-    keyDecisions: ["Use JWT over sessions"],
-    unresolvedItems: [{ priority: "high", description: "Auth provider choice" }]
+TaskUpdate({
+  taskId: "3",  // Plan: Synthesize
+  status: "completed",
+  metadata: {
+    taskType: "phase",
+    pactWorkflow: "plan-mode",
+    phase: "synthesize",
+    featureSlug: "user-auth-jwt",
+    handoff: {
+      summary: "Identified 3 specialists needed; 2 conflicts to resolve",
+      keyDecisions: ["Use JWT over sessions"],
+      unresolvedItems: [{ priority: "high", description: "Auth provider choice" }]
+    }
   }
-}
+})
 ```
 
 ### Key Differences from Orchestrate

@@ -23,19 +23,87 @@ rePACT: TEST       (nested)
 
 The parent phase (from the outer orchestration) is `blockedBy` the nested `rePACT: TEST` task. This ensures the parent waits for the full nested cycle to complete.
 
-### Nested Task Metadata
+### Creating Nested Tasks
+
+When rePACT starts, create 4 nested phase tasks with parent linkage:
 
 ```javascript
-{
-  taskType: "phase",
-  pactWorkflow: "rePACT",
-  phase: "prepare" | "architect" | "code" | "test",
-  nestingLevel: 1 | 2,
-  parentPhaseId: "3",        // ID of the parent phase task that spawned this rePACT
-  parentWorkflow: "orchestrate",
-  domain: "backend" | "frontend" | "database" | null,  // null if multi-domain
-  handoff: { ... }
-}
+// Nested PREPARE (first in cycle - no blockedBy within nested cycle)
+TaskCreate({
+  subject: "rePACT: PREPARE",
+  description: "Research OAuth2 token refresh patterns",
+  activeForm: "Running rePACT",
+  metadata: {
+    taskType: "phase",
+    pactWorkflow: "rePACT",
+    phase: "prepare",
+    nestingLevel: 1,
+    parentPhaseId: "3",        // ID of parent CODE phase that spawned this
+    parentWorkflow: "orchestrate",
+    domain: "backend"
+  }
+})  // Returns taskId: "4"
+
+// Nested ARCHITECT (blocked by nested PREPARE)
+TaskCreate({
+  subject: "rePACT: ARCHITECT",
+  description: "Design token refresh component",
+  activeForm: "Running rePACT",
+  addBlockedBy: ["4"],
+  metadata: {
+    taskType: "phase",
+    pactWorkflow: "rePACT",
+    phase: "architect",
+    nestingLevel: 1,
+    parentPhaseId: "3",
+    parentWorkflow: "orchestrate",
+    domain: "backend"
+  }
+})  // Returns taskId: "5"
+
+// Nested CODE (blocked by nested ARCHITECT)
+TaskCreate({
+  subject: "rePACT: CODE",
+  description: "Implement token refresh mechanism",
+  activeForm: "Running rePACT",
+  addBlockedBy: ["5"],
+  metadata: {
+    taskType: "phase",
+    pactWorkflow: "rePACT",
+    phase: "code",
+    nestingLevel: 1,
+    parentPhaseId: "3",
+    parentWorkflow: "orchestrate",
+    domain: "backend"
+  }
+})  // Returns taskId: "6"
+
+// Nested TEST (blocked by nested CODE)
+TaskCreate({
+  subject: "rePACT: TEST",
+  description: "Smoke test token refresh flow",
+  activeForm: "Running rePACT",
+  addBlockedBy: ["6"],
+  metadata: {
+    taskType: "phase",
+    pactWorkflow: "rePACT",
+    phase: "test",
+    nestingLevel: 1,
+    parentPhaseId: "3",
+    parentWorkflow: "orchestrate",
+    domain: "backend"
+  }
+})  // Returns taskId: "7"
+
+// Update parent phase to wait for nested cycle completion
+TaskUpdate({
+  taskId: "3",  // Parent CODE phase
+  addBlockedBy: ["7"],  // Blocked by nested TEST
+  metadata: {
+    // ... existing parent metadata preserved ...
+    nestedCycleId: "7"  // Track nested cycle's final task
+  }
+})
 ```
 
 ### Parent-Child Linkage
@@ -46,6 +114,31 @@ The parent phase (from the outer orchestration) is `blockedBy` the nested `rePAC
    - Sequential within nested cycle: ARCH blockedBy PREP, CODE blockedBy ARCH, TEST blockedBy CODE
    - Parent blocked: Parent phase `blockedBy` nested `rePACT: TEST`
 4. **On completion**: Nested TEST completes → parent phase auto-unblocks
+
+### Nested Phase Completion
+
+When a nested phase completes, update with handoff:
+
+```javascript
+TaskUpdate({
+  taskId: "7",  // rePACT: TEST
+  status: "completed",
+  metadata: {
+    taskType: "phase",
+    pactWorkflow: "rePACT",
+    phase: "test",
+    nestingLevel: 1,
+    parentPhaseId: "3",
+    parentWorkflow: "orchestrate",
+    domain: "backend",
+    handoff: {
+      summary: "Token refresh implemented with 15-min expiry",
+      keyDecisions: ["Used refresh token rotation for security"],
+      areasOfUncertainty: ["Edge case: concurrent refresh requests"]
+    }
+  }
+})
+```
 
 ### Example Task Structure
 
