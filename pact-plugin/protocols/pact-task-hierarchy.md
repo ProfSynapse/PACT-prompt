@@ -1,8 +1,8 @@
-# PACT Task Hierarchy
+## Task Hierarchy
 
 This document explains how PACT uses Claude Code's Task system to track work at multiple levels.
 
-## Hierarchy Levels
+### Hierarchy Levels
 
 ```
 Feature Task (created by orchestrator)
@@ -13,7 +13,7 @@ Feature Task (created by orchestrator)
 └── Review Task (peer-review phase)
 ```
 
-## Task Ownership
+### Task Ownership
 
 | Level | Created By | Owned By | Lifecycle |
 |-------|------------|----------|-----------|
@@ -21,7 +21,7 @@ Feature Task (created by orchestrator)
 | Phase | Orchestrator | Orchestrator | Active during phase |
 | Agent | Orchestrator | Specialist | Completed when specialist returns |
 
-## Task States
+### Task States
 
 Tasks progress through: `pending` → `in_progress` → `completed`
 
@@ -29,7 +29,7 @@ Tasks progress through: `pending` → `in_progress` → `completed`
 - **in_progress**: Active work underway
 - **completed**: Work finished (success or documented failure)
 
-## Blocking Relationships
+### Blocking Relationships
 
 Use `addBlockedBy` to express dependencies:
 
@@ -40,7 +40,7 @@ CODE phase task
     └── blockedBy: [CODE phase task ID]
 ```
 
-## Metadata Conventions
+### Metadata Conventions
 
 Agent tasks include metadata for context:
 
@@ -56,13 +56,13 @@ Agent tasks include metadata for context:
 }
 ```
 
-## Integration with PACT Signals
+### Integration with PACT Signals
 
 - **Algedonic signals**: Emit via task metadata or direct escalation
 - **Variety signals**: Note in task metadata when complexity differs from estimate
 - **Handoff**: Store structured handoff in task metadata on completion
 
-## Example Flow
+### Example Flow
 
 1. Orchestrator creates Feature task: "Implement user authentication" (parent container)
 2. Orchestrator creates PREPARE phase task under the Feature task
@@ -71,3 +71,4 @@ Agent tasks include metadata for context:
 5. Orchestrator marks PREPARE complete, creates ARCHITECT phase task
 6. Orchestrator creates CODE phase task (blocked by ARCHITECT phase task)
 7. Pattern continues through remaining phases
+

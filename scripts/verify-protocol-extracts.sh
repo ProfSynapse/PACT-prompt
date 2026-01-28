@@ -61,10 +61,11 @@ verify "pact-s1-autonomy.md" "S1 Autonomy (lines 526-599)" "526,599"
 verify "pact-variety.md" "Variety (lines 644-705)" "644,705"
 
 # Combined-range extracts
-verify "pact-s2-coordination.md" "S2 Coordination (lines 365-525 + 868-882)" "365,525" "868,882"
+verify "pact-s2-coordination.md" "S2 Coordination (lines 365-525 + 936-950)" "365,525" "936,950"
 verify "pact-workflows.md" "Workflows (lines 706-848)" "706,848"
-verify "pact-phase-transitions.md" "Phase Transitions (lines 849-859 + 883-960)" "849,859" "883,960"
-verify "pact-documentation.md" "Documentation (lines 961-985)" "961,985"
+verify "pact-task-hierarchy.md" "Task Hierarchy (lines 860-933)" "860,933"
+verify "pact-phase-transitions.md" "Phase Transitions (lines 849-859 + 951-1028)" "849,859" "951,1028"
+verify "pact-documentation.md" "Documentation (lines 1029-1053)" "1029,1053"
 
 echo ""
 echo "=== Summary ==="
