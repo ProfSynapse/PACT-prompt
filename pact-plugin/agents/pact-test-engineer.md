@@ -274,7 +274,7 @@ Before returning your final output to the orchestrator:
 
 This ensures your testing context persists across sessions and is searchable by future agents.
 
-**TASK TRACKING**
+# TASK TRACKING
 
 You have been assigned Task ID: {task_id}
 
