@@ -14,6 +14,12 @@ SKILL_DIR = Path(__file__).parent
 SKILL_FILE = SKILL_DIR / "SKILL.md"
 
 
+@pytest.fixture
+def skill_content():
+    """Load the skill file content."""
+    return SKILL_FILE.read_text()
+
+
 class TestSkillFileExists:
     """Test that the skill file exists."""
 
@@ -28,11 +34,6 @@ class TestSkillFileExists:
 
 class TestYamlFrontmatter:
     """Test that YAML frontmatter is valid and has required fields."""
-
-    @pytest.fixture
-    def skill_content(self):
-        """Load the skill file content."""
-        return SKILL_FILE.read_text()
 
     @pytest.fixture
     def frontmatter(self, skill_content):
@@ -68,11 +69,6 @@ class TestYamlFrontmatter:
 
 class TestKeyContentSections:
     """Test that the skill content includes required sections."""
-
-    @pytest.fixture
-    def skill_content(self):
-        """Load the skill file content."""
-        return SKILL_FILE.read_text()
 
     def test_has_on_start_section(self, skill_content):
         """Skill must include 'On Start' section."""

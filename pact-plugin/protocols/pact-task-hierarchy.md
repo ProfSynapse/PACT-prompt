@@ -64,9 +64,10 @@ Agent tasks include metadata for context:
 
 ## Example Flow
 
-1. Orchestrator creates Feature task: "Implement user authentication"
-2. Orchestrator creates PREPARE phase task (blocked by Feature)
-3. Orchestrator dispatches pact-preparer with agent task (blocked by PREPARE)
+1. Orchestrator creates Feature task: "Implement user authentication" (parent container)
+2. Orchestrator creates PREPARE phase task under the Feature task
+3. Orchestrator dispatches pact-preparer with agent task (blocked by PREPARE phase task)
 4. Preparer completes, updates task to completed with handoff metadata
 5. Orchestrator marks PREPARE complete, creates ARCHITECT phase task
-6. Pattern continues through CODE and TEST phases
+6. Orchestrator creates CODE phase task (blocked by ARCHITECT phase task)
+7. Pattern continues through remaining phases
