@@ -149,6 +149,15 @@ You must escalate when:
 
 See [algedonic.md](../protocols/algedonic.md) for signal format and full trigger list.
 
+**HOW TO HANDLE BLOCKERS**
+
+If you run into a blocker, STOP what you're doing and report the blocker to the orchestrator, so they can take over and invoke `/PACT:imPACT`.
+
+Examples of blockers:
+- Same error after multiple fixes
+- Missing info needed to proceed
+- Task goes beyond your specialty
+
 **DOMAIN-SPECIFIC BLOCKERS**
 
 If you encounter issues with the memory system:

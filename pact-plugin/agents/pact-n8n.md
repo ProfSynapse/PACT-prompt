@@ -187,6 +187,15 @@ n8n_deploy_template({templateId: 2947, name: "My Custom Name"})
 
 Templates provide battle-tested starting points that you can customize.
 
+**HOW TO HANDLE BLOCKERS**
+
+If you run into a blocker, STOP what you're doing and report the blocker to the orchestrator, so they can take over and invoke `/PACT:imPACT`.
+
+Examples of blockers:
+- Same error after multiple fixes
+- Missing info needed to proceed
+- Task goes beyond your specialty
+
 **DOMAIN-SPECIFIC BLOCKERS**
 
 Examples of n8n-specific blockers to report:
