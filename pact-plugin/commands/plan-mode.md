@@ -436,6 +436,30 @@ The orchestrator should reference this plan during execution.
 
 ---
 
+## Signal Monitoring
+
+Check TaskList for blocker/algedonic signals:
+- After each specialist consultation dispatch
+- When specialist reports completion
+- On any unexpected specialist stoppage
+
+On signal detected: Follow Signal Task Handling in CLAUDE.md.
+
+---
+
+## Agent Prompt Language
+
+Include in every agent dispatch prompt:
+
+**Blocker/Signal Protocol**:
+- If you hit a blocker, STOP work immediately and report: "BLOCKER: {description}"
+- If you detect a viability threat (security, data, ethics), STOP immediately and report:
+  "ALGEDONIC [HALT|ALERT]: {category} — {description}"
+- Do NOT attempt workarounds for blockers. Do NOT continue work after emitting algedonic signals.
+- Always end your response with a structured HANDOFF, even if incomplete.
+
+---
+
 ## Output Conciseness
 
 **Default: Concise output.** User sees plan summary and decision points, not synthesis process.

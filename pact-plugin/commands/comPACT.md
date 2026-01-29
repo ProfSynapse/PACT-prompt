@@ -207,6 +207,19 @@ On signal detected: Follow Signal Task Handling in CLAUDE.md.
 
 ---
 
+## Agent Prompt Language
+
+Include in every agent dispatch prompt:
+
+**Blocker/Signal Protocol**:
+- If you hit a blocker, STOP work immediately and report: "BLOCKER: {description}"
+- If you detect a viability threat (security, data, ethics), STOP immediately and report:
+  "ALGEDONIC [HALT|ALERT]: {category} — {description}"
+- Do NOT attempt workarounds for blockers. Do NOT continue work after emitting algedonic signals.
+- Always end your response with a structured HANDOFF, even if incomplete.
+
+---
+
 ## After Specialist Completes
 
 1. **Receive handoff** from specialist(s)
