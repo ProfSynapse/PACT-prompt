@@ -213,9 +213,10 @@ On signal detected: Follow Signal Task Handling in CLAUDE.md.
 ## After Specialist Completes
 
 1. **Receive handoff** from specialist(s)
-2. **Run tests** — verify work passes. If tests fail → return to specialist for fixes before committing.
-3. **TaskUpdate**: Feature task status = "completed"
+2. **TaskUpdate**: Agent tasks status = "completed" (as each completes)
+3. **Run tests** — verify work passes. If tests fail → return to specialist for fixes (create new agent task, repeat from step 1).
 4. **Create atomic commit(s)** — stage and commit before proceeding
+5. **TaskUpdate**: Feature task status = "completed"
 
 **Next steps** (user decides):
 - Done → work is committed

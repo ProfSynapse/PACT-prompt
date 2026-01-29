@@ -410,8 +410,8 @@ On signal detected: Follow Signal Task Handling in CLAUDE.md.
 > **S5 Policy Checkpoint (Pre-PR)**: Before creating PR, verify: "Do all tests pass? Is system integrity maintained? Have S5 non-negotiables been respected throughout?"
 
 1. **Update plan status** (if plan exists): IN_PROGRESS → IMPLEMENTED
-2. **TaskUpdate**: Feature task status = "completed" (all phases done)
-3. **Verify all work is committed** — CODE and TEST phase commits should already exist; if any uncommitted changes remain, commit them now
+2. **Verify all work is committed** — CODE and TEST phase commits should already exist; if any uncommitted changes remain, commit them now
+3. **TaskUpdate**: Feature task status = "completed" (all phases done, all work committed)
 4. **Run `/PACT:peer-review`** to create PR and get multi-agent review
 5. **Present review summary and stop** — orchestrator never merges (S5 policy)
 6. **S4 Retrospective** (after user decides): Briefly note—what worked well? What should we adapt for next time?
