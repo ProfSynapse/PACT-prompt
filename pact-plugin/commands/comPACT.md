@@ -19,7 +19,7 @@ Create a simpler Task hierarchy than full orchestrate:
 2. Analyze: How many agents needed?
 3. TaskCreate: Agent task(s) — direct children of feature
 4. TaskUpdate: Feature task addBlockedBy = [all agent IDs]
-5. Dispatch agents concurrently with task IDs
+5. Dispatch agents concurrently with Task IDs
 6. Monitor via TaskList until all agents complete
 7. TaskUpdate: Feature task status = "completed"
 ```

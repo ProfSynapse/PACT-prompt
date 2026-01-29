@@ -358,7 +358,7 @@ A list of things that include the following:
 - [Best Practices]
 - [Wisdom from lessons learned]
 
-> ⚠️ **Task ID Handoff (MANDATORY)**: Before dispatching any agent, ALWAYS create a Task for it via `TaskCreate` first, then include the returned task ID as `{task_id}` in the agent's prompt (as shown above). The `pact-task-tracking` skill tells agents to call `TaskUpdate` on start and completion, but agents can only do this if they know their task ID. Without it, tasks stay in "pending" forever.
+> ⚠️ **Task ID Handoff (MANDATORY)**: Before dispatching any agent, ALWAYS create a Task for it via `TaskCreate` first, then include the returned Task ID as `{task_id}` in the agent's prompt (as shown above). The `pact-task-tracking` skill tells agents to call `TaskUpdate` on start and completion, but agents can only do this if they know their Task ID. Without it, tasks stay in "pending" forever.
 
 ### How to Delegate
 

@@ -29,7 +29,7 @@ a. TaskUpdate: phase status = "in_progress"
 b. Analyze work needed (QDCL for CODE)
 c. TaskCreate: agent task(s) as children of phase
 d. TaskUpdate: next phase addBlockedBy = [agent IDs]
-e. Dispatch agents with task IDs in their prompts
+e. Dispatch agents with Task IDs in their prompts
 f. Monitor via TaskList until agents complete
 g. TaskUpdate: phase status = "completed"
 ```

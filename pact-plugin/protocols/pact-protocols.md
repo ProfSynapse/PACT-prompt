@@ -894,9 +894,9 @@ Use `addBlockedBy` to express dependencies:
 
 ```
 CODE phase task
-├── blockedBy: [ARCHITECT task ID]
+├── blockedBy: [ARCHITECT Task ID]
 └── Agent tasks within CODE
-    └── blockedBy: [CODE phase task ID]
+    └── blockedBy: [CODE phase Task ID]
 ```
 
 ### Metadata Conventions

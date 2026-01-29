@@ -11,7 +11,7 @@ description: |
 
 > **Reference**: See [Claude Code Task System](https://docs.anthropic.com/en/docs/claude-code/tasks) for full API documentation.
 
-> **Note**: The orchestrator passes your assigned task ID when dispatching you. Use this ID in all TaskUpdate calls.
+> **Note**: The orchestrator passes your assigned Task ID when dispatching you. Use this ID in all TaskUpdate calls.
 
 You have been assigned Task ID: {task_id}
 
