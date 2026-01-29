@@ -27,6 +27,8 @@ Create a simpler Task hierarchy than full orchestrate:
 10. TaskUpdate: Feature task status = "completed"
 ```
 
+> Steps 8-10 are detailed in the [After Specialist Completes](#after-specialist-completes) section below (includes test verification and commit steps).
+
 **Example structure:**
 ```
 [Feature] "Fix 3 backend bugs"           (blockedBy: agent1, agent2, agent3)
@@ -208,7 +210,7 @@ Check TaskList for blocker/algedonic signals:
 
 On signal detected: Follow Signal Task Handling in CLAUDE.md.
 
-For agent stall detection and recovery, see orchestrate.md > Agent Stall Detection.
+For agent stall detection and recovery, see [Agent Stall Detection](orchestrate.md#agent-stall-detection).
 
 ---
 
