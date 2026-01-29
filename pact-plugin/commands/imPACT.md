@@ -99,3 +99,29 @@ If the blocker reveals that a sub-task is more complex than expected and needs i
 ```
 /PACT:rePACT backend "implement the OAuth2 token refresh that's blocking us"
 ```
+
+---
+
+## Task Operations
+
+imPACT operates on blocker Tasks that the orchestrator already created from agent text reports. Agents do NOT create Tasks themselves — the orchestrator translates agent `BLOCKER:` text into Task state.
+
+**Flow**:
+```
+1. Agent reported: "BLOCKER: {description}" (text, not Task tool)
+2. Orchestrator already created blocker Task:
+   TaskCreate(subject="Resolve: {desc}", metadata={"type": "blocker"})
+3. Orchestrator blocked the agent Task:
+   TaskUpdate(agent_task_id, addBlockedBy=[blocker_id])
+4. imPACT receives the blocker_id
+5. TaskGet(blocker_id) — understand the blocker context
+6. Triage: redo prior phase? need specialist? need user?
+7. On resolution path chosen:
+   - If delegating: TaskCreate resolution agent task, dispatch
+   - If self-resolving: proceed directly
+8. On resolution complete:
+   TaskUpdate(blocker_id, status="completed")
+9. Blocked agent task is now unblocked
+```
+
+**Graceful degradation**: If TaskGet fails, proceed with triage using the blocker description from the agent's text report.

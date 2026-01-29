@@ -64,6 +64,41 @@ See [algedonic.md](../protocols/algedonic.md) for signal format and full protoco
 
 ---
 
+## Task Hierarchy
+
+At workflow start, create the full Task hierarchy upfront. This provides visibility into the entire workflow before execution begins.
+
+```
+1. TaskCreate: Feature task — subject: "{verb} {feature}"
+2. TaskCreate: Phase tasks:
+   - "PREPARE: {feature-slug}"
+   - "ARCHITECT: {feature-slug}"
+   - "CODE: {feature-slug}"
+   - "TEST: {feature-slug}"
+3. TaskUpdate: Set phase-to-phase blockedBy chain:
+   - ARCHITECT blockedBy [PREPARE]
+   - CODE blockedBy [ARCHITECT]
+   - TEST blockedBy [CODE]
+4. For each phase execution:
+   a. TaskUpdate: phase status = "in_progress"
+   b. Analyze work needed (QDCL for CODE)
+   c. TaskCreate: agent task(s) — subject: "{agent-type}: {work-description}"
+   d. Dispatch agents (mark agent tasks in_progress immediately after dispatch)
+   e. Monitor via TaskList until agents complete (handoff received)
+   f. TaskUpdate: agent tasks completed (extract metadata from handoff)
+   g. TaskUpdate: phase status = "completed"
+5. Skipped phases: TaskUpdate status = "completed" with description noting skip reason
+```
+
+**Naming convention**:
+- Feature: `"{verb} {feature}"` (e.g., "Implement user authentication")
+- Phase: `"{PHASE}: {feature-slug}"` (e.g., "CODE: auth-feature")
+- Agent: `"{agent-type}: {work-description}"` (e.g., "pact-backend-coder: auth endpoint")
+
+**Graceful degradation**: If any Task tool call fails, log a warning and continue without Task tracking for that item. Task integration enhances PACT but should never block it.
+
+---
+
 ## Before Starting
 
 ### Task Variety Assessment
@@ -384,3 +419,30 @@ If a sub-task emerges that is too complex for a single specialist invocation:
 4. **Present review summary and stop** — orchestrator never merges (S5 policy)
 5. **S4 Retrospective** (after user decides): Briefly note—what worked well? What should we adapt for next time?
 6. **High-variety audit trail** (variety 10+ only): Delegate to `pact-memory-agent` to save key orchestration decisions, S3/S4 tensions resolved, and lessons learned
+7. **TaskUpdate**: Feature task status = "completed"
+
+---
+
+## Signal Monitoring
+
+Check TaskList for blocker/algedonic signals:
+- After each agent dispatch
+- When agent reports completion
+- On any unexpected agent stoppage
+
+On signal detected: Follow Task Lifecycle Management in CLAUDE.md.
+
+---
+
+## Agent Prompt Language
+
+When dispatching agents in any phase, include this block in the agent prompt:
+
+```
+**Blocker/Signal Protocol**:
+- If you hit a blocker, STOP work immediately and report: "BLOCKER: {description}"
+- If you detect a viability threat (security, data, ethics), STOP immediately and report:
+  "⚠️ ALGEDONIC [HALT|ALERT]: {category} — {description}"
+- Do NOT attempt workarounds for blockers. Do NOT continue work after emitting algedonic signals.
+- Always end your response with a structured HANDOFF, even if incomplete.
+```
