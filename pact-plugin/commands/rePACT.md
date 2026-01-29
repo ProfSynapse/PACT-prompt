@@ -22,7 +22,7 @@ Create a nested Task hierarchy as a child of the current context:
 3. TaskUpdate: Set dependencies:
    - Phase-to-phase blockedBy chain (same as orchestrate)
    - Parent task addBlockedBy = [sub-feature task]
-4. Execute nested P→A→C→T cycle
+4. Execute nested P→A→C→T cycle (include each agent's Task ID in their prompt)
 5. On completion: Parent task unblocked
 ```
 

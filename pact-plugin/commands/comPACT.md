@@ -146,6 +146,8 @@ Before invoking multiple specialists concurrently, perform this coordination che
 When the task contains multiple independent items, invoke multiple specialists together with boundary context:
 
 ```
+Your assigned Task ID is: [agent's task ID from TaskCreate]
+
 comPACT mode (concurrent): You are one of [N] specialists working concurrently.
 
 YOUR SCOPE: [specific sub-task and files this agent owns]
@@ -178,6 +180,8 @@ Use a single specialist agent only when:
 
 **Invoke the specialist with**:
 ```
+Your assigned Task ID is: [agent's task ID from TaskCreate]
+
 comPACT mode: Work directly from this task description.
 Check docs/plans/, docs/preparation/, docs/architecture/ briefly if they exist—reference relevant context.
 Do not create new documentation artifacts in docs/.

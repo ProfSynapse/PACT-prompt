@@ -17,7 +17,7 @@ Create a planning Task hierarchy:
 2. Analyze: Which specialists to consult?
 3. TaskCreate: Consultation task(s) — one per specialist
 4. TaskUpdate: Planning task addBlockedBy = [consultation IDs]
-5. Dispatch specialists in parallel (planning-only mode)
+5. Dispatch specialists in parallel (planning-only mode, include each specialist's Task ID in their prompt)
 6. Monitor until consultations complete
 7. Synthesize → write plan document
 8. TaskUpdate: Planning task completed, metadata.artifact = plan path
@@ -99,6 +99,8 @@ Invoke relevant specialists **in parallel**, each in **planning-only mode**.
 **Use this prompt template for each specialist:**
 
 ```
+Your assigned Task ID is: {task_id}
+
 PLANNING CONSULTATION ONLY — No implementation, no code changes.
 
 Task: {task description}

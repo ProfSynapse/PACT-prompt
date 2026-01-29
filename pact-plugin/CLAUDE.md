@@ -336,6 +336,9 @@ Task(
 
 Use this structure in the `prompt` field to ensure agents have adequate context:
 
+**TASK ID**
+Your assigned Task ID is: {task_id}
+
 **CONTEXT**
 [Brief background, what phase we are in, and relevant state]
 
@@ -352,6 +355,8 @@ A list of things that include the following:
 - [Constraints]
 - [Best Practices]
 - [Wisdom from lessons learned]
+
+> ⚠️ **Task ID Handoff (MANDATORY)**: When a Task exists for the work being delegated, you MUST include the task ID in the agent prompt (as shown above). The `pact-task-tracking` skill tells agents to call `TaskUpdate` on start and completion, but agents can only do this if they know their task ID. Without it, tasks stay in "pending" forever.
 
 ### How to Delegate
 
