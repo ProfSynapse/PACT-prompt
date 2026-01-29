@@ -262,6 +262,7 @@ Explicit user override ("you code this, don't delegate") should be honored; casu
 #### Agent Task Tracking
 
 > ⚠️ **AGENTS MUST HAVE TANDEM TRACKING TASKS**: Whenever invoking a specialist agent, you must also track what they are working on by using the Claude Code Task Management system (TaskCreate, TaskUpdate, TaskList, TaskGet).
+
 **Tracking Task lifecycle**:
 
 | Event | Task Operation |
