@@ -8,36 +8,6 @@ This command initiates a **nested P→A→C→T cycle** for a sub-task that is t
 
 ---
 
-## Task Hierarchy
-
-Create a nested Task hierarchy as a child of the current context:
-
-```
-1. TaskCreate: Sub-feature task "{verb} {sub-feature}" (child of parent context)
-2. TaskCreate: Nested phase tasks:
-   - "PREPARE: {sub-feature-slug}"
-   - "ARCHITECT: {sub-feature-slug}"
-   - "CODE: {sub-feature-slug}"
-   - "TEST: {sub-feature-slug}"
-3. TaskUpdate: Set dependencies:
-   - Phase-to-phase blockedBy chain (same as orchestrate)
-   - Parent task addBlockedBy = [sub-feature task]
-4. Execute nested P→A→C→T cycle
-5. On completion: Parent task unblocked
-```
-
-**Example structure:**
-```
-[Feature] "Implement user auth" (parent, blockedBy: sub-feature)
-└── [Sub-Feature] "Implement OAuth2 token refresh"
-    ├── [Phase] "PREPARE: oauth2-token-refresh"
-    ├── [Phase] "ARCHITECT: oauth2-token-refresh"
-    ├── [Phase] "CODE: oauth2-token-refresh"
-    └── [Phase] "TEST: oauth2-token-refresh"
-```
-
----
-
 ## When to Use rePACT
 
 Use `/PACT:rePACT` when:
@@ -280,24 +250,12 @@ Consider using /PACT:orchestrate instead.
 
 ---
 
-## Signal Monitoring
-
-Check TaskList for blocker/algedonic signals:
-- After each agent dispatch within nested phases
-- When agent reports completion
-- On any unexpected agent stoppage
-
-On signal detected: Follow Signal Task Handling in CLAUDE.md.
-
----
-
 ## After Completion
 
 When nested cycle completes:
-1. **TaskUpdate**: Sub-feature task status = "completed"
-2. **Summarize** what was done in the nested cycle
-3. **Report** any decisions that affect the parent task
-4. **Continue** with parent orchestration (parent task now unblocked)
+1. **Summarize** what was done in the nested cycle
+2. **Report** any decisions that affect the parent task
+3. **Continue** with parent orchestration
 
 **Handoff format**: Use the standard 4-item structure (Produced, Key context, Areas of uncertainty, Open questions). See orchestrate.md § Handoff Format.
 

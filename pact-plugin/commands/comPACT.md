@@ -10,30 +10,6 @@ Delegate this focused task within a single PACT domain: $ARGUMENTS
 
 ---
 
-## Task Hierarchy
-
-Create a simpler Task hierarchy than full orchestrate:
-
-```
-1. TaskCreate: Feature task "{verb} {feature}" (single-domain work)
-2. Analyze: How many agents needed?
-3. TaskCreate: Agent task(s) — direct children of feature
-4. TaskUpdate: Feature task addBlockedBy = [all agent IDs]
-5. Dispatch agents concurrently with task IDs
-6. Monitor via TaskList until all agents complete
-7. TaskUpdate: Feature task status = "completed"
-```
-
-**Example structure:**
-```
-[Feature] "Fix 3 backend bugs"           (blockedBy: agent1, agent2, agent3)
-├── [Agent] "backend-coder: fix bug A"
-├── [Agent] "backend-coder: fix bug B"
-└── [Agent] "backend-coder: fix bug C"
-```
-
----
-
 ## Specialist Selection
 
 | Shorthand | Specialist | Use For |
@@ -196,23 +172,11 @@ Task: [user's task description]
 
 ---
 
-## Signal Monitoring
-
-Check TaskList for blocker/algedonic signals:
-- After each agent dispatch
-- When agent reports completion
-- On any unexpected agent stoppage
-
-On signal detected: Follow Signal Task Handling in CLAUDE.md.
-
----
-
 ## After Specialist Completes
 
 1. **Receive handoff** from specialist(s)
 2. **Run tests** — verify work passes. If tests fail → return to specialist for fixes before committing.
-3. **TaskUpdate**: Feature task status = "completed"
-4. **Create atomic commit(s)** — stage and commit before proceeding
+3. **Create atomic commit(s)** — stage and commit before proceeding
 
 **Next steps** (user decides):
 - Done → work is committed

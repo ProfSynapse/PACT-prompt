@@ -81,50 +81,18 @@ Apply the S5 Decision Framing Protocol (see [pact-s5-policy.md](pact-s5-policy.m
 
 **Protocol-level, not architectural**: Agents emit algedonic signals through the same communication channel (to orchestrator), but the SIGNAL FORMAT itself demands immediate user escalation. The orchestrator is **REQUIRED** to surface algedonic signals to user immediately—it cannot triage, delay, or suppress them.
 
-### Task System Integration
-
-With PACT Task integration, algedonic signals create **signal Tasks** that persist and block affected work:
-
-**Agent behavior on algedonic signal:**
-```
-1. TaskCreate(subject="[HALT|ALERT]: {category}", metadata={"type": "algedonic", "level": "HALT|ALERT", "category": "..."})
-2. TaskUpdate(own_task_id, addBlockedBy=[algedonic_task_id])
-3. Stop work immediately
-4. Report signal to orchestrator
-```
-
-**Orchestrator amplifies scope:**
-| Signal Level | Orchestrator Action |
-|--------------|---------------------|
-| **ALERT** | `TaskUpdate(current_phase_id, addBlockedBy=[algedonic_id])` — blocks phase |
-| **HALT** | `TaskUpdate(feature_task_id, addBlockedBy=[algedonic_id])` — blocks entire workflow |
-
-**Resolution:**
-```
-1. User acknowledges/resolves the issue
-2. TaskUpdate(algedonic_task_id, status="completed")
-3. Blocked Tasks become unblocked automatically
-4. Work can resume
-```
-
-This makes algedonic signals **visible in TaskList** and ensures they properly block affected work until resolved.
-
 ### Flow
 
 ```
 Agent detects trigger condition
     ↓
-Agent creates algedonic Task + blocks self (addBlockedBy)
+Agent emits algedonic signal (HALT or ALERT)
     ↓
-Agent emits algedonic signal (HALT or ALERT) to orchestrator
-    ↓
-Orchestrator amplifies scope (blocks phase or feature Task)
+Orchestrator receives signal
     ↓
 Orchestrator IMMEDIATELY presents to user (no other work continues)
     ↓
 User responds
-    ↓
-Algedonic Task marked completed
     ↓
 Work resumes (or stops) based on user decision
 ```

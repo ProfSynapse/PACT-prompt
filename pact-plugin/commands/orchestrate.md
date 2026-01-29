@@ -6,38 +6,6 @@ Orchestrate specialist PACT agents through the PACT workflow to address: $ARGUME
 
 ---
 
-## Task Hierarchy
-
-Create the full Task hierarchy upfront for workflow visibility:
-
-```
-1. TaskCreate: Feature task "{verb} {feature}"
-2. TaskCreate: Phase tasks (all upfront):
-   - "PREPARE: {feature-slug}"
-   - "ARCHITECT: {feature-slug}"
-   - "CODE: {feature-slug}"
-   - "TEST: {feature-slug}"
-3. TaskUpdate: Set phase-to-phase blockedBy chain:
-   - ARCHITECT blockedBy PREPARE
-   - CODE blockedBy ARCHITECT
-   - TEST blockedBy CODE
-```
-
-For each phase execution:
-```
-a. TaskUpdate: phase status = "in_progress"
-b. Analyze work needed (QDCL for CODE)
-c. TaskCreate: agent task(s) as children of phase
-d. TaskUpdate: next phase addBlockedBy = [agent IDs]
-e. Dispatch agents with task IDs in their prompts
-f. Monitor via TaskList until agents complete
-g. TaskUpdate: phase status = "completed"
-```
-
-**Skipped phases**: Create the phase Task, then immediately mark `completed` with metadata noting skip reason.
-
----
-
 ## S3/S4 Mode Awareness
 
 This command primarily operates in **S3 mode** (operational control)—executing the plan and coordinating agents. However, mode transitions are important:
@@ -406,25 +374,13 @@ If a sub-task emerges that is too complex for a single specialist invocation:
 
 ---
 
-## Signal Monitoring
-
-Check TaskList for blocker/algedonic signals:
-- After each agent dispatch
-- When agent reports completion
-- On any unexpected agent stoppage
-
-On signal detected: Follow Signal Task Handling in CLAUDE.md.
-
----
-
 ## After All Phases Complete
 
 > **S5 Policy Checkpoint (Pre-PR)**: Before creating PR, verify: "Do all tests pass? Is system integrity maintained? Have S5 non-negotiables been respected throughout?"
 
 1. **Update plan status** (if plan exists): IN_PROGRESS → IMPLEMENTED
-2. **TaskUpdate**: Feature task status = "completed" (all phases done)
-3. **Verify all work is committed** — CODE and TEST phase commits should already exist; if any uncommitted changes remain, commit them now
-4. **Run `/PACT:peer-review`** to create PR and get multi-agent review
-5. **Present review summary and stop** — orchestrator never merges (S5 policy)
-6. **S4 Retrospective** (after user decides): Briefly note—what worked well? What should we adapt for next time?
-7. **High-variety audit trail** (variety 10+ only): Delegate to `pact-memory-agent` to save key orchestration decisions, S3/S4 tensions resolved, and lessons learned
+2. **Verify all work is committed** — CODE and TEST phase commits should already exist; if any uncommitted changes remain, commit them now
+3. **Run `/PACT:peer-review`** to create PR and get multi-agent review
+4. **Present review summary and stop** — orchestrator never merges (S5 policy)
+5. **S4 Retrospective** (after user decides): Briefly note—what worked well? What should we adapt for next time?
+6. **High-variety audit trail** (variety 10+ only): Delegate to `pact-memory-agent` to save key orchestration decisions, S3/S4 tensions resolved, and lessons learned

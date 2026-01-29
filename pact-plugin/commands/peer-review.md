@@ -8,50 +8,6 @@ Review the current work: $ARGUMENTS
 2. Create a PR if one doesn't exist
 3. Review the PR
 
----
-
-## Task Hierarchy
-
-Create a review Task hierarchy:
-
-```
-1. TaskCreate: Review task "Review: {feature}"
-2. Analyze PR: Which reviewers needed?
-3. TaskCreate: Reviewer agent tasks (architect, test-engineer, domain specialists)
-4. TaskUpdate: Review task addBlockedBy = [reviewer IDs]
-5. Dispatch reviewers in parallel
-6. Monitor until reviewers complete
-7. Synthesize findings
-8. If major issues:
-   a. TaskCreate: Remediation agent tasks
-   b. Dispatch, monitor until complete
-9. TaskCreate: "User: review minor issues" step task
-10. Present minor issues to user, record decisions in step metadata
-11. If "fix now" decisions:
-    a. TaskCreate: Remediation agent tasks
-    b. Dispatch, monitor until complete
-12. TaskCreate: "Awaiting merge decision" approval task
-13. Present to user, await approval
-14. On approval: TaskUpdate approval completed
-15. TaskUpdate: Review task completed, metadata.artifact = PR URL
-```
-
-**Example structure:**
-```
-[Review] "Review: user authentication"
-├── [Agent] "architect: design review"
-├── [Agent] "test-engineer: coverage review"
-├── [Agent] "backend-coder: implementation review"
-├── [Remediation] (dynamic, for major issues)
-│   └── [Agent] "fix: auth vulnerability"
-├── [Step] "User: review minor issues"
-├── [Remediation] (dynamic, for "fix now" minors)
-│   └── [Agent] "fix: input validation"
-└── [Approval] "Awaiting merge decision"
-```
-
----
-
 **PR Review Workflow**
 
 Pull request reviews should mirror real-world team practices where multiple reviewers sign off before merging. Invoke **at least 3 agents in parallel** to provide comprehensive review coverage:
@@ -153,17 +109,6 @@ Select the domain coder based on PR focus:
 4. State merge readiness (only after ALL blocking fixes complete AND minor/future item handling is done): "Ready to merge" or "Changes requested: [specifics]"
 
 5. Present to user and **stop** — merging requires explicit user authorization (S5 policy)
-
----
-
-## Signal Monitoring
-
-Check TaskList for blocker/algedonic signals:
-- After each reviewer dispatch
-- After each remediation dispatch
-- On any unexpected agent stoppage
-
-On signal detected: Follow Signal Task Handling in CLAUDE.md.
 
 ---
 
