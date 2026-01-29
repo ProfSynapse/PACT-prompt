@@ -52,6 +52,8 @@ TaskCreate("PREPARE: auth-refresh") → prepareTaskId
 TaskUpdate(prepareTaskId, status="completed", metadata={"skipped": true, "skip_reason": "approved_plan_exists"})
 ```
 
+> **Note**: Skipped phases go directly from `pending` to `completed` — no `in_progress` transition since no work occurs.
+
 ---
 
 ## S3/S4 Mode Awareness
@@ -415,9 +417,11 @@ An agent is considered **stalled** when:
 
 | Condition | Indicator |
 |-----------|-----------|
-| Extended silence | `in_progress` for an extended period with no output |
+| Extended silence | Background task still running but no progress at signal monitoring checkpoints |
 | Silent completion | Background task completed but no handoff received |
 | Unexpected termination | Agent process terminated without handoff or blocker report |
+
+> **Detection is event-driven**: Check for stalls at signal monitoring points (after dispatch, on completion events, on unexpected stoppage). If a background task has returned but produced no handoff or blocker report, treat as stalled immediately.
 
 ### Recovery Protocol
 
@@ -430,6 +434,18 @@ An agent is considered **stalled** when:
 ### Prevention
 
 Include in agent prompts: "If you encounter an error that prevents completion, report a partial handoff with whatever work you completed rather than silently failing."
+
+### Non-Happy-Path Task Termination
+
+When an agent cannot complete normally (stall, failure, or unresolvable blocker), mark its task as `completed` with descriptive metadata:
+
+| Scenario | Metadata |
+|----------|----------|
+| Agent stalled | `{"stalled": true, "reason": "..."}` |
+| Agent failed | `{"failed": true, "reason": "..."}` |
+| Unresolvable blocker | `{"blocked": true, "blocker_task": "..."}` |
+
+**Convention**: There is no `failed` status in the task system — all terminal states use `completed` with metadata distinguishing success from failure. This preserves the `pending → in_progress → completed` lifecycle while providing failure context.
 
 ---
 
