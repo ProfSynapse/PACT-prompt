@@ -37,16 +37,9 @@ h. TaskUpdate: agent tasks status = "completed" (as each completes)
 i. TaskUpdate: phase status = "completed"
 ```
 
-**Skipped phases**: Create the phase Task, then immediately mark `completed` with metadata noting skip reason.
-
-**Skipped phase metadata format**:
-```
-TaskUpdate(phaseTaskId, status="completed", metadata={"skipped": true, "skip_reason": "{reason}"})
-```
-
-Valid `skip_reason` values: `"approved_plan_exists"`, `"requirements_explicit"`, `"existing_docs_cover_scope"`, `"trivial_change"`, or a custom string.
-
-> **Note**: Skipped phases go directly from `pending` to `completed` — no `in_progress` transition since no work occurs.
+**Skipped phases**: Mark directly `completed` (no `in_progress` — no work occurs):
+`TaskUpdate(phaseTaskId, status="completed", metadata={"skipped": true, "skip_reason": "{reason}"})`
+Valid reasons: `"approved_plan_exists"`, `"requirements_explicit"`, `"existing_docs_cover_scope"`, `"trivial_change"`, or custom.
 
 ---
 
@@ -407,15 +400,9 @@ If a sub-task emerges that is too complex for a single specialist invocation:
 
 ## Agent Stall Detection
 
-An agent is considered **stalled** when:
+**Stalled indicators**: Background task running but no progress at monitoring checkpoints · task completed but no handoff received · process terminated without handoff or blocker report.
 
-| Condition | Indicator |
-|-----------|-----------|
-| Extended silence | Background task still running but no progress at signal monitoring checkpoints |
-| Silent completion | Background task completed but no handoff received |
-| Unexpected termination | Agent process terminated without handoff or blocker report |
-
-> **Detection is event-driven**: Check for stalls at signal monitoring points (after dispatch, on completion events, on unexpected stoppage). If a background task has returned but produced no handoff or blocker report, treat as stalled immediately.
+Detection is event-driven: check at signal monitoring points (after dispatch, on completion, on stoppage). If a background task returned but produced no handoff or blocker, treat as stalled immediately.
 
 ### Recovery Protocol
 
@@ -433,13 +420,9 @@ Include in agent prompts: "If you encounter an error that prevents completion, r
 
 When an agent cannot complete normally (stall, failure, or unresolvable blocker), mark its task as `completed` with descriptive metadata:
 
-| Scenario | Metadata |
-|----------|----------|
-| Agent stalled | `{"stalled": true, "reason": "..."}` |
-| Agent failed | `{"failed": true, "reason": "..."}` |
-| Unresolvable blocker | `{"blocked": true, "blocker_task": "..."}` |
+Metadata convention: `{"stalled": true, "reason": "..."}` · `{"failed": true, "reason": "..."}` · `{"blocked": true, "blocker_task": "..."}`
 
-**Convention**: There is no `failed` status in the task system — all terminal states use `completed` with metadata distinguishing success from failure. This preserves the `pending → in_progress → completed` lifecycle while providing failure context.
+**Convention**: All non-happy-path terminations use `completed` with metadata — no `failed` status exists. This preserves the `pending → in_progress → completed` lifecycle.
 
 ---
 

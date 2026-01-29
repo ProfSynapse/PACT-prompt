@@ -62,34 +62,9 @@ Create a review Task hierarchy:
 
 ## Remediation Task State
 
-The review task persists across fix-verify cycles. State transitions:
+**Remediation cycles**: Each cycle creates fresh agent tasks (remediation → re-review verify-only). Review stays `in_progress` throughout. After 2 failed cycles: create BLOCKER task → `addBlockedBy` on review → `/PACT:imPACT` → on resolution, blocker completed, review resumes.
 
-```
-Review task: in_progress (persists until merge-ready)
-│
-├─ Cycle 1:
-│   ├─ TaskCreate: remediation agent tasks → in_progress → completed
-│   ├─ TaskCreate: re-review agent tasks (verify fixes only) → in_progress → completed
-│   └─ If blocking issues remain → Cycle 2
-│
-├─ Cycle 2:
-│   ├─ TaskCreate: new remediation agent tasks → in_progress → completed
-│   ├─ TaskCreate: new re-review agent tasks → in_progress → completed
-│   └─ If blocking issues remain → Escalation
-│
-└─ Escalation (after 2 failed cycles):
-    ├─ TaskCreate: "BLOCKER: persistent review issues after 2 cycles"
-    ├─ TaskUpdate: review task addBlockedBy = [blocker task]
-    ├─ Run /PACT:imPACT
-    └─ On resolution: blocker task completed → review task unblocked → resume
-```
-
-**Key rules:**
-- Review task stays `in_progress` throughout all remediation cycles — never completed until merge-ready
-- Each cycle creates fresh agent tasks (do not reuse completed ones)
-- Re-review after fixes uses minimal scope (verify fixes only, not full re-review)
-- On imPACT escalation, the review task is blocked (not completed or deleted)
-- After imPACT resolution, review resumes from where it left off
+**Key rules**: Review stays `in_progress` until merge-ready; fresh tasks per cycle; re-review is verify-only (minimal scope); imPACT escalation blocks (doesn't complete/delete) review; resume after resolution.
 
 ---
 
