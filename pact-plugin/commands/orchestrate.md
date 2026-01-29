@@ -21,6 +21,7 @@ Create the full Task hierarchy upfront for workflow visibility:
    - ARCHITECT blockedBy PREPARE
    - CODE blockedBy ARCHITECT
    - TEST blockedBy CODE
+4. TaskUpdate: Feature task status = "in_progress"
 ```
 
 For each phase execution:
@@ -28,10 +29,12 @@ For each phase execution:
 a. TaskUpdate: phase status = "in_progress"
 b. Analyze work needed (QDCL for CODE)
 c. TaskCreate: agent task(s) as children of phase
-d. TaskUpdate: next phase addBlockedBy = [agent IDs]
-e. Dispatch agents with task IDs in their prompts
-f. Monitor via TaskList until agents complete
-g. TaskUpdate: phase status = "completed"
+d. TaskUpdate: agent tasks status = "in_progress"
+e. TaskUpdate: next phase addBlockedBy = [agent IDs]
+f. Dispatch agents with task IDs in their prompts
+g. Monitor via TaskList until agents complete
+h. TaskUpdate: agent tasks status = "completed" (as each completes)
+i. TaskUpdate: phase status = "completed"
 ```
 
 **Skipped phases**: Create the phase Task, then immediately mark `completed` with metadata noting skip reason.

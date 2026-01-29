@@ -22,8 +22,9 @@ Create a nested Task hierarchy as a child of the current context:
 3. TaskUpdate: Set dependencies:
    - Phase-to-phase blockedBy chain (same as orchestrate)
    - Parent task addBlockedBy = [sub-feature task]
-4. Execute nested P→A→C→T cycle
-5. On completion: Parent task unblocked
+4. TaskUpdate: Sub-feature task status = "in_progress"
+5. Execute nested P→A→C→T cycle (same per-phase lifecycle as orchestrate)
+6. On completion: Parent task unblocked
 ```
 
 **Example structure:**
