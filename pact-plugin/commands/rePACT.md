@@ -13,17 +13,17 @@ This command initiates a **nested P→A→C→T cycle** for a sub-task that is t
 Create a nested Task hierarchy as a child of the current context:
 
 ```
-1. TaskCreate: Sub-feature task "{verb} {sub-feature}" (child of parent context)
-2. TaskCreate: Nested phase tasks:
+1. TaskCreate: Sub-feature Task "{verb} {sub-feature}" (child of parent context)
+2. TaskCreate: Nested phase Tasks:
    - "PREPARE: {sub-feature-slug}"
    - "ARCHITECT: {sub-feature-slug}"
    - "CODE: {sub-feature-slug}"
    - "TEST: {sub-feature-slug}"
 3. TaskUpdate: Set dependencies:
    - Phase-to-phase blockedBy chain (same as orchestrate)
-   - Parent task addBlockedBy = [sub-feature task]
+   - Parent Task addBlockedBy = [sub-feature Task]
 4. Execute nested P→A→C→T cycle (include each agent's `{task_id}` in their prompt)
-5. On completion: Parent task unblocked
+5. On completion: Parent Task unblocked
 ```
 
 **Example structure:**
@@ -142,7 +142,7 @@ If you hit the nesting limit:
 ### Branch Behavior
 
 - **No new branch**: rePACT stays on the current feature branch
-- **No PR**: Results integrate into the parent task's eventual PR
+- **No PR**: Results integrate into the parent Task's eventual PR
 - All commits remain part of the current feature work
 
 ---
@@ -215,7 +215,7 @@ Complete the nested cycle:
 
 Nested cycles inherit from parent:
 - Current feature branch
-- Parent task context and requirements
+- Parent Task context and requirements
 - Architectural decisions from parent
 - Coding conventions established in parent
 
@@ -311,10 +311,10 @@ On signal detected: Follow Signal Task Handling in CLAUDE.md.
 ## After Completion
 
 When nested cycle completes:
-1. **TaskUpdate**: Sub-feature task status = "completed"
+1. **TaskUpdate**: Sub-feature Task status = "completed"
 2. **Summarize** what was done in the nested cycle
-3. **Report** any decisions that affect the parent task
-4. **Continue** with parent orchestration (parent task now unblocked)
+3. **Report** any decisions that affect the parent Task
+4. **Continue** with parent orchestration (parent Task now unblocked)
 
 **Handoff format**: Use the standard 4-item structure (Produced, Key context, Areas of uncertainty, Open questions). See orchestrate.md § Handoff Format.
 

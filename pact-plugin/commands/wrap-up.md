@@ -12,7 +12,7 @@ Before other cleanup, audit and optionally clean up Task state:
 ```
 1. TaskList: Review all session tasks
 2. For abandoned in_progress tasks: complete or document reason
-3. Verify Feature task reflects final state
+3. Verify Feature Task reflects final state
 4. Archive key context to memory (via pact-memory-agent)
 5. Report task summary: "Session has N tasks (X completed, Y pending)"
 6. IF multi-session mode (CLAUDE_CODE_TASK_LIST_ID set):
@@ -25,8 +25,8 @@ Before other cleanup, audit and optionally clean up Task state:
 
 | Task State | Cleanup Action |
 |------------|----------------|
-| `completed` Feature task | Archive summary, then delete with children |
-| `in_progress` Feature task | Do NOT delete (workflow still active) |
+| `completed` Feature Task | Archive summary, then delete with children |
+| `in_progress` Feature Task | Do NOT delete (workflow still active) |
 | Orphaned `in_progress` | Document abandonment reason, then delete |
 | `pending` blocked forever | Delete with note |
 

@@ -15,13 +15,13 @@ Delegate this focused task within a single PACT domain: $ARGUMENTS
 Create a simpler Task hierarchy than full orchestrate:
 
 ```
-1. TaskCreate: Feature task "{verb} {feature}" (single-domain work)
+1. TaskCreate: Feature Task "{verb} {feature}" (single-domain work)
 2. Analyze: How many agents needed?
-3. TaskCreate: Agent task(s) — direct children of feature
-4. TaskUpdate: Feature task addBlockedBy = [all agent IDs]
+3. TaskCreate: Agent Task(s) — direct children of feature
+4. TaskUpdate: Feature Task addBlockedBy = [all agent IDs]
 5. Dispatch agents concurrently with Task IDs
 6. Monitor via TaskList until all agents complete
-7. TaskUpdate: Feature task status = "completed"
+7. TaskUpdate: Feature Task status = "completed"
 ```
 
 **Example structure:**
@@ -215,7 +215,7 @@ On signal detected: Follow Signal Task Handling in CLAUDE.md.
 
 1. **Receive handoff** from specialist(s)
 2. **Run tests** — verify work passes. If tests fail → return to specialist for fixes before committing.
-3. **TaskUpdate**: Feature task status = "completed"
+3. **TaskUpdate**: Feature Task status = "completed"
 4. **Create atomic commit(s)** — stage and commit before proceeding
 
 **Next steps** (user decides):

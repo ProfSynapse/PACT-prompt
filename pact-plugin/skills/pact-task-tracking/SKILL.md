@@ -15,11 +15,11 @@ description: |
 
 You have been assigned Task ID: {task_id}
 
-> **If no Task ID was provided** (the line above still reads `{task_id}` literally), skip all TaskUpdate calls in this protocol. Your work proceeds normally; only task tracking is skipped.
+> **If no Task ID was provided** (the line above still reads `{task_id}` literally), skip all TaskUpdate calls in this protocol. Your work proceeds normally; only Task tracking is skipped.
 
 ## On Start
 
-Before any other work, update your task status:
+Before any other work, update your Task status:
 
 ```
 TaskUpdate(taskId="{task_id}", status="in_progress")
@@ -29,11 +29,11 @@ TaskUpdate(taskId="{task_id}", status="in_progress")
 
 If you cannot proceed:
 
-1. Create a blocker task:
+1. Create a blocker Task:
    ```
    TaskCreate(subject="Resolve: {description}", metadata={"type": "blocker"})
    ```
-2. Link it to your task:
+2. Link it to your Task:
    ```
    TaskUpdate(taskId="{task_id}", addBlockedBy=[blocker_id])
    ```
@@ -43,11 +43,11 @@ If you cannot proceed:
 
 When you detect a viability threat:
 
-1. Create an algedonic task:
+1. Create an algedonic Task:
    ```
    TaskCreate(subject="⚠️ [HALT|ALERT]: {category}", metadata={"type": "algedonic", "level": "...", "category": "..."})
    ```
-2. Link it to your task:
+2. Link it to your Task:
    ```
    TaskUpdate(taskId="{task_id}", addBlockedBy=[algedonic_id])
    ```

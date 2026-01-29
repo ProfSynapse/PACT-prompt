@@ -13,14 +13,14 @@ Create a comprehensive implementation plan for: $ARGUMENTS
 Create a planning Task hierarchy:
 
 ```
-1. TaskCreate: Planning task "Plan: {feature}"
+1. TaskCreate: Planning Task "Plan: {feature}"
 2. Analyze: Which specialists to consult?
-3. TaskCreate: Consultation task(s) — one per specialist
-4. TaskUpdate: Planning task addBlockedBy = [consultation IDs]
+3. TaskCreate: Consultation Task(s) — one per specialist
+4. TaskUpdate: Planning Task addBlockedBy = [consultation IDs]
 5. Dispatch specialists in parallel (planning-only mode, include each specialist's `{task_id}` in their prompt)
 6. Monitor until consultations complete
 7. Synthesize → write plan document
-8. TaskUpdate: Planning task completed, metadata.artifact = plan path
+8. TaskUpdate: Planning Task completed, metadata.artifact = plan path
 ```
 
 **Example structure:**
@@ -233,7 +233,7 @@ After collecting all specialist outputs, use extended thinking to synthesize:
 
 ### Phase 3: Plan Output
 
-**TaskUpdate**: Planning task completed with artifact path:
+**TaskUpdate**: Planning Task completed with artifact path:
 ```
 TaskUpdate(
   taskId=planning_task_id,
@@ -500,4 +500,4 @@ After the user approves the plan:
 3. If plan exists, use it as the implementation specification
 4. Specialists receive relevant sections of the plan as context
 
-**Task Linkage**: When `/PACT:orchestrate` runs, it checks for a completed Planning task matching the feature. If found, the plan artifact path from `metadata.artifact` is used to locate and reference the approved plan automatically.
+**Task Linkage**: When `/PACT:orchestrate` runs, it checks for a completed Planning Task matching the feature. If found, the plan artifact path from `metadata.artifact` is used to locate and reference the approved plan automatically.

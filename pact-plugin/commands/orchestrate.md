@@ -11,8 +11,8 @@ Orchestrate specialist PACT agents through the PACT workflow to address: $ARGUME
 Create the full Task hierarchy upfront for workflow visibility:
 
 ```
-1. TaskCreate: Feature task "{verb} {feature}"
-2. TaskCreate: Phase tasks (all upfront):
+1. TaskCreate: Feature Task "{verb} {feature}"
+2. TaskCreate: Phase Tasks (all upfront):
    - "PREPARE: {feature-slug}"
    - "ARCHITECT: {feature-slug}"
    - "CODE: {feature-slug}"
@@ -27,7 +27,7 @@ For each phase execution:
 ```
 a. TaskUpdate: phase status = "in_progress"
 b. Analyze work needed (QDCL for CODE)
-c. TaskCreate: agent task(s) as children of phase
+c. TaskCreate: agent Task(s) as children of phase
 d. TaskUpdate: next phase addBlockedBy = [agent IDs]
 e. Dispatch agents with Task IDs in their prompts
 f. Monitor via TaskList until agents complete
@@ -422,7 +422,7 @@ On signal detected: Follow Signal Task Handling in CLAUDE.md.
 > **S5 Policy Checkpoint (Pre-PR)**: Before creating PR, verify: "Do all tests pass? Is system integrity maintained? Have S5 non-negotiables been respected throughout?"
 
 1. **Update plan status** (if plan exists): IN_PROGRESS → IMPLEMENTED
-2. **TaskUpdate**: Feature task status = "completed" (all phases done)
+2. **TaskUpdate**: Feature Task status = "completed" (all phases done)
 3. **Verify all work is committed** — CODE and TEST phase commits should already exist; if any uncommitted changes remain, commit them now
 4. **Run `/PACT:peer-review`** to create PR and get multi-agent review
 5. **Present review summary and stop** — orchestrator never merges (S5 policy)

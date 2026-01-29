@@ -34,15 +34,15 @@ Tasks progress through: `pending` → `in_progress` → `completed`
 Use `addBlockedBy` to express dependencies:
 
 ```
-CODE phase task
+CODE phase Task
 ├── blockedBy: [ARCHITECT Task ID]
-└── Agent tasks within CODE
+└── Agent Tasks within CODE
     └── blockedBy: [CODE phase Task ID]
 ```
 
 ### Metadata Conventions
 
-Agent tasks include metadata for context:
+Agent Tasks include metadata for context:
 
 ```json
 {
@@ -58,17 +58,17 @@ Agent tasks include metadata for context:
 
 ### Integration with PACT Signals
 
-- **Algedonic signals**: Emit via task metadata or direct escalation
-- **Variety signals**: Note in task metadata when complexity differs from estimate
-- **Handoff**: Store structured handoff in task metadata on completion
+- **Algedonic signals**: Emit via Task metadata or direct escalation
+- **Variety signals**: Note in Task metadata when complexity differs from estimate
+- **Handoff**: Store structured handoff in Task metadata on completion
 
 ### Example Flow
 
-1. Orchestrator creates Feature task: "Implement user authentication" (parent container)
-2. Orchestrator creates PREPARE phase task under the Feature task
-3. Orchestrator dispatches pact-preparer with agent task (blocked by PREPARE phase task)
-4. Preparer completes, updates task to completed with handoff metadata
-5. Orchestrator marks PREPARE complete, creates ARCHITECT phase task
-6. Orchestrator creates CODE phase task (blocked by ARCHITECT phase task)
+1. Orchestrator creates Feature Task: "Implement user authentication" (parent container)
+2. Orchestrator creates PREPARE phase Task under the Feature Task
+3. Orchestrator dispatches pact-preparer with agent Task (blocked by PREPARE phase Task)
+4. Preparer completes, updates Task to completed with handoff metadata
+5. Orchestrator marks PREPARE complete, creates ARCHITECT phase Task
+6. Orchestrator creates CODE phase Task (blocked by ARCHITECT phase Task)
 7. Pattern continues through remaining phases
 
