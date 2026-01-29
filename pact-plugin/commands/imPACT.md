@@ -124,9 +124,7 @@ If the blocker reveals that a sub-task is more complex than expected and needs i
 
 ## Phase Re-Entry Task Protocol
 
-> **Prerequisite**: Before starting phase re-entry, complete the original blocker task per the [Task Operations](#task-operations) section above (step 4: `TaskUpdate(blocker_id, status="completed")`).
-
-> **Invoked from**: [orchestrate.md CODE phase](orchestrate.md) when imPACT decides to redo a prior phase.
+**Context**: Invoked from [orchestrate.md CODE phase](orchestrate.md) when imPACT decides to redo a prior phase. Before starting, complete the original blocker task per [Task Operations](#task-operations) step 4. If retry also fails, the 3+ consecutive imPACT cycle escalation rule applies (ALERT: META-BLOCK). See [Algedonic Signals Protocol](../protocols/algedonic.md).
 
 When imPACT decides to redo a prior phase (e.g., "redo ARCHITECT because the design was wrong"), follow this Task lifecycle:
 
@@ -137,17 +135,3 @@ When imPACT decides to redo a prior phase (e.g., "redo ARCHITECT because the des
 5. **Dispatch agent(s)** for the retry phase
 6. **On retry completion**: `TaskUpdate(retryPhaseId, status="completed")` — unblocks the current phase
 7. **Retry the current phase** with a new agent task using the updated outputs
-
-**Example** (CODE blocked, redo ARCHITECT):
-```
-# ARCHITECT was completed earlier — leave it as-is
-TaskCreate("ARCHITECT (retry): auth-refresh") → retryArchId
-TaskUpdate(retryArchId, status="in_progress")
-TaskUpdate(codePhaseId, addBlockedBy=[retryArchId])
-# Dispatch architect agent...
-# On architect completion:
-TaskUpdate(retryArchId, status="completed")  # unblocks CODE
-# Re-invoke coder with updated architecture
-```
-
-**Retry limits**: If the retry phase also fails, a new imPACT cycle is triggered. The existing escalation rule applies: 3+ consecutive imPACT cycles without resolution → emit ALERT algedonic signal (META-BLOCK category). See the [Algedonic Signals Protocol](../protocols/algedonic.md) for details.

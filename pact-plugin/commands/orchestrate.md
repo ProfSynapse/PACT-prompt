@@ -46,12 +46,6 @@ TaskUpdate(phaseTaskId, status="completed", metadata={"skipped": true, "skip_rea
 
 Valid `skip_reason` values: `"approved_plan_exists"`, `"requirements_explicit"`, `"existing_docs_cover_scope"`, `"trivial_change"`, or a custom string.
 
-**Example** (skipping PREPARE because an approved plan exists):
-```
-TaskCreate("PREPARE: auth-refresh") → prepareTaskId
-TaskUpdate(prepareTaskId, status="completed", metadata={"skipped": true, "skip_reason": "approved_plan_exists"})
-```
-
 > **Note**: Skipped phases go directly from `pending` to `completed` — no `in_progress` transition since no work occurs.
 
 ---
