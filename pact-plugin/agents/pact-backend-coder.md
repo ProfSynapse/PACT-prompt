@@ -109,9 +109,13 @@ Your work isn't done until smoke tests pass. Smoke tests verify: "Does it compil
 
 End with a structured handoff for the orchestrator:
 1. **Produced**: Files created/modified
-2. **Key context**: Decisions made, patterns used, assumptions
-3. **Areas of uncertainty**: Where bugs might hide, tricky parts (helps TEST phase)
-4. **Open questions**: Anything unresolved
+2. **Key decisions**: Decisions with rationale, assumptions that could be wrong
+3. **Areas of uncertainty** (PRIORITIZED):
+   - [HIGH] {description} — Why risky, suggested test focus
+   - [MEDIUM] {description}
+   - [LOW] {description}
+4. **Integration points**: Other components touched
+5. **Open questions**: Unresolved items
 
 **AUTONOMY CHARTER**
 

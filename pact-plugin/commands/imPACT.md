@@ -8,7 +8,9 @@ You hit a blocker: $ARGUMENTS
 
 ## Task Operations
 
-imPACT operates on existing blocker Tasks created by agents:
+imPACT operates on blocker Tasks reported by agents.
+
+These are orchestrator-side operations (agents report blockers via text; the orchestrator manages Tasks):
 
 ```
 1. TaskGet(blocker_id) — understand the blocker context
@@ -20,7 +22,7 @@ imPACT operates on existing blocker Tasks created by agents:
 5. Blocked agent task is now unblocked
 ```
 
-**Note**: Agents create blocker Tasks and block themselves via `addBlockedBy`. When the blocker is resolved (marked completed), the agent's task becomes unblocked.
+**Note**: Agents report blockers via text ("BLOCKER: {description}"). The orchestrator creates blocker Tasks and uses `addBlockedBy` to block the agent's task. When the blocker is resolved (marked completed), the agent's task becomes unblocked.
 
 ---
 

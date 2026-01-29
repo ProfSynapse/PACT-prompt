@@ -2,69 +2,67 @@
 name: pact-task-tracking
 description: |
   Task tracking protocol for PACT specialist agents. Auto-loaded via agent frontmatter.
-  Defines how to report progress, blockers, and completion status via TaskCreate/TaskUpdate tools.
+  Defines how to report progress, blockers, and completion status via text-based reporting.
 ---
 
 # Task Tracking Protocol
 
 > **Architecture**: See [pact-task-hierarchy.md](../../protocols/pact-task-hierarchy.md) for the full hierarchy model.
 
-> **Reference**: See [Claude Code Task System](https://docs.anthropic.com/en/docs/claude-code/tasks) for full API documentation.
+## Important: Agents Do Not Have Task Tools
 
-> **Note**: The orchestrator passes your assigned task ID when dispatching you. Use this ID in all TaskUpdate calls.
-
-You have been assigned Task ID: {task_id}
+Agents do **NOT** have access to Task tools (TaskCreate, TaskUpdate, TaskGet, TaskList). All Task operations are performed by the orchestrator. Agents communicate status through structured text in their responses, and the orchestrator translates these into Task operations.
 
 ## On Start
 
-Before any other work, update your task status:
+Begin working immediately. The orchestrator tracks your task status — no status reporting is needed from you.
 
-```
-TaskUpdate(taskId="{task_id}", status="in_progress")
-```
+## Progress Reporting
+
+Report progress naturally in your responses. The orchestrator monitors your output and updates task status accordingly.
 
 ## On Blocker
 
 If you cannot proceed:
 
-1. Create a blocker task:
-   ```
-   TaskCreate(subject="Resolve: {description}", metadata={"type": "blocker"})
-   ```
-2. Link it to your task:
-   ```
-   TaskUpdate(taskId="{task_id}", addBlockedBy=[blocker_id])
-   ```
-3. Stop work and report: "BLOCKER: {description}"
+1. **Stop work immediately**
+2. Report: `BLOCKER: {description of what is blocking you}`
+3. Provide a partial HANDOFF (see format below) with whatever work you completed
+
+Do not attempt to work around the blocker. The orchestrator will triage and resolve it.
 
 ## On Algedonic Signal
 
-When you detect a viability threat:
+When you detect a viability threat (security, data integrity, ethics):
 
-1. Create an algedonic task:
+1. **Stop work immediately**
+2. Report using this format:
    ```
-   TaskCreate(subject="⚠️ [HALT|ALERT]: {category}", metadata={"type": "algedonic", "level": "...", "category": "..."})
-   ```
-2. Link it to your task:
-   ```
-   TaskUpdate(taskId="{task_id}", addBlockedBy=[algedonic_id])
-   ```
-3. Stop immediately
-4. Report signal to orchestrator
+   ⚠️ ALGEDONIC [HALT|ALERT]: {Category}
 
-## On Completion
+   Issue: {One-line description}
+   Evidence: {Specific details — file, line, what you observed}
+   Impact: {Why this threatens viability}
+   Recommended Action: {What you suggest}
+   ```
+3. Provide a partial HANDOFF with whatever work you completed
 
-After all work is done:
+See the algedonic protocol for trigger categories and severity guidance.
+
+## On Completion — HANDOFF (Required)
+
+End every response with a structured HANDOFF. This is mandatory — the orchestrator uses it to coordinate subsequent work.
 
 ```
-TaskUpdate(
-  taskId="{task_id}",
-  status="completed",
-  metadata={
-    "produced": ["file1.ts", "file2.ts"],
-    "decisions": ["key decisions made"],
-    "uncertainties": ["areas needing review"]
-  }
-)
+HANDOFF:
+1. Produced: Files created/modified
+2. Key decisions: Decisions with rationale, assumptions that could be wrong
+3. Areas of uncertainty (PRIORITIZED):
+   - [HIGH] {description} — Why risky, suggested test focus
+   - [MEDIUM] {description}
+   - [LOW] {description}
+4. Integration points: Other components touched
+5. Open questions: Unresolved items
 ```
 
+All five items are required. Not all priority levels need to be present in Areas of uncertainty. If you have no uncertainties, explicitly state "No areas of uncertainty flagged."
