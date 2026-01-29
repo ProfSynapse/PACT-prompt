@@ -384,13 +384,17 @@ Every agent ends their response with a structured HANDOFF. Expect this format:
 
 ```
 HANDOFF:
-1. Produced: {files created or modified, with paths}
-2. Key context: {decisions made, patterns used, assumptions}
-3. Areas of uncertainty: {where bugs might hide, tricky parts}
-4. Open questions: {anything unresolved that needs attention}
+1. Produced: Files created/modified
+2. Key decisions: Decisions with rationale, assumptions that could be wrong
+3. Areas of uncertainty (PRIORITIZED):
+   - [HIGH] {description} — Why risky, suggested test focus
+   - [MEDIUM] {description}
+   - [LOW] {description}
+4. Integration points: Other components touched
+5. Open questions: Unresolved items
 ```
 
-All four items are always present. Use this to update Task metadata and inform subsequent phases.
+All five items are always present. Use this to update Task metadata and inform subsequent phases.
 
 If the `validate_handoff` hook warns about a missing HANDOFF, extract available context from the agent's response and update the Task accordingly.
 

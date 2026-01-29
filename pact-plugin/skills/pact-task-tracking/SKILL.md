@@ -55,10 +55,14 @@ End every response with a structured HANDOFF. This is mandatory — the orchestr
 
 ```
 HANDOFF:
-1. Produced: {files created or modified, with paths}
-2. Key context: {decisions made, patterns used, assumptions}
-3. Areas of uncertainty: {where bugs might hide, tricky parts}
-4. Open questions: {anything unresolved that needs attention}
+1. Produced: Files created/modified
+2. Key decisions: Decisions with rationale, assumptions that could be wrong
+3. Areas of uncertainty (PRIORITIZED):
+   - [HIGH] {description} — Why risky, suggested test focus
+   - [MEDIUM] {description}
+   - [LOW] {description}
+4. Integration points: Other components touched
+5. Open questions: Unresolved items
 ```
 
-All four items are required, even if some are "None."
+All five items are required. Not all priority levels need to be present in Areas of uncertainty. If you have no uncertainties, explicitly state "No areas of uncertainty flagged."
