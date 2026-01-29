@@ -38,6 +38,27 @@ See [pact-variety.md](../protocols/pact-variety.md) for the Variety Management a
 
 ---
 
+## Task Hierarchy
+
+Create Task hierarchy for planning consultation:
+
+```
+1. TaskCreate: Planning task — subject: "Plan: {feature-slug}"
+2. Analyze: Which specialists to consult?
+3. TaskCreate: Consultation task(s)
+   - subject: "{agent-type}: plan consultation for {feature-slug}"
+4. TaskUpdate: Planning task addBlockedBy = [consultation IDs]
+5. Dispatch specialists in parallel (mark in_progress immediately after dispatch)
+6. Monitor until consultations complete (handoffs received)
+7. TaskUpdate: Consultation tasks completed (extract metadata from handoffs)
+8. Synthesize plan, write to docs/plans/
+9. TaskUpdate: Planning task completed, metadata.artifact = plan path
+```
+
+**Graceful degradation**: If any Task tool call fails, log a warning and continue. Task integration enhances PACT but should never block it.
+
+---
+
 ## Your Workflow
 
 ### Phase 0: Orchestrator Analysis
@@ -460,3 +481,29 @@ After the user approves the plan:
 2. Orchestrator should check for existing plan in `docs/plans/`
 3. If plan exists, use it as the implementation specification
 4. Specialists receive relevant sections of the plan as context
+
+---
+
+## Signal Monitoring
+
+Check TaskList for blocker/algedonic signals:
+- After each agent dispatch
+- When agent reports completion
+- On any unexpected agent stoppage
+
+On signal detected: Follow Task Lifecycle Management in CLAUDE.md.
+
+---
+
+## Agent Prompt Language
+
+When dispatching consultation specialists, include this block in the agent prompt:
+
+```
+**Blocker/Signal Protocol**:
+- If you hit a blocker, STOP work immediately and report: "BLOCKER: {description}"
+- If you detect a viability threat (security, data, ethics), STOP immediately and report:
+  "⚠️ ALGEDONIC [HALT|ALERT]: {category} — {description}"
+- Do NOT attempt workarounds for blockers. Do NOT continue work after emitting algedonic signals.
+- Always end your response with a structured HANDOFF, even if incomplete.
+```

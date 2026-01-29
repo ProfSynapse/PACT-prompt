@@ -70,6 +70,32 @@ This runs a mini-orchestration:
 
 ---
 
+## Task Hierarchy
+
+Create a nested Task hierarchy as a child of the current context:
+
+```
+1. TaskCreate: Sub-feature task — subject: "rePACT: {sub-task description}"
+2. TaskCreate: Nested phase tasks (as needed):
+   - "PREPARE: {sub-task-slug}" (if mini-prepare runs)
+   - "ARCHITECT: {sub-task-slug}" (if mini-architect runs)
+   - "CODE: {sub-task-slug}"
+   - "TEST: {sub-task-slug}" (if mini-test runs)
+3. TaskUpdate: Set dependencies:
+   - Phase-to-phase blockedBy chain (same as orchestrate)
+   - Parent context task addBlockedBy = [sub-feature task]
+4. Execute nested P→A→C→T cycle (orchestrator manages all Task state)
+5. On completion:
+   - TaskUpdate: Sub-feature task completed
+   - Parent task unblocked
+```
+
+**Skipped phases**: Created and immediately marked `completed` with description noting skip reason.
+
+**Graceful degradation**: If any Task tool call fails, log a warning and continue. Task integration enhances PACT but should never block it.
+
+---
+
 ## Constraints
 
 ### Nesting Depth
@@ -260,3 +286,29 @@ When nested cycle completes:
 **Handoff format**: Use the standard 4-item structure (Produced, Key context, Areas of uncertainty, Open questions). See orchestrate.md § Handoff Format.
 
 The parent orchestration resumes with the sub-task complete.
+
+---
+
+## Signal Monitoring
+
+Check TaskList for blocker/algedonic signals:
+- After each agent dispatch
+- When agent reports completion
+- On any unexpected agent stoppage
+
+On signal detected: Follow Task Lifecycle Management in CLAUDE.md.
+
+---
+
+## Agent Prompt Language
+
+When dispatching agents in nested phases, include this block in the agent prompt:
+
+```
+**Blocker/Signal Protocol**:
+- If you hit a blocker, STOP work immediately and report: "BLOCKER: {description}"
+- If you detect a viability threat (security, data, ethics), STOP immediately and report:
+  "⚠️ ALGEDONIC [HALT|ALERT]: {category} — {description}"
+- Do NOT attempt workarounds for blockers. Do NOT continue work after emitting algedonic signals.
+- Always end your response with a structured HANDOFF, even if incomplete.
+```

@@ -25,6 +25,41 @@ Select the domain coder based on PR focus:
 
 ---
 
+## Task Hierarchy
+
+Create Task hierarchy for the review process:
+
+```
+1. TaskCreate: Review task — subject: "Review: {feature-slug}"
+2. Analyze PR: Which reviewers needed?
+3. TaskCreate: Reviewer agent tasks
+   - subject: "{agent-type}: review {feature-slug}"
+   - (architect, test-engineer, domain specialist(s))
+4. TaskUpdate: Review task addBlockedBy = [reviewer IDs]
+5. Dispatch reviewers in parallel (mark in_progress immediately after dispatch)
+6. Monitor until reviewers complete (handoffs received)
+7. TaskUpdate: Reviewer tasks completed (extract metadata from handoffs)
+8. Synthesize findings
+9. If major/blocking issues found:
+   a. TaskCreate: Remediation agent tasks
+   b. Dispatch, monitor until complete
+   c. TaskUpdate: Remediation tasks completed
+10. If minor/future items require fixes (user approved):
+    a. TaskCreate: Fix agent tasks
+    b. Dispatch, monitor until complete
+    c. TaskUpdate: Fix tasks completed
+11. TaskCreate: "Awaiting merge decision" — approval task
+12. Present to user, await approval
+13. On approval: TaskUpdate approval task completed
+14. TaskUpdate: Review task completed, metadata.artifact = PR URL
+```
+
+**Merge authorization boundary**: The orchestrator NEVER merges. Present findings, state merge readiness, then stop and wait for explicit user authorization.
+
+**Graceful degradation**: If any Task tool call fails, log a warning and continue. Task integration enhances PACT but should never block it.
+
+---
+
 ## Output Conciseness
 
 **Default: Concise output.** User sees synthesis, not each reviewer's full output restated.
@@ -113,3 +148,29 @@ Select the domain coder based on PR focus:
 ---
 
 **After user-authorized merge**: Run `/PACT:pin-memory` to update the project `CLAUDE.md` with the latest changes.
+
+---
+
+## Signal Monitoring
+
+Check TaskList for blocker/algedonic signals:
+- After each agent dispatch (reviewers, remediation agents)
+- When agent reports completion
+- On any unexpected agent stoppage
+
+On signal detected: Follow Task Lifecycle Management in CLAUDE.md.
+
+---
+
+## Agent Prompt Language
+
+When dispatching reviewer or remediation agents, include this block in the agent prompt:
+
+```
+**Blocker/Signal Protocol**:
+- If you hit a blocker, STOP work immediately and report: "BLOCKER: {description}"
+- If you detect a viability threat (security, data, ethics), STOP immediately and report:
+  "⚠️ ALGEDONIC [HALT|ALERT]: {category} — {description}"
+- Do NOT attempt workarounds for blockers. Do NOT continue work after emitting algedonic signals.
+- Always end your response with a structured HANDOFF, even if incomplete.
+```
