@@ -8,31 +8,6 @@ Create a comprehensive implementation plan for: $ARGUMENTS
 
 ---
 
-## Task Hierarchy
-
-Create a planning Task hierarchy:
-
-```
-1. TaskCreate: Planning task "Plan: {feature}"
-2. Analyze: Which specialists to consult?
-3. TaskCreate: Consultation task(s) — one per specialist
-4. TaskUpdate: Planning task addBlockedBy = [consultation IDs]
-5. Dispatch specialists in parallel (planning-only mode)
-6. Monitor until consultations complete
-7. Synthesize → write plan document
-8. TaskUpdate: Planning task completed, metadata.artifact = plan path
-```
-
-**Example structure:**
-```
-[Planning] "Plan: user authentication"      (blockedBy: consult1, consult2, consult3)
-├── [Consult] "preparer: research auth patterns"
-├── [Consult] "architect: design auth service"
-└── [Consult] "test-engineer: testing strategy"
-```
-
----
-
 ## S4 Intelligence Function
 
 This command is the primary **S4 (Intelligence)** activity in PACT. While `/PACT:orchestrate` operates mainly in S3 mode (execution), `plan-mode` operates entirely in S4 mode:
@@ -60,6 +35,27 @@ If variety assessment suggests:
 - **Extreme variety (15-16)**: Consider recommending a research spike first (run PREPARE phase alone)
 
 See [pact-variety.md](../protocols/pact-variety.md) for the Variety Management assessment protocol.
+
+---
+
+## Task Hierarchy
+
+Create Task hierarchy for planning consultation:
+
+```
+1. TaskCreate: Planning task — subject: "Plan: {feature-slug}"
+2. Analyze: Which specialists to consult?
+3. TaskCreate: Consultation task(s)
+   - subject: "{agent-type}: plan consultation for {feature-slug}"
+4. TaskUpdate: Planning task addBlockedBy = [consultation IDs]
+5. Dispatch specialists in parallel (mark in_progress immediately after dispatch)
+6. Monitor until consultations complete (handoffs received)
+7. TaskUpdate: Consultation tasks completed (extract metadata from handoffs)
+8. Synthesize plan, write to docs/plans/
+9. TaskUpdate: Planning task completed, metadata.artifact = plan path
+```
+
+**Graceful degradation**: If any Task tool call fails, log a warning and continue. Task integration enhances PACT but should never block it.
 
 ---
 
@@ -230,18 +226,6 @@ After collecting all specialist outputs, use extended thinking to synthesize:
    - For missing mandatory sections → Populate with "TBD - requires {specific input}"
 
 ### Phase 3: Plan Output
-
-**TaskUpdate**: Planning task completed with artifact path:
-```
-TaskUpdate(
-  taskId=planning_task_id,
-  status="completed",
-  metadata={
-    "artifact": "docs/plans/{feature-slug}-plan.md",
-    "summary": "Planning complete. Awaiting user approval."
-  }
-)
-```
 
 Save the synthesized plan to `docs/plans/{feature-slug}-plan.md`.
 
@@ -498,4 +482,28 @@ After the user approves the plan:
 3. If plan exists, use it as the implementation specification
 4. Specialists receive relevant sections of the plan as context
 
-**Task Linkage**: When `/PACT:orchestrate` runs, it checks for a completed Planning task matching the feature. If found, the plan artifact path from `metadata.artifact` is used to locate and reference the approved plan automatically.
+---
+
+## Signal Monitoring
+
+Check TaskList for blocker/algedonic signals:
+- After each agent dispatch
+- When agent reports completion
+- On any unexpected agent stoppage
+
+On signal detected: Follow Task Lifecycle Management in CLAUDE.md.
+
+---
+
+## Agent Prompt Language
+
+When dispatching consultation specialists, include this block in the agent prompt:
+
+```
+**Blocker/Signal Protocol**:
+- If you hit a blocker, STOP work immediately and report: "BLOCKER: {description}"
+- If you detect a viability threat (security, data, ethics), STOP immediately and report:
+  "⚠️ ALGEDONIC [HALT|ALERT]: {category} — {description}"
+- Do NOT attempt workarounds for blockers. Do NOT continue work after emitting algedonic signals.
+- Always end your response with a structured HANDOFF, even if incomplete.
+```

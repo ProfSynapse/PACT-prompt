@@ -12,25 +12,21 @@ Delegate this focused task within a single PACT domain: $ARGUMENTS
 
 ## Task Hierarchy
 
-Create a simpler Task hierarchy than full orchestrate:
+Create a lightweight Task hierarchy for single-domain work:
 
 ```
-1. TaskCreate: Feature task "{verb} {feature}" (single-domain work)
+1. TaskCreate: Feature task — subject: "{verb} {feature}" (single-domain work)
 2. Analyze: How many agents needed?
 3. TaskCreate: Agent task(s) — direct children of feature
+   - subject: "{agent-type}: {work-description}"
 4. TaskUpdate: Feature task addBlockedBy = [all agent IDs]
-5. Dispatch agents concurrently with task IDs
-6. Monitor via TaskList until all agents complete
-7. TaskUpdate: Feature task status = "completed"
+5. Dispatch agents concurrently (mark each in_progress immediately after dispatch)
+6. Monitor via TaskList until all agents complete (handoffs received)
+7. TaskUpdate: Agent tasks completed (extract metadata from handoffs)
+8. TaskUpdate: Feature task completed
 ```
 
-**Example structure:**
-```
-[Feature] "Fix 3 backend bugs"           (blockedBy: agent1, agent2, agent3)
-├── [Agent] "backend-coder: fix bug A"
-├── [Agent] "backend-coder: fix bug B"
-└── [Agent] "backend-coder: fix bug C"
-```
+**Graceful degradation**: If any Task tool call fails, log a warning and continue. Task integration enhances PACT but should never block it.
 
 ---
 
@@ -196,23 +192,11 @@ Task: [user's task description]
 
 ---
 
-## Signal Monitoring
-
-Check TaskList for blocker/algedonic signals:
-- After each agent dispatch
-- When agent reports completion
-- On any unexpected agent stoppage
-
-On signal detected: Follow Signal Task Handling in CLAUDE.md.
-
----
-
 ## After Specialist Completes
 
 1. **Receive handoff** from specialist(s)
 2. **Run tests** — verify work passes. If tests fail → return to specialist for fixes before committing.
-3. **TaskUpdate**: Feature task status = "completed"
-4. **Create atomic commit(s)** — stage and commit before proceeding
+3. **Create atomic commit(s)** — stage and commit before proceeding
 
 **Next steps** (user decides):
 - Done → work is committed
@@ -259,3 +243,29 @@ During comPACT execution, if you discover the task is more complex than expected
 **Conversely**, if the specialist reports the task is simpler than expected:
 - Note in handoff to orchestrator
 - Complete the task; orchestrator may simplify remaining work
+
+---
+
+## Signal Monitoring
+
+Check TaskList for blocker/algedonic signals:
+- After each agent dispatch
+- When agent reports completion
+- On any unexpected agent stoppage
+
+On signal detected: Follow Task Lifecycle Management in CLAUDE.md.
+
+---
+
+## Agent Prompt Language
+
+When dispatching agents, include this block in the agent prompt:
+
+```
+**Blocker/Signal Protocol**:
+- If you hit a blocker, STOP work immediately and report: "BLOCKER: {description}"
+- If you detect a viability threat (security, data, ethics), STOP immediately and report:
+  "⚠️ ALGEDONIC [HALT|ALERT]: {category} — {description}"
+- Do NOT attempt workarounds for blockers. Do NOT continue work after emitting algedonic signals.
+- Always end your response with a structured HANDOFF, even if incomplete.
+```

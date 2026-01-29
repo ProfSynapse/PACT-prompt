@@ -6,38 +6,6 @@ Orchestrate specialist PACT agents through the PACT workflow to address: $ARGUME
 
 ---
 
-## Task Hierarchy
-
-Create the full Task hierarchy upfront for workflow visibility:
-
-```
-1. TaskCreate: Feature task "{verb} {feature}"
-2. TaskCreate: Phase tasks (all upfront):
-   - "PREPARE: {feature-slug}"
-   - "ARCHITECT: {feature-slug}"
-   - "CODE: {feature-slug}"
-   - "TEST: {feature-slug}"
-3. TaskUpdate: Set phase-to-phase blockedBy chain:
-   - ARCHITECT blockedBy PREPARE
-   - CODE blockedBy ARCHITECT
-   - TEST blockedBy CODE
-```
-
-For each phase execution:
-```
-a. TaskUpdate: phase status = "in_progress"
-b. Analyze work needed (QDCL for CODE)
-c. TaskCreate: agent task(s) as children of phase
-d. TaskUpdate: next phase addBlockedBy = [agent IDs]
-e. Dispatch agents with task IDs in their prompts
-f. Monitor via TaskList until agents complete
-g. TaskUpdate: phase status = "completed"
-```
-
-**Skipped phases**: Create the phase Task, then immediately mark `completed` with metadata noting skip reason.
-
----
-
 ## S3/S4 Mode Awareness
 
 This command primarily operates in **S3 mode** (operational control)—executing the plan and coordinating agents. However, mode transitions are important:
@@ -93,6 +61,41 @@ See [algedonic.md](../protocols/algedonic.md) for signal format and full protoco
 | "Let me assess variety and check for the approved plan" | (just do it, show result) |
 | "I'm now going to invoke the backend coder" | `Invoking backend coder` |
 | "S4 Mode — Task Assessment" | (implicit, don't announce) |
+
+---
+
+## Task Hierarchy
+
+At workflow start, create the full Task hierarchy upfront. This provides visibility into the entire workflow before execution begins.
+
+```
+1. TaskCreate: Feature task — subject: "{verb} {feature}"
+2. TaskCreate: Phase tasks:
+   - "PREPARE: {feature-slug}"
+   - "ARCHITECT: {feature-slug}"
+   - "CODE: {feature-slug}"
+   - "TEST: {feature-slug}"
+3. TaskUpdate: Set phase-to-phase blockedBy chain:
+   - ARCHITECT blockedBy [PREPARE]
+   - CODE blockedBy [ARCHITECT]
+   - TEST blockedBy [CODE]
+4. For each phase execution:
+   a. TaskUpdate: phase status = "in_progress"
+   b. Analyze work needed (QDCL for CODE)
+   c. TaskCreate: agent task(s) — subject: "{agent-type}: {work-description}"
+   d. Dispatch agents (mark agent tasks in_progress immediately after dispatch)
+   e. Monitor via TaskList until agents complete (handoff received)
+   f. TaskUpdate: agent tasks completed (extract metadata from handoff)
+   g. TaskUpdate: phase status = "completed"
+5. Skipped phases: TaskUpdate status = "completed" with description noting skip reason
+```
+
+**Naming convention**:
+- Feature: `"{verb} {feature}"` (e.g., "Implement user authentication")
+- Phase: `"{PHASE}: {feature-slug}"` (e.g., "CODE: auth-feature")
+- Agent: `"{agent-type}: {work-description}"` (e.g., "pact-backend-coder: auth endpoint")
+
+**Graceful degradation**: If any Task tool call fails, log a warning and continue without Task tracking for that item. Task integration enhances PACT but should never block it.
 
 ---
 
@@ -406,6 +409,20 @@ If a sub-task emerges that is too complex for a single specialist invocation:
 
 ---
 
+## After All Phases Complete
+
+> **S5 Policy Checkpoint (Pre-PR)**: Before creating PR, verify: "Do all tests pass? Is system integrity maintained? Have S5 non-negotiables been respected throughout?"
+
+1. **Update plan status** (if plan exists): IN_PROGRESS → IMPLEMENTED
+2. **Verify all work is committed** — CODE and TEST phase commits should already exist; if any uncommitted changes remain, commit them now
+3. **Run `/PACT:peer-review`** to create PR and get multi-agent review
+4. **Present review summary and stop** — orchestrator never merges (S5 policy)
+5. **S4 Retrospective** (after user decides): Briefly note—what worked well? What should we adapt for next time?
+6. **High-variety audit trail** (variety 10+ only): Delegate to `pact-memory-agent` to save key orchestration decisions, S3/S4 tensions resolved, and lessons learned
+7. **TaskUpdate**: Feature task status = "completed"
+
+---
+
 ## Signal Monitoring
 
 Check TaskList for blocker/algedonic signals:
@@ -413,18 +430,19 @@ Check TaskList for blocker/algedonic signals:
 - When agent reports completion
 - On any unexpected agent stoppage
 
-On signal detected: Follow Signal Task Handling in CLAUDE.md.
+On signal detected: Follow Task Lifecycle Management in CLAUDE.md.
 
 ---
 
-## After All Phases Complete
+## Agent Prompt Language
 
-> **S5 Policy Checkpoint (Pre-PR)**: Before creating PR, verify: "Do all tests pass? Is system integrity maintained? Have S5 non-negotiables been respected throughout?"
+When dispatching agents in any phase, include this block in the agent prompt:
 
-1. **Update plan status** (if plan exists): IN_PROGRESS → IMPLEMENTED
-2. **TaskUpdate**: Feature task status = "completed" (all phases done)
-3. **Verify all work is committed** — CODE and TEST phase commits should already exist; if any uncommitted changes remain, commit them now
-4. **Run `/PACT:peer-review`** to create PR and get multi-agent review
-5. **Present review summary and stop** — orchestrator never merges (S5 policy)
-6. **S4 Retrospective** (after user decides): Briefly note—what worked well? What should we adapt for next time?
-7. **High-variety audit trail** (variety 10+ only): Delegate to `pact-memory-agent` to save key orchestration decisions, S3/S4 tensions resolved, and lessons learned
+```
+**Blocker/Signal Protocol**:
+- If you hit a blocker, STOP work immediately and report: "BLOCKER: {description}"
+- If you detect a viability threat (security, data, ethics), STOP immediately and report:
+  "⚠️ ALGEDONIC [HALT|ALERT]: {category} — {description}"
+- Do NOT attempt workarounds for blockers. Do NOT continue work after emitting algedonic signals.
+- Always end your response with a structured HANDOFF, even if incomplete.
+```

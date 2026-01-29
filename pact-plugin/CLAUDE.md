@@ -106,6 +106,36 @@ Delegate to `pact-memory-agent` with a clear intent:
 
 See **Always Run Agents in Background** for the mandatory `run_in_background=true` requirement.
 
+### Task Lifecycle Management
+
+The orchestrator owns ALL Task tool calls (TaskCreate, TaskUpdate, TaskGet, TaskList). Agents do not have access to these tools. The orchestrator manages Task state based on agent lifecycle events.
+
+**Dispatch lifecycle**:
+
+| Event | Orchestrator Action |
+|-------|---------------------|
+| Before dispatching agent | `TaskCreate(subject="...")` to get `task_id` |
+| Immediately after dispatch | `TaskUpdate(taskId, status="in_progress")` |
+| Agent completes (handoff received) | `TaskUpdate(taskId, status="completed", metadata={...})` |
+| Agent reports blocker | `TaskCreate blocker` then `TaskUpdate(taskId, addBlockedBy=[blocker_id])` |
+| Agent emits algedonic signal | `TaskCreate algedonic` then amplify scope per protocol |
+
+**Key principle**: Agents communicate status through structured text (handoff format, blocker reports, algedonic signals). The orchestrator translates these into Task tool calls.
+
+#### Signal Task Handling
+
+**Blocker text received** (agent reports `BLOCKER: {description}`):
+1. Create blocker Task: `TaskCreate(subject="Resolve: {desc}", metadata={"type": "blocker"})`
+2. Block agent Task: `TaskUpdate(agent_task_id, addBlockedBy=[blocker_id])`
+3. Triage via `/PACT:imPACT`
+
+**Algedonic text received** (agent reports `ALGEDONIC [HALT|ALERT]: {category}`):
+1. Create algedonic Task: `TaskCreate(subject="[HALT|ALERT]: {category}", metadata={"type": "algedonic"})`
+2. Amplify scope:
+   - **ALERT**: `TaskUpdate(current_phase_id, addBlockedBy=[algedonic_id])`
+   - **HALT**: `TaskUpdate(feature_task_id, addBlockedBy=[algedonic_id])`
+3. Surface to user immediately (see Algedonic Signals protocol)
+
 ### S3/S4 Operational Modes
 
 The orchestrator operates in two distinct modes. Being aware of which mode you're in improves decision-making.

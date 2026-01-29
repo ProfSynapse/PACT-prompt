@@ -8,36 +8,6 @@ This command initiates a **nested P→A→C→T cycle** for a sub-task that is t
 
 ---
 
-## Task Hierarchy
-
-Create a nested Task hierarchy as a child of the current context:
-
-```
-1. TaskCreate: Sub-feature task "{verb} {sub-feature}" (child of parent context)
-2. TaskCreate: Nested phase tasks:
-   - "PREPARE: {sub-feature-slug}"
-   - "ARCHITECT: {sub-feature-slug}"
-   - "CODE: {sub-feature-slug}"
-   - "TEST: {sub-feature-slug}"
-3. TaskUpdate: Set dependencies:
-   - Phase-to-phase blockedBy chain (same as orchestrate)
-   - Parent task addBlockedBy = [sub-feature task]
-4. Execute nested P→A→C→T cycle
-5. On completion: Parent task unblocked
-```
-
-**Example structure:**
-```
-[Feature] "Implement user auth" (parent, blockedBy: sub-feature)
-└── [Sub-Feature] "Implement OAuth2 token refresh"
-    ├── [Phase] "PREPARE: oauth2-token-refresh"
-    ├── [Phase] "ARCHITECT: oauth2-token-refresh"
-    ├── [Phase] "CODE: oauth2-token-refresh"
-    └── [Phase] "TEST: oauth2-token-refresh"
-```
-
----
-
 ## When to Use rePACT
 
 Use `/PACT:rePACT` when:
@@ -97,6 +67,32 @@ This runs a mini-orchestration:
 | `architect` | pact-architect | Design-only nested cycles |
 
 **If no specialist specified**: Assess the sub-task and determine which specialists are needed (multi-domain mode).
+
+---
+
+## Task Hierarchy
+
+Create a nested Task hierarchy as a child of the current context:
+
+```
+1. TaskCreate: Sub-feature task — subject: "rePACT: {sub-task description}"
+2. TaskCreate: Nested phase tasks (as needed):
+   - "PREPARE: {sub-task-slug}" (if mini-prepare runs)
+   - "ARCHITECT: {sub-task-slug}" (if mini-architect runs)
+   - "CODE: {sub-task-slug}"
+   - "TEST: {sub-task-slug}" (if mini-test runs)
+3. TaskUpdate: Set dependencies:
+   - Phase-to-phase blockedBy chain (same as orchestrate)
+   - Parent context task addBlockedBy = [sub-feature task]
+4. Execute nested P→A→C→T cycle (orchestrator manages all Task state)
+5. On completion:
+   - TaskUpdate: Sub-feature task completed
+   - Parent task unblocked
+```
+
+**Skipped phases**: Created and immediately marked `completed` with description noting skip reason.
+
+**Graceful degradation**: If any Task tool call fails, log a warning and continue. Task integration enhances PACT but should never block it.
 
 ---
 
@@ -280,25 +276,39 @@ Consider using /PACT:orchestrate instead.
 
 ---
 
-## Signal Monitoring
-
-Check TaskList for blocker/algedonic signals:
-- After each agent dispatch within nested phases
-- When agent reports completion
-- On any unexpected agent stoppage
-
-On signal detected: Follow Signal Task Handling in CLAUDE.md.
-
----
-
 ## After Completion
 
 When nested cycle completes:
-1. **TaskUpdate**: Sub-feature task status = "completed"
-2. **Summarize** what was done in the nested cycle
-3. **Report** any decisions that affect the parent task
-4. **Continue** with parent orchestration (parent task now unblocked)
+1. **Summarize** what was done in the nested cycle
+2. **Report** any decisions that affect the parent task
+3. **Continue** with parent orchestration
 
 **Handoff format**: Use the standard 4-item structure (Produced, Key context, Areas of uncertainty, Open questions). See orchestrate.md § Handoff Format.
 
 The parent orchestration resumes with the sub-task complete.
+
+---
+
+## Signal Monitoring
+
+Check TaskList for blocker/algedonic signals:
+- After each agent dispatch
+- When agent reports completion
+- On any unexpected agent stoppage
+
+On signal detected: Follow Task Lifecycle Management in CLAUDE.md.
+
+---
+
+## Agent Prompt Language
+
+When dispatching agents in nested phases, include this block in the agent prompt:
+
+```
+**Blocker/Signal Protocol**:
+- If you hit a blocker, STOP work immediately and report: "BLOCKER: {description}"
+- If you detect a viability threat (security, data, ethics), STOP immediately and report:
+  "⚠️ ALGEDONIC [HALT|ALERT]: {category} — {description}"
+- Do NOT attempt workarounds for blockers. Do NOT continue work after emitting algedonic signals.
+- Always end your response with a structured HANDOFF, even if incomplete.
+```

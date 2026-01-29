@@ -8,50 +8,6 @@ Review the current work: $ARGUMENTS
 2. Create a PR if one doesn't exist
 3. Review the PR
 
----
-
-## Task Hierarchy
-
-Create a review Task hierarchy:
-
-```
-1. TaskCreate: Review task "Review: {feature}"
-2. Analyze PR: Which reviewers needed?
-3. TaskCreate: Reviewer agent tasks (architect, test-engineer, domain specialists)
-4. TaskUpdate: Review task addBlockedBy = [reviewer IDs]
-5. Dispatch reviewers in parallel
-6. Monitor until reviewers complete
-7. Synthesize findings
-8. If major issues:
-   a. TaskCreate: Remediation agent tasks
-   b. Dispatch, monitor until complete
-9. TaskCreate: "User: review minor issues" step task
-10. Present minor issues to user, record decisions in step metadata
-11. If "fix now" decisions:
-    a. TaskCreate: Remediation agent tasks
-    b. Dispatch, monitor until complete
-12. TaskCreate: "Awaiting merge decision" approval task
-13. Present to user, await approval
-14. On approval: TaskUpdate approval completed
-15. TaskUpdate: Review task completed, metadata.artifact = PR URL
-```
-
-**Example structure:**
-```
-[Review] "Review: user authentication"
-├── [Agent] "architect: design review"
-├── [Agent] "test-engineer: coverage review"
-├── [Agent] "backend-coder: implementation review"
-├── [Remediation] (dynamic, for major issues)
-│   └── [Agent] "fix: auth vulnerability"
-├── [Step] "User: review minor issues"
-├── [Remediation] (dynamic, for "fix now" minors)
-│   └── [Agent] "fix: input validation"
-└── [Approval] "Awaiting merge decision"
-```
-
----
-
 **PR Review Workflow**
 
 Pull request reviews should mirror real-world team practices where multiple reviewers sign off before merging. Invoke **at least 3 agents in parallel** to provide comprehensive review coverage:
@@ -66,6 +22,41 @@ Select the domain coder based on PR focus:
 - Backend changes → **pact-backend-coder** (Server-side implementation quality, API design, error handling)
 - Database changes → **pact-database-engineer** (Query efficiency, schema design, data integrity)
 - Multiple domains → Coder for domain with most significant changes, or all relevant domain coders if changes are equally significant
+
+---
+
+## Task Hierarchy
+
+Create Task hierarchy for the review process:
+
+```
+1. TaskCreate: Review task — subject: "Review: {feature-slug}"
+2. Analyze PR: Which reviewers needed?
+3. TaskCreate: Reviewer agent tasks
+   - subject: "{agent-type}: review {feature-slug}"
+   - (architect, test-engineer, domain specialist(s))
+4. TaskUpdate: Review task addBlockedBy = [reviewer IDs]
+5. Dispatch reviewers in parallel (mark in_progress immediately after dispatch)
+6. Monitor until reviewers complete (handoffs received)
+7. TaskUpdate: Reviewer tasks completed (extract metadata from handoffs)
+8. Synthesize findings
+9. If major/blocking issues found:
+   a. TaskCreate: Remediation agent tasks
+   b. Dispatch, monitor until complete
+   c. TaskUpdate: Remediation tasks completed
+10. If minor/future items require fixes (user approved):
+    a. TaskCreate: Fix agent tasks
+    b. Dispatch, monitor until complete
+    c. TaskUpdate: Fix tasks completed
+11. TaskCreate: "Awaiting merge decision" — approval task
+12. Present to user, await approval
+13. On approval: TaskUpdate approval task completed
+14. TaskUpdate: Review task completed, metadata.artifact = PR URL
+```
+
+**Merge authorization boundary**: The orchestrator NEVER merges. Present findings, state merge readiness, then stop and wait for explicit user authorization.
+
+**Graceful degradation**: If any Task tool call fails, log a warning and continue. Task integration enhances PACT but should never block it.
 
 ---
 
@@ -156,15 +147,30 @@ Select the domain coder based on PR focus:
 
 ---
 
-## Signal Monitoring
-
-Check TaskList for blocker/algedonic signals:
-- After each reviewer dispatch
-- After each remediation dispatch
-- On any unexpected agent stoppage
-
-On signal detected: Follow Signal Task Handling in CLAUDE.md.
+**After user-authorized merge**: Run `/PACT:pin-memory` to update the project `CLAUDE.md` with the latest changes.
 
 ---
 
-**After user-authorized merge**: Run `/PACT:pin-memory` to update the project `CLAUDE.md` with the latest changes.
+## Signal Monitoring
+
+Check TaskList for blocker/algedonic signals:
+- After each agent dispatch (reviewers, remediation agents)
+- When agent reports completion
+- On any unexpected agent stoppage
+
+On signal detected: Follow Task Lifecycle Management in CLAUDE.md.
+
+---
+
+## Agent Prompt Language
+
+When dispatching reviewer or remediation agents, include this block in the agent prompt:
+
+```
+**Blocker/Signal Protocol**:
+- If you hit a blocker, STOP work immediately and report: "BLOCKER: {description}"
+- If you detect a viability threat (security, data, ethics), STOP immediately and report:
+  "⚠️ ALGEDONIC [HALT|ALERT]: {category} — {description}"
+- Do NOT attempt workarounds for blockers. Do NOT continue work after emitting algedonic signals.
+- Always end your response with a structured HANDOFF, even if incomplete.
+```

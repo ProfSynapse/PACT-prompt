@@ -4,11 +4,8 @@ Location: pact-plugin/hooks/phase_completion.py
 Summary: Stop hook that verifies phase completion and reminds about decision logs.
 Used by: Claude Code settings.json Stop hook
 
-Checks for CODE phase completion without decision logs and reminds about
-documentation and testing requirements.
-
-With Task integration, phase completion is detected via Task statuses first,
-falling back to transcript parsing if TaskList unavailable.
+Checks for CODE phase completion without decision logs and
+reminds about documentation requirements.
 
 Input: JSON from stdin with session transcript/context
 Output: JSON with `systemMessage` for reminders if needed
@@ -18,18 +15,9 @@ import json
 import sys
 import os
 from pathlib import Path
-from typing import Any
-
-# Add hooks directory to path for shared package imports
-_hooks_dir = Path(__file__).parent
-if str(_hooks_dir) not in sys.path:
-    sys.path.insert(0, str(_hooks_dir))
-
-# Import shared Task utilities (DRY - used by multiple hooks)
-from shared.task_utils import get_task_list
 
 
-# Indicators that CODE phase work was performed (for transcript fallback)
+# Indicators that CODE phase work was performed
 CODE_PHASE_INDICATORS = [
     "pact-backend-coder",
     "pact-frontend-coder",
@@ -50,75 +38,9 @@ DECISION_LOG_MENTIONS = [
 ]
 
 
-def check_phase_completion_via_tasks(tasks: list[dict[str, Any]]) -> dict[str, Any]:
-    """
-    Check phase completion status using Task system.
-
-    Analyzes Task statuses to determine:
-    - If CODE phase is completed
-    - If TEST phase has started
-    - Any phase completion reminders needed
-
-    Args:
-        tasks: List of all tasks
-
-    Returns:
-        Dict with:
-        - code_completed: bool
-        - test_started: bool
-        - test_completed: bool
-        - reminders: list of reminder messages
-    """
-    result = {
-        "code_completed": False,
-        "test_started": False,
-        "test_completed": False,
-        "reminders": [],
-    }
-
-    code_phase = None
-    test_phase = None
-
-    for task in tasks:
-        subject = task.get("subject", "")
-        status = task.get("status", "")
-
-        if subject.startswith("CODE:"):
-            code_phase = task
-            if status == "completed":
-                result["code_completed"] = True
-
-        if subject.startswith("TEST:"):
-            test_phase = task
-            if status == "in_progress":
-                result["test_started"] = True
-            elif status == "completed":
-                result["test_started"] = True
-                result["test_completed"] = True
-
-    # Generate reminders based on Task state
-    if result["code_completed"] and not result["test_started"]:
-        result["reminders"].append(
-            "TEST Phase Reminder: CODE phase completed. Consider invoking "
-            "pact-test-engineer to verify the implementation."
-        )
-
-    if test_phase and test_phase.get("status") == "pending":
-        result["reminders"].append(
-            "TEST Phase Reminder: TEST phase is pending (blocked). "
-            "Check blockedBy to see what needs to complete first."
-        )
-
-    return result
-
-
-# -----------------------------------------------------------------------------
-# Transcript Fallback (Legacy Detection)
-# -----------------------------------------------------------------------------
-
 def check_for_code_phase_activity(transcript: str) -> bool:
     """
-    Determine if CODE phase agents were invoked in this session (fallback).
+    Determine if CODE phase agents were invoked in this session.
 
     Args:
         transcript: The session transcript
@@ -188,11 +110,8 @@ def main():
     """
     Main entry point for the Stop hook.
 
-    Strategy:
-    1. Primary: Check Task statuses for phase completion (Task integration)
-    2. Fallback: Check transcript for CODE phase indicators
-
-    Reminds about decision logs and testing if appropriate.
+    Checks for CODE phase indicators and reminds about decision logs
+    and testing if not mentioned in the session.
     """
     try:
         # Read input from stdin
@@ -204,44 +123,18 @@ def main():
         project_dir = os.environ.get("CLAUDE_PROJECT_DIR", ".")
         transcript = input_data.get("transcript", "")
 
+        # If no transcript, nothing to check
+        if not transcript:
+            sys.exit(0)
+
         messages = []
-        was_code_phase = False
 
-        # ---------------------------------------------------------------------
-        # Primary: Check Task statuses (Task integration)
-        # ---------------------------------------------------------------------
-        tasks = get_task_list()
+        # Check for CODE phase activity
+        was_code_phase = check_for_code_phase_activity(transcript)
 
-        if tasks:
-            phase_status = check_phase_completion_via_tasks(tasks)
-
-            # Add any Task-derived reminders
-            messages.extend(phase_status.get("reminders", []))
-
-            # Track CODE phase completion for decision log check
-            was_code_phase = phase_status.get("code_completed", False)
-
-        # ---------------------------------------------------------------------
-        # Fallback: Check transcript if no Task state
-        # ---------------------------------------------------------------------
-        elif transcript:
-            was_code_phase = check_for_code_phase_activity(transcript)
-
-            if was_code_phase:
-                # Check if testing was addressed (transcript-based)
-                testing_discussed = check_for_test_reminders(transcript)
-                if not testing_discussed:
-                    messages.append(
-                        "TEST Phase Reminder: Consider invoking pact-test-engineer "
-                        "to verify the implementation."
-                    )
-
-        # ---------------------------------------------------------------------
-        # Common checks (regardless of source)
-        # ---------------------------------------------------------------------
         if was_code_phase:
             # Check if decision logs were addressed
-            decision_log_mentioned = transcript and check_decision_log_mentioned(transcript)
+            decision_log_mentioned = check_decision_log_mentioned(transcript)
             decision_logs_exist = check_decision_logs_exist(project_dir)
 
             if not decision_log_mentioned and not decision_logs_exist:
@@ -249,6 +142,14 @@ def main():
                     "CODE Phase Reminder: Decision logs should be created at "
                     "docs/decision-logs/{feature}-{domain}.md to document key "
                     "implementation decisions and trade-offs."
+                )
+
+            # Check if testing was addressed
+            testing_discussed = check_for_test_reminders(transcript)
+            if not testing_discussed:
+                messages.append(
+                    "TEST Phase Reminder: Consider invoking pact-test-engineer "
+                    "to verify the implementation."
                 )
 
         # Output messages if any reminders are needed

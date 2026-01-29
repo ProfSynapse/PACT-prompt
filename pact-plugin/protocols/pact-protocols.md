@@ -366,26 +366,6 @@ When a checkpoint surfaces tension, apply the Resolution Protocol above.
 
 The coordination layer enables parallel agent operation without conflicts. S2 is **proactive** (prevents conflicts) not just **reactive** (resolves conflicts). Apply these protocols whenever multiple agents work concurrently.
 
-### Task System Integration
-
-With PACT Task integration, the TaskList serves as a **shared state mechanism** for coordination:
-
-| Use Case | How TaskList Helps |
-|----------|-------------------|
-| **Conflict detection** | Query TaskList to see what files/components other agents are working on |
-| **Parallel agent visibility** | All in_progress agent Tasks visible via TaskList |
-| **Convention propagation** | First agent's metadata (decisions, patterns) queryable by later agents |
-| **Resource claims** | Agent Tasks can include metadata about claimed resources |
-
-**Coordination via Tasks:**
-```
-Before parallel dispatch:
-1. TaskList → check for in_progress agents on same files
-2. If conflict detected → sequence or assign boundaries
-3. Dispatch agents with Task IDs
-4. Monitor via TaskList for completion/blockers
-```
-
 ### Information Flows
 
 S2 manages information flow between agents:
@@ -395,7 +375,6 @@ S2 manages information flow between agents:
 | Earlier agent | Later agents | Conventions established, interfaces defined |
 | Orchestrator | All agents | Shared context, boundary assignments |
 | Any agent | Orchestrator → All others | Resource claims, conflict warnings |
-| TaskList | All agents | Current in_progress work, blockers, completed decisions |
 
 ### Pre-Parallel Coordination Check
 
@@ -521,6 +500,18 @@ After each specialist completes work:
 
 This transforms implicit knowledge into explicit coordination, reducing "surprise" conflicts.
 
+### Task-Based Coordination
+
+The orchestrator uses the Task system for S2 coordination:
+
+1. **Create agent Tasks before dispatching agents**: Each agent gets a Task created via `TaskCreate` before dispatch. This makes all active agents visible in `TaskList`.
+
+2. **Use TaskList for conflict detection**: Before dispatching parallel agents, check `TaskList` for in-progress agent Tasks that may conflict with new work (shared files, shared interfaces).
+
+3. **Use TaskList for parallel agent visibility**: During execution, `TaskList` shows all active agents, their subjects (describing their work), and their status. This enables the orchestrator to detect when agents may be working on overlapping concerns.
+
+4. **Orchestrator owns all Task coordination**: Agents do not see each other's Tasks. The orchestrator is the sole coordinator — it reads Task state and injects relevant context into agent prompts.
+
 ---
 
 ## S1 Autonomy & Recursion
@@ -638,6 +629,96 @@ For full protocol details, see [algedonic.md](algedonic.md).
 | Operational blocker | imPACT | "How do we proceed?" |
 | Repeated blocker (3+ cycles) | imPACT → ALERT | Escalate to user |
 | Viability threat | Algedonic | "Should we proceed at all?" |
+
+---
+
+## Task Hierarchy
+
+The Task system provides workflow visibility via Claude Code's native Task tools (TaskCreate, TaskUpdate, TaskGet, TaskList). The orchestrator owns ALL Task operations; agents communicate via structured text.
+
+> **Critical Platform Constraint**: Sub-agents spawned via Claude Code's Task tool do NOT have access to TaskCreate, TaskUpdate, TaskGet, or TaskList. Only the parent orchestrator process has these tools.
+
+### Hierarchy Structure
+
+```
+[Feature Task] "Implement user authentication"
+├── [Phase Task] "PREPARE: auth feature"        (blockedBy: none)
+│   └── [Agent Task] "pact-preparer: research auth patterns"
+├── [Phase Task] "ARCHITECT: auth feature"      (blockedBy: PREPARE)
+│   └── [Agent Task] "pact-architect: design auth service"
+├── [Phase Task] "CODE: auth feature"           (blockedBy: ARCHITECT)
+│   ├── [Agent Task] "pact-backend-coder: auth endpoint"
+│   └── [Agent Task] "pact-frontend-coder: login form"
+└── [Phase Task] "TEST: auth feature"           (blockedBy: CODE, all CODE agents)
+    └── [Agent Task] "pact-test-engineer: auth tests"
+```
+
+### Creation Rules
+
+| Task Type | Created When | Created By |
+|-----------|--------------|------------|
+| Feature Task | Workflow start | Orchestrator |
+| Phase Tasks | Workflow start (upfront) | Orchestrator |
+| Agent Tasks | Phase begins (dynamic) | Orchestrator |
+| Blocker Tasks | Agent reports blocker via text | Orchestrator |
+| Algedonic Tasks | Agent reports signal via text | Orchestrator |
+
+### Dependency Model
+
+- **Unify on `blockedBy`**: All dependencies expressed via `blockedBy`
+- **Phase-to-phase**: Strict chain (PREPARE → ARCHITECT → CODE → TEST)
+- **Agent-to-phase**: Agent tasks block the next phase
+- **Skipped phases**: Created and immediately marked `completed` with note
+
+### Naming Convention
+
+- Feature: `"{verb} {feature}"`
+- Phase: `"{PHASE}: {feature-slug}"`
+- Agent: `"{agent-type}: {work-description}"`
+- Blocker: `"Resolve: {description}"`
+- Algedonic: `"⚠️ [HALT|ALERT]: {category}"`
+
+### VSM-Task Mapping
+
+| VSM System | Task System Role |
+|------------|------------------|
+| **S1 (Operations)** | Agents report status via structured text; do NOT call Task tools |
+| **S2 (Coordination)** | Orchestrator uses TaskList for conflict detection, parallel agent visibility |
+| **S3 (Orchestrator)** | Creates hierarchy, sets dependencies, translates agent reports into Task state |
+| **S4 (Intelligence)** | Creates new Tasks on adaptation, deletes obsolete Tasks |
+| **S5 (Policy)** | TaskList provides audit trail, user visibility via `/tasks` |
+
+### Orchestrator Dispatch Lifecycle
+
+| Event | Orchestrator Action |
+|-------|---------------------|
+| Before dispatching agent | `TaskCreate(subject="...")` → gets `task_id` |
+| Immediately after dispatch | `TaskUpdate(taskId=task_id, status="in_progress")` |
+| Agent completes (handoff received) | `TaskUpdate(taskId=task_id, status="completed", metadata={...})` |
+| Agent reports blocker | `TaskCreate(subject="Resolve: {desc}")` then `TaskUpdate(taskId=task_id, addBlockedBy=[blocker_id])` |
+| Agent emits algedonic signal | `TaskCreate(subject="⚠️ [HALT|ALERT]: {cat}")` then amplify scope |
+
+### Tool Selection Guide
+
+| Need | Tool | Example |
+|------|------|---------|
+| Create a new task | `TaskCreate` | Create agent task when phase begins |
+| Update status, dependencies, metadata | `TaskUpdate` | Mark task completed, add blockedBy |
+| See all tasks and their states | `TaskList` | Monitor progress, detect signals, audit |
+| Get full details of one task | `TaskGet` | Read handoff metadata, blocker context |
+
+### Agent Reporting (Text-Based)
+
+Agents do NOT call Task tools. They report via structured text:
+
+| Agent Event | Agent Action |
+|-------------|-------------|
+| Start | Begin working (orchestrator already marked task in_progress) |
+| Blocker | Stop immediately, report: `BLOCKER: {description}` |
+| Viability threat | Stop immediately, report: `⚠️ ALGEDONIC [HALT|ALERT]: {category} — {description}` |
+| Completion | End response with structured HANDOFF |
+
+The orchestrator translates agent text into Task tool calls.
 
 ---
 
@@ -854,82 +935,6 @@ Invoke multiple specialists of the same type when:
 3. What the next agent needs to know
 
 Keep it brief. No templates required.
-
----
-
-## Task Hierarchy
-
-This document explains how PACT uses Claude Code's Task system to track work at multiple levels.
-
-### Hierarchy Levels
-
-```
-Feature Task (created by orchestrator)
-├── Phase Tasks (PREPARE, ARCHITECT, CODE, TEST)
-│   ├── Agent Task 1 (specialist work)
-│   ├── Agent Task 2 (parallel specialist)
-│   └── Agent Task 3 (parallel specialist)
-└── Review Task (peer-review phase)
-```
-
-### Task Ownership
-
-| Level | Created By | Owned By | Lifecycle |
-|-------|------------|----------|-----------|
-| Feature | Orchestrator | Orchestrator | Spans entire workflow |
-| Phase | Orchestrator | Orchestrator | Active during phase |
-| Agent | Orchestrator | Specialist | Completed when specialist returns |
-
-### Task States
-
-Tasks progress through: `pending` → `in_progress` → `completed`
-
-- **pending**: Created but not started
-- **in_progress**: Active work underway
-- **completed**: Work finished (success or documented failure)
-
-### Blocking Relationships
-
-Use `addBlockedBy` to express dependencies:
-
-```
-CODE phase task
-├── blockedBy: [ARCHITECT task ID]
-└── Agent tasks within CODE
-    └── blockedBy: [CODE phase task ID]
-```
-
-### Metadata Conventions
-
-Agent tasks include metadata for context:
-
-```json
-{
-  "phase": "CODE",
-  "domain": "backend",
-  "feature": "user-auth",
-  "handoff": {
-    "produced": ["src/auth.ts"],
-    "uncertainty": ["token refresh edge cases"]
-  }
-}
-```
-
-### Integration with PACT Signals
-
-- **Algedonic signals**: Emit via task metadata or direct escalation
-- **Variety signals**: Note in task metadata when complexity differs from estimate
-- **Handoff**: Store structured handoff in task metadata on completion
-
-### Example Flow
-
-1. Orchestrator creates Feature task: "Implement user authentication" (parent container)
-2. Orchestrator creates PREPARE phase task under the Feature task
-3. Orchestrator dispatches pact-preparer with agent task (blocked by PREPARE phase task)
-4. Preparer completes, updates task to completed with handoff metadata
-5. Orchestrator marks PREPARE complete, creates ARCHITECT phase task
-6. Orchestrator creates CODE phase task (blocked by ARCHITECT phase task)
-7. Pattern continues through remaining phases
 
 ---
 
