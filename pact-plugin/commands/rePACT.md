@@ -290,6 +290,8 @@ Check TaskList for blocker/algedonic signals:
 
 On signal detected: Follow Signal Task Handling in CLAUDE.md.
 
+For agent stall detection and recovery, see orchestrate.md > Agent Stall Detection.
+
 ---
 
 ## After Completion
