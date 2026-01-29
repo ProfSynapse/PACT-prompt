@@ -44,6 +44,8 @@ Create a review Task hierarchy:
 19. TaskUpdate: Review task status = "completed", metadata.artifact = PR URL
 ```
 
+> **Convention**: Synchronous user steps (step tasks, approval tasks) skip the `in_progress` transition — they go directly from `pending` to `completed` since the orchestrator handles them inline without background dispatch.
+
 **Example structure:**
 ```
 [Review] "Review: user authentication"

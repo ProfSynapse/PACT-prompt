@@ -124,6 +124,10 @@ If the blocker reveals that a sub-task is more complex than expected and needs i
 
 ## Phase Re-Entry Task Protocol
 
+> **Prerequisite**: Before starting phase re-entry, complete the original blocker task per the [Task Operations](#task-operations) section above (step 4: `TaskUpdate(blocker_id, status="completed")`).
+
+> **Invoked from**: [orchestrate.md CODE phase](orchestrate.md) when imPACT decides to redo a prior phase.
+
 When imPACT decides to redo a prior phase (e.g., "redo ARCHITECT because the design was wrong"), follow this Task lifecycle:
 
 1. **Do NOT reopen the old phase task** — it was completed and is historical record
@@ -145,3 +149,5 @@ TaskUpdate(codePhaseId, addBlockedBy=[retryArchId])
 TaskUpdate(retryArchId, status="completed")  # unblocks CODE
 # Re-invoke coder with updated architecture
 ```
+
+**Retry limits**: If the retry phase also fails, a new imPACT cycle is triggered. The existing escalation rule applies: 3+ consecutive imPACT cycles without resolution → emit ALERT algedonic signal (META-BLOCK category). See the [Algedonic Signals Protocol](../protocols/algedonic.md) for details.
