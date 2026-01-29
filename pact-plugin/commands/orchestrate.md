@@ -39,6 +39,19 @@ i. TaskUpdate: phase status = "completed"
 
 **Skipped phases**: Create the phase Task, then immediately mark `completed` with metadata noting skip reason.
 
+**Skipped phase metadata format**:
+```
+TaskUpdate(phaseTaskId, status="completed", metadata={"skipped": true, "skip_reason": "{reason}"})
+```
+
+Valid `skip_reason` values: `"approved_plan_exists"`, `"requirements_explicit"`, `"existing_docs_cover_scope"`, `"trivial_change"`, or a custom string.
+
+**Example** (skipping PREPARE because an approved plan exists):
+```
+TaskCreate("PREPARE: auth-refresh") → prepareTaskId
+TaskUpdate(prepareTaskId, status="completed", metadata={"skipped": true, "skip_reason": "approved_plan_exists"})
+```
+
 ---
 
 ## S3/S4 Mode Awareness
@@ -365,6 +378,8 @@ If a sub-task emerges that is too complex for a single specialist invocation:
 - Sub-task needs its own research/preparation phase
 - Sub-task requires architectural decisions before coding
 - Sub-task spans multiple concerns within a domain
+
+**Phase re-entry** (via `/PACT:imPACT`): When imPACT decides to redo a prior phase, create a new retry phase task — do not reopen the completed one. See [imPACT.md Phase Re-Entry Task Protocol](imPACT.md#phase-re-entry-task-protocol) for details.
 
 ---
 

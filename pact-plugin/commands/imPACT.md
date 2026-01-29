@@ -119,3 +119,29 @@ If the blocker reveals that a sub-task is more complex than expected and needs i
 ```
 /PACT:rePACT backend "implement the OAuth2 token refresh that's blocking us"
 ```
+
+---
+
+## Phase Re-Entry Task Protocol
+
+When imPACT decides to redo a prior phase (e.g., "redo ARCHITECT because the design was wrong"), follow this Task lifecycle:
+
+1. **Do NOT reopen the old phase task** — it was completed and is historical record
+2. **Create a new retry phase task**: `TaskCreate("ARCHITECT (retry): {feature-slug}")`
+3. **Set retry task to `in_progress`**
+4. **Block the current phase** (the one that hit the blocker): `TaskUpdate(currentPhaseId, addBlockedBy=[retryPhaseId])`
+5. **Dispatch agent(s)** for the retry phase
+6. **On retry completion**: `TaskUpdate(retryPhaseId, status="completed")` — unblocks the current phase
+7. **Retry the current phase** with a new agent task using the updated outputs
+
+**Example** (CODE blocked, redo ARCHITECT):
+```
+# ARCHITECT was completed earlier — leave it as-is
+TaskCreate("ARCHITECT (retry): auth-refresh") → retryArchId
+TaskUpdate(retryArchId, status="in_progress")
+TaskUpdate(codePhaseId, addBlockedBy=[retryArchId])
+# Dispatch architect agent...
+# On architect completion:
+TaskUpdate(retryArchId, status="completed")  # unblocks CODE
+# Re-invoke coder with updated architecture
+```
