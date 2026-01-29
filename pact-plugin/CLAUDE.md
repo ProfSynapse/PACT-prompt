@@ -122,7 +122,7 @@ See **Always Run Agents in Background** for the mandatory `run_in_background=tru
 
 **Key principle**: Agents communicate status via structured text in their responses. The orchestrator reads agent output and translates it into Task operations. This separation ensures Task state is always managed by the process that has the tools.
 
-**Signal Task Handling**:
+#### Signal Task Handling
 When an agent reports a blocker or algedonic signal via text:
 1. Create a signal Task (blocker or algedonic type)
 2. Block the agent's task via `addBlockedBy`
@@ -378,6 +378,22 @@ A list of things that include the following:
 - [Constraints]
 - [Best Practices]
 - [Wisdom from lessons learned]
+
+#### Expected Agent HANDOFF Format
+
+Every agent ends their response with a structured HANDOFF. Expect this format:
+
+```
+HANDOFF:
+1. Produced: {files created or modified, with paths}
+2. Key context: {decisions made, patterns used, assumptions}
+3. Areas of uncertainty: {where bugs might hide, tricky parts}
+4. Open questions: {anything unresolved that needs attention}
+```
+
+All four items are always present. Use this to update Task metadata and inform subsequent phases.
+
+If the `validate_handoff` hook warns about a missing HANDOFF, extract available context from the agent's response and update the Task accordingly.
 
 ### How to Delegate
 

@@ -291,19 +291,6 @@ On signal detected: Follow Signal Task Handling in CLAUDE.md.
 
 ---
 
-## Agent Prompt Language
-
-Include in every agent dispatch prompt:
-
-**Blocker/Signal Protocol**:
-- If you hit a blocker, STOP work immediately and report: "BLOCKER: {description}"
-- If you detect a viability threat (security, data, ethics), STOP immediately and report:
-  "ALGEDONIC [HALT|ALERT]: {category} — {description}"
-- Do NOT attempt workarounds for blockers. Do NOT continue work after emitting algedonic signals.
-- Always end your response with a structured HANDOFF, even if incomplete.
-
----
-
 ## After Completion
 
 When nested cycle completes:
@@ -312,6 +299,6 @@ When nested cycle completes:
 3. **Report** any decisions that affect the parent task
 4. **Continue** with parent orchestration (parent task now unblocked)
 
-**Handoff format**: Use the standard 4-item structure (Produced, Key context, Areas of uncertainty, Open questions). See orchestrate.md § Handoff Format.
+**Handoff format**: Use the standard 4-item structure (Produced, Key context, Areas of uncertainty, Open questions).
 
 The parent orchestration resumes with the sub-task complete.

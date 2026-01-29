@@ -15,7 +15,7 @@ Agents do **NOT** have access to Task tools (TaskCreate, TaskUpdate, TaskGet, Ta
 
 ## On Start
 
-Begin working on your assigned task immediately. No status update call is needed — the orchestrator tracks your task status.
+Begin working immediately. The orchestrator tracks your task status — no status reporting is needed from you.
 
 ## Progress Reporting
 
@@ -38,7 +38,7 @@ When you detect a viability threat (security, data integrity, ethics):
 1. **Stop work immediately**
 2. Report using this format:
    ```
-   ALGEDONIC [HALT|ALERT]: {Category}
+   ⚠️ ALGEDONIC [HALT|ALERT]: {Category}
 
    Issue: {One-line description}
    Evidence: {Specific details — file, line, what you observed}

@@ -208,21 +208,6 @@ When a phase is skipped but a coder encounters a decision that would have been h
 
 ---
 
-## Handoff Format
-
-Each specialist should end with a structured handoff:
-
-```
-1. **Produced**: Files created/modified
-2. **Key context**: Decisions made, patterns used, assumptions
-3. **Areas of uncertainty**: Where bugs might hide, tricky parts, things to watch
-4. **Open questions**: Anything unresolved
-```
-
-**Example**: `1. Produced: src/middleware/rateLimiter.ts. 2. Key context: Used token bucket with Redis. 3. Areas of uncertainty: Edge case with concurrent resets. 4. Open questions: None.`
-
----
-
 ### Phase 1: PREPARE → `pact-preparer`
 
 **Skip criteria met?** → Proceed to Phase 2.
@@ -238,7 +223,7 @@ Each specialist should end with a structured handoff:
 
 **Before next phase**:
 - [ ] Outputs exist in `docs/preparation/`
-- [ ] Specialist handoff received (see Handoff Format below)
+- [ ] Specialist handoff received
 - [ ] If blocker reported → `/PACT:imPACT`
 - [ ] **S4 Checkpoint** (see [pact-s4-checkpoints.md](../protocols/pact-s4-checkpoints.md)): Environment stable? Model aligned? Plan viable?
 
@@ -277,7 +262,7 @@ If PREPARE ran and ARCHITECT was marked "Skip," compare PREPARE's recommended ap
 
 **Before next phase**:
 - [ ] Outputs exist in `docs/architecture/`
-- [ ] Specialist handoff received (see Handoff Format above)
+- [ ] Specialist handoff received
 - [ ] If blocker reported → `/PACT:imPACT`
 - [ ] **S4 Checkpoint**: Environment stable? Model aligned? Plan viable?
 
@@ -358,7 +343,7 @@ Before concurrent dispatch, check internally: shared files? shared interfaces? c
 **Before next phase**:
 - [ ] Implementation complete
 - [ ] All tests passing (full test suite; fix any tests your changes break)
-- [ ] Specialist handoff(s) received (see Handoff Format above)
+- [ ] Specialist handoff(s) received
 - [ ] If blocker reported → `/PACT:imPACT`
 - [ ] **Create atomic commit(s)** of CODE phase work (preserves work before strategic re-assessment)
 - [ ] **S4 Checkpoint**: Environment stable? Model aligned? Plan viable?
@@ -398,7 +383,7 @@ If a sub-task emerges that is too complex for a single specialist invocation:
 
 **Before completing**:
 - [ ] All tests passing
-- [ ] Specialist handoff received (see Handoff Format above)
+- [ ] Specialist handoff received
 - [ ] If blocker reported → `/PACT:imPACT`
 - [ ] **Create atomic commit(s)** of TEST phase work (preserves work before strategic re-assessment)
 
@@ -414,19 +399,6 @@ Check TaskList for blocker/algedonic signals:
 - On any unexpected agent stoppage
 
 On signal detected: Follow Signal Task Handling in CLAUDE.md.
-
----
-
-## Agent Prompt Language
-
-Include in every agent dispatch prompt:
-
-**Blocker/Signal Protocol**:
-- If you hit a blocker, STOP work immediately and report: "BLOCKER: {description}"
-- If you detect a viability threat (security, data, ethics), STOP immediately and report:
-  "ALGEDONIC [HALT|ALERT]: {category} — {description}"
-- Do NOT attempt workarounds for blockers. Do NOT continue work after emitting algedonic signals.
-- Always end your response with a structured HANDOFF, even if incomplete.
 
 ---
 
