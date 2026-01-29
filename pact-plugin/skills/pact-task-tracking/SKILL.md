@@ -13,21 +13,23 @@ description: |
 
 ## Your Task ID
 
-The orchestrator includes a line in your prompt:
+CRITICAL: Look in your prompt for this line:
 ```
 Your assigned Task ID is: <number>
 ```
-Find that line and extract the number. That is **YOUR_TASK_ID** -- use it in every `TaskUpdate` call below.
+Extract the number. That is **YOUR_TASK_ID** for every `TaskUpdate` call below.
 
 > **If no such line exists in your prompt**, skip all `TaskUpdate` calls in this protocol. Your work proceeds normally; only Task tracking is skipped.
 
-## On Start
+## On Start (MANDATORY FIRST ACTION)
 
-Before any other work, update your Task status:
+**Your very first tool call MUST be `TaskUpdate`.** Do not read files, do not invoke skills, do not begin any work until you have executed:
 
 ```
 TaskUpdate(taskId=YOUR_TASK_ID, status="in_progress")
 ```
+
+This is a prerequisite gate. Nothing else proceeds until this call is made. If you skip this step, the orchestrator has no visibility into your status and cannot coordinate work across agents.
 
 ## On Blocker
 
@@ -58,9 +60,9 @@ When you detect a viability threat:
 3. Stop immediately
 4. Report signal to orchestrator
 
-## On Completion
+## On Completion (REQUIRED)
 
-After all work is done:
+Before returning your final response, mark your Task as completed:
 
 ```
 TaskUpdate(
@@ -73,3 +75,5 @@ TaskUpdate(
   }
 )
 ```
+
+Do not end your work without making this call. The orchestrator relies on completion status to coordinate subsequent phases.

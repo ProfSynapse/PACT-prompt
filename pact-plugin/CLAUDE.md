@@ -338,8 +338,11 @@ Task(
 
 Use this structure in the `prompt` field to ensure agents have adequate context:
 
-**TASK ID**
 Your assigned Task ID is: {task_id}
+
+**FIRST ACTION (MANDATORY)**
+Before doing anything else, run: `TaskUpdate(taskId={task_id}, status="in_progress")`
+This must be your very first tool call. Do not skip it.
 
 **CONTEXT**
 [Brief background, what phase we are in, and relevant state]
