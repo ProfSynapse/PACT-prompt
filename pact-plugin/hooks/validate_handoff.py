@@ -6,7 +6,7 @@ Used by: Claude Code settings.json SubagentStop hook
 
 Validates that PACT agents:
 1. Complete with proper handoff information (produced, decisions, next steps)
-2. Called TaskUpdate(status="completed") with required metadata (Task integration)
+2. Reported completion via structured HANDOFF text (orchestrator handles TaskUpdate)
 
 Input: JSON from stdin with `transcript`, `agent_id`, and optionally `task_id`
 Output: JSON with `systemMessage` if handoff format is incomplete or Task protocol violated

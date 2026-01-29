@@ -14,13 +14,13 @@ imPACT operates on existing blocker Tasks created by agents:
 1. TaskGet(blocker_id) — understand the blocker context
 2. Triage: redo prior phase? need specialist? need user?
 3. On resolution path chosen:
-   - If delegating: TaskCreate resolution agent task
+   - If delegating: TaskCreate resolution agent Task, include its `{task_id}` in the agent prompt
    - If self-resolving: proceed directly
 4. On resolution complete: TaskUpdate(blocker_id, status="completed")
-5. Blocked agent task is now unblocked
+5. Blocked agent Task is now unblocked
 ```
 
-**Note**: Agents create blocker Tasks and block themselves via `addBlockedBy`. When the blocker is resolved (marked completed), the agent's task becomes unblocked.
+**Note**: Agents create blocker Tasks and block themselves via `addBlockedBy`. When the blocker is resolved (marked completed), the agent's Task becomes unblocked.
 
 ---
 

@@ -11,29 +11,37 @@ description: |
 
 > **Reference**: See [Claude Code Task System](https://docs.anthropic.com/en/docs/claude-code/tasks) for full API documentation.
 
-> **Note**: The orchestrator passes your assigned task ID when dispatching you. Use this ID in all TaskUpdate calls.
+## Your Task ID
 
-You have been assigned Task ID: {task_id}
+CRITICAL: Look in your prompt for this line:
+```
+Your assigned Task ID is: <number>
+```
+Extract the number. That is **YOUR_TASK_ID** for every `TaskUpdate` call below.
 
-## On Start
+> **If no such line exists in your prompt**, skip all `TaskUpdate` calls in this protocol. Your work proceeds normally; only Task tracking is skipped.
 
-Before any other work, update your task status:
+## On Start (MANDATORY FIRST ACTION)
+
+**Your very first tool call MUST be `TaskUpdate`.** Do not read files, do not invoke skills, do not begin any work until you have executed:
 
 ```
-TaskUpdate(taskId="{task_id}", status="in_progress")
+TaskUpdate(taskId=YOUR_TASK_ID, status="in_progress")
 ```
+
+This is a prerequisite gate. Nothing else proceeds until this call is made. If you skip this step, the orchestrator has no visibility into your status and cannot coordinate work across agents.
 
 ## On Blocker
 
 If you cannot proceed:
 
-1. Create a blocker task:
+1. Create a blocker Task:
    ```
    TaskCreate(subject="Resolve: {description}", metadata={"type": "blocker"})
    ```
-2. Link it to your task:
+2. Link it to your Task:
    ```
-   TaskUpdate(taskId="{task_id}", addBlockedBy=[blocker_id])
+   TaskUpdate(taskId=YOUR_TASK_ID, addBlockedBy=[blocker_id])
    ```
 3. Stop work and report: "BLOCKER: {description}"
 
@@ -41,24 +49,24 @@ If you cannot proceed:
 
 When you detect a viability threat:
 
-1. Create an algedonic task:
+1. Create an algedonic Task:
    ```
    TaskCreate(subject="⚠️ [HALT|ALERT]: {category}", metadata={"type": "algedonic", "level": "...", "category": "..."})
    ```
-2. Link it to your task:
+2. Link it to your Task:
    ```
-   TaskUpdate(taskId="{task_id}", addBlockedBy=[algedonic_id])
+   TaskUpdate(taskId=YOUR_TASK_ID, addBlockedBy=[algedonic_id])
    ```
 3. Stop immediately
 4. Report signal to orchestrator
 
-## On Completion
+## On Completion (REQUIRED)
 
-After all work is done:
+Before returning your final response, mark your Task as completed:
 
 ```
 TaskUpdate(
-  taskId="{task_id}",
+  taskId=YOUR_TASK_ID,
   status="completed",
   metadata={
     "produced": ["file1.ts", "file2.ts"],
@@ -68,3 +76,4 @@ TaskUpdate(
 )
 ```
 
+Do not end your work without making this call. The orchestrator relies on completion status to coordinate subsequent phases.

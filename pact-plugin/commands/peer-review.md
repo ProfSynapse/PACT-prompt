@@ -15,25 +15,25 @@ Review the current work: $ARGUMENTS
 Create a review Task hierarchy:
 
 ```
-1. TaskCreate: Review task "Review: {feature}"
+1. TaskCreate: Review Task "Review: {feature}"
 2. Analyze PR: Which reviewers needed?
-3. TaskCreate: Reviewer agent tasks (architect, test-engineer, domain specialists)
-4. TaskUpdate: Review task addBlockedBy = [reviewer IDs]
-5. Dispatch reviewers in parallel
+3. TaskCreate: Reviewer agent Tasks (architect, test-engineer, domain specialists)
+4. TaskUpdate: Review Task addBlockedBy = [reviewer IDs]
+5. Dispatch reviewers in parallel (include each reviewer's `{task_id}` in their prompt)
 6. Monitor until reviewers complete
 7. Synthesize findings
 8. If major issues:
-   a. TaskCreate: Remediation agent tasks
+   a. TaskCreate: Remediation agent Tasks
    b. Dispatch, monitor until complete
-9. TaskCreate: "User: review minor issues" step task
+9. TaskCreate: "User: review minor issues" step Task
 10. Present minor issues to user, record decisions in step metadata
 11. If "fix now" decisions:
-    a. TaskCreate: Remediation agent tasks
+    a. TaskCreate: Remediation agent Tasks
     b. Dispatch, monitor until complete
-12. TaskCreate: "Awaiting merge decision" approval task
+12. TaskCreate: "Awaiting merge decision" approval Task
 13. Present to user, await approval
-14. On approval: TaskUpdate approval completed
-15. TaskUpdate: Review task completed, metadata.artifact = PR URL
+14. On approval: TaskUpdate approval Task completed
+15. TaskUpdate: Review Task completed, metadata.artifact = PR URL
 ```
 
 **Example structure:**
@@ -66,6 +66,29 @@ Select the domain coder based on PR focus:
 - Backend changes → **pact-backend-coder** (Server-side implementation quality, API design, error handling)
 - Database changes → **pact-database-engineer** (Query efficiency, schema design, data integrity)
 - Multiple domains → Coder for domain with most significant changes, or all relevant domain coders if changes are equally significant
+
+**Use this prompt template for each reviewer:**
+
+```
+Your assigned Task ID is: {task_id}
+
+PEER REVIEW — Review this PR for issues in your domain of expertise.
+
+PR: {PR URL or branch name}
+
+As the {role} reviewer, evaluate:
+1. Issues in your domain (bugs, design flaws, missing edge cases)
+2. Adherence to project conventions and patterns
+3. Security, performance, or maintainability concerns
+
+Classify each finding as:
+- **Blocking**: Must fix before merge
+- **Minor**: Optional improvement for this PR
+- **Future**: Out of scope; suggest tracking as GitHub issue
+
+Output your findings as a markdown table with columns: Recommendation | Severity | Details.
+If no issues found, state "No issues found."
+```
 
 ---
 

@@ -11,8 +11,8 @@ Orchestrate specialist PACT agents through the PACT workflow to address: $ARGUME
 Create the full Task hierarchy upfront for workflow visibility:
 
 ```
-1. TaskCreate: Feature task "{verb} {feature}"
-2. TaskCreate: Phase tasks (all upfront):
+1. TaskCreate: Feature Task "{verb} {feature}"
+2. TaskCreate: Phase Tasks (all upfront):
    - "PREPARE: {feature-slug}"
    - "ARCHITECT: {feature-slug}"
    - "CODE: {feature-slug}"
@@ -27,9 +27,9 @@ For each phase execution:
 ```
 a. TaskUpdate: phase status = "in_progress"
 b. Analyze work needed (QDCL for CODE)
-c. TaskCreate: agent task(s) as children of phase
+c. TaskCreate: agent Task(s) as children of phase
 d. TaskUpdate: next phase addBlockedBy = [agent IDs]
-e. Dispatch agents with task IDs in their prompts
+e. Dispatch agents with Task IDs in their prompts
 f. Monitor via TaskList until agents complete
 g. TaskUpdate: phase status = "completed"
 ```
@@ -231,7 +231,7 @@ Each specialist should end with a structured handoff:
 - "Preparation Phase"
 - "Open Questions > Require Further Research"
 
-**Invoke `pact-preparer` with**:
+**Invoke `pact-preparer` with** (include the agent's `{task_id}` from TaskCreate):
 - Task description
 - Plan sections above (if any)
 - "Reference the approved plan at `docs/plans/{slug}-plan.md` for full context."
@@ -269,7 +269,7 @@ If PREPARE ran and ARCHITECT was marked "Skip," compare PREPARE's recommended ap
 - "Key Decisions"
 - "Interface Contracts"
 
-**Invoke `pact-architect` with**:
+**Invoke `pact-architect` with** (include the agent's `{task_id}` from TaskCreate):
 - Task description
 - PREPARE phase outputs
 - Plan sections above (if any)
@@ -347,7 +347,7 @@ Before concurrent dispatch, check internally: shared files? shared interfaces? c
 
 **Include in prompts for concurrent specialists**: "You are working concurrently with other specialists. Your scope is [files]. Do not modify files outside your scope."
 
-**Invoke coder(s) with**:
+**Invoke coder(s) with** (include each agent's `{task_id}` from TaskCreate):
 - Task description
 - ARCHITECT phase outputs (or plan's Architecture Phase if ARCHITECT was skipped)
 - Plan sections above (if any)
@@ -389,7 +389,7 @@ If a sub-task emerges that is too complex for a single specialist invocation:
 - "Test Scenarios"
 - "Coverage Targets"
 
-**Invoke `pact-test-engineer` with**:
+**Invoke `pact-test-engineer` with** (include the agent's `{task_id}` from TaskCreate):
 - Task description
 - CODE phase handoff(s): Pass the handoff summaries from coders for context on what was built
 - Plan sections above (if any)
@@ -422,7 +422,7 @@ On signal detected: Follow Signal Task Handling in CLAUDE.md.
 > **S5 Policy Checkpoint (Pre-PR)**: Before creating PR, verify: "Do all tests pass? Is system integrity maintained? Have S5 non-negotiables been respected throughout?"
 
 1. **Update plan status** (if plan exists): IN_PROGRESS → IMPLEMENTED
-2. **TaskUpdate**: Feature task status = "completed" (all phases done)
+2. **TaskUpdate**: Feature Task status = "completed" (all phases done)
 3. **Verify all work is committed** — CODE and TEST phase commits should already exist; if any uncommitted changes remain, commit them now
 4. **Run `/PACT:peer-review`** to create PR and get multi-agent review
 5. **Present review summary and stop** — orchestrator never merges (S5 policy)

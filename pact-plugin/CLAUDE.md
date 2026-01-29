@@ -244,6 +244,8 @@ Explicit user override ("you code this, don't delegate") should be honored; casu
 
 **If in doubt, delegate!**
 
+**Checkpoint**: Before dispatching any agent, ALWAYS run `TaskCreate` first, then pass the returned `{task_id}` in the agent's prompt. This enables agents to track their own status via the `pact-task-tracking` skill.
+
 #### Invoke Multiple Specialists Concurrently
 
 > ⚠️ **DEFAULT TO CONCURRENT**: When delegating, dispatch multiple specialists together in a single response unless tasks share files or have explicit dependencies. This is not optional—it's the expected mode of orchestration.
@@ -336,6 +338,12 @@ Task(
 
 Use this structure in the `prompt` field to ensure agents have adequate context:
 
+Your assigned Task ID is: {task_id}
+
+**FIRST ACTION (MANDATORY)**
+Before doing anything else, run: `TaskUpdate(taskId={task_id}, status="in_progress")`
+This must be your very first tool call. Do not skip it.
+
 **CONTEXT**
 [Brief background, what phase we are in, and relevant state]
 
@@ -352,6 +360,8 @@ A list of things that include the following:
 - [Constraints]
 - [Best Practices]
 - [Wisdom from lessons learned]
+
+> ⚠️ **Task ID Handoff (MANDATORY)**: Before dispatching any agent, ALWAYS create a Task for it via `TaskCreate` first, then include the returned Task ID as `{task_id}` in the agent's prompt (as shown above). The `pact-task-tracking` skill tells agents to call `TaskUpdate` on start and completion, but agents can only do this if they know their Task ID. Without it, tasks stay in "pending" forever.
 
 ### How to Delegate
 

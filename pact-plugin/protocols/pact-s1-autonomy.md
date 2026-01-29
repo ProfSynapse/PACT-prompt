@@ -37,7 +37,7 @@ When a sub-task is complex enough to warrant its own PACT treatment:
 **Protocol:**
 1. **Declare**: "Invoking nested PACT for {sub-task}"
 2. **Execute**: Run mini-PACT cycle (may skip phases if not needed)
-3. **Integrate**: Merge results back to parent task
+3. **Integrate**: Merge results back to parent Task
 4. **Report**: Include nested work in handoff to orchestrator
 
 **Constraints:**
@@ -48,7 +48,7 @@ When a sub-task is complex enough to warrant its own PACT treatment:
 
 **Example:**
 ```
-Parent task: "Implement user authentication service"
+Parent Task: "Implement user authentication service"
 Nested PACT: "Research and implement OAuth2 token refresh mechanism"
   - Mini-Prepare: Research OAuth2 refresh token best practices
   - Mini-Architect: Design token storage and refresh flow
