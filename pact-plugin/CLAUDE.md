@@ -244,6 +244,8 @@ Explicit user override ("you code this, don't delegate") should be honored; casu
 
 **If in doubt, delegate!**
 
+**Checkpoint**: Before dispatching any agent, ALWAYS run `TaskCreate` first, then pass the returned `{task_id}` in the agent's prompt. This enables agents to track their own status via the `pact-task-tracking` skill.
+
 #### Invoke Multiple Specialists Concurrently
 
 > ⚠️ **DEFAULT TO CONCURRENT**: When delegating, dispatch multiple specialists together in a single response unless tasks share files or have explicit dependencies. This is not optional—it's the expected mode of orchestration.
