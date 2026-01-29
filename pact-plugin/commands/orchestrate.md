@@ -400,7 +400,10 @@ If a sub-task emerges that is too complex for a single specialist invocation:
 
 ## Agent Stall Detection
 
-**Stalled indicators**: Background task running but no progress at monitoring checkpoints · task completed but no handoff received · process terminated without handoff or blocker report.
+**Stalled indicators**:
+- Background task running but no progress at monitoring checkpoints
+- Task completed but no handoff received
+- Process terminated without handoff or blocker report
 
 Detection is event-driven: check at signal monitoring points (after dispatch, on completion, on stoppage). If a background task returned but produced no handoff or blocker, treat as stalled immediately.
 
@@ -420,7 +423,7 @@ Include in agent prompts: "If you encounter an error that prevents completion, r
 
 When an agent cannot complete normally (stall, failure, or unresolvable blocker), mark its task as `completed` with descriptive metadata:
 
-Metadata convention: `{"stalled": true, "reason": "..."}` · `{"failed": true, "reason": "..."}` · `{"blocked": true, "blocker_task": "..."}`
+Metadata: `{"stalled": true, "reason": "..."}` | `{"failed": true, "reason": "..."}` | `{"blocked": true, "blocker_task": "..."}`
 
 **Convention**: All non-happy-path terminations use `completed` with metadata — no `failed` status exists. This preserves the `pending → in_progress → completed` lifecycle.
 

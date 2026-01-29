@@ -124,7 +124,7 @@ If the blocker reveals that a sub-task is more complex than expected and needs i
 
 ## Phase Re-Entry Task Protocol
 
-**Context**: Invoked when redoing a prior phase. Complete original blocker first ([Task Operations](#task-operations) step 4). Retry failure triggers 3+ cycle escalation (ALERT: META-BLOCK).
+**Context**: Invoked from [orchestrate.md](orchestrate.md) when redoing a prior phase. Complete original blocker first ([Task Operations](#task-operations) step 4). Retry failure triggers 3+ cycle escalation (ALERT: META-BLOCK).
 
 When imPACT decides to redo a prior phase (e.g., "redo ARCHITECT because the design was wrong"), follow this Task lifecycle:
 

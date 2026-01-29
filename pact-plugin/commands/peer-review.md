@@ -62,7 +62,12 @@ Create a review Task hierarchy:
 
 ## Remediation Task State
 
-**Remediation cycles**: Each cycle creates fresh agent tasks (remediation → re-review verify-only). Review stays `in_progress` throughout. After 2 failed cycles: create BLOCKER task → `addBlockedBy` on review → `/PACT:imPACT` → on resolution, blocker completed, review resumes.
+```
+Review task: in_progress (persists until merge-ready)
+├─ Cycle N: remediation tasks → re-review (verify-only) → check
+├─ After 2 failed cycles: BLOCKER task → addBlockedBy review → /PACT:imPACT
+└─ On resolution: blocker completed → review resumes
+```
 
 **Key rules**: Review stays `in_progress` until merge-ready; fresh tasks per cycle; re-review is verify-only (minimal scope); imPACT escalation blocks (doesn't complete/delete) review; resume after resolution.
 
