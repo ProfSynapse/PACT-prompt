@@ -106,32 +106,6 @@ Delegate to `pact-memory-agent` with a clear intent:
 
 See **Always Run Agents in Background** for the mandatory `run_in_background=true` requirement.
 
-### Task Lifecycle Management
-
-**Platform constraint**: The orchestrator owns ALL Task tool calls (TaskCreate, TaskUpdate, TaskGet, TaskList). Agents do NOT have access to Task tools — they communicate via structured text, and the orchestrator translates to Task operations.
-
-**Dispatch lifecycle**:
-
-| When | Orchestrator Action |
-|------|---------------------|
-| Before dispatch | `TaskCreate` agent task (child of phase) |
-| After dispatch | `TaskUpdate` status → `in_progress` |
-| On agent handoff | `TaskUpdate` status → `completed` |
-| On blocker text | `TaskCreate` blocker task + `addBlockedBy` on agent task |
-| On algedonic text | `TaskCreate` signal task + amplify scope (block phase or feature) |
-
-**Key principle**: Agents communicate status via structured text in their responses. The orchestrator reads agent output and translates it into Task operations. This separation ensures Task state is always managed by the process that has the tools.
-
-#### Signal Task Handling
-When an agent reports a blocker or algedonic signal via text:
-1. Create a signal Task (blocker or algedonic type)
-2. Block the agent's task via `addBlockedBy`
-3. For algedonic signals, amplify scope:
-   - ALERT → block current phase task
-   - HALT → block feature task (stops all work)
-4. Present to user and await resolution
-5. On resolution: mark signal task `completed` (unblocks downstream)
-
 ### S3/S4 Operational Modes
 
 The orchestrator operates in two distinct modes. Being aware of which mode you're in improves decision-making.
@@ -284,6 +258,31 @@ Explicit user override ("you code this, don't delegate") should be honored; casu
 | Same domain, multiple items (3 bugs, 5 endpoints) | Invoke multiple specialists of same type at once |
 | Different domains touched | Dispatch specialists across domains together |
 | Tasks share files or have dependencies | Dispatch sequentially (exception, not default) |
+
+#### Agent Task Tracking
+
+> ⚠️ **AGENTS MUST HAVE TANDEM TRACKING TASKS**: Whenever invoking a specialist agent, you must also track what they are working on by using the Claude Code Task Management system (TaskCreate, TaskUpdate, TaskList, TaskGet).
+**Tracking Task lifecycle**:
+
+| Event | Task Operation |
+|-------|----------------|
+| Before dispatching agent | `TaskCreate(subject, description, activeForm)` |
+| After dispatching agent | `TaskUpdate(taskId, status: "in_progress", addBlocks: [PARENT_TASK_ID])` |
+| Agent completes (handoff) | `TaskUpdate(taskId, status: "completed")` |
+| Agent reports blocker | `TaskCreate(subject: "BLOCKER: ...")` then `TaskUpdate(agent_taskId, addBlockedBy: [blocker_taskId])` |
+| Agent reports algedonic signal | `TaskCreate(subject: "[HALT\|ALERT]: ...")` then amplify scope via `addBlockedBy` on phase/feature task |
+
+**Key principle**: Agents communicate status via structured text in their responses. The orchestrator reads agent output and translates it into Task operations. This separation ensures Task state is always managed by the process that has the tools.
+
+##### Signal Task Handling
+When an agent reports a blocker or algedonic signal via text:
+1. Create a signal Task (blocker or algedonic type)
+2. Block the agent's task via `addBlockedBy`
+3. For algedonic signals, amplify scope:
+   - ALERT → block current phase task
+   - HALT → block feature task (stops all work)
+4. Present to user and await resolution
+5. On resolution: mark signal task `completed` (unblocks downstream)
 
 ### What Is "Application Code"?
 
