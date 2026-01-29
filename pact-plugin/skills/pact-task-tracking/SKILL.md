@@ -11,18 +11,22 @@ description: |
 
 > **Reference**: See [Claude Code Task System](https://docs.anthropic.com/en/docs/claude-code/tasks) for full API documentation.
 
-> **Note**: The orchestrator passes your assigned Task ID when dispatching you. Use this ID in all TaskUpdate calls.
+## Your Task ID
 
-You have been assigned Task ID: {task_id}
+The orchestrator includes a line in your prompt:
+```
+Your assigned Task ID is: <number>
+```
+Find that line and extract the number. That is **YOUR_TASK_ID** -- use it in every `TaskUpdate` call below.
 
-> **If no Task ID was provided** (the line above still reads `{task_id}` literally), skip all TaskUpdate calls in this protocol. Your work proceeds normally; only Task tracking is skipped.
+> **If no such line exists in your prompt**, skip all `TaskUpdate` calls in this protocol. Your work proceeds normally; only Task tracking is skipped.
 
 ## On Start
 
 Before any other work, update your Task status:
 
 ```
-TaskUpdate(taskId="{task_id}", status="in_progress")
+TaskUpdate(taskId=YOUR_TASK_ID, status="in_progress")
 ```
 
 ## On Blocker
@@ -35,7 +39,7 @@ If you cannot proceed:
    ```
 2. Link it to your Task:
    ```
-   TaskUpdate(taskId="{task_id}", addBlockedBy=[blocker_id])
+   TaskUpdate(taskId=YOUR_TASK_ID, addBlockedBy=[blocker_id])
    ```
 3. Stop work and report: "BLOCKER: {description}"
 
@@ -49,7 +53,7 @@ When you detect a viability threat:
    ```
 2. Link it to your Task:
    ```
-   TaskUpdate(taskId="{task_id}", addBlockedBy=[algedonic_id])
+   TaskUpdate(taskId=YOUR_TASK_ID, addBlockedBy=[algedonic_id])
    ```
 3. Stop immediately
 4. Report signal to orchestrator
@@ -60,7 +64,7 @@ After all work is done:
 
 ```
 TaskUpdate(
-  taskId="{task_id}",
+  taskId=YOUR_TASK_ID,
   status="completed",
   metadata={
     "produced": ["file1.ts", "file2.ts"],
@@ -69,4 +73,3 @@ TaskUpdate(
   }
 )
 ```
-
