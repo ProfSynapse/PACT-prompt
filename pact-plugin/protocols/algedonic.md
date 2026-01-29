@@ -86,15 +86,27 @@ Apply the S5 Decision Framing Protocol (see [pact-s5-policy.md](pact-s5-policy.m
 ```
 Agent detects trigger condition
     ↓
-Agent emits algedonic signal (HALT or ALERT)
+Agent STOPS immediately — no further work
     ↓
-Orchestrator receives signal
+Agent reports via text: "⚠️ ALGEDONIC [HALT|ALERT]: {category} — {description}"
+    ↓
+Agent ends with partial HANDOFF
+    ↓
+Orchestrator receives agent response
+    ↓
+Orchestrator creates algedonic Task (TaskCreate)
+    ↓
+Orchestrator amplifies scope:
+  - ALERT: blocks current phase Task
+  - HALT: blocks feature Task (entire workflow)
     ↓
 Orchestrator IMMEDIATELY presents to user (no other work continues)
     ↓
 User responds
     ↓
-Work resumes (or stops) based on user decision
+Orchestrator marks algedonic Task completed (TaskUpdate)
+    ↓
+Blocked Tasks can proceed; work resumes (or stops) based on user decision
 ```
 
 ### Orchestrator Behavior
@@ -145,6 +157,30 @@ User must provide **explicit justification** that:
 - "Investigate" — Pause and dig deeper
 - "Continue with caution" — Proceed but with awareness
 - "Stop work" — Halt all activity
+
+### Task System Integration
+
+Agents do NOT have access to Task tools. They report algedonic signals via structured text. The orchestrator translates agent text into Task state changes.
+
+**Agent behavior on algedonic signal:**
+1. STOP immediately — no further work
+2. Report: `⚠️ ALGEDONIC [HALT|ALERT]: {category} — {description}`
+3. End with partial HANDOFF (even incomplete work should be reported)
+
+**Orchestrator behavior on receiving algedonic text:**
+1. Create algedonic Task: `TaskCreate(subject="⚠️ [HALT|ALERT]: {category}", metadata={"type": "algedonic", "level": "...", "category": "..."})`
+2. Amplify scope:
+   - **ALERT**: `TaskUpdate(current_phase_id, addBlockedBy=[algedonic_id])` — blocks phase
+   - **HALT**: `TaskUpdate(feature_task_id, addBlockedBy=[algedonic_id])` — blocks entire workflow
+3. Surface to user immediately
+
+**Resolution:**
+1. User acknowledges/resolves the issue
+2. `TaskUpdate(algedonic_task_id, status="completed")`
+3. Blocked Tasks become unblocked automatically
+4. Work can resume
+
+This makes algedonic signals **visible in TaskList** and ensures they properly block affected work until resolved.
 
 ---
 

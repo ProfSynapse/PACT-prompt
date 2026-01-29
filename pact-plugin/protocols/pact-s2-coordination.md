@@ -136,6 +136,18 @@ After each specialist completes work:
 
 This transforms implicit knowledge into explicit coordination, reducing "surprise" conflicts.
 
+### Task-Based Coordination
+
+The orchestrator uses the Task system for S2 coordination:
+
+1. **Create agent Tasks before dispatching agents**: Each agent gets a Task created via `TaskCreate` before dispatch. This makes all active agents visible in `TaskList`.
+
+2. **Use TaskList for conflict detection**: Before dispatching parallel agents, check `TaskList` for in-progress agent Tasks that may conflict with new work (shared files, shared interfaces).
+
+3. **Use TaskList for parallel agent visibility**: During execution, `TaskList` shows all active agents, their subjects (describing their work), and their status. This enables the orchestrator to detect when agents may be working on overlapping concerns.
+
+4. **Orchestrator owns all Task coordination**: Agents do not see each other's Tasks. The orchestrator is the sole coordinator — it reads Task state and injects relevant context into agent prompts.
+
 ---
 
 ## Backend ↔ Database Boundary
