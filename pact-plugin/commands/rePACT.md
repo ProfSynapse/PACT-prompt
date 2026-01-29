@@ -179,6 +179,23 @@ Implement the sub-component:
 - Apply S2 coordination if parallel work
 - Output: Code + handoff summary
 
+**Use this prompt template for each specialist:**
+
+```
+Your assigned Task ID is: {task_id}
+
+rePACT nested cycle — sub-task of parent feature.
+
+Parent context: {parent feature description}
+Sub-task: {sub-task description}
+
+Work directly from this sub-task description.
+Stay within the sub-component scope. Do not modify files outside your boundary.
+Smoke test your changes before handoff.
+
+If you hit a blocker, STOP and report it.
+```
+
 ### Phase 4: Mini-Test
 
 Verify the sub-component:

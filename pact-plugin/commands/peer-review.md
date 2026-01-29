@@ -67,6 +67,29 @@ Select the domain coder based on PR focus:
 - Database changes → **pact-database-engineer** (Query efficiency, schema design, data integrity)
 - Multiple domains → Coder for domain with most significant changes, or all relevant domain coders if changes are equally significant
 
+**Use this prompt template for each reviewer:**
+
+```
+Your assigned Task ID is: {task_id}
+
+PEER REVIEW — Review this PR for issues in your domain of expertise.
+
+PR: {PR URL or branch name}
+
+As the {role} reviewer, evaluate:
+1. Issues in your domain (bugs, design flaws, missing edge cases)
+2. Adherence to project conventions and patterns
+3. Security, performance, or maintainability concerns
+
+Classify each finding as:
+- **Blocking**: Must fix before merge
+- **Minor**: Optional improvement for this PR
+- **Future**: Out of scope; suggest tracking as GitHub issue
+
+Output your findings as a markdown table with columns: Recommendation | Severity | Details.
+If no issues found, state "No issues found."
+```
+
 ---
 
 ## Output Conciseness

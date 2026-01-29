@@ -15,6 +15,8 @@ description: |
 
 You have been assigned Task ID: {task_id}
 
+> **If no Task ID was provided** (the line above still reads `{task_id}` literally), skip all TaskUpdate calls in this protocol. Your work proceeds normally; only task tracking is skipped.
+
 ## On Start
 
 Before any other work, update your task status:
