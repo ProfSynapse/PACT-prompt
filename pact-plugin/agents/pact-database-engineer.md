@@ -127,9 +127,13 @@ Your work isn't done until smoke tests pass. Smoke tests verify: "Does the schem
 
 End with a structured handoff for the orchestrator:
 1. **Produced**: Files created/modified (schemas, migrations, queries)
-2. **Key context**: Decisions made (normalization, indexes), patterns used, assumptions
-3. **Areas of uncertainty**: Where performance issues might hide, tricky queries (helps TEST phase)
-4. **Open questions**: Anything unresolved
+2. **Key decisions**: Decisions with rationale (normalization, indexes), assumptions that could be wrong
+3. **Areas of uncertainty** (PRIORITIZED):
+   - [HIGH] {description} — Why risky, suggested test focus
+   - [MEDIUM] {description}
+   - [LOW] {description}
+4. **Integration points**: Other components touched
+5. **Open questions**: Unresolved items
 
 **AUTONOMY CHARTER**
 

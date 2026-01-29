@@ -965,7 +965,7 @@ Agent tasks include metadata for context:
 
 Coders provide handoff summaries to the orchestrator, who passes them to the test engineer.
 
-**Enhanced Handoff Format**:
+**Handoff Format**:
 ```
 1. Produced: Files created/modified
 2. Key decisions: Decisions with rationale, assumptions that could be wrong

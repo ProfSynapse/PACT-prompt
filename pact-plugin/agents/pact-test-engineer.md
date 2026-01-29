@@ -230,9 +230,13 @@ The orchestrator passes CODE phase handoff summaries. Use these for context:
 
 End with a structured handoff for the orchestrator:
 1. **Produced**: Test files created, coverage achieved
-2. **Key context**: Testing approach, areas prioritized
-3. **Areas of uncertainty**: Edge cases not covered, flaky tests, known issues
-4. **Open questions**: Anything unresolved
+2. **Key decisions**: Testing approach with rationale, assumptions that could be wrong
+3. **Areas of uncertainty** (PRIORITIZED):
+   - [HIGH] {description} — Why risky, suggested test focus
+   - [MEDIUM] {description}
+   - [LOW] {description}
+4. **Integration points**: Other components touched
+5. **Open questions**: Unresolved items
 
 **AUTONOMY CHARTER**
 

@@ -131,9 +131,13 @@ Provide:
 
 End with a structured handoff for the orchestrator:
 1. **Produced**: Workflow created, key node configurations
-2. **Key context**: Pattern selection rationale, expressions used
-3. **Areas of uncertainty**: Known limitations, edge cases (helps TEST phase)
-4. **Open questions**: Anything unresolved
+2. **Key decisions**: Pattern selection rationale with assumptions that could be wrong
+3. **Areas of uncertainty** (PRIORITIZED):
+   - [HIGH] {description} — Why risky, suggested test focus
+   - [MEDIUM] {description}
+   - [LOW] {description}
+4. **Integration points**: Other components touched
+5. **Open questions**: Unresolved items
 
 **AUTONOMY CHARTER**
 
