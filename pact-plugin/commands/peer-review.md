@@ -19,7 +19,7 @@ Create a review Task hierarchy:
 2. Analyze PR: Which reviewers needed?
 3. TaskCreate: Reviewer agent tasks (architect, test-engineer, domain specialists)
 4. TaskUpdate: Review task addBlockedBy = [reviewer IDs]
-5. Dispatch reviewers in parallel (include each reviewer's Task ID in their prompt)
+5. Dispatch reviewers in parallel (include each reviewer's `{task_id}` in their prompt)
 6. Monitor until reviewers complete
 7. Synthesize findings
 8. If major issues:

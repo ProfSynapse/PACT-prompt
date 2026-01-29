@@ -231,7 +231,7 @@ Each specialist should end with a structured handoff:
 - "Preparation Phase"
 - "Open Questions > Require Further Research"
 
-**Invoke `pact-preparer` with** (include the agent's Task ID from TaskCreate):
+**Invoke `pact-preparer` with** (include the agent's `{task_id}` from TaskCreate):
 - Task description
 - Plan sections above (if any)
 - "Reference the approved plan at `docs/plans/{slug}-plan.md` for full context."
@@ -269,7 +269,7 @@ If PREPARE ran and ARCHITECT was marked "Skip," compare PREPARE's recommended ap
 - "Key Decisions"
 - "Interface Contracts"
 
-**Invoke `pact-architect` with** (include the agent's Task ID from TaskCreate):
+**Invoke `pact-architect` with** (include the agent's `{task_id}` from TaskCreate):
 - Task description
 - PREPARE phase outputs
 - Plan sections above (if any)
@@ -347,7 +347,7 @@ Before concurrent dispatch, check internally: shared files? shared interfaces? c
 
 **Include in prompts for concurrent specialists**: "You are working concurrently with other specialists. Your scope is [files]. Do not modify files outside your scope."
 
-**Invoke coder(s) with** (include each agent's Task ID from TaskCreate):
+**Invoke coder(s) with** (include each agent's `{task_id}` from TaskCreate):
 - Task description
 - ARCHITECT phase outputs (or plan's Architecture Phase if ARCHITECT was skipped)
 - Plan sections above (if any)
@@ -389,7 +389,7 @@ If a sub-task emerges that is too complex for a single specialist invocation:
 - "Test Scenarios"
 - "Coverage Targets"
 
-**Invoke `pact-test-engineer` with** (include the agent's Task ID from TaskCreate):
+**Invoke `pact-test-engineer` with** (include the agent's `{task_id}` from TaskCreate):
 - Task description
 - CODE phase handoff(s): Pass the handoff summaries from coders for context on what was built
 - Plan sections above (if any)
