@@ -436,6 +436,17 @@ The orchestrator should reference this plan during execution.
 
 ---
 
+## Signal Monitoring
+
+Check TaskList for blocker/algedonic signals:
+- After each specialist consultation dispatch
+- When specialist reports completion
+- On any unexpected specialist stoppage
+
+On signal detected: Follow Signal Task Handling in CLAUDE.md.
+
+---
+
 ## Output Conciseness
 
 **Default: Concise output.** User sees plan summary and decision points, not synthesis process.

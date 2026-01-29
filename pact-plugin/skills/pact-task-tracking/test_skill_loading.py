@@ -82,8 +82,12 @@ class TestKeyContentSections:
         """Skill must include 'On Completion' section."""
         assert "## On Completion" in skill_content, "SKILL.md must include '## On Completion' section"
 
-    def test_task_id_placeholder_present(self, skill_content):
-        """Skill must include task_id placeholder for orchestrator injection."""
-        assert "{task_id}" in skill_content, (
-            "SKILL.md must include '{task_id}' placeholder for task ID injection"
-        )
+    def test_text_based_reporting_keywords(self, skill_content):
+        """Skill must include key text-based reporting protocol references."""
+        # Under the new model, agents report status via structured text
+        # (HANDOFF, BLOCKER, ALGEDONIC) rather than {task_id} placeholders.
+        required_keywords = ["Blocker", "Completion"]
+        for keyword in required_keywords:
+            assert keyword in skill_content, (
+                f"SKILL.md must reference '{keyword}' for text-based reporting protocol"
+            )

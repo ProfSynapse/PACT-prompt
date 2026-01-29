@@ -106,6 +106,32 @@ Delegate to `pact-memory-agent` with a clear intent:
 
 See **Always Run Agents in Background** for the mandatory `run_in_background=true` requirement.
 
+### Task Lifecycle Management
+
+**Platform constraint**: The orchestrator owns ALL Task tool calls (TaskCreate, TaskUpdate, TaskGet, TaskList). Agents do NOT have access to Task tools — they communicate via structured text, and the orchestrator translates to Task operations.
+
+**Dispatch lifecycle**:
+
+| When | Orchestrator Action |
+|------|---------------------|
+| Before dispatch | `TaskCreate` agent task (child of phase) |
+| After dispatch | `TaskUpdate` status → `in_progress` |
+| On agent handoff | `TaskUpdate` status → `completed` |
+| On blocker text | `TaskCreate` blocker task + `addBlockedBy` on agent task |
+| On algedonic text | `TaskCreate` signal task + amplify scope (block phase or feature) |
+
+**Key principle**: Agents communicate status via structured text in their responses. The orchestrator reads agent output and translates it into Task operations. This separation ensures Task state is always managed by the process that has the tools.
+
+#### Signal Task Handling
+When an agent reports a blocker or algedonic signal via text:
+1. Create a signal Task (blocker or algedonic type)
+2. Block the agent's task via `addBlockedBy`
+3. For algedonic signals, amplify scope:
+   - ALERT → block current phase task
+   - HALT → block feature task (stops all work)
+4. Present to user and await resolution
+5. On resolution: mark signal task `completed` (unblocks downstream)
+
 ### S3/S4 Operational Modes
 
 The orchestrator operates in two distinct modes. Being aware of which mode you're in improves decision-making.
@@ -352,6 +378,22 @@ A list of things that include the following:
 - [Constraints]
 - [Best Practices]
 - [Wisdom from lessons learned]
+
+#### Expected Agent HANDOFF Format
+
+Every agent ends their response with a structured HANDOFF. Expect this format:
+
+```
+HANDOFF:
+1. Produced: {files created or modified, with paths}
+2. Key context: {decisions made, patterns used, assumptions}
+3. Areas of uncertainty: {where bugs might hide, tricky parts}
+4. Open questions: {anything unresolved that needs attention}
+```
+
+All four items are always present. Use this to update Task metadata and inform subsequent phases.
+
+If the `validate_handoff` hook warns about a missing HANDOFF, extract available context from the agent's response and update the Task accordingly.
 
 ### How to Delegate
 
