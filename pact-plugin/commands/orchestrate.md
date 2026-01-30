@@ -62,16 +62,7 @@ When transitioning to S4 mode, pause and ask: "Are we still building the right t
 
 ## Responding to Algedonic Signals
 
-Algedonic signals are emergency escalations that bypass normal triage. You **MUST** surface them to the user immediately.
-
-| Signal | Response |
-|--------|----------|
-| **HALT** (Security, Data, Ethics) | Stop ALL agents, present to user, await acknowledgment |
-| **ALERT** (Quality, Scope, Meta-block) | Pause current work, present options, await decision |
-
-**Algedonic vs imPACT**: Operational blocker → `/PACT:imPACT` ("How do we proceed?"). Viability threat → Algedonic ("Should we proceed at all?"). If unsure, err toward algedonic (safer).
-
-See [algedonic.md](../protocols/algedonic.md) for signal format and full protocol.
+For algedonic signal handling (HALT/ALERT responses, algedonic vs imPACT distinction), see [algedonic.md](../protocols/algedonic.md).
 
 ---
 
