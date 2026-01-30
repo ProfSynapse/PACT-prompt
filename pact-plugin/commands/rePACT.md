@@ -22,8 +22,9 @@ Create a nested Task hierarchy as a child of the current context:
 3. TaskUpdate: Set dependencies:
    - Phase-to-phase blockedBy chain (same as orchestrate)
    - Parent task addBlockedBy = [sub-feature task]
-4. Execute nested P→A→C→T cycle
-5. On completion: Parent task unblocked
+4. TaskUpdate: Sub-feature task status = "in_progress"
+5. Execute nested P→A→C→T cycle (same per-phase lifecycle as orchestrate: create phase task → `in_progress` → dispatch agents → agent tasks `in_progress` → `completed` → phase `completed`)
+6. On completion: Parent task unblocked
 ```
 
 **Example structure:**
@@ -288,6 +289,8 @@ Check TaskList for blocker/algedonic signals:
 - On any unexpected agent stoppage
 
 On signal detected: Follow Signal Task Handling in CLAUDE.md.
+
+For agent stall detection and recovery, see [Agent Stall Detection](orchestrate.md#agent-stall-detection).
 
 ---
 

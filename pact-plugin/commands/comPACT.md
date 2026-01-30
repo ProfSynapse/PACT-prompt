@@ -16,13 +16,18 @@ Create a simpler Task hierarchy than full orchestrate:
 
 ```
 1. TaskCreate: Feature task "{verb} {feature}" (single-domain work)
-2. Analyze: How many agents needed?
-3. TaskCreate: Agent task(s) — direct children of feature
-4. TaskUpdate: Feature task addBlockedBy = [all agent IDs]
-5. Dispatch agents concurrently with task IDs
-6. Monitor via TaskList until all agents complete
-7. TaskUpdate: Feature task status = "completed"
+2. TaskUpdate: Feature task status = "in_progress"
+3. Analyze: How many agents needed?
+4. TaskCreate: Agent task(s) — direct children of feature
+5. TaskUpdate: Agent tasks status = "in_progress"
+6. TaskUpdate: Feature task addBlockedBy = [all agent IDs]
+7. Dispatch agents concurrently with task IDs
+8. Monitor via TaskList until all agents complete
+9. TaskUpdate: Agent tasks status = "completed" (as each completes)
+10. TaskUpdate: Feature task status = "completed"
 ```
+
+> Steps 8-10 are detailed in the [After Specialist Completes](#after-specialist-completes) section below (includes test verification and commit steps).
 
 **Example structure:**
 ```
@@ -205,14 +210,17 @@ Check TaskList for blocker/algedonic signals:
 
 On signal detected: Follow Signal Task Handling in CLAUDE.md.
 
+For agent stall detection and recovery, see [Agent Stall Detection](orchestrate.md#agent-stall-detection).
+
 ---
 
 ## After Specialist Completes
 
 1. **Receive handoff** from specialist(s)
-2. **Run tests** — verify work passes. If tests fail → return to specialist for fixes before committing.
-3. **TaskUpdate**: Feature task status = "completed"
+2. **TaskUpdate**: Agent tasks status = "completed" (as each completes)
+3. **Run tests** — verify work passes. If tests fail → return to specialist for fixes (create new agent task, repeat from step 1).
 4. **Create atomic commit(s)** — stage and commit before proceeding
+5. **TaskUpdate**: Feature task status = "completed"
 
 **Next steps** (user decides):
 - Done → work is committed

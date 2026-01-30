@@ -21,6 +21,7 @@ Create the full Task hierarchy upfront for workflow visibility:
    - ARCHITECT blockedBy PREPARE
    - CODE blockedBy ARCHITECT
    - TEST blockedBy CODE
+4. TaskUpdate: Feature task status = "in_progress"
 ```
 
 For each phase execution:
@@ -28,13 +29,17 @@ For each phase execution:
 a. TaskUpdate: phase status = "in_progress"
 b. Analyze work needed (QDCL for CODE)
 c. TaskCreate: agent task(s) as children of phase
-d. TaskUpdate: next phase addBlockedBy = [agent IDs]
-e. Dispatch agents with task IDs in their prompts
-f. Monitor via TaskList until agents complete
-g. TaskUpdate: phase status = "completed"
+d. TaskUpdate: agent tasks status = "in_progress"
+e. TaskUpdate: next phase addBlockedBy = [agent IDs]
+f. Dispatch agents with task IDs in their prompts
+g. Monitor via TaskList until agents complete
+h. TaskUpdate: agent tasks status = "completed" (as each completes)
+i. TaskUpdate: phase status = "completed"
 ```
 
-**Skipped phases**: Create the phase Task, then immediately mark `completed` with metadata noting skip reason.
+**Skipped phases**: Mark directly `completed` (no `in_progress` — no work occurs):
+`TaskUpdate(phaseTaskId, status="completed", metadata={"skipped": true, "skip_reason": "{reason}"})`
+Valid reasons: `"approved_plan_exists"`, `"requirements_explicit"`, `"existing_docs_cover_scope"`, `"trivial_change"`, or custom.
 
 ---
 
@@ -57,16 +62,7 @@ When transitioning to S4 mode, pause and ask: "Are we still building the right t
 
 ## Responding to Algedonic Signals
 
-Algedonic signals are emergency escalations that bypass normal triage. You **MUST** surface them to the user immediately.
-
-| Signal | Response |
-|--------|----------|
-| **HALT** (Security, Data, Ethics) | Stop ALL agents, present to user, await acknowledgment |
-| **ALERT** (Quality, Scope, Meta-block) | Pause current work, present options, await decision |
-
-**Algedonic vs imPACT**: Operational blocker → `/PACT:imPACT` ("How do we proceed?"). Viability threat → Algedonic ("Should we proceed at all?"). If unsure, err toward algedonic (safer).
-
-See [algedonic.md](../protocols/algedonic.md) for signal format and full protocol.
+For algedonic signal handling (HALT/ALERT responses, algedonic vs imPACT distinction), see [algedonic.md](../protocols/algedonic.md).
 
 ---
 
@@ -363,6 +359,8 @@ If a sub-task emerges that is too complex for a single specialist invocation:
 - Sub-task requires architectural decisions before coding
 - Sub-task spans multiple concerns within a domain
 
+**Phase re-entry** (via `/PACT:imPACT`): When imPACT decides to redo a prior phase, create a new retry phase task — do not reopen the completed one. See [imPACT.md Phase Re-Entry Task Protocol](imPACT.md#phase-re-entry-task-protocol) for details.
+
 ---
 
 ### Phase 4: TEST → `pact-test-engineer`
@@ -391,6 +389,12 @@ If a sub-task emerges that is too complex for a single specialist invocation:
 
 ---
 
+## Agent Stall Detection
+
+For stall detection indicators, recovery protocol, prevention, and non-happy-path task termination, see [pact-agent-stall.md](../protocols/pact-agent-stall.md).
+
+---
+
 ## Signal Monitoring
 
 Check TaskList for blocker/algedonic signals:
@@ -407,8 +411,8 @@ On signal detected: Follow Signal Task Handling in CLAUDE.md.
 > **S5 Policy Checkpoint (Pre-PR)**: Before creating PR, verify: "Do all tests pass? Is system integrity maintained? Have S5 non-negotiables been respected throughout?"
 
 1. **Update plan status** (if plan exists): IN_PROGRESS → IMPLEMENTED
-2. **TaskUpdate**: Feature task status = "completed" (all phases done)
-3. **Verify all work is committed** — CODE and TEST phase commits should already exist; if any uncommitted changes remain, commit them now
+2. **Verify all work is committed** — CODE and TEST phase commits should already exist; if any uncommitted changes remain, commit them now
+3. **TaskUpdate**: Feature task status = "completed" (all phases done, all work committed)
 4. **Run `/PACT:peer-review`** to create PR and get multi-agent review
 5. **Present review summary and stop** — orchestrator never merges (S5 policy)
 6. **S4 Retrospective** (after user decides): Briefly note—what worked well? What should we adapt for next time?

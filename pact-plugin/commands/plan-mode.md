@@ -14,13 +14,16 @@ Create a planning Task hierarchy:
 
 ```
 1. TaskCreate: Planning task "Plan: {feature}"
-2. Analyze: Which specialists to consult?
-3. TaskCreate: Consultation task(s) — one per specialist
-4. TaskUpdate: Planning task addBlockedBy = [consultation IDs]
-5. Dispatch specialists in parallel (planning-only mode)
-6. Monitor until consultations complete
-7. Synthesize → write plan document
-8. TaskUpdate: Planning task completed, metadata.artifact = plan path
+2. TaskUpdate: Planning task status = "in_progress"
+3. Analyze: Which specialists to consult?
+4. TaskCreate: Consultation task(s) — one per specialist
+5. TaskUpdate: Consultation tasks status = "in_progress"
+6. TaskUpdate: Planning task addBlockedBy = [consultation IDs]
+7. Dispatch specialists in parallel (planning-only mode)
+8. Monitor until consultations complete
+9. TaskUpdate: Consultation tasks status = "completed" (as each completes)
+10. Synthesize → write plan document
+11. TaskUpdate: Planning task status = "completed", metadata.artifact = plan path
 ```
 
 **Example structure:**
