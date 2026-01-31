@@ -40,6 +40,13 @@ i. TaskUpdate: phase status = "completed"
 **Skipped phases**: Mark directly `completed` (no `in_progress` — no work occurs):
 `TaskUpdate(phaseTaskId, status="completed", metadata={"skipped": true, "skip_reason": "{reason}"})`
 Valid reasons: `"approved_plan_exists"`, `"plan_section_complete"`, `"requirements_explicit"`, `"existing_docs_cover_scope"`, `"trivial_change"`, or custom.
+<!-- Skip reason semantics:
+  - "approved_plan_exists": Plan exists but completeness not verified (legacy/weak)
+  - "plan_section_complete": Plan exists AND section passed completeness check (preferred)
+  - "requirements_explicit": Task description contains all needed context
+  - "existing_docs_cover_scope": docs/preparation/ or docs/architecture/ already complete
+  - "trivial_change": Change too small to warrant this phase
+-->
 
 ---
 
@@ -171,10 +178,10 @@ Before executing phases, assess which are needed based on existing context:
 
 | Phase | Run if... | Skip if... |
 |-------|-----------|------------|
-| **PREPARE** | Requirements unclear, external APIs to research, dependencies unmapped | Approved plan exists with Preparation Phase section AND section passes completeness check (all research items checked, no TBD language, no "handled during PREPARE" forward references, no unchecked questions); OR requirements explicit in task; OR existing `docs/preparation/` covers scope with no unresolved items |
-| **ARCHITECT** | New component or module, interface contracts undefined, architectural decisions required | Approved plan exists with Architecture Phase section AND section passes completeness check (all design decisions resolved, no TBD values, no "handled during ARCHITECT" forward references, no unresolved interface questions); OR following established patterns with no new components; OR `docs/architecture/` covers design with no open items |
+| **PREPARE** | Requirements unclear, external APIs to research, dependencies unmapped | Approved plan with complete Preparation section (passes completeness check below); OR requirements explicit in task; OR existing `docs/preparation/` covers scope with no unresolved items |
+| **ARCHITECT** | New component or module, interface contracts undefined, architectural decisions required | Approved plan with complete Architecture section (passes completeness check below); OR following established patterns with no new components; OR `docs/architecture/` covers design with no open items |
 | **CODE** | Always run | Never skip |
-| **TEST** | Integration/E2E tests needed, complex component interactions, security/performance verification | Trivial change (no new logic requiring tests) AND no integration boundaries crossed AND isolated change with no meaningful test scenarios |
+| **TEST** | Integration/E2E tests needed, complex component interactions, security/performance verification | Trivial change (no new logic requiring tests) AND no integration boundaries crossed AND isolated change with no meaningful test scenarios AND plan's Phase Requirements section does not mark TEST as REQUIRED (if plan exists) |
 
 **Conflict resolution**: When both "Run if" and "Skip if" criteria apply, **run the phase** (safer default). Example: A plan exists but requirements have changed—run PREPARE to validate.
 
@@ -191,10 +198,12 @@ The user can override your assessment or ask for details.
 **Incompleteness signals** (any of these means the phase is REQUIRED):
 - Unchecked checkboxes: `[ ]` items remain in the relevant plan section
 - TBD/placeholder language: "TBD", "to be determined", "placeholder", "TODO"
-- Forward references: "handled during PREPARE", "handled during ARCHITECT", "addressed in [PHASE]"
+- Forward references: "⚠️ Handled during {PHASE}" (standardized format), or informal variants like "handled during PREPARE", "deferred to ARCHITECT", "addressed in [PHASE]"
 - Unresolved questions: Items in "Open Questions > Require Further Research" that map to this phase
 - Empty or stub sections: Section header exists but content is missing or minimal
 - Explicit phase requirement: Plan's "Phase Requirements" section lists this phase as REQUIRED
+
+**Backward compatibility**: Plans created before this convention (without a "Phase Requirements" section) are evaluated using the other five signals only. The absence of a Phase Requirements section is NOT itself an incompleteness signal.
 
 **Skip justification required**: When skipping any phase, state WHY briefly:
 - `Skipping PREPARE: all 4 research items checked, no TBD language, no forward references`

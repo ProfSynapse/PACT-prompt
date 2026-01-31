@@ -284,6 +284,13 @@ If a plan already exists for this feature slug:
      - Any → BLOCKED: plan-mode (when unresolved blocking conflicts)
 -->
 
+<!-- Forward Reference Convention:
+     When deferring work to a later phase, use the standardized format:
+     "⚠️ Handled during {PHASE_NAME}" (e.g., "⚠️ Handled during PREPARE")
+     This format is detected by the orchestrator's phase-skip completeness check.
+     Do NOT use informal variants like "deferred to", "will be addressed in", etc.
+-->
+
 ## Summary
 
 {2-3 sentence overview of what will be implemented and the high-level approach}
@@ -299,6 +306,8 @@ If a plan already exists for this feature slug:
 **Effort**: {Low/Medium/High}
 
 #### Research Needed
+<!-- Use checkboxes for all research items. Check [x] when complete, leave [ ] when pending.
+     The orchestrator's skip logic checks for unchecked items to determine phase requirements. -->
 - [ ] {Research item}
 
 #### Dependencies to Map
