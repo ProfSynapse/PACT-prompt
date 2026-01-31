@@ -92,10 +92,8 @@ imPACT is for operational problem-solving. If you're questioning whether the wor
 ## Gather Context
 
 Before triaging, quickly check for existing context:
-- **Plan**: Check `docs/plans/` for related plan — scan for incompleteness signals (unchecked items, TBD language, forward references like "handled during [PHASE]")
-- **Prior phase outputs**: Check `docs/preparation/`, `docs/architecture/` — verify outputs are complete, not just present (no stub sections, no unresolved items relevant to the blocker)
-
-Incomplete prior outputs (unchecked items, TBD decisions, unfulfilled forward references) suggest the phase needs redoing. See [pact-completeness.md](../protocols/pact-completeness.md) for the full signal checklist.
+- **Plan**: Check `docs/plans/` for related plan (broader feature context)
+- **Prior phase outputs**: Check `docs/preparation/`, `docs/architecture/` for relevant artifacts
 
 This context informs whether the blocker is isolated or systemic.
 

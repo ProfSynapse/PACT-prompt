@@ -119,10 +119,6 @@ If you hit the nesting limit:
 - Use `/PACT:comPACT` for remaining work
 - Or escalate to user for guidance
 
-### Phase Skip Completeness
-
-Before skipping a mini-phase, verify that parent phase outputs explicitly cover this sub-task's scope — not just tangentially related. See [pact-completeness.md](../protocols/pact-completeness.md) for incompleteness signals.
-
 ---
 
 ## Output Conciseness

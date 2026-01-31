@@ -193,7 +193,7 @@ The user can override your assessment or ask for details.
 
 ### Phase Skip Completeness Check
 
-**Principle: Existence ≠ Completeness.** Before skipping a PACT phase, verify whether the phase's requirements have been met, and not just mentioned. See [pact-completeness.md](../protocols/pact-completeness.md) for full details.
+**Principle: Existence ≠ Completeness.** Before skipping a phase, verify the plan's content for that phase is actually complete — not just present. A plan section with "TBD" decisions, unchecked research items, or "handled during [PHASE]" forward references means the phase is still needed.
 
 ---
 

@@ -158,7 +158,6 @@ OTHER AGENTS' SCOPE: [what other agents are handling - do not touch]
 
 Work directly from this task description.
 Check docs/plans/, docs/preparation/, docs/architecture/ briefly if they exist—reference relevant context.
-Note: Existing docs provide context but do not substitute for your own analysis. If docs contain unresolved items (unchecked checkboxes, TBD language, "handled during [PHASE]" references), flag them in your handoff.
 Do not create new documentation artifacts in docs/.
 Stay within your assigned scope—do not modify files outside your boundary.
 
@@ -186,7 +185,6 @@ Use a single specialist agent only when:
 ```
 comPACT mode: Work directly from this task description.
 Check docs/plans/, docs/preparation/, docs/architecture/ briefly if they exist—reference relevant context.
-Note: Existing docs provide context but do not substitute for your own analysis. If docs contain unresolved items (unchecked checkboxes, TBD language, "handled during [PHASE]" references), flag them in your handoff.
 Do not create new documentation artifacts in docs/.
 Focus on the task at hand.
 Testing responsibilities:
@@ -263,7 +261,6 @@ During comPACT execution, if you discover the task is more complex than expected
 | Significant ambiguity/uncertainty | High (11+) | Escalate; may need PREPARE phase |
 | Architectural decisions required | High (11+) | Escalate; need ARCHITECT phase |
 | Higher risk than expected | High (11+) | Consider `/PACT:plan-mode` first |
-| Prior phase outputs incomplete | Any | Escalate to `/PACT:orchestrate` or `/PACT:imPACT`; incomplete prior phases are structural, not complexity-dependent. See [pact-completeness.md](../protocols/pact-completeness.md) for incompleteness signals |
 
 **Heuristic**: If re-assessing variety would now score Medium+ (7+), escalate.
 
