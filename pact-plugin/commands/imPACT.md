@@ -104,14 +104,13 @@ This context informs whether the blocker is isolated or systemic.
 Answer two questions:
 
 1. **Redo prior phase?** — Is the issue upstream in P→A→C→T?
-   Check not just whether the phase ran, but whether its output is **complete** for the blocked agent's needs. Prior phase outputs with TBD decisions, unchecked research items, or "handled during [PHASE]" forward references are effectively incomplete — the phase needs to be redone or augmented.
 2. **Additional agents needed?** — Do we need help beyond the blocked agent's scope/specialty?
 
 ## Outcomes
 
 | Outcome | When | Action |
 |---------|------|--------|
-| **Redo prior phase** | Issue is upstream in P→A→C→T: prior phase output is wrong, missing, OR incomplete (contains TBD decisions, unchecked items, or unfulfilled forward references relevant to the blocker) | Re-delegate to relevant agent(s) to redo or complete the prior phase |
+| **Redo prior phase** | Issue is upstream in P→A→C→T | Re-delegate to relevant agent(s) to redo the prior phase |
 | **Augment present phase** | Need help in current phase | Re-invoke blocked agent with additional context + parallel agents |
 | **Invoke rePACT** | Sub-task needs own P→A→C→T cycle | Use `/PACT:rePACT` for nested cycle |
 | **Not truly blocked** | Neither question is "Yes" | Instruct agent to continue with clarified guidance |

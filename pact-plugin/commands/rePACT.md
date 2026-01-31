@@ -165,8 +165,7 @@ Before starting, verify:
 
 For the sub-task, gather focused context:
 - Research specific to the sub-component
-- May be skipped if parent Prepare phase covered this scope AND parent preparation outputs contain no unresolved items for this sub-task (no unchecked research, no TBD language, no "handled during PREPARE" forward references)
-- When skipping, state justification: e.g., "Skipping mini-prepare: parent preparation covers OAuth2 scope, all items resolved"
+- May be skipped if parent Prepare phase covered this
 - Output: Notes integrated into parent preparation or separate `-nested` doc
 
 ### Phase 2: Mini-Architect (if needed)
@@ -174,8 +173,7 @@ For the sub-task, gather focused context:
 Design the sub-component:
 - Component design within the larger architecture
 - Interface contracts with parent components
-- May be skipped for simple sub-tasks where parent architecture covers the design AND no unresolved design decisions exist for this sub-component (no TBD interfaces, no open questions about this sub-task's boundaries)
-- When skipping, state justification: e.g., "Skipping mini-architect: parent design covers form validation component, interfaces defined"
+- May be skipped for simple sub-tasks
 - Output: Design notes in `-nested` architecture doc or inline
 
 ### Phase 3: Mini-Code
@@ -261,13 +259,10 @@ Orchestrator assesses scope:
 ```
 
 If parent already has:
-- Validation requirements with all items resolved and no TBD language (skip mini-prepare)
-- Component design with interfaces defined and no unresolved decisions (skip mini-architect)
+- Validation requirements (skip mini-prepare)
+- Component design (skip mini-architect)
 
-If parent has validation requirements but with unchecked items or "handled during PREPARE" language:
-- Run mini-prepare to complete the remaining research
-
-Then run mini-code and mini-test.
+Then just run mini-code and mini-test.
 
 ---
 
