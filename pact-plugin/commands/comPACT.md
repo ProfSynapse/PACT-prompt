@@ -263,7 +263,7 @@ During comPACT execution, if you discover the task is more complex than expected
 | Significant ambiguity/uncertainty | High (11+) | Escalate; may need PREPARE phase |
 | Architectural decisions required | High (11+) | Escalate; need ARCHITECT phase |
 | Higher risk than expected | High (11+) | Consider `/PACT:plan-mode` first |
-| Prior phase outputs incomplete | Medium+ (7+) | Escalate; incomplete preparation/architecture needs full orchestrate |
+| Prior phase outputs incomplete | Any | Escalate to `/PACT:orchestrate` or `/PACT:imPACT`; incomplete prior phases are structural, not complexity-dependent |
 
 **Heuristic**: If re-assessing variety would now score Medium+ (7+), escalate.
 

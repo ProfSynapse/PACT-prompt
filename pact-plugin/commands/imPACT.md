@@ -99,7 +99,9 @@ Before triaging, quickly check for existing context:
 - `[ ]` unchecked items related to the blocker's domain
 - TBD/placeholder decisions that the blocked agent needed
 - "Handled during [PHASE]" forward references that were never fulfilled
+- Unresolved questions in the plan's Open Questions section mapping to the blocker's domain
 - Empty or stub sections in docs that should have provided context
+- Plan's Phase Requirements section explicitly marks the prior phase as REQUIRED (if plan exists)
 
 This context informs whether the blocker is isolated or systemic.
 
@@ -115,8 +117,7 @@ Answer two questions:
 
 | Outcome | When | Action |
 |---------|------|--------|
-| **Redo prior phase** | Issue is upstream in P→A→C→T | Re-delegate to relevant agent(s) to redo the prior phase |
-| **Redo prior phase (incomplete)** | Prior phase output exists but is incomplete — contains TBD, unchecked items, or unfulfilled forward references relevant to the blocker | Re-delegate to fill the gaps, then retry current phase |
+| **Redo prior phase** | Issue is upstream in P→A→C→T: prior phase output is wrong, missing, OR incomplete (contains TBD decisions, unchecked items, or unfulfilled forward references relevant to the blocker) | Re-delegate to relevant agent(s) to redo or complete the prior phase |
 | **Augment present phase** | Need help in current phase | Re-invoke blocked agent with additional context + parallel agents |
 | **Invoke rePACT** | Sub-task needs own P→A→C→T cycle | Use `/PACT:rePACT` for nested cycle |
 | **Not truly blocked** | Neither question is "Yes" | Instruct agent to continue with clarified guidance |
