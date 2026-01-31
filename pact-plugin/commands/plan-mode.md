@@ -213,7 +213,7 @@ After collecting all specialist outputs, use extended thinking to synthesize:
    - Create step-by-step implementation plan
    - Map steps to specialists
    - Identify the commit sequence
-   - Populate "Phase Requirements" section based on completeness analysis: check each phase's plan section for unchecked items, TBD language, forward references, and unresolved questions
+   - Populate "Phase Requirements" section based on completeness analysis: check each phase's plan section for the 6 incompleteness signals defined in [pact-completeness.md](../protocols/pact-completeness.md)
 
 6. **Risk Assessment**
    - Aggregate risks from all specialists

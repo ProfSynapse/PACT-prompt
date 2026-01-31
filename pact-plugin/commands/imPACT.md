@@ -95,13 +95,7 @@ Before triaging, quickly check for existing context:
 - **Plan**: Check `docs/plans/` for related plan — scan for incompleteness signals (unchecked items, TBD language, forward references like "handled during [PHASE]")
 - **Prior phase outputs**: Check `docs/preparation/`, `docs/architecture/` — verify outputs are complete, not just present (no stub sections, no unresolved items relevant to the blocker)
 
-**Completeness signals to check**:
-- `[ ]` unchecked items related to the blocker's domain
-- TBD/placeholder decisions that the blocked agent needed
-- "Handled during [PHASE]" forward references that were never fulfilled
-- Unresolved questions in the plan's Open Questions section mapping to the blocker's domain
-- Empty or stub sections in docs that should have provided context
-- Plan's Phase Requirements section explicitly marks the prior phase as REQUIRED (if plan exists)
+Check prior phase outputs for completeness signals — incomplete outputs (unchecked items, TBD decisions, unfulfilled forward references) suggest the phase needs to be redone. See [pact-completeness.md](../protocols/pact-completeness.md) for the full 6-signal checklist.
 
 This context informs whether the blocker is isolated or systemic.
 

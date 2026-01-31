@@ -1,8 +1,8 @@
 #!/bin/bash
 # scripts/verify-completeness-signals.sh
-# Verifies that incompleteness signal lists stay consistent across all
-# command files that reference them. The canonical list lives in
-# orchestrate.md's "Phase Skip Completeness Check" section.
+# Verifies that the completeness protocol is canonical and that all command
+# files reference it. The canonical signal list lives in
+# pact-plugin/protocols/pact-completeness.md (single source of truth).
 
 set -e
 
@@ -10,6 +10,7 @@ echo "=== Completeness Signal Verification ==="
 echo ""
 
 COMMANDS_DIR="pact-plugin/commands"
+PROTOCOL_FILE="pact-plugin/protocols/pact-completeness.md"
 
 if [ ! -d "$COMMANDS_DIR" ]; then
     echo "ERROR: Commands directory $COMMANDS_DIR not found"
@@ -26,15 +27,13 @@ check_keyword() {
     local name="$2"
     local keyword="$3"
 
-    local filepath="$COMMANDS_DIR/$file"
-
-    if [ ! -f "$filepath" ]; then
-        echo "  ✗ $name: FILE NOT FOUND ($filepath)"
+    if [ ! -f "$file" ]; then
+        echo "  ✗ $name: FILE NOT FOUND ($file)"
         FAIL=$((FAIL + 1))
         return
     fi
 
-    if grep -qi "$keyword" "$filepath"; then
+    if grep -qi "$keyword" "$file"; then
         echo "  ✓ $name"
         PASS=$((PASS + 1))
     else
@@ -51,17 +50,15 @@ check_all_keywords() {
     shift 2
     local keywords=("$@")
 
-    local filepath="$COMMANDS_DIR/$file"
-
-    if [ ! -f "$filepath" ]; then
-        echo "  ✗ $name: FILE NOT FOUND ($filepath)"
+    if [ ! -f "$file" ]; then
+        echo "  ✗ $name: FILE NOT FOUND ($file)"
         FAIL=$((FAIL + 1))
         return
     fi
 
     local missing=()
     for kw in "${keywords[@]}"; do
-        if ! grep -qi "$kw" "$filepath"; then
+        if ! grep -qi "$kw" "$file"; then
             missing+=("$kw")
         fi
     done
@@ -78,63 +75,66 @@ check_all_keywords() {
     fi
 }
 
-# ---- orchestrate.md (canonical signal list) ----
-echo "orchestrate.md (canonical):"
-check_all_keywords "orchestrate.md" "Canonical signal list" \
+# ---- Protocol file (canonical source of truth) ----
+echo "pact-completeness.md (canonical protocol):"
+check_keyword "$PROTOCOL_FILE" "Protocol file exists" \
+    "Phase Skip Completeness"
+check_all_keywords "$PROTOCOL_FILE" "All 6 canonical signals" \
     "unchecked" \
     "TBD" \
     "forward reference" \
     "unresolved question" \
     "stub" \
     "Phase Requirements"
-check_keyword "orchestrate.md" "Phase Skip Completeness Check section" \
-    "Phase Skip Completeness Check"
-check_keyword "orchestrate.md" "Existence != Completeness principle" \
+check_keyword "$PROTOCOL_FILE" "Core principle present" \
     "Existence"
+check_keyword "$PROTOCOL_FILE" "Backward compatibility clause" \
+    "backward compatibility"
+echo ""
+
+# ---- orchestrate.md (links to protocol) ----
+echo "orchestrate.md:"
+check_keyword "$COMMANDS_DIR/orchestrate.md" "Phase Skip Completeness Check section" \
+    "Phase Skip Completeness Check"
+check_keyword "$COMMANDS_DIR/orchestrate.md" "Existence != Completeness principle" \
+    "Existence"
+check_keyword "$COMMANDS_DIR/orchestrate.md" "Links to completeness protocol" \
+    "pact-completeness.md"
 echo ""
 
 # ---- rePACT.md ----
 echo "rePACT.md:"
-check_all_keywords "rePACT.md" "Core signal keywords" \
-    "unchecked" \
-    "TBD" \
-    "forward reference" \
-    "unresolved" \
-    "Phase Requirements"
-check_keyword "rePACT.md" "Existence != Completeness principle" \
-    "Existence"
+check_keyword "$COMMANDS_DIR/rePACT.md" "Phase Skip Completeness section" \
+    "Phase Skip Completeness"
+check_keyword "$COMMANDS_DIR/rePACT.md" "Links to completeness protocol" \
+    "pact-completeness.md"
 echo ""
 
 # ---- imPACT.md ----
 echo "imPACT.md:"
-check_all_keywords "imPACT.md" "Core signal keywords" \
-    "unchecked" \
-    "TBD" \
-    "handled during" \
-    "stub" \
-    "unresolved" \
-    "Phase Requirements"
-check_keyword "imPACT.md" "Completeness signals section" \
-    "Completeness signals"
+check_keyword "$COMMANDS_DIR/imPACT.md" "Completeness reference" \
+    "completeness"
+check_keyword "$COMMANDS_DIR/imPACT.md" "Links to completeness protocol" \
+    "pact-completeness.md"
 echo ""
 
 # ---- comPACT.md ----
 echo "comPACT.md:"
-check_all_keywords "comPACT.md" "Inline signal references" \
-    "unchecked" \
-    "TBD" \
-    "handled during"
+check_keyword "$COMMANDS_DIR/comPACT.md" "Completeness reference" \
+    "completeness"
+check_keyword "$COMMANDS_DIR/comPACT.md" "Links to completeness protocol" \
+    "pact-completeness.md"
 echo ""
 
 # ---- plan-mode.md ----
 echo "plan-mode.md:"
-check_keyword "plan-mode.md" "Phase Requirements section template" \
+check_keyword "$COMMANDS_DIR/plan-mode.md" "Phase Requirements section template" \
     "Phase Requirements"
-check_keyword "plan-mode.md" "TBD convention comment" \
+check_keyword "$COMMANDS_DIR/plan-mode.md" "Links to completeness protocol" \
+    "pact-completeness.md"
+check_keyword "$COMMANDS_DIR/plan-mode.md" "TBD convention comment" \
     "TBD"
-check_keyword "plan-mode.md" "Forward reference checking" \
-    "forward reference"
-check_keyword "plan-mode.md" "Unchecked items checking" \
+check_keyword "$COMMANDS_DIR/plan-mode.md" "Unchecked items checking" \
     "unchecked"
 echo ""
 

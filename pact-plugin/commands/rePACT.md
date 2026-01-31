@@ -121,13 +121,7 @@ If you hit the nesting limit:
 
 ### Phase Skip Completeness
 
-**Existence ≠ Completeness.** Parent phase outputs existing does NOT mean the sub-task's scope is fully covered. Before skipping a mini-phase, verify:
-- No unchecked items (`[ ]`) related to this sub-task's scope
-- No TBD/placeholder language for this sub-component
-- No forward references ("handled during [PHASE]") pointing to the mini-phase being considered for skip
-- No unresolved questions in the plan's Open Questions section mapping to this sub-task
-- Parent outputs explicitly cover this sub-task (not just tangentially related)
-- Plan's Phase Requirements section does not mark the relevant phase as REQUIRED (if plan exists)
+Before skipping a mini-phase, apply completeness checks scoped to this sub-task. Parent phase outputs existing does NOT mean the sub-task's scope is fully covered — parent outputs must explicitly cover this sub-task (not just tangentially related). See [pact-completeness.md](../protocols/pact-completeness.md) for the 6 incompleteness signals.
 
 ---
 

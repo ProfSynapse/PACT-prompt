@@ -193,22 +193,7 @@ The user can override your assessment or ask for details.
 
 ### Phase Skip Completeness Check
 
-**Principle: Existence ≠ Completeness.** A section or document existing does NOT mean the work is done. Before skipping any phase, verify POSITIVE evidence of completeness.
-
-**Incompleteness signals** (any of these means the phase is REQUIRED):
-- Unchecked checkboxes: `[ ]` items remain in the relevant plan section
-- TBD/placeholder language: "TBD", "to be determined", "placeholder", "TODO"
-- Forward references: "⚠️ Handled during {PHASE}" (standardized format), or informal variants like "handled during PREPARE", "deferred to ARCHITECT", "addressed in [PHASE]"
-- Unresolved questions: Items in "Open Questions > Require Further Research" that map to this phase
-- Empty or stub sections: Section header exists but content is missing or minimal
-- Explicit phase requirement: Plan's "Phase Requirements" section lists this phase as REQUIRED
-
-**Backward compatibility**: Plans created before this convention (without a "Phase Requirements" section) are evaluated using the other five signals only. The absence of a Phase Requirements section is NOT itself an incompleteness signal.
-
-**Skip justification required**: When skipping any phase, state WHY briefly:
-- `Skipping PREPARE: all 4 research items checked, no TBD language, no forward references`
-- `Skipping ARCHITECT: plan Architecture section complete, all decisions resolved`
-- `Skipping PREPARE (approved plan exists)` — too vague, does not confirm completeness
+**Principle: Existence does not equal Completeness.** Before skipping any phase, verify positive evidence of completeness against the 6 incompleteness signals. See [pact-completeness.md](../protocols/pact-completeness.md) for the full signal list, backward compatibility rules, and skip justification examples.
 
 ---
 
