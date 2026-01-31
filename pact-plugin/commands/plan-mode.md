@@ -213,6 +213,7 @@ After collecting all specialist outputs, use extended thinking to synthesize:
    - Create step-by-step implementation plan
    - Map steps to specialists
    - Identify the commit sequence
+   - Populate "Phase Requirements" section based on completeness analysis: check each phase's plan section for unchecked items, TBD language, forward references, and unresolved questions
 
 6. **Risk Assessment**
    - Aggregate risks from all specialists
@@ -320,6 +321,8 @@ If a plan already exists for this feature slug:
 {Description of architectural approach}
 
 #### Key Decisions
+<!-- Use "TBD" explicitly for unresolved decisions. Resolved decisions should have concrete values.
+     The orchestrator's skip logic checks for TBD language to determine phase requirements. -->
 | Decision | Options | Recommendation | Rationale |
 |----------|---------|----------------|-----------|
 | {Decision} | {A, B, C} | {B} | {Why} |
@@ -424,6 +427,19 @@ If a plan already exists for this feature slug:
 - **Estimated Files**: {N} modified, {M} new
 - **Specialists Required**: {List}
 - **External Dependencies**: {Yes/No — details}
+
+---
+
+## Phase Requirements
+
+> Auto-populated based on plan content. The orchestrator uses this section to determine which phases to run.
+
+| Phase | Required? | Rationale |
+|-------|-----------|-----------|
+| PREPARE | {Yes/No} | {e.g., "Yes — 3 unchecked research items remain" or "No — all research complete, no TBD items"} |
+| ARCHITECT | {Yes/No} | {e.g., "Yes — interface contracts marked TBD" or "No — all design decisions resolved"} |
+| CODE | Yes | Always required |
+| TEST | {Yes/No} | {e.g., "Yes — integration tests needed" or "No — trivial change, no test scenarios"} |
 
 ---
 
