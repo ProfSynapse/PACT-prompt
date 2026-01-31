@@ -443,6 +443,9 @@ If a plan already exists for this feature slug:
 
 > Auto-populated based on plan content. The orchestrator uses this section to determine which phases to run.
 
+<!-- Re-derive this table whenever plan content changes after initial synthesis (e.g., user decisions in Phase 4).
+     The "any signal = REQUIRED" default is conservative, but stale rationale text can mislead the orchestrator. -->
+
 | Phase | Required? | Rationale |
 |-------|-----------|-----------|
 | PREPARE | {Yes/No} | {e.g., "Yes — 3 unchecked research items remain" or "No — all research complete, no TBD items"} |
