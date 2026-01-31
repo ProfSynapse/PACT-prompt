@@ -111,7 +111,9 @@ check_all_keywords "imPACT.md" "Core signal keywords" \
     "unchecked" \
     "TBD" \
     "handled during" \
-    "stub"
+    "stub" \
+    "unresolved" \
+    "Phase Requirements"
 check_keyword "imPACT.md" "Completeness signals section" \
     "Completeness signals"
 echo ""
@@ -134,6 +136,45 @@ check_keyword "plan-mode.md" "Forward reference checking" \
     "forward reference"
 check_keyword "plan-mode.md" "Unchecked items checking" \
     "unchecked"
+echo ""
+
+# ---- Meta-check: file list drift ----
+# Ensures this script covers all workflow command files. If a new workflow
+# command is added to pact-plugin/commands/, this check will catch it.
+echo "Meta: command file coverage:"
+
+# Workflow command files that this script explicitly checks above.
+CHECKED_FILES=("orchestrate.md" "rePACT.md" "imPACT.md" "comPACT.md" "plan-mode.md")
+
+# Utility commands that do NOT have phase-skip / completeness logic.
+# If a new command is added, decide whether it belongs here or in CHECKED_FILES.
+EXCLUDED_FILES=("peer-review.md" "pin-memory.md" "wrap-up.md")
+
+# Build a combined list of known files for quick lookup
+declare -A KNOWN_FILES
+for f in "${CHECKED_FILES[@]}" "${EXCLUDED_FILES[@]}"; do
+    KNOWN_FILES["$f"]=1
+done
+
+# Find all .md files in the commands directory and check for uncovered ones
+UNCOVERED=()
+for filepath in "$COMMANDS_DIR"/*.md; do
+    filename="$(basename "$filepath")"
+    if [ -z "${KNOWN_FILES[$filename]+x}" ]; then
+        UNCOVERED+=("$filename")
+    fi
+done
+
+if [ ${#UNCOVERED[@]} -eq 0 ]; then
+    echo "  ✓ All command files accounted for (${#CHECKED_FILES[@]} checked, ${#EXCLUDED_FILES[@]} excluded)"
+    PASS=$((PASS + 1))
+else
+    echo "  ✗ Uncovered command files found — add to CHECKED_FILES or EXCLUDED_FILES:"
+    for f in "${UNCOVERED[@]}"; do
+        echo "      - $f"
+    done
+    FAIL=$((FAIL + 1))
+fi
 echo ""
 
 # ---- Summary ----
