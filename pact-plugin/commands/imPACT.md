@@ -95,7 +95,7 @@ Before triaging, quickly check for existing context:
 - **Plan**: Check `docs/plans/` for related plan — scan for incompleteness signals (unchecked items, TBD language, forward references like "handled during [PHASE]")
 - **Prior phase outputs**: Check `docs/preparation/`, `docs/architecture/` — verify outputs are complete, not just present (no stub sections, no unresolved items relevant to the blocker)
 
-Check prior phase outputs for completeness signals — incomplete outputs (unchecked items, TBD decisions, unfulfilled forward references) suggest the phase needs to be redone. See [pact-completeness.md](../protocols/pact-completeness.md) for the full 6-signal checklist.
+Incomplete prior outputs (unchecked items, TBD decisions, unfulfilled forward references) suggest the phase needs redoing. See [pact-completeness.md](../protocols/pact-completeness.md) for the full signal checklist.
 
 This context informs whether the blocker is isolated or systemic.
 

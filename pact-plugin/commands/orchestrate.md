@@ -193,7 +193,7 @@ The user can override your assessment or ask for details.
 
 ### Phase Skip Completeness Check
 
-**Principle: Existence does not equal Completeness.** Before skipping any phase, verify positive evidence of completeness against the 6 incompleteness signals. See [pact-completeness.md](../protocols/pact-completeness.md) for the full signal list, backward compatibility rules, and skip justification examples.
+**Principle: Existence ≠ Completeness.** Before skipping a PACT phase, verify whether the phase's requirements have been met, and not just mentioned. See [pact-completeness.md](../protocols/pact-completeness.md) for full details.
 
 ---
 

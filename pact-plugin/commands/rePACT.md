@@ -121,7 +121,7 @@ If you hit the nesting limit:
 
 ### Phase Skip Completeness
 
-Before skipping a mini-phase, apply completeness checks scoped to this sub-task. Parent phase outputs existing does NOT mean the sub-task's scope is fully covered — parent outputs must explicitly cover this sub-task (not just tangentially related). See [pact-completeness.md](../protocols/pact-completeness.md) for the 6 incompleteness signals.
+Before skipping a mini-phase, verify that parent phase outputs explicitly cover this sub-task's scope — not just tangentially related. See [pact-completeness.md](../protocols/pact-completeness.md) for incompleteness signals.
 
 ---
 
