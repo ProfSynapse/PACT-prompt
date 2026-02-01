@@ -512,6 +512,7 @@ After saving the plan:
    - Repeat until no "Require User Decision" items remain
 
 4. Once all decision-requiring questions are resolved:
+   - Re-derive the Phase Requirements table based on updated plan content (incompleteness signals may have changed after user decisions)
    - Highlight any remaining **"Require Further Research"** items (these are addressed during the Prepare phase of implementation)
    - Explain that after approval, they can run `/PACT:orchestrate` to implement
 
