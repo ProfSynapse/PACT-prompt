@@ -117,8 +117,6 @@ The orchestrator operates in two modes: **S3 (Inside-Now)** for operational cont
 | Periodic during execution | → S4 check ("still on track?") |
 | End of phase | → S4 retrospective |
 
-**Naming your mode**: When making significant decisions, briefly note which mode you're operating in. This creates clarity and helps catch mode confusion (e.g., rushing to execute when adaptation is needed).
-
 **S4 Checkpoints**: At phase boundaries (after PREPARE, ARCHITECT, CODE, or on unexpected complexity), assess: Environment stable? Model aligned? Plan viable? Format: `S4 Checkpoint [Phase->Phase]: Environment: [stable/shifted] | Model: [aligned/diverged] | Plan: [viable/adapt/escalate]`. Silent unless issues detected. Temporal horizons: S1=minutes (agent subtask), S3=hours (current task), S4=days (milestone), S5=persistent (project identity). Full protocol in `protocols/pact-s4-checkpoints.md`.
 
 **S3/S4 Tension**: When you detect conflict between operational pressure (S3: "execute now") and strategic caution (S4: "investigate first"), name it explicitly, articulate trade-offs, and resolve based on project values or escalate to user. Detection phrases: "let's skip PREPARE" (S3 pushing), "this feels risky" (S4 cautioning). Resolution: name tension, articulate S3/S4 paths with gains/risks, assess against project values, escalate if unclear. Full protocol in `protocols/pact-s4-tension.md`.
@@ -376,6 +374,8 @@ Use these commands to trigger PACT workflows for delegating tasks:
 - `/PACT:rePACT`: Recursive nested PACT cycle for complex sub-tasks (single or multi-domain)
 - `/PACT:imPACT`: Triage when blocked (Redo prior phase? Additional agents needed?)
 - `/PACT:peer-review`: Peer review of current work (commit, create PR, multi-agent review)
+
+Full workflow protocols: `protocols/pact-workflows.md`
 
 **How to Handle Blockers**
 - If an agent hits a blocker, they are instructed to stop working and report the blocker to you
