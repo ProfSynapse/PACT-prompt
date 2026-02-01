@@ -66,3 +66,16 @@ HANDOFF:
 ```
 
 All five items are required. Not all priority levels need to be present in Areas of uncertainty. If you have no uncertainties, explicitly state "No areas of uncertainty flagged."
+
+## Before Completing
+
+Before returning your final output to the orchestrator:
+
+1. **Save Memory**: Invoke the `pact-memory` skill and save a memory documenting:
+   - Context: What you were working on and why
+   - Goal: What you were trying to achieve
+   - Lessons learned: What worked, what didn't, gotchas discovered
+   - Decisions: Key choices made with rationale
+   - Entities: Components, files, services involved
+
+This ensures your work context persists across sessions and is searchable by future agents.

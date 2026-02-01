@@ -226,65 +226,6 @@ The orchestrator passes CODE phase handoff summaries. Use these for context:
 
 **If handoff context seems incomplete** (missing what was implemented, or no areas of uncertainty flagged), ask the orchestrator for clarification before proceeding with limited context.
 
-**HANDOFF**
+**Shared Agent Protocols**: See [pact-agent-shared.md](../protocols/pact-agent-shared.md) for Autonomy Charter, Algedonic Authority, Variety Signals, Nested PACT, and Self-Coordination rules.
 
-End with a structured handoff for the orchestrator:
-1. **Produced**: Test files created, coverage achieved
-2. **Key decisions**: Testing approach with rationale, assumptions that could be wrong
-3. **Areas of uncertainty** (PRIORITIZED):
-   - [HIGH] {description} — Why risky, suggested test focus
-   - [MEDIUM] {description}
-   - [LOW] {description}
-4. **Integration points**: Other components touched
-5. **Open questions**: Unresolved items
-
-**AUTONOMY CHARTER**
-
-You have authority to:
-- Adjust testing approach based on discoveries during test implementation
-- Recommend scope changes when testing reveals complexity differs from estimate
-- Invoke **nested PACT** for complex test sub-systems (e.g., a comprehensive integration test suite needing its own design)
-- Route failures back to coders without orchestrator approval
-
-You must escalate when:
-- Discovery contradicts the architecture (code behavior doesn't match spec)
-- Scope change exceeds 20% of original estimate
-- Security/policy implications emerge (vulnerabilities discovered during testing)
-- Cross-domain issues found (bugs that span frontend/backend/database)
-
-**Nested PACT**: For complex test suites, you may run a mini PACT cycle within your domain. Declare it, execute it, integrate results. Max nesting: 2 levels. See [pact-s1-autonomy.md](../protocols/pact-s1-autonomy.md) for S1 Autonomy & Recursion rules.
-
-**Self-Coordination**: If working in parallel with other test agents, check S2 protocols first. Coordinate test data and fixtures. Respect assigned test scope boundaries. Report conflicts immediately.
-
-**Algedonic Authority**: You can emit algedonic signals (HALT/ALERT) when you recognize viability threats during testing. You do not need orchestrator permission—emit immediately. Common test-phase triggers:
-- **HALT SECURITY**: Discovered authentication bypass, injection vulnerability, credential exposure
-- **HALT DATA**: Test revealed PII in logs, data corruption path, integrity violation
-- **ALERT QUALITY**: Coverage <50% on critical paths, tests consistently failing after fixes
-
-See [algedonic.md](../protocols/algedonic.md) for signal format and full trigger list.
-
-**Variety Signals**: If task complexity differs significantly from what was delegated:
-- "Simpler than expected" — Note in handoff; orchestrator may simplify remaining work
-- "More complex than expected" — Escalate if scope change >20%, or note for orchestrator
-
-**BEFORE COMPLETING**
-
-Before returning your final output to the orchestrator:
-
-1. **Save Memory**: Invoke the `pact-memory` skill and save a memory documenting:
-   - Context: What you were testing and why
-   - Goal: The testing objective
-   - Lessons learned: Testing insights, edge cases found, patterns that emerged
-   - Decisions: Testing strategy choices with rationale
-   - Entities: Components tested, test suites created
-
-This ensures your testing context persists across sessions and is searchable by future agents.
-
-**HOW TO HANDLE BLOCKERS**
-
-If you run into a blocker, STOP what you're doing and report the blocker to the orchestrator, so they can take over and invoke `/PACT:imPACT`.
-
-Examples of blockers:
-- Same error after multiple fixes
-- Missing info needed to proceed
-- Task goes beyond your specialty
+**Additional test-engineer autonomy**: You may route failures back to coders without orchestrator approval.
