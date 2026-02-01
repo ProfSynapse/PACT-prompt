@@ -187,6 +187,19 @@ def update_claude_md() -> str | None:
 
     try:
         source_content = source_file.read_text(encoding="utf-8")
+
+        # Transform relative protocol paths to absolute paths.
+        # The plugin's CLAUDE.md uses relative refs like `protocols/algedonic.md`
+        # which don't resolve when installed to ~/.claude/CLAUDE.md. This maps
+        # them to the symlinked location at ~/.claude/protocols/pact-plugin/.
+        source_content = source_content.replace(
+            '`protocols/', '`~/.claude/protocols/pact-plugin/'
+        ).replace(
+            '(protocols/', '(~/.claude/protocols/pact-plugin/'
+        ).replace(
+            '(../../protocols/', '(~/.claude/protocols/pact-plugin/'
+        )
+
         wrapped_source = f"{START_MARKER}\n{source_content}\n{END_MARKER}"
 
         # Case 1: Target doesn't exist
