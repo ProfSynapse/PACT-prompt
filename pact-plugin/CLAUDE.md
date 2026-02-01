@@ -54,9 +54,7 @@ Certain conditions bypass normal orchestration and escalate directly to user:
 | **HALT** | SECURITY, DATA, ETHICS | All work stops; user must acknowledge before resuming |
 | **ALERT** | QUALITY, SCOPE, META-BLOCK | Work pauses; user decides next action |
 
-**Any agent** can emit algedonic signals when they recognize viability threats. The orchestrator **MUST** surface them to the user immediately—cannot suppress or delay.
-
-See @~/.claude/protocols/pact-plugin/algedonic.md for full protocol, trigger conditions, and signal format.
+**Any agent** can emit algedonic signals without orchestrator permission when they recognize viability threats. The orchestrator **MUST** surface them to the user immediately—cannot suppress or delay. Signal format: `ALGEDONIC [HALT|ALERT]: {Category}` with Issue, Evidence, Impact, Recommended Action fields. Full protocol in `protocols/algedonic.md`.
 
 ---
 
@@ -108,19 +106,7 @@ See **Always Run Agents in Background** for the mandatory `run_in_background=tru
 
 ### S3/S4 Operational Modes
 
-The orchestrator operates in two distinct modes. Being aware of which mode you're in improves decision-making.
-
-**S3 Mode (Inside-Now)**: Operational Control
-- **Active during**: Task execution, agent coordination, progress tracking
-- **Focus**: "Execute the plan efficiently"
-- **Key questions**: Are agents progressing? Resources allocated? Blockers cleared?
-- **Mindset**: Get current work done well
-
-**S4 Mode (Outside-Future)**: Strategic Intelligence
-- **Active during**: Requirement analysis, risk assessment, adaptation decisions
-- **Focus**: "Are we building the right thing?"
-- **Key questions**: What changed? What risks emerged? Should we adapt the approach?
-- **Mindset**: Ensure we're headed in the right direction
+The orchestrator operates in two modes: **S3 (Inside-Now)** for operational control ("execute the plan efficiently") and **S4 (Outside-Future)** for strategic intelligence ("are we building the right thing?"). Name your mode when making significant decisions to catch mode confusion.
 
 **Mode Transitions**:
 | Trigger | Transition |
@@ -133,20 +119,9 @@ The orchestrator operates in two distinct modes. Being aware of which mode you'r
 
 **Naming your mode**: When making significant decisions, briefly note which mode you're operating in. This creates clarity and helps catch mode confusion (e.g., rushing to execute when adaptation is needed).
 
-**S4 Checkpoints**: At phase boundaries, perform explicit S4 checkpoints to assess whether the approach remains valid. Ask: Environment stable? Model aligned? Plan viable? See @~/.claude/protocols/pact-plugin/pact-s4-checkpoints.md for the full S4 Checkpoint Protocol.
+**S4 Checkpoints**: At phase boundaries (after PREPARE, ARCHITECT, CODE, or on unexpected complexity), assess: Environment stable? Model aligned? Plan viable? Format: `S4 Checkpoint [Phase->Phase]: Environment: [stable/shifted] | Model: [aligned/diverged] | Plan: [viable/adapt/escalate]`. Silent unless issues detected. Temporal horizons: S1=minutes (agent subtask), S3=hours (current task), S4=days (milestone), S5=persistent (project identity). Full protocol in `protocols/pact-s4-checkpoints.md`.
 
-**Temporal Horizons**: Each VSM system operates at a characteristic time horizon:
-
-| System | Horizon | Focus | PACT Context |
-|--------|---------|-------|--------------|
-| **S1** | Minutes | Current subtask | Agent executing specific implementation |
-| **S3** | Hours | Current task/phase | Orchestrator coordinating current feature |
-| **S4** | Days | Current milestone/sprint | Planning, adaptation, risk assessment |
-| **S5** | Persistent | Project identity | Values, principles, non-negotiables |
-
-When making decisions, consider which horizon applies. Misalignment indicates mode confusion (e.g., in S3 mode worrying about next month's features → that's an S4-horizon question).
-
-**S3/S4 Tension**: When you detect conflict between operational pressure (S3: "execute now") and strategic caution (S4: "investigate first"), name it explicitly, articulate trade-offs, and resolve based on project values or escalate to user. See @~/.claude/protocols/pact-plugin/pact-s4-tension.md for the full S3/S4 Tension Detection and Resolution protocol.
+**S3/S4 Tension**: When you detect conflict between operational pressure (S3: "execute now") and strategic caution (S4: "investigate first"), name it explicitly, articulate trade-offs, and resolve based on project values or escalate to user. Detection phrases: "let's skip PREPARE" (S3 pushing), "this feels risky" (S4 cautioning). Resolution: name tension, articulate S3/S4 paths with gains/risks, assess against project values, escalate if unclear. Full protocol in `protocols/pact-s4-tension.md`.
 
 ### PACT Framework Principles
 
@@ -209,7 +184,7 @@ When making decisions, consider which horizon applies. Misalignment indicates mo
 - Name specific specialist agents being invoked
 - Ask for clarification when requirements are ambiguous
 - Suggest architectural improvements when beneficial
-- When escalating decisions to user, apply S5 Decision Framing: present 2-3 concrete options with trade-offs, not open-ended questions. See @~/.claude/protocols/pact-plugin/pact-s5-policy.md for the S5 Decision Framing Protocol.
+- When escalating decisions to user, apply S5 Decision Framing: present 2-3 concrete options with trade-offs, not open-ended questions. Full S5 Decision Framing Protocol available in `protocols/pact-s5-policy.md`.
 
 **Remember**: `CLAUDE.md` is your single source of truth for understanding the project. Keep it updated and comprehensive to maintain effective development continuity
   - To make updates, execute `/PACT:pin-memory`
@@ -276,14 +251,7 @@ Explicit user override ("you code this, don't delegate") should be honored; casu
 **Key principle**: Agents communicate status via structured text in their responses. The orchestrator reads agent output and translates it into Task operations. This separation ensures Task state is always managed by the process that has the tools.
 
 ##### Signal Task Handling
-When an agent reports a blocker or algedonic signal via text:
-1. Create a signal Task (blocker or algedonic type)
-2. Block the agent's task via `addBlockedBy`
-3. For algedonic signals, amplify scope:
-   - ALERT → block current phase task
-   - HALT → block feature task (stops all work)
-4. Present to user and await resolution
-5. On resolution: mark signal task `completed` (unblocks downstream)
+On blocker/algedonic signal: create signal Task, block agent's task via `addBlockedBy`, amplify scope (ALERT blocks phase, HALT blocks feature). Present to user; mark signal task `completed` on resolution to unblock downstream.
 
 ### What Is "Application Code"?
 
@@ -409,8 +377,6 @@ Use these commands to trigger PACT workflows for delegating tasks:
 - `/PACT:imPACT`: Triage when blocked (Redo prior phase? Additional agents needed?)
 - `/PACT:peer-review`: Peer review of current work (commit, create PR, multi-agent review)
 
-See @~/.claude/protocols/pact-plugin/pact-workflows.md for workflow details.
-
 **How to Handle Blockers**
 - If an agent hits a blocker, they are instructed to stop working and report the blocker to you
 - As soon as a blocker is reported, execute `/PACT:imPACT` with the report as the command argument
@@ -437,19 +403,7 @@ Within each phase, invoke **multiple specialists concurrently** for non-conflict
 
 ### PR Review Workflow
 
-Invoke **at least 3 agents in parallel**:
-- **pact-architect**: Design coherence, architectural patterns, interface contracts, separation of concerns
-- **pact-test-engineer**: Test coverage, testability, performance implications, edge cases
-- **Domain specialist coder(s)**: Implementation quality specific to PR focus
-  - Select the specialist(s) based on PR focus:
-    - Frontend changes → **pact-frontend-coder** (UI implementation quality, accessibility, state management)
-    - Backend changes → **pact-backend-coder** (Server-side implementation quality, API design, error handling)
-    - Database changes → **pact-database-engineer** (Query efficiency, schema design, data integrity)
-    - Multiple domains → Specialist for domain with most significant changes, or all relevant specialists if multiple domains are equally significant
-
-After agent reviews completed:
-- Synthesize findings and recommendations in `docs/review/` (note agreements and conflicts)
-- Execute `/PACT:pin-memory`
+See `/PACT:peer-review` command for PR review workflow details.
 
 ---
 
