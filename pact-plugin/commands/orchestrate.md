@@ -181,7 +181,7 @@ Before executing phases, assess which are needed based on existing context:
 | **PREPARE** | Requirements unclear, external APIs to research, dependencies unmapped | Approved plan with complete Preparation section (passes completeness check below); OR requirements explicit in task; OR existing `docs/preparation/` covers scope with no unresolved items |
 | **ARCHITECT** | New component or module, interface contracts undefined, architectural decisions required | Approved plan with complete Architecture section (passes completeness check below); OR following established patterns with no new components; OR `docs/architecture/` covers design with no open items |
 | **CODE** | Always run | Never skip |
-| **TEST** | Integration/E2E tests needed, complex component interactions, security/performance verification | Trivial change (no new logic requiring tests) AND no integration boundaries crossed AND isolated change with no meaningful test scenarios AND plan's Phase Requirements section does not mark TEST as REQUIRED (if plan exists) |
+| **TEST** | Integration/E2E tests needed, complex component interactions, security/performance verification | ALL of the following are true: (1) trivial change with no new logic requiring tests, (2) no integration boundaries crossed, (3) isolated change with no meaningful test scenarios, AND (4) plan's Phase Requirements section does not mark TEST as REQUIRED (if plan exists) |
 
 **Conflict resolution**: When both "Run if" and "Skip if" criteria apply, **run the phase** (safer default). Example: A plan exists but requirements have changed—run PREPARE to validate.
 
@@ -193,7 +193,20 @@ The user can override your assessment or ask for details.
 
 ### Phase Skip Completeness Check
 
-**Principle: Existence ≠ Completeness.** Before skipping a phase, verify the plan's content for that phase is actually complete — not just present. A plan section with "TBD" decisions, unchecked research items, or "handled during [PHASE]" forward references means the phase is still needed.
+**Principle: Existence ≠ Completeness.**
+
+Before skipping, scan the plan section for incompleteness signals (see [pact-completeness.md](../protocols/pact-completeness.md)):
+- [ ] No unchecked research items (`- [ ]`)
+- [ ] No TBD values in decision tables
+- [ ] No `⚠️ Handled during {PHASE_NAME}` forward references
+- [ ] No unresolved open questions
+- [ ] No empty/placeholder sections
+- [ ] No unchecked questions to resolve
+
+**All clear** → Skip with reason `"plan_section_complete"` (not `"approved_plan_exists"`)
+**Any signal present** → Run the phase
+
+> **Note**: The plan's Phase Requirements table is advisory. When in doubt, verify against actual section content — the table may be stale if the plan was updated after initial synthesis.
 
 ---
 
