@@ -213,6 +213,16 @@ After collecting all specialist outputs, use extended thinking to synthesize:
    - Create step-by-step implementation plan
    - Map steps to specialists
    - Identify the commit sequence
+   - Populate "Phase Requirements" section based on completeness analysis:
+     - Check each phase's plan section for these incompleteness signals:
+       - [ ] Unchecked research items (`- [ ]`)
+       - [ ] TBD values in decision tables
+       - [ ] `⚠️ Handled during {PHASE_NAME}` forward references
+       - [ ] Unchecked questions to resolve
+       - [ ] Empty/placeholder sections
+       - [ ] Unresolved open questions
+     - **Any signal present** → mark phase as REQUIRED
+       - For more details on incompleteness signals, see [pact-completeness.md](../protocols/pact-completeness.md)
 
 6. **Risk Assessment**
    - Aggregate risks from all specialists
@@ -283,6 +293,13 @@ If a plan already exists for this feature slug:
      - Any → BLOCKED: plan-mode (when unresolved blocking conflicts)
 -->
 
+<!-- Forward Reference Convention:
+     When deferring work to a later phase, use the standardized format:
+     "⚠️ Handled during {PHASE_NAME}" (e.g., "⚠️ Handled during PREPARE")
+     This format is detected by the orchestrator's phase-skip completeness check.
+     Do NOT use informal variants like "deferred to", "will be addressed in", etc.
+-->
+
 ## Summary
 
 {2-3 sentence overview of what will be implemented and the high-level approach}
@@ -298,6 +315,8 @@ If a plan already exists for this feature slug:
 **Effort**: {Low/Medium/High}
 
 #### Research Needed
+<!-- Use checkboxes for all research items. Check [x] when complete, leave [ ] when pending.
+     The orchestrator's skip logic checks for unchecked items to determine phase requirements. -->
 - [ ] {Research item}
 
 #### Dependencies to Map
@@ -320,6 +339,8 @@ If a plan already exists for this feature slug:
 {Description of architectural approach}
 
 #### Key Decisions
+<!-- Use "TBD" explicitly for unresolved decisions. Resolved decisions should have concrete values.
+     The orchestrator's skip logic checks for TBD language to determine phase requirements. -->
 | Decision | Options | Recommendation | Rationale |
 |----------|---------|----------------|-----------|
 | {Decision} | {A, B, C} | {B} | {Why} |
@@ -427,6 +448,22 @@ If a plan already exists for this feature slug:
 
 ---
 
+## Phase Requirements
+
+> Auto-populated based on plan content. The orchestrator uses this section to determine which phases to run.
+
+<!-- Re-derive this table whenever plan content changes after initial synthesis (e.g., user decisions in Phase 4).
+     The "any signal = REQUIRED" default is conservative, but stale rationale text can mislead the orchestrator. -->
+
+| Phase | Required? | Rationale |
+|-------|-----------|-----------|
+| PREPARE | {Yes/No} | {e.g., "Yes — 3 unchecked research items remain" or "No — all research complete, no TBD items"} |
+| ARCHITECT | {Yes/No} | {e.g., "Yes — interface contracts marked TBD" or "No — all design decisions resolved"} |
+| CODE | Yes | Always required |
+| TEST | {Yes/No} | {e.g., "Yes — integration tests needed" or "No — trivial change, no test scenarios"} |
+
+---
+
 ## Next Steps
 
 To implement this plan after approval:
@@ -484,6 +521,7 @@ After saving the plan:
    - Repeat until no "Require User Decision" items remain
 
 4. Once all decision-requiring questions are resolved:
+   - Re-derive the Phase Requirements table based on updated plan content (incompleteness signals may have changed after user decisions)
    - Highlight any remaining **"Require Further Research"** items (these are addressed during the Prepare phase of implementation)
    - Explain that after approval, they can run `/PACT:orchestrate` to implement
 

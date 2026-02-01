@@ -67,6 +67,7 @@ verify "pact-task-hierarchy.md" "Task Hierarchy (lines 860-933)" "860,933"
 verify "pact-phase-transitions.md" "Phase Transitions (lines 849-859 + 951-1028)" "849,859" "951,1028"
 verify "pact-documentation.md" "Documentation (lines 1029-1053)" "1029,1053"
 verify "pact-agent-stall.md" "Agent Stall Detection (lines 1054-1083)" "1054,1083"
+verify "pact-completeness.md" "Completeness Signals (lines 1085-1119)" "1085,1119"
 
 echo ""
 echo "=== Summary ==="

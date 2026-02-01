@@ -39,7 +39,14 @@ i. TaskUpdate: phase status = "completed"
 
 **Skipped phases**: Mark directly `completed` (no `in_progress` — no work occurs):
 `TaskUpdate(phaseTaskId, status="completed", metadata={"skipped": true, "skip_reason": "{reason}"})`
-Valid reasons: `"approved_plan_exists"`, `"requirements_explicit"`, `"existing_docs_cover_scope"`, `"trivial_change"`, or custom.
+Valid reasons: `"approved_plan_exists"`, `"plan_section_complete"`, `"requirements_explicit"`, `"existing_docs_cover_scope"`, `"trivial_change"`, or custom.
+<!-- Skip reason semantics:
+  - "approved_plan_exists": Plan exists but completeness not verified (legacy/weak)
+  - "plan_section_complete": Plan exists AND section passed completeness check (preferred)
+  - "requirements_explicit": Task description contains all needed context
+  - "existing_docs_cover_scope": docs/preparation/ or docs/architecture/ already complete
+  - "trivial_change": Change too small to warrant this phase
+-->
 
 ---
 
@@ -171,18 +178,35 @@ Before executing phases, assess which are needed based on existing context:
 
 | Phase | Run if... | Skip if... |
 |-------|-----------|------------|
-| **PREPARE** | Requirements unclear, external APIs to research, dependencies unmapped | Approved plan exists with Preparation Phase section, OR requirements explicit in task, OR existing `docs/preparation/` covers scope |
-| **ARCHITECT** | New component or module, interface contracts undefined, architectural decisions required | Approved plan exists with Architecture Phase section, OR following established patterns, OR `docs/architecture/` covers design |
+| **PREPARE** | Requirements unclear, external APIs to research, dependencies unmapped | Approved plan with complete Preparation section (passes completeness check below); OR requirements explicit in task; OR existing `docs/preparation/` covers scope with no unresolved items |
+| **ARCHITECT** | New component or module, interface contracts undefined, architectural decisions required | Approved plan with complete Architecture section (passes completeness check below); OR following established patterns with no new components; OR `docs/architecture/` covers design with no open items |
 | **CODE** | Always run | Never skip |
-| **TEST** | Integration/E2E tests needed, complex component interactions, security/performance verification | Trivial change (no new logic requiring tests) AND no integration boundaries crossed AND isolated change with no meaningful test scenarios |
+| **TEST** | Integration/E2E tests needed, complex component interactions, security/performance verification | ALL of the following are true: (1) trivial change with no new logic requiring tests, (2) no integration boundaries crossed, (3) isolated change with no meaningful test scenarios, AND (4) plan's Phase Requirements section does not mark TEST as REQUIRED (if plan exists) |
 
 **Conflict resolution**: When both "Run if" and "Skip if" criteria apply, **run the phase** (safer default). Example: A plan exists but requirements have changed—run PREPARE to validate.
 
-**Plan-aware fast path**: When an approved plan exists in `docs/plans/`, PREPARE and ARCHITECT are typically skippable—the plan already synthesized specialist perspectives. Skip unless scope has changed or plan appears stale (typically >2 weeks; ask user to confirm if uncertain).
+**Plan-aware fast path**: When an approved plan exists in `docs/plans/`, PREPARE and ARCHITECT are typically skippable—the plan already synthesized specialist perspectives. Skip unless scope has changed, plan appears stale (typically >2 weeks; ask user to confirm if uncertain), OR the plan contains incompleteness signals for that phase (see Phase Skip Completeness Check below).
 
 **State your assessment briefly.** Example: `Skipping PREPARE/ARCHITECT (approved plan exists). Running CODE and TEST.`
 
 The user can override your assessment or ask for details.
+
+### Phase Skip Completeness Check
+
+**Principle: Existence ≠ Completeness.**
+
+Before skipping, scan the plan section for incompleteness signals (see [pact-completeness.md](../protocols/pact-completeness.md)):
+- [ ] No unchecked research items (`- [ ]`)
+- [ ] No TBD values in decision tables
+- [ ] No `⚠️ Handled during {PHASE_NAME}` forward references
+- [ ] No unchecked questions to resolve
+- [ ] No empty/placeholder sections
+- [ ] No unresolved open questions
+
+**All clear** → Skip with reason `"plan_section_complete"` (not `"approved_plan_exists"`)
+**Any signal present** → Run the phase
+
+> **Note**: The plan's Phase Requirements table is advisory. When in doubt, verify against actual section content — the table may be stale if the plan was updated after initial synthesis.
 
 ---
 
@@ -206,7 +230,7 @@ When a phase is skipped but a coder encounters a decision that would have been h
 
 ### Phase 1: PREPARE → `pact-preparer`
 
-**Skip criteria met?** → Proceed to Phase 2.
+**Skip criteria met (including completeness check)?** → Proceed to Phase 2.
 
 **Plan sections to pass** (if plan exists):
 - "Preparation Phase"
@@ -243,7 +267,7 @@ If PREPARE ran and ARCHITECT was marked "Skip," compare PREPARE's recommended ap
 
 ### Phase 2: ARCHITECT → `pact-architect`
 
-**Skip criteria met (after re-assessment)?** → Proceed to Phase 3.
+**Skip criteria met (including completeness check, after re-assessment)?** → Proceed to Phase 3.
 
 **Plan sections to pass** (if plan exists):
 - "Architecture Phase"
