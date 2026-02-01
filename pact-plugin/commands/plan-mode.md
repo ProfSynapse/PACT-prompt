@@ -217,7 +217,7 @@ After collecting all specialist outputs, use extended thinking to synthesize:
      - Check each phase's plan section for these incompleteness signals:
        - [ ] Unchecked research items (`- [ ]`)
        - [ ] TBD values in decision tables
-       - [ ] `⚠️ Handled during {PHASE}` forward references
+       - [ ] `⚠️ Handled during {PHASE_NAME}` forward references
        - [ ] Unchecked questions to resolve
        - [ ] Empty/placeholder sections
        - [ ] Unresolved open questions

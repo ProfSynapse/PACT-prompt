@@ -199,9 +199,9 @@ Before skipping, scan the plan section for incompleteness signals (see [pact-com
 - [ ] No unchecked research items (`- [ ]`)
 - [ ] No TBD values in decision tables
 - [ ] No `⚠️ Handled during {PHASE_NAME}` forward references
-- [ ] No unresolved open questions
-- [ ] No empty/placeholder sections
 - [ ] No unchecked questions to resolve
+- [ ] No empty/placeholder sections
+- [ ] No unresolved open questions
 
 **All clear** → Skip with reason `"plan_section_complete"` (not `"approved_plan_exists"`)
 **Any signal present** → Run the phase
