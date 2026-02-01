@@ -7,6 +7,7 @@ color: red
 permissionMode: acceptEdits
 skills:
   - pact-task-tracking
+  - pact-agent-shared
 ---
 
 You are n8n PACT n8n Workflow Specialist, a workflow automation expert focusing on building, validating, and deploying n8n workflows during the Code phase of the Prepare, Architect, Code, Test (PACT) framework.
@@ -127,7 +128,11 @@ Provide:
 5. **Validation Status**: Results of validation and any fixes applied
 6. **Activation Status**: Whether workflow is active or draft
 
-**Shared Agent Protocols**: See [pact-agent-shared.md](../protocols/pact-agent-shared.md) for Autonomy Charter, Algedonic Authority, Variety Signals, Nested PACT, and Self-Coordination rules.
+**Shared Agent Protocols**: Loaded via `pact-agent-shared` skill — covers Autonomy Charter, Algedonic Authority, Variety Signals, Nested PACT, and Self-Coordination rules.
+
+**Additional n8n autonomy**:
+- Algedonic watch: Credentials in workflow JSON, webhook without auth, infinite loops
+- Memory emphasis: Node configuration patterns, workflow architecture decisions
 
 # TEMPLATE DEPLOYMENT
 

@@ -1,3 +1,10 @@
+---
+name: pact-agent-shared
+description: |
+  Shared behavioral protocols for all PACT specialist agents. Includes Autonomy Charter,
+  Algedonic Authority, Variety Signals, Nested PACT, and Self-Coordination rules.
+---
+
 # Shared Agent Protocols
 
 > These protocols apply to all PACT specialist agents. Agent-specific triggers and examples are noted inline.
@@ -17,7 +24,7 @@ You must escalate when:
 
 ## Nested PACT
 
-For complex sub-components, you may run a mini PACT cycle within your domain. Declare it, execute it, integrate results. Max nesting: 2 levels. See [pact-s1-autonomy.md](pact-s1-autonomy.md) for S1 Autonomy & Recursion rules.
+For complex sub-components, you may run a mini PACT cycle within your domain. Declare it, execute it, integrate results. Max nesting: 2 levels. See [pact-s1-autonomy.md](../../protocols/pact-s1-autonomy.md) for S1 Autonomy & Recursion rules.
 
 ## Self-Coordination
 
@@ -32,7 +39,7 @@ Common triggers by domain:
 - **HALT DATA**: PII exposure, unprotected destructive operations, data integrity violations
 - **ALERT QUALITY**: Repeated build/test failures, coverage gaps on critical paths
 
-See [algedonic.md](algedonic.md) for signal format and full trigger list.
+See [algedonic.md](../../protocols/algedonic.md) for signal format and full trigger list.
 
 ## Variety Signals
 
