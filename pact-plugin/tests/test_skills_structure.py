@@ -346,16 +346,19 @@ class TestOrderingInvariantPhraseCount:
 
 
 class TestHarvestPerTeamSectionDirective:
-    """Content-presence pin for the agent-memory per-team-section overwrite
+    """Content-presence pin for the agent-memory per-team-section SCOPE
     directive in the harvest skill's save step.
 
     The secretary's processed-tasks read-back file is shared by every concurrent
     same-named secretary instance (one per team). The load-bearing fix re-scopes
-    the save step from a whole-file overwrite to a per-``## team={team_id}``
-    section overwrite, so a secretary in team A cannot clobber team B's section.
+    the save step from a whole-file write to a per-``## team={team_id}``
+    section write, so a secretary in team A cannot clobber team B's section.
+    This pin is about WHICH section may be touched, never about how it is
+    written: the write within your own section is append-only, and that is a
+    separate rule the skill states at its Step 8 section semantics.
     Because every agent-memory write is LLM-driven prose (no runtime code path),
     this directive has no executable regression test of its own — a future edit
-    could silently revert the save step to a whole-file overwrite and nothing
+    could silently revert the save step to a whole-file write and nothing
     would fail. This pin closes that gap: it asserts the verbatim directive
     phrases survive, so the per-team scoping cannot be elided without a RED.
 
