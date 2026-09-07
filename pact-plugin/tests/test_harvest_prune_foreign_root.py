@@ -143,7 +143,7 @@ def read_last(session_dir, event_type, step3):
 
 
 class TestForeignRootSectionCannotBeVerified:
-    def test_the_reader_sees_the_same_nothing_for_both_sections(self, roots, step3):
+    def test_the_reader_sees_the_same_nothing_for_both_sections(self, roots):
         """THE GROUND, measured. Population: 2 sections, 1 reader root.
 
         The two sections differ in whether a complete journal exists under a

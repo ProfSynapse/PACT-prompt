@@ -116,8 +116,9 @@ def worktree(tmp_path):
     try:
         yield root
     finally:
-        # mode-000 arms would otherwise defeat tmp_path cleanup.
-        for path in (root / "docs", root):
+        # The permission arms would otherwise defeat tmp_path cleanup. Root
+        # FIRST: a child of a non-traversable parent cannot be chmod'd.
+        for path in (root, root / "docs"):
             if path.exists():
                 os.chmod(path, 0o755)
 
@@ -128,65 +129,87 @@ def populate(docs, count=3):
         (docs / f"artifact-{i}.md").write_text("phase artifact\n")
 
 
+def _absent(worktree):
+    pass  # `absent` is constructed precisely by not creating the path.
+
+
+def _empty(worktree):
+    (worktree / "docs").mkdir()
+
+
+def _populated(worktree):
+    populate(worktree / "docs")
+
+
+def _symlink_inward(worktree):
+    target = worktree / "inner"
+    populate(target, count=2)
+    (worktree / "docs").symlink_to(target, target_is_directory=True)
+
+
+def _unreadable_docs(worktree):
+    populate(worktree / "docs")
+    os.chmod(worktree / "docs", 0o000)
+
+
+def _parent_000(worktree):
+    populate(worktree / "docs")
+    os.chmod(worktree, 0o000)
+
+
+def _parent_400(worktree):
+    populate(worktree / "docs")
+    os.chmod(worktree, 0o400)
+
+
+def _parent_100(worktree):
+    populate(worktree / "docs", count=1)
+    os.chmod(worktree, 0o100)
+
+
+# Every state an empty listing can mean, with the triple the probe must report.
+# The listing is always run from `/`, never from the worktree, so each
+# populated row doubles as the wrong-CWD arm: a path that had become relative
+# would list nothing here.
+STATES = [
+    ("absent", _absent, ("DIR_ABSENT", 1, 0)),
+    ("empty", _empty, ("DIR_PRESENT", 0, 0)),
+    # `docs/` is gitignored in the real tree, so an ignore-aware instrument
+    # returns empty over exactly this state. The listing must find all three.
+    ("populated-gitignored", _populated, ("DIR_PRESENT", 0, 3)),
+    # A `find` without `-L` reports zero files here — indistinguishable from
+    # empty, and it proceeds to removal.
+    ("symlink-inward", _symlink_inward, ("DIR_PRESENT", 0, 2)),
+    # Marker says present, listing fails. Exit status ALONE cannot separate
+    # this from `absent` — both are 1 — which is why the marker exists.
+    ("unreadable-docs", _unreadable_docs, ("DIR_PRESENT", 1, 0)),
+    ("parent-000", _parent_000, ("CANNOT_OBSERVE", 1, 0)),
+    # DO NOT DROP AS REDUNDANT. Measured: `parent-000` passes under a marker
+    # whose second predicate is `-r` too, because at mode 000 BOTH `-r` and
+    # `-x` read false — so it pins only that SOME third state exists.
+    # `parent-400` is the one that pins WHICH predicate: it is the sole state
+    # where the two disagree. `-r` reads TRUE there and would license proceed
+    # over a populated `docs/` the instrument cannot enter; `-x` reads false
+    # and routes to the warning. It looks exactly like the sibling above it,
+    # which is what makes it the deletion risk.
+    ("parent-400", _parent_400, ("CANNOT_OBSERVE", 1, 0)),
+    # The counterpart that bounds the claim: execute-without-read is
+    # traversable, so the marker's FIRST predicate resolves it and the state
+    # is genuinely observable. The refusal is confined to what cannot be
+    # entered rather than to what cannot be read.
+    ("parent-100", _parent_100, ("DIR_PRESENT", 0, 1)),
+]
+
+
 class TestDocsProbeSeparatesTheStates:
     """Every state an empty listing can mean, and what the probe reports."""
 
-    def test_absent_docs_reports_absent(self, probe, worktree):
-        # §8.3's third arm. It MUST report absent, or the guard blocks the
-        # no-team manual cleanup path the file protects.
-        assert probe(worktree) == ("DIR_ABSENT", 1, 0)
-
-    def test_empty_docs_reports_present_and_lists_nothing(self, probe, worktree):
-        (worktree / "docs").mkdir()
-        assert probe(worktree) == ("DIR_PRESENT", 0, 0)
-
-    def test_gitignored_artifacts_are_listed(self, probe, worktree):
-        # §8.3's second arm. `docs/` is gitignored in the real tree, so an
-        # ignore-aware instrument returns empty over exactly this state. The
-        # listing is ignore-blind, so it must find all three.
-        populate(worktree / "docs")
-        assert probe(worktree) == ("DIR_PRESENT", 0, 3)
-
-    def test_absolute_path_survives_a_foreign_cwd(self, probe, worktree):
-        # §8.3's first arm. The probe fixture runs from `/`, never from the
-        # worktree, so a path that had become relative would list nothing here.
-        populate(worktree / "docs")
-        marker, _, files = probe(worktree)
-        assert (marker, files) == ("DIR_PRESENT", 3)
-
-    def test_symlinked_docs_is_followed(self, probe, worktree, tmp_path):
-        # A `find` without `-L` reports zero files over a populated symlinked
-        # docs/ — indistinguishable from empty, and it proceeds to removal.
-        target = tmp_path / "elsewhere"
-        populate(target, count=2)
-        (worktree / "docs").symlink_to(target, target_is_directory=True)
-        assert probe(worktree) == ("DIR_PRESENT", 0, 2)
-
-    def test_unreadable_docs_is_present_but_unlistable(self, probe, worktree):
-        # The marker says present, the listing fails: `docs/` may hold
-        # artifacts the instrument could not read. Exit status ALONE cannot
-        # separate this from absent — both are 1 — which is why the marker
-        # carries the discrimination.
-        populate(worktree / "docs")
-        os.chmod(worktree / "docs", 0o000)
-        assert probe(worktree) == ("DIR_PRESENT", 1, 0)
-
-    def test_unreadable_parent_is_not_reported_as_absent(self, probe, worktree):
-        """THE ARM THAT DISCRIMINATES THE SHIPPED MARKER FROM ITS PREDECESSOR.
-
-        A marker consulting `[ -d ]` alone answers false on an unreadable
-        PARENT exactly as it does on a genuinely absent `docs/`, so a populated
-        worktree the instrument cannot enter routes onto the proceed branch and
-        is removed irrecoverably. The third state is what separates them.
-        """
-        populate(worktree / "docs")
-        os.chmod(worktree, 0o000)
-        marker, code, files = probe(worktree)
-        assert marker == "CANNOT_OBSERVE", (
-            f"an unreadable worktree reports {marker!r}; DIR_ABSENT here routes "
-            f"a populated docs/ straight to an irrecoverable removal"
-        )
-        assert (code, files) == (1, 0)
+    @pytest.mark.parametrize(
+        "setup,expected", [(s, e) for _, s, e in STATES], ids=[i for i, _, _ in STATES]
+    )
+    def test_probe_reports_the_expected_triple(self, probe, worktree, setup, expected):
+        setup(worktree)
+        assert probe(worktree) == expected
 
 
 class TestProceedBranchAdmitsOnlyTheSafeStates:
