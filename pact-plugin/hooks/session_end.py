@@ -904,8 +904,9 @@ def _prune_registry_dead_teams(
     Best-effort: never raises. The self-asserted ``@team`` is validated as a safe
     single path segment (``_is_safe_team_segment``) BEFORE any ``teams/<team>``
     path build, so a garbled/adversarial value cannot raise (e.g. a NUL byte) or
-    escape the teams root. A missing registry / unreadable file / write race is
-    swallowed (the hook-fail-open invariant; a stale line is harmless). The
+    escape the teams root. A missing registry / unreadable file / non-UTF-8
+    content / write race is swallowed (the hook-fail-open invariant; a stale
+    line is harmless). The
     rewrite preserves 0o600 and goes via a temp file renamed into place, so the
     registry is never open for writing: a failed write leaves the original
     intact, and a planted symlink cannot redirect it.
@@ -958,7 +959,14 @@ def _prune_registry_dead_teams(
         if not registry_path.exists() or registry_path.is_symlink():
             return 0
         raw = registry_path.read_text(encoding="utf-8")
-    except OSError:
+    except (OSError, UnicodeDecodeError):
+        # UnicodeDecodeError is named explicitly because it subclasses
+        # ValueError, NOT OSError — without it, a registry holding invalid
+        # UTF-8 raises straight out of a function whose contract is
+        # never-raises. A half-written registry is a live possibility: the
+        # rewrite below used to truncate in place, which could leave a
+        # severed multi-byte sequence. Do not widen this to ValueError; a
+        # corrupt registry is UNOBSERVABLE, not stale, so it prunes nothing.
         return 0
 
     kept_lines: list[str] = []
