@@ -64,6 +64,12 @@ UNION_ANCHOR = "UNION of every `Processed task IDs` line"
 # added here, which is the point of a coupling pin.
 UNION_SITES = 3
 
+# The WHOLE command, not just its quoted pattern. Extracting only the pattern
+# and then applying it to a file the ARM chose leaves nothing reading what the
+# SKILL's command searches — measured: rewriting Step 8 to
+# `head -2000 "{ledger path}" | grep -c '...'`, a literal revert to counting
+# over the read prefix, left all eleven arms in this file green.
+_GREP_C_COMMAND = re.compile(r"`([^`]*grep -c '[^']+'[^`]*)`")
 _GREP_C = re.compile(r"grep -c '([^']+)'")
 _SYSTEM_GREP = Path("/usr/bin/grep")
 
@@ -107,6 +113,28 @@ def extract_existence_pattern(skill_text, team_id):
     if not found:
         return None
     return found[0].replace("{your team_id}", team_id)
+
+
+def extract_existence_command(skill_text, team_id, ledger_path):
+    """The whole shell command Step 8 names, ready to run.
+
+    The pattern alone cannot express this file's thesis. The claim is that the
+    count is taken over the WHOLE FILE; a command that truncates its input
+    first carries an identical pattern, so only running the command as written
+    can tell the two apart.
+    """
+    step8 = region(skill_text, "### Step 8", "### Step 9")
+    if not step8:
+        return None
+    found = _GREP_C_COMMAND.findall(step8)
+    assert len(found) <= 1, (
+        f"{len(found)} `grep -c` commands in a {len(step8)}-char Step 8: {found}"
+    )
+    if not found:
+        return None
+    return (found[0]
+            .replace("{your team_id}", team_id)
+            .replace("{ledger path}", str(ledger_path)))
 
 
 def count_matches(pattern, text):
@@ -224,12 +252,28 @@ class TestExistenceCountSurvivesTruncation:
         one, rest = routing.split("`0`:", 1)
         zero, two_plus = rest.split("`2` or more:", 1)
 
-        # 1 → the section exists: extract and APPEND. Never create.
+        # ASSERT WHAT EACH BRANCH ADMITS, NOT WHICH TOKENS IT MENTIONS. A
+        # routing clause fails by GAINING a permission, and a token-presence
+        # check only ever catches one that LOSES a token. Measured: inserting
+        # "creating a fresh section first if the extract comes back empty"
+        # into the exists branch left every arm in this file green, because
+        # "creating" does not contain "create".
+        creates = re.compile(r"creat", re.IGNORECASE)
+
+        # 1 → the section exists: extract and APPEND. Creation in any word
+        # form is the widening this branch must never admit.
         assert "append" in one
-        assert "create" not in one, f"the exists branch may create: {one!r}"
-        # 0 → genuinely absent: create. This is the only creating branch.
+        assert not creates.search(one), (
+            f"the exists branch admits creating a section, which duplicates a "
+            f"section whose dedup baseline is then split: {one!r}"
+        )
+        # 0 → genuinely absent: create. The only creating branch.
         assert "create it" in zero
-        # 2+ → refuse. Adding a third section is what this branch prevents.
+        # 2+ → refuse. NOT checked for writing verbs: this slice runs to the
+        # end of Step 8 and swallows unrelated prose, so `creat` matches the
+        # clause explaining how a duplicate AROSE and `append` matches the
+        # `sed` warning below it. Both are descriptions, not permissions, and
+        # asserting over them fails on correct text.
         assert "refuse and report" in two_plus
 
     @pytest.mark.skipif(
@@ -259,6 +303,38 @@ class TestExistenceCountSurvivesTruncation:
 
         assert grep_count(ledger) == 1
         assert grep_count(prefix) == 0
+
+    def test_the_shipped_command_counts_over_the_whole_file(self, tmp_path, skill_text):
+        """THE THESIS OF THIS FILE, executed as written rather than modelled.
+
+        Every other arm here applies the extracted PATTERN to a file the arm
+        chose, so none of them reads what the shipped command searches. A
+        command that truncates its own input carries an identical pattern and
+        is invisible to all of them — measured: rewriting Step 8 to
+        `head -2000 "{ledger path}" | grep -c '...'` left all eleven green.
+
+        This runs the command Step 8 actually names, against a ledger whose
+        target section sits past the read cut, under `/bin/sh` with `PATH`
+        pinned so `grep` is the system binary rather than an operator's shim.
+        """
+        ledger = tmp_path / "session_processed_tasks.md"
+        build_oversized_ledger(ledger, [TARGET_HEADER])
+        command = extract_existence_command(skill_text, TARGET_TEAM, ledger)
+        assert command is not None, (
+            "Step 8 names no `grep -c` existence command; the section-existence "
+            "decision has reverted to a search of what was read"
+        )
+
+        done = subprocess.run(
+            ["/bin/sh", "-c", command],
+            capture_output=True, text=True, env={"PATH": "/usr/bin:/bin"},
+        )
+        assert done.returncode in (0, 1), done.stderr
+        assert done.stdout.strip() == "1", (
+            f"the shipped command answered {done.stdout.strip()!r} for a section "
+            f"that IS present but sits past line {READ_CUT}. It is counting over "
+            f"part of the file, not over the file: {command!r}"
+        )
 
 
 class TestUnionRuleIsCoupledAcrossItsThreeSites:

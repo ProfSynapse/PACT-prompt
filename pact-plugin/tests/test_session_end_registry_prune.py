@@ -8,8 +8,12 @@ idempotent (no needless rewrite when nothing is stale), and is fail-safe
 rewrite.
 """
 
+import inspect
 import json
+import os
+import re
 import stat
+import sys
 from pathlib import Path
 
 import pytest
@@ -153,6 +157,13 @@ def test_symlink_registry_is_skipped(prune_env, tmp_path):
     assert prune_env.prune() == 0
     # the link target is untouched
     assert real.read_text(encoding="utf-8").strip() == prune_env.line("s1", "alice@pact-dead")
+    # WHICH MECHANISM THIS PINS: the READ-TIME is_symlink refusal (guarantee 4),
+    # not the write path. Deleting that check leaves read_text following the
+    # link and the prune reaching os.replace, which REPLACES the symlink with a
+    # regular file -- so the deliberate arrangement is silently destroyed while
+    # the target's bytes survive. Asserting the target alone cannot see that;
+    # this line is what separates the two.
+    assert prune_env.registry.is_symlink()
 
 
 def _make_root_absent(root):
@@ -232,23 +243,25 @@ def test_unobservable_teams_root_prunes_nothing(tmp_path, make_root):
 
 
 def test_unlistable_root_refuses_rather_than_pruning_a_dead_line(tmp_path):
-    """Pins the guard's DISCLOSED OVER-REFUSAL: a mode-111 root (traversable,
-    not listable) refuses, keeping a line it could have proved dead.
+    """A mode-111 root (traversable, not listable) is OBSERVABLE per entry, so
+    the dead line is pruned and the live one kept.
+
+    THIS ARM WAS INVERTED BY THE PER-ENTRY PROBE. It previously pinned a
+    disclosed OVER-REFUSAL: the old root-listability guard refused here,
+    keeping a line it could have proved dead. Guarantee 6 stats each team
+    individually, and traversal is permitted at mode 111, so the stats now
+    answer correctly and the over-refusal is gone. The arm is kept, and
+    inverted, because the state is the one that separates listability from
+    traversability -- the only state where the two disagree.
 
     Distinct from the four arms above, which use live-only registries where
     refusing and pruning-correctly both leave 2 lines and cannot be told apart.
-    Here one team is live and one is dead: the guard keeps 2/2, while the
-    per-team stats it declines to run would have kept 1/2 — traversal is
-    permitted, so `(teams_dir / team).is_dir()` still answers correctly.
+    Here one team is live and one is dead, so the two outcomes differ: 1 line
+    if the entries were probed, 2 if the root was judged unobservable.
 
-    NON-VACUITY: both predecessors prune here. Unguarded and root-predicate
-    (`is_dir()`/`exists()`, which a mode-111 root passes) both reach the loop
-    and return 1, dropping the dead line → this arm reddens.
-
-    The trade is deliberate — keeping stale lines is the fail-safe direction
-    and the function's docstring records them as harmless to correctness. This
-    arm does not forbid narrowing the guard to permit an unlistable root; it
-    makes that a change someone has to make on purpose.
+    NON-VACUITY: reinstating any root-LISTABILITY guard reddens this arm --
+    scandir on a mode-111 root raises, so such a guard returns 0 and keeps
+    both lines. That is what the arm now forbids.
     """
     teams_dir = tmp_path / "teams"
     teams_dir.mkdir()
@@ -268,8 +281,10 @@ def test_unlistable_root_refuses_rather_than_pruning_a_dead_line(tmp_path):
     finally:
         teams_dir.chmod(0o755)
 
-    assert pruned == 0
-    assert reg_path.read_text(encoding="utf-8") == payload  # the dead line too
+    remaining = reg_path.read_text(encoding="utf-8")
+    assert pruned == 1
+    assert "alice@pact-live" in remaining     # observable and live -> kept
+    assert "bob@pact-dead" not in remaining   # observable and dead -> pruned
 
 
 def test_defaults_resolve_without_args(monkeypatch, tmp_path):
@@ -283,3 +298,202 @@ def test_defaults_resolve_without_args(monkeypatch, tmp_path):
         lambda: tmp_path / ".claude" / "pact-sessions" / ".teammate-registry.jsonl",
     )
     assert session_end._prune_registry_dead_teams() == 0
+
+
+# --------------------------------------------------------------------------
+# Arms that separate a guarantee from its NEIGHBOUR.
+#
+# The arms above assert on return values and file contents. Six guard lines in
+# this function were found deletable with nothing red, because that is the
+# layer at which a deletable line is invisible: its neighbour reproduces the
+# same return and the same bytes. Each arm below observes the one thing that
+# differs.
+# --------------------------------------------------------------------------
+
+
+class _ReadCountingPath(type(Path())):
+    """A Path that counts its own read_text calls."""
+
+    reads = 0
+
+    def read_text(self, *args, **kwargs):
+        type(self).reads += 1
+        return super().read_text(*args, **kwargs)
+
+
+def test_unusable_root_is_rejected_before_the_registry_is_read(tmp_path):
+    """Guarantee 2 (S_ISDIR): an unusable root never reaches a file read.
+
+    ORDERING PIN -- READ THIS BEFORE "FIXING" A RED HERE. This arm asserts an
+    implementation ORDERING, not a behaviour, and it will redden on a
+    legitimate restructure that still behaves correctly. That is acceptable
+    only because the ordering IS the claim the S_ISDIR line makes: on a
+    plain-file root the per-entry probes are meaningless, so the function
+    declines before reading anything. A restructure that keeps the refusal but
+    reads first has changed that claim and should be re-argued, not silenced.
+
+    WHY NOTHING ELSE SEES IT: with the S_ISDIR line deleted, the per-entry
+    stats raise ENOTDIR, guarantee 6 catches them and returns 0, and the
+    registry is untouched. Measured: pruned and file contents are IDENTICAL
+    with and without the line -- 0 and intact both ways. Only the read count
+    differs (0 shipped, 1 ablated).
+    """
+    root = tmp_path / "teams"
+    root.write_text("not a directory\n", encoding="utf-8")  # stat-able, not a dir
+    registry = _ReadCountingPath(tmp_path / "registry.jsonl")
+    registry.write_text(
+        json.dumps({"session_id": "s1", "value": "ghost@pact-dead"}) + "\n",
+        encoding="utf-8",
+    )
+    before = registry.read_text(encoding="utf-8")
+
+    _ReadCountingPath.reads = 0
+    pruned = _prune_registry_dead_teams(registry_path=registry, teams_dir=root)
+
+    assert _ReadCountingPath.reads == 0, (
+        "the registry was read despite an unusable teams root: the S_ISDIR "
+        "refusal no longer precedes the read"
+    )
+    # Stated so a future reader can see these do NOT separate the mechanisms.
+    assert pruned == 0
+    assert registry.read_text(encoding="utf-8") == before
+
+
+def test_registry_is_0600_even_when_the_umask_would_not_grant_it(prune_env):
+    """Guarantee 3: the explicit 0600 is load-bearing, not double-held.
+
+    The temp file is created with `O_CREAT|O_EXCL, 0o600`, whose mode argument
+    IS honoured (the temp is always new) -- but it is masked by the process
+    umask, so at the common umasks the explicit chmod and the open mode agree
+    and neither can be told from the other. Measured: at umask 022 and 077 both
+    routes give 0o600; at umask 0o200 the open alone gives 0o400.
+
+    This arm runs under a umask that masks a bit in 0600, which is the only
+    condition under which deleting the explicit chmod reddens anything.
+
+    os.umask is PROCESS-GLOBAL. It is restored in the finally below; a leak
+    would silently change the mode of every file every later test writes, with
+    no symptom in this file.
+    """
+    prune_env.live_team("pact-live")
+    prune_env.write_registry([
+        prune_env.line("s1", "alice@pact-live"),
+        prune_env.line("s2", "bob@pact-dead"),
+    ])
+
+    previous = os.umask(0o200)  # strip owner-write from anything newly created
+    try:
+        assert prune_env.prune() == 1
+    finally:
+        os.umask(previous)
+
+    mode = stat.S_IMODE(prune_env.registry.stat().st_mode)
+    assert mode == 0o600, (
+        f"expected 0o600 under a masking umask, got {oct(mode)} -- the explicit "
+        f"chmod is gone and only the open's mode argument remains, which the "
+        f"umask has masked"
+    )
+
+
+def test_invalid_utf8_registry_returns_rather_than_propagating(prune_env):
+    """Guarantee 5: a registry that is not valid UTF-8 prunes nothing.
+
+    UnicodeDecodeError subclasses ValueError, not OSError, so it is not caught
+    by the never-raises handlers around it. The separating observation is that
+    the function RETURNS with the registry byte-identical, rather than raising
+    out of a contract that forbids raising.
+    """
+    prune_env.live_team("pact-live")
+    payload = (
+        json.dumps({"session_id": "s1", "value": "alice@pact-live"}).encode("utf-8")
+        + b"\n"
+        + b'{"session_id": "s2", "value": "bob@\xff\xfe-dead"}\n'  # invalid UTF-8
+    )
+    prune_env.registry.write_bytes(payload)
+
+    assert prune_env.prune() == 0
+    assert prune_env.registry.read_bytes() == payload
+
+
+def test_a_decodable_registry_still_prunes(prune_env):
+    """Over-swallowing control for the arm above.
+
+    Without this, widening the guarantee-5 handler to swallow every ValueError
+    -- or bailing out on any registry at all -- would leave that arm green
+    while the prune had stopped working entirely.
+    """
+    prune_env.live_team("pact-live")
+    prune_env.write_registry([
+        prune_env.line("s1", "alice@pact-live"),
+        prune_env.line("s2", "bob@pact-dead"),
+    ])
+
+    assert prune_env.prune() == 1
+    remaining = prune_env.remaining()
+    assert len(remaining) == 1
+    assert "alice@pact-live" in remaining[0]
+
+
+GUARANTEE_ARMS = {
+    1: ["test_unobservable_teams_root_prunes_nothing"],
+    2: ["test_unusable_root_is_rejected_before_the_registry_is_read"],
+    3: ["test_registry_is_0600_even_when_the_umask_would_not_grant_it",
+        "test_preserves_0o600_on_rewrite"],
+    4: ["test_symlink_registry_is_skipped"],
+    5: ["test_invalid_utf8_registry_returns_rather_than_propagating",
+        "test_a_decodable_registry_still_prunes"],
+    6: ["test_unobservable_teams_root_prunes_nothing",
+        "test_unlistable_root_refuses_rather_than_pruning_a_dead_line"],
+}
+
+
+def test_every_guarantee_marker_has_an_arm():
+    """Each `SAFETY GUARANTEE n of m` in the function is claimed by an arm here.
+
+    ONLY ONE DIRECTION OF THIS IS MECHANISED, and the other is the one that
+    found guarantee 6. This arm checks *every marker has an arm*. It cannot
+    check *every guard-shaped line has a marker* -- there is no way to
+    recognise an unmarked guard automatically, and guarantee 6 was exactly
+    that: a working, well-armed handler whose missing marker made it invisible
+    for six passes. That direction rests on review. When a guard line is added,
+    the marker is the thing that is easy to forget and nothing here will say so.
+
+    COLLATERAL vs TARGETED: `test_defaults_resolve_without_args` reddens when
+    guarantee 1 is ablated, but it is NOT listed against it. It exercises the
+    no-argument default path, so it breaks on anything that raises downstream;
+    it pins nothing about the unobservable root. An arm that merely reddens is
+    not an arm that pins.
+
+    Numbers are read from the markers, never hardcoded, and the markers sit
+    deliberately out of source order -- so this keys on the parsed number and
+    a reordering is a no-op here, as it should be.
+    """
+    source = inspect.getsource(_prune_registry_dead_teams)
+    markers = re.findall(r"SAFETY GUARANTEE (\d+) of (\d+)", source)
+    assert markers, "no SAFETY GUARANTEE markers in the function -- parser is blind"
+
+    numbers = sorted(int(n) for n, _ in markers)
+    declared = {int(m) for _, m in markers}
+    assert len(declared) == 1, f"markers disagree on the total: {sorted(declared)}"
+    total = declared.pop()
+
+    assert len(numbers) == total, (
+        f"{len(numbers)} markers present but each declares 'of {total}' -- a "
+        f"guarantee was added or removed without renumbering the others"
+    )
+    assert numbers == list(range(1, total + 1)), (
+        f"marker numbers are not 1..{total}: {numbers}"
+    )
+    assert set(numbers) == set(GUARANTEE_ARMS), (
+        f"markers {numbers} do not match the arms mapped here "
+        f"{sorted(GUARANTEE_ARMS)} -- a guarantee has no arm, or an arm claims "
+        f"a guarantee that no longer exists"
+    )
+
+    module = sys.modules[__name__]
+    for number, arms in GUARANTEE_ARMS.items():
+        for arm in arms:
+            assert hasattr(module, arm), (
+                f"guarantee {number} names {arm!r}, which does not exist in "
+                f"this module -- the mapping has gone stale"
+            )

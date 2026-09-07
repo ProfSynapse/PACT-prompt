@@ -118,7 +118,7 @@ def worktree(tmp_path):
     finally:
         # The permission arms would otherwise defeat tmp_path cleanup. Root
         # FIRST: a child of a non-traversable parent cannot be chmod'd.
-        for path in (root, root / "docs"):
+        for path in (root, root / "docs", root / "docs" / "architecture"):
             if path.exists():
                 os.chmod(path, 0o755)
 
@@ -152,6 +152,14 @@ def _unreadable_docs(worktree):
     os.chmod(worktree / "docs", 0o000)
 
 
+def _nested_unreadable(worktree):
+    """A readable artifact beside an unreadable subtree: `find` lists AND fails."""
+    populate(worktree / "docs", count=1)
+    (worktree / "docs" / "architecture").mkdir()
+    (worktree / "docs" / "architecture" / "design.md").write_text("unharvestable\n")
+    os.chmod(worktree / "docs" / "architecture", 0o000)
+
+
 def _parent_000(worktree):
     populate(worktree / "docs")
     os.chmod(worktree, 0o000)
@@ -183,6 +191,11 @@ STATES = [
     # Marker says present, listing fails. Exit status ALONE cannot separate
     # this from `absent` — both are 1 — which is why the marker exists.
     ("unreadable-docs", _unreadable_docs, ("DIR_PRESENT", 1, 0)),
+    # The only state where `find` LISTS files and still exits non-zero. The
+    # listed file is harvestable and the unreadable subtree is not, so harvest
+    # and removal-licence must diverge here -- which is why they are two
+    # decisions rather than one. No other state separates them.
+    ("nested-unreadable", _nested_unreadable, ("DIR_PRESENT", 1, 1)),
     ("parent-000", _parent_000, ("CANNOT_OBSERVE", 1, 0)),
     # DO NOT DROP AS REDUNDANT. Measured: `parent-000` passes under a marker
     # whose second predicate is `-r` too, because at mode 000 BOTH `-r` and
@@ -212,50 +225,90 @@ class TestDocsProbeSeparatesTheStates:
         assert probe(worktree) == expected
 
 
-class TestProceedBranchAdmitsOnlyTheSafeStates:
+class TestRemovalLicenceAdmitsOnlyTheSafeStates:
     """The routing, which the observation arms above cannot see.
 
-    HONEST LABEL: a prose pin. The observations are executed; which branch each
-    one takes is a sentence an agent follows. It is keyed on the bullet's own
-    conditions rather than on its wording, and it is here because the commands
-    surviving while their routing widens is a regression every arm above stays
-    green through.
+    THE TABLE IS THE PIN, because the table is the enumeration: one row per
+    observable state, with harvest and removal decided separately. This asserts
+    what each row ADMITS -- derived from the observation itself -- rather than
+    which words the row contains. A clause that gains a permission is the way a
+    routing rule fails, and a token-presence check only ever catches a clause
+    that LOSES a token.
+
+    REPLACES an arm that pinned the literal `**Any other result**`. That arm
+    went red when the prose was restructured even though the property it
+    guarded still held -- a pin on wording rather than on meaning. It is not
+    repaired, it is retired: the catch-all it named no longer exists, because
+    the restructure made harvest and removal two decisions and there is nothing
+    left for a reader to fall through.
     """
 
-    def test_proceed_names_both_safe_states_and_neither_unsafe_one(self):
-        """The catch-all sits INSIDE the proceed bullet, deliberately.
+    # Removal is safe exactly when the probe was CONCLUSIVE about the
+    # directory's contents. Two ways to be conclusive, and only two:
+    #   DIR_ABSENT  -- there is no docs/ at all, so nothing can be unread.
+    #                  `find` exits non-zero here and that is not a failure,
+    #                  it is the absence being reported.
+    #   DIR_PRESENT with `find` exiting zero -- the walk completed, so the
+    #                  listing is the whole contents.
+    # Everything else may hide an artifact the instrument could not read, and
+    # removal is irrecoverable.
+    @staticmethod
+    def _licensed(marker, exit_code):
+        if marker == "DIR_ABSENT":
+            return True
+        return marker == "DIR_PRESENT" and exit_code == 0
 
-        An unsure reader takes the branch that ends the task, so the default
-        action has to live where that reader lands rather than in a fourth
-        bullet below them. That is why this arm splits the bullet at its own
-        clause boundary instead of reading the whole line: the two halves make
-        opposite claims and a whole-line search cannot tell them apart.
+    def _rows(self):
+        """The Step 1.5 table as {(marker, exit-word, files-word): removal cell}."""
+        block = step_1_5(SKILL_FILE.read_text())
+        rows = {}
+        for line in block.splitlines():
+            cells = [c.strip() for c in line.strip().strip("|").split("|")]
+            if len(cells) != 5 or not cells[0].startswith("`DIR") and not cells[0].startswith("`CANNOT"):
+                continue
+            rows[(cells[0].strip("`"), cells[1], cells[2])] = cells[4]
+        assert rows, "no table rows parsed out of Step 1.5 -- the parser is blind"
+        return rows
+
+    def test_every_observed_state_has_a_row_admitting_the_right_outcome(self, probe, worktree, request):
+        """Every state the probe can produce is routed, and routed correctly."""
+        rows = self._rows()
+        for name, setup, (marker, exit_code, count) in STATES:
+            key = (marker, "zero" if exit_code == 0 else "non-zero",
+                   "none" if count == 0 else "some")
+            assert key in rows, f"{name}: observation {key} has no row in the table"
+            cell = rows[key]
+            licensed = "refused" not in cell
+            assert licensed == self._licensed(marker, exit_code), (
+                f"{name}: observation {key} is routed to {cell!r}, which "
+                f"{'licenses' if licensed else 'refuses'} removal; a state that "
+                f"may hold unread artifacts must refuse"
+            )
+
+    def test_the_prose_licence_names_exactly_what_the_table_licenses(self):
+        """The table and the prose both state the rule; they must not drift.
+
+        Bullet 2 restates the licensing condition in prose, so pinning only the
+        table would leave the prose free to widen with nothing red -- and an
+        agent reads the prose. This is the drift check, not a second pin: the
+        table stays the source and this asserts the sentence agrees with it.
         """
         block = step_1_5(SKILL_FILE.read_text())
-        bullet = next(
-            (ln for ln in block.splitlines() if "proceed directly to Step 2" in ln), ""
-        )
-        assert bullet, "no proceed bullet in Step 1.5"
-        marker = "**Any other result**"
-        assert marker in bullet, (
-            f"the proceed bullet no longer carries its catch-all clause, so an "
-            f"unsure reader has no default but to proceed: {bullet!r}"
-        )
-        proceed, catch_all = bullet.split(marker, 1)
+        bullet = next((ln for ln in block.splitlines()
+                       if "Removal is licensed only if" in ln), "")
+        assert bullet, "no removal-licence bullet in Step 1.5"
 
-        # The proceed half admits exactly the two states that cannot hold
-        # unread artifacts.
-        assert "DIR_ABSENT" in proceed
-        assert "DIR_PRESENT" in proceed
-        assert "CANNOT_OBSERVE" not in proceed, (
-            f"the proceed clause now admits an unobservable worktree: {proceed!r}"
+        licensed_markers = {m for (m, _, _), cell in self._rows().items()
+                            if "refused" not in cell}
+        for marker in ("DIR_ABSENT", "DIR_PRESENT", "CANNOT_OBSERVE"):
+            in_prose = marker in bullet
+            assert in_prose == (marker in licensed_markers), (
+                f"the prose licence and the table disagree about {marker}: "
+                f"prose {'names' if in_prose else 'omits'} it, table "
+                f"{'licenses' if marker in licensed_markers else 'refuses'} it"
+            )
+        assert "exiting zero" in bullet, (
+            f"the prose licence no longer qualifies DIR_PRESENT by the find "
+            f"exit status, so it now admits the non-zero rows the table "
+            f"refuses: {bullet!r}"
         )
-
-        # The catch-all half carries the unobservable state and ends on the
-        # non-destructive branch.
-        assert "CANNOT_OBSERVE" in catch_all
-        assert "loud-warning" in catch_all, (
-            f"the catch-all no longer routes anywhere non-destructive: {catch_all!r}"
-        )
-        # Base rate, so a zero above is distinguishable from an empty read.
-        assert block.count("CANNOT_OBSERVE") >= 2, "base-rate check read an empty block"
