@@ -43,13 +43,13 @@ phrase restored ALONGSIDE the new clauses — a co-existence muddle (a
 merge or partial edit keeping both forms) leaves the presence pins
 green, and only the retired phrase witnesses the regression.
 
-Counter-test-by-revert (verified at authoring time): with both doc
-surfaces reverted to their pre-change state (git checkout HEAD -- <2 doc
-paths>, edits uncommitted in the working tree), every test in this module
-fails — all 11 presence cases (new phrases absent pre-fix) and both
-absence cases (retired phrase present pre-fix). The observed flip-set
-cardinality is recorded in the module-level comment at the bottom of this
-file. Post-restore, all cases pass.
+Counter-test-by-revert (verified): with both doc surfaces reverted to
+their pre-change state, every test in this module fails — all 12
+presence cases (no pinned phrase pre-existed on either surface) and
+both absence cases (the retired phrase was present pre-fix). The
+flip-set cardinality and its measurement history are recorded in the
+module-level comment at the bottom of this file. Post-restore, all
+cases pass.
 """
 
 from pathlib import Path
@@ -203,20 +203,21 @@ def test_retired_scope_phrase_absent(doc_path: Path, retired: str):
 
 
 # ---------------------------------------------------------------------------
-# Counter-test flip-set record (measured at authoring time 2026-09-07; see
-# module docstring). With both doc surfaces reverted to their pre-change
-# state (git checkout HEAD -- the 2 doc paths, edits saved aside) and this
-# module run against them: {13 failed, 0 passed} — all 11 presence cases
-# RED (no pinned phrase pre-existed on either surface) and both absence
-# cases RED (the retired scope phrase was present on both surfaces
-# pre-fix). Post-restore: 13/13 green.
-#
-# 2026-09-07 addendum (review remediation): one presence case added — the
-# lead-surface stale-anchor response clause "re-read from disk, re-anchor,
-# and retry" (measured unpinned at review: deleting it alone left the
-# condition and anti-fallback pins green). Phrase verified 1x-unique on
-# the surface and absent pre-fix, so the case joins the flip-set under
-# the authoring-time revert. Module cases 13 -> 14. Same remediation
+# Counter-test flip-set record (see module docstring). Current inventory:
+# 12 presence + 2 absence = 14 cases. With both doc surfaces reverted to
+# their pre-change state and this module run against them: {14 failed,
+# 0 passed} — all 12 presence cases RED (no pinned phrase pre-existed on
+# either surface) and both absence cases RED (the retired scope phrase
+# was present on both surfaces pre-fix). Post-restore: 14/14 green.
+# Measurement history: {13 failed, 0 passed} measured at authoring time
+# 2026-09-07 (working-tree revert of the 2 doc paths, edits saved aside),
+# when the module had 11 presence cases. The 12th presence case — the
+# lead-surface stale-anchor response clause "re-read from disk,
+# re-anchor, and retry" — was added in review remediation after being
+# measured unpinned (deleting it alone left the condition and
+# anti-fallback pins green); {14 failed, 0 passed} then measured
+# 2026-09-07 against the pre-change surfaces in a throwaway detached
+# worktree with the current module copied in. The same remediation
 # corrected the absence-pin rationale in the docstring and the
 # RETIRED_SCOPE comment: their unique catch is the retired phrase
 # restored ALONGSIDE the new clauses (co-existence); a bare clause
