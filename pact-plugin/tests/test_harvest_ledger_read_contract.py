@@ -364,3 +364,83 @@ class TestUnionRuleIsCoupledAcrossItsThreeSites:
         # Stated beside the per-region results: the three hits above are three
         # DIFFERENT sites and not three hits inside one of them.
         assert skill_text.count(UNION_ANCHOR) == UNION_SITES
+
+
+class TestEverySiteUsingTheLedgerObeysItsRule:
+    """Every site that touches the ledger states the read rule or cites it.
+
+    The rule lives at Step 8. Five other places in this file read or write the
+    same ledger, and a site that neither states the rule nor points at it is
+    one an agent will execute from memory -- which is how the Standard
+    harvest's own population read at the top of the file went five specialist
+    reviews without obeying the discipline it defines.
+
+    HOW THE SITE SET IS DERIVED, and it is not a hand-maintained list: a site
+    cannot instruct anyone to touch the ledger without naming it, so the
+    filename enumerates the sites. Fenced blocks are excluded because a format
+    template is not an instruction -- that exclusion is structural, so a future
+    template inside a fence drops out on its own.
+
+    WHAT THIS CANNOT CATCH. A site that refers to the ledger without naming it
+    ("the processed task list", "that file") is invisible here, and so is one
+    naming it only as a path fragment. The filename is a coupling, not a
+    guarantee: it enumerates sites only where sites spell it the same way. The
+    bare token is matched deliberately rather than `session_processed_tasks.md`
+    so that dropping the extension does not hide a site. And a site added
+    INSIDE the Step 8 region is exempt, because that region is where the rule
+    is stated -- measured, by inserting an uncited site at Step 8.5 and
+    watching this stay green. Outside the region the same insertion reddens.
+    """
+
+    LEDGER = "session_processed_tasks"
+    _STATES_RULE = re.compile(r"grep -[cn] '")
+
+    @staticmethod
+    def _strip_fences(skill_text):
+        """Drop fenced blocks by SCANNING, not by pairing ```...``` with a regex.
+
+        Measured: a non-greedy `re.sub` over the whole document mis-pairs the
+        moment a fence is added or removed anywhere above, silently swallowing
+        prose between two markers that were never a pair -- which hid a `Step
+        8` citation and turned a correct file red. A line scanner cannot
+        mis-pair, because it decides one line at a time.
+        """
+        out, fenced = [], False
+        for line in skill_text.splitlines():
+            if line.lstrip().startswith("```"):
+                fenced = not fenced
+                continue
+            out.append("" if fenced else line)
+        return "\n".join(out)
+
+    def _sites(self, skill_text):
+        """Ledger-naming blocks, paired with whether each sits inside Step 8."""
+        unfenced = self._strip_fences(skill_text)
+        start = unfenced.find("### Step 8")
+        end = unfenced.find("### Step 9")
+        assert -1 < start < end, "Step 8 region not found -- the parser is blind"
+        sites, offset = [], 0
+        for block in unfenced.split("\n\n"):
+            if self.LEDGER in block:
+                sites.append((block, start <= offset < end))
+            offset += len(block) + 2
+        return sites
+
+    def test_the_site_census_is_not_empty(self, skill_text):
+        # A zero here would make every assertion below vacuously true.
+        sites = self._sites(skill_text)
+        assert len(sites) >= 5, (
+            f"only {len(sites)} ledger sites found; the filename has stopped "
+            f"enumerating them and the arm below is measuring nothing"
+        )
+        assert any(defines for _, defines in sites), "no site inside Step 8"
+
+    def test_every_site_states_the_rule_or_cites_it(self, skill_text):
+        for block, defines in self._sites(skill_text):
+            if defines or self._STATES_RULE.search(block):
+                continue  # this site IS the rule, or restates it inline
+            assert "Step 8" in block, (
+                f"a site touching the ledger neither states the read rule nor "
+                f"cites Step 8, so an agent reaching it has nothing to follow "
+                f"but memory: {block.strip()[:200]!r}"
+            )
