@@ -36,10 +36,12 @@ rendering alike. The Unicode arrows in the one-liner call sequence are
 literal text on both sides of normalization and must be copied exactly.
 
 ABSENCE pins lock out the retired pre-fix scope ("never a whole-file
-rewrite from a copy you read earlier") on both surfaces: a revert to the
-two-step-only scope restores that phrase while the new-clause presence
-pins stay green if the clauses are merely deleted alongside, so the
-retired phrase itself is the regression witness.
+rewrite from a copy you read earlier") on both surfaces. A full revert
+to the two-step-only scope flips the presence pins too (the new clauses
+are gone with it), so the absence pins' unique catch is the retired
+phrase restored ALONGSIDE the new clauses — a co-existence muddle (a
+merge or partial edit keeping both forms) leaves the presence pins
+green, and only the retired phrase witnesses the regression.
 
 Counter-test-by-revert (verified at authoring time): with both doc
 surfaces reverted to their pre-change state (git checkout HEAD -- <2 doc
@@ -127,6 +129,10 @@ PHRASE_PINS = [
     (ORCHESTRATOR, "a scripted read-replace-write from a shell one-liner"),
     # Stale-anchor semantics on the lead surface.
     (ORCHESTRATOR, "If the Edit fails on a stale anchor, the file changed under you"),
+    # The stale-anchor response on the lead surface (the condition above
+    # and the anti-fallback below leave this imperative clause unpinned
+    # without it — measured: deleting it alone leaves both green).
+    (ORCHESTRATOR, "re-read from disk, re-anchor, and retry"),
     # Anti-fallback, lowercase n — mid-sentence on this surface; the
     # distinct case from the SKILL pin above is deliberate (per-surface
     # casing — do not normalize case to unify these pins).
@@ -162,10 +168,12 @@ def test_rule_phrase_present(doc_path: Path, phrase: str):
 # ---------------------------------------------------------------------------
 
 # The pre-fix rule scoped the prohibition to the two-step form only
-# ("never a whole-file rewrite from a copy you read earlier"). A revert to
-# that scope restores the phrase while the new-clause presence pins stay
-# green if the clauses are merely deleted alongside — so the retired
-# phrase itself is pinned absent on both surfaces.
+# ("never a whole-file rewrite from a copy you read earlier"). A full
+# revert to that scope flips the presence pins too (the new clauses are
+# gone with it); the absence pins' unique catch is the retired phrase
+# restored ALONGSIDE the new clauses — a co-existence muddle (a merge or
+# partial edit keeping both forms) leaves the presence pins green — so
+# the retired phrase itself is pinned absent on both surfaces.
 RETIRED_SCOPE = "never a whole-file rewrite from a copy you read earlier"
 
 ABSENCE_PINS = [
@@ -202,4 +210,15 @@ def test_retired_scope_phrase_absent(doc_path: Path, retired: str):
 # RED (no pinned phrase pre-existed on either surface) and both absence
 # cases RED (the retired scope phrase was present on both surfaces
 # pre-fix). Post-restore: 13/13 green.
+#
+# 2026-09-07 addendum (review remediation): one presence case added — the
+# lead-surface stale-anchor response clause "re-read from disk, re-anchor,
+# and retry" (measured unpinned at review: deleting it alone left the
+# condition and anti-fallback pins green). Phrase verified 1x-unique on
+# the surface and absent pre-fix, so the case joins the flip-set under
+# the authoring-time revert. Module cases 13 -> 14. Same remediation
+# corrected the absence-pin rationale in the docstring and the
+# RETIRED_SCOPE comment: their unique catch is the retired phrase
+# restored ALONGSIDE the new clauses (co-existence); a bare clause
+# deletion flips the presence pins itself.
 # ---------------------------------------------------------------------------
