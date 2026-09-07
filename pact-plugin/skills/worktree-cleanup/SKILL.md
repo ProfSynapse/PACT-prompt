@@ -43,7 +43,7 @@ Present the list and ask: "Which worktree should I remove?"
 Run this exact command, substituting the target worktree's absolute path from Step 1 — the same path Step 2 will remove:
 
 ```bash
-[ -d "{abs_worktree}/docs" ] && echo DIR_PRESENT || echo DIR_ABSENT
+[ -d "{abs_worktree}/docs" ] && echo DIR_PRESENT || { [ -x "{abs_worktree}" ] && echo DIR_ABSENT || echo CANNOT_OBSERVE; }
 find -L "{abs_worktree}/docs" -type f
 ```
 
@@ -51,7 +51,7 @@ Then apply this conditional guard:
 
 - **`find` lists files AND a secretary/team is reachable** (the normal workflow-driven teardown): trigger a secretary harvest of the worktree's `docs/` artifacts and **confirm it completes before** proceeding to Step 2. The secretary reads + distills each artifact into pact-memory (its `pact-handoff-harvest` Step 3.5 resolves `artifact_paths` events and reads the disk artifacts while the worktree is still live — this guard is what guarantees that liveness). Do NOT remove the worktree until the harvest is confirmed done.
 - **`find` lists files but no secretary/team is reachable** (e.g. a manual cleanup in a fresh session with no active team): do NOT silently delete. Surface a **loud warning** that the worktree's `docs/` artifacts have NOT been harvested and will be **irrecoverably deleted** by removal, and let the user decide whether to proceed, harvest manually first, or abort.
-- **Nothing to protect** — `DIR_ABSENT`, or `DIR_PRESENT` with `find` exiting zero and listing no files: proceed directly to Step 2. **Any other result** — `DIR_PRESENT` with `find` exiting non-zero, or either result unestablished — means `docs/` may hold artifacts your instrument could not read: take the loud-warning branch above instead.
+- **Nothing to protect** — `DIR_ABSENT`, or `DIR_PRESENT` with `find` exiting zero and listing no files: proceed directly to Step 2. **Any other result** — `CANNOT_OBSERVE`, `DIR_PRESENT` with `find` exiting non-zero, or either result unestablished — means `docs/` may hold artifacts your instrument could not read: take the loud-warning branch above instead.
 
 This guard is conditional by design: it must NOT unconditionally block, or it would break the no-team manual-cleanup path. (A user who chooses `--force` past the loud warning is the accepted out-of-scope edge.)
 
