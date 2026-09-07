@@ -923,20 +923,14 @@ def _prune_registry_dead_teams(
         registry_path = _get_registry_path()
     if teams_dir is None:
         teams_dir = get_claude_config_dir() / "teams"
-    # SAFETY GUARANTEE 1 of 3 — the unobservable root. Absence or
+    # SAFETY GUARANTEE 1 of 6 — the unobservable root. Absence or
     # unreadability of the teams root is NOT evidence that its teams are dead,
-    # so every state this function cannot observe returns 0 and prunes nothing.
-    # (The other two guarantees are the 0600 chmod and the is_symlink refusal
-    # below; each is one deletable line, so name them when you refactor.)
+    # so a root this function cannot stat returns 0 and prunes nothing.
     #
     # os.stat rather than a directory PREDICATE: `Path.is_dir()` swallows
     # OSError INTERNALLY and returns False, so on a root the process cannot
     # traverse it would report every live team as dead from a call that never
     # raised — no exception, nothing for an `except` below to catch.
-    # S_ISDIR because stat reports that a thing EXISTS, not that it is a
-    # directory: on a plain-file root every per-entry stat below raises
-    # ENOTDIR, which is a statement about a PATH COMPONENT rather than about
-    # the leaf, and reading it as "that team is gone" empties the registry.
     #
     # NOT the idiom in `cleanup_old_teams` / `cleanup_old_tasks`, despite the
     # resemblance: those two survive an unenumerable root only because they
@@ -947,11 +941,16 @@ def _prune_registry_dead_teams(
         st = os.stat(teams_dir)
     except OSError:
         return 0  # cannot observe the teams root → prune nothing
+    # SAFETY GUARANTEE 2 of 6 — a root that exists but is not a directory.
+    # stat reports that a thing EXISTS, not that it is a directory: on a
+    # plain-file root every per-entry stat below raises ENOTDIR, which is a
+    # statement about a PATH COMPONENT rather than about the leaf, and reading
+    # it as "that team is gone" empties the registry.
     if not stat.S_ISDIR(st.st_mode):
         return 0  # not a directory → the per-entry probes below are meaningless
 
     try:
-        # SAFETY GUARANTEE 3 of 3 — a DELIBERATE symlink at the registry path
+        # SAFETY GUARANTEE 4 of 6 — a DELIBERATE symlink at the registry path
         # is refused here, before any write. Do not delete this as redundant
         # with the rewrite below: `os.replace` REPLACES a symlink rather than
         # refusing it, so without this line a user's deliberate link would be
@@ -960,6 +959,7 @@ def _prune_registry_dead_teams(
             return 0
         raw = registry_path.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError):
+        # SAFETY GUARANTEE 5 of 6 — a registry that is not valid UTF-8.
         # UnicodeDecodeError is named explicitly because it subclasses
         # ValueError, NOT OSError — without it, a registry holding invalid
         # UTF-8 raises straight out of a function whose contract is
@@ -993,10 +993,16 @@ def _prune_registry_dead_teams(
                     except FileNotFoundError:
                         keep = False  # verified dead under this root
                     except OSError:
-                        # Unobservable, NOT dead — PermissionError is an OSError
-                        # and so is NotADirectoryError. Neither may reach the
-                        # handler below, which would turn "I cannot tell" back
-                        # into "drop it". Bail out instead, pruning nothing.
+                        # SAFETY GUARANTEE 6 of 6 — an unobservable TEAM.
+                        # One deletable unit, one property, one failure
+                        # direction: delete it or turn it into `keep = False`
+                        # and a team we cannot see becomes a team we call dead,
+                        # dropping a live registration.
+                        #
+                        # PermissionError is an OSError and so is
+                        # NotADirectoryError. Neither may reach the handler
+                        # below, which would turn "I cannot tell" back into
+                        # "drop it". Bail out instead, pruning nothing.
                         return 0
         except ValueError:
             # Malformed JSON only. Do NOT widen this back to OSError: that is
@@ -1016,7 +1022,7 @@ def _prune_registry_dead_teams(
     # write (ENOSPC, EDQUOT, EIO — no adversary needed) left 0 bytes behind
     # and still returned 0, reporting "nothing pruned" over a destroyed file.
     #
-    # SAFETY GUARANTEE 2 of 3 — the explicit 0600. os.replace does NOT
+    # SAFETY GUARANTEE 3 of 6 — the explicit 0600. os.replace does NOT
     # preserve the destination's mode; the temp file's mode wins. Without the
     # fchmod the registry silently becomes 0644 and nothing raises.
     #
