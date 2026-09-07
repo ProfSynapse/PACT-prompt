@@ -23,6 +23,7 @@ import json
 import os
 import re
 import shutil
+import stat
 import sys
 import time
 from pathlib import Path
@@ -905,8 +906,9 @@ def _prune_registry_dead_teams(
     path build, so a garbled/adversarial value cannot raise (e.g. a NUL byte) or
     escape the teams root. A missing registry / unreadable file / write race is
     swallowed (the hook-fail-open invariant; a stale line is harmless). The
-    rewrite preserves 0o600 and uses O_NOFOLLOW so a planted symlink at the path
-    cannot redirect the write.
+    rewrite preserves 0o600 and goes via a temp file renamed into place, so the
+    registry is never open for writing: a failed write leaves the original
+    intact, and a planted symlink cannot redirect it.
 
     Args:
         registry_path: the registry file. Defaults to the shared get_registry_path().
@@ -920,33 +922,39 @@ def _prune_registry_dead_teams(
         registry_path = _get_registry_path()
     if teams_dir is None:
         teams_dir = get_claude_config_dir() / "teams"
-    # The question this site needs answered is "can I ENUMERATE the teams
-    # root", and scandir IS that operation rather than a proxy for it. Anything
-    # that makes the root unenumerable raises OSError here and prunes nothing:
-    # absent, a plain file, a dangling symlink, or a root the process cannot
-    # read. Absence/unreadability of the root is NOT evidence the teams are
-    # dead — without this, every `(teams_dir / team).is_dir()` below returns
-    # False and the whole registry, live registrations included, is dropped.
+    # SAFETY GUARANTEE 1 of 3 — the unobservable root. Absence or
+    # unreadability of the teams root is NOT evidence that its teams are dead,
+    # so every state this function cannot observe returns 0 and prunes nothing.
+    # (The other two guarantees are the 0600 chmod and the is_symlink refusal
+    # below; each is one deletable line, so name them when you refactor.)
+    #
+    # os.stat rather than a directory PREDICATE: `Path.is_dir()` swallows
+    # OSError INTERNALLY and returns False, so on a root the process cannot
+    # traverse it would report every live team as dead from a call that never
+    # raised — no exception, nothing for an `except` below to catch.
+    # S_ISDIR because stat reports that a thing EXISTS, not that it is a
+    # directory: on a plain-file root every per-entry stat below raises
+    # ENOTDIR, which is a statement about a PATH COMPONENT rather than about
+    # the leaf, and reading it as "that team is gone" empties the registry.
     #
     # NOT the idiom in `cleanup_old_teams` / `cleanup_old_tasks`, despite the
-    # resemblance: those two survive a bad root only because they call
-    # `iterdir()`, which RAISES into their outer `except OSError`. This
-    # function never iterates teams_dir — it
-    # only builds `(teams_dir / team).is_dir()`, which returns False instead of
-    # raising, so no backstop fires. `is_dir()`/`exists()` on the root are
-    # proxies and each has a gap: a mode-000 root with live teams inside is
-    # both, yet every per-team stat inside it fails into False.
-    #
-    # KNOWN, DELIBERATE OVER-REFUSAL: a mode-111 root (execute, no read) is
-    # stat-able but not listable, so this refuses where per-team stats would
-    # have worked. Keeping the lines is the right direction — the docstring
-    # above records that stale lines are harmless to correctness.
+    # resemblance: those two survive an unenumerable root only because they
+    # call `iterdir()`, which RAISES into their outer `except OSError`. This
+    # function stats children one at a time, so no backstop fires and the
+    # refusal has to be explicit.
     try:
-        os.scandir(teams_dir).close()
+        st = os.stat(teams_dir)
     except OSError:
         return 0  # cannot observe the teams root → prune nothing
+    if not stat.S_ISDIR(st.st_mode):
+        return 0  # not a directory → the per-entry probes below are meaningless
 
     try:
+        # SAFETY GUARANTEE 3 of 3 — a DELIBERATE symlink at the registry path
+        # is refused here, before any write. Do not delete this as redundant
+        # with the rewrite below: `os.replace` REPLACES a symlink rather than
+        # refusing it, so without this line a user's deliberate link would be
+        # silently swapped for a regular file.
         if not registry_path.exists() or registry_path.is_symlink():
             return 0
         raw = registry_path.read_text(encoding="utf-8")
@@ -969,12 +977,23 @@ def _prune_registry_dead_teams(
                 # BEFORE building an FS path: a garbled/adversarial @team (NUL,
                 # control char, slash, '..') must never raise out of the prune
                 # (honor the never-raises contract) nor build an uncontained
-                # teams/<team> path. The is_dir() lives INSIDE this try so even an
-                # unexpected path error drops the line instead of raising.
-                if _is_safe_team_segment(team) and (teams_dir / team).is_dir():
-                    keep = True
-        except (ValueError, OSError):
-            keep = False  # malformed line / path error → drop, never raise
+                # teams/<team> path.
+                if _is_safe_team_segment(team):
+                    try:
+                        os.stat(teams_dir / team)
+                        keep = True
+                    except FileNotFoundError:
+                        keep = False  # verified dead under this root
+                    except OSError:
+                        # Unobservable, NOT dead — PermissionError is an OSError
+                        # and so is NotADirectoryError. Neither may reach the
+                        # handler below, which would turn "I cannot tell" back
+                        # into "drop it". Bail out instead, pruning nothing.
+                        return 0
+        except ValueError:
+            # Malformed JSON only. Do NOT widen this back to OSError: that is
+            # the route by which an unobservable team becomes a dropped line.
+            keep = False
         if keep:
             kept_lines.append(stripped)
         else:
@@ -983,20 +1002,35 @@ def _prune_registry_dead_teams(
     if pruned == 0:
         return 0  # nothing stale → leave the file untouched (no needless rewrite)
 
+    # Write a sibling temp and rename it into place: the registry is NEVER
+    # open for writing, so there is no window in which it exists empty on
+    # disk. Writing in place with O_TRUNC truncated at OPEN, so a failing
+    # write (ENOSPC, EDQUOT, EIO — no adversary needed) left 0 bytes behind
+    # and still returned 0, reporting "nothing pruned" over a destroyed file.
+    #
+    # SAFETY GUARANTEE 2 of 3 — the explicit 0600. os.replace does NOT
+    # preserve the destination's mode; the temp file's mode wins. Without the
+    # fchmod the registry silently becomes 0644 and nothing raises.
+    #
+    # Symlinks: O_CREAT|O_EXCL refuses to open one, and rename operates on the
+    # link rather than its target, so a link planted here cannot redirect the
+    # write. A deliberate link is refused earlier, at guarantee 3.
+    tmp_path = registry_path.with_name(f"{registry_path.name}.{os.getpid()}.tmp")
     try:
-        nofollow = getattr(os, "O_NOFOLLOW", 0)
-        flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC | nofollow
-        fd = os.open(str(registry_path), flags, 0o600)
+        fd = os.open(str(tmp_path), os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
         try:
-            # O_CREAT's mode arg is a no-op when the file already exists, so set
-            # 0o600 explicitly to preserve the register-side permission on rewrite.
             os.fchmod(fd, 0o600)
             payload = ("\n".join(kept_lines) + "\n") if kept_lines else ""
             os.write(fd, payload.encode("utf-8"))
         finally:
             os.close(fd)
+        os.replace(tmp_path, registry_path)
     except OSError:
-        return 0  # write race / symlink (ELOOP) → leave as-is, never raise
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass  # cleanup is best-effort; the registry is intact either way
+        return 0  # never raise; the original file is untouched
 
     return pruned
 
