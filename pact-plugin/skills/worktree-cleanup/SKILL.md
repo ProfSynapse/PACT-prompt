@@ -47,11 +47,20 @@ Run this exact command, substituting the target worktree's absolute path from St
 find -L "{abs_worktree}/docs" -type f
 ```
 
-Then apply this conditional guard:
+Then apply this guard. It is **two independent decisions** — what to harvest, and whether removal is licensed. A failed probe must never suppress the harvest; it only withholds the removal.
 
-- **`find` lists files AND a secretary/team is reachable** (the normal workflow-driven teardown): trigger a secretary harvest of the worktree's `docs/` artifacts and **confirm it completes before** proceeding to Step 2. The secretary reads + distills each artifact into pact-memory (its `pact-handoff-harvest` Step 3.5 resolves `artifact_paths` events and reads the disk artifacts while the worktree is still live — this guard is what guarantees that liveness). Do NOT remove the worktree until the harvest is confirmed done.
-- **`find` lists files but no secretary/team is reachable** (e.g. a manual cleanup in a fresh session with no active team): do NOT silently delete. Surface a **loud warning** that the worktree's `docs/` artifacts have NOT been harvested and will be **irrecoverably deleted** by removal, and let the user decide whether to proceed, harvest manually first, or abort.
-- **Nothing to protect** — `DIR_ABSENT`, or `DIR_PRESENT` with `find` exiting zero and listing no files: proceed directly to Step 2. **Any other result** — `CANNOT_OBSERVE`, `DIR_PRESENT` with `find` exiting non-zero, or either result unestablished — means `docs/` may hold artifacts your instrument could not read: take the loud-warning branch above instead.
+**1. Harvest whatever `find` listed.** Every listed file is an unharvested artifact, however the probe ended. If a secretary/team is reachable, trigger a secretary harvest of the worktree's `docs/` artifacts and **confirm it completes** before going on. The secretary reads + distills each artifact into pact-memory (its `pact-handoff-harvest` Step 3.5 resolves `artifact_paths` events and reads the disk artifacts while the worktree is still live — this guard is what guarantees that liveness). If `find` listed nothing, there is nothing to harvest.
+
+**2. Removal is licensed only if the probe was conclusive** — `DIR_ABSENT`, or `DIR_PRESENT` with `find` exiting zero — **and** every listed artifact was harvested; then proceed directly to Step 2. Otherwise do NOT remove: surface a **loud warning** naming what is unharvested or unreadable and will be **irrecoverably deleted** by removal, and let the user decide whether to proceed, harvest manually first, or abort. A non-zero exit means `docs/` holds a subtree your instrument could not read, so no harvest can have covered it.
+
+| marker | `find` exit | files listed | harvest | removal |
+|---|---|---|---|---|
+| `DIR_ABSENT` | non-zero | none | nothing to harvest | licensed |
+| `DIR_PRESENT` | zero | none | nothing to harvest | licensed |
+| `DIR_PRESENT` | zero | some | harvest them | licensed once harvested |
+| `DIR_PRESENT` | non-zero | some | harvest what was listed | **refused** — unread subtree |
+| `DIR_PRESENT` | non-zero | none | nothing to harvest | **refused** — unread subtree |
+| `CANNOT_OBSERVE` | non-zero | none | nothing to harvest | **refused** — marker untrustworthy |
 
 This guard is conditional by design: it must NOT unconditionally block, or it would break the no-team manual-cleanup path. (A user who chooses `--force` past the loud warning is the accepted out-of-scope edge.)
 
