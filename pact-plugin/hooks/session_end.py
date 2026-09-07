@@ -1023,12 +1023,16 @@ def _prune_registry_dead_teams(
     # and still returned 0, reporting "nothing pruned" over a destroyed file.
     #
     # SAFETY GUARANTEE 3 of 6 — the explicit 0600. os.replace does NOT
-    # preserve the destination's mode; the temp file's mode wins. Without the
-    # fchmod the registry silently becomes 0644 and nothing raises.
+    # preserve the destination's mode, so whatever the TEMP carries becomes the
+    # registry's. O_CREAT's mode argument sets 0600 here, but it is masked by
+    # the process umask: at umask 022 the two agree and the fchmod changes
+    # nothing, at umask 200 the mode argument alone yields 0400. The fchmod is
+    # what makes the guarantee umask-INDEPENDENT — it is not what provides
+    # 0600 in the normal case.
     #
     # Symlinks: O_CREAT|O_EXCL refuses to open one, and rename operates on the
     # link rather than its target, so a link planted here cannot redirect the
-    # write. A deliberate link is refused earlier, at guarantee 3.
+    # write. A deliberate link is refused earlier, at guarantee 4.
     tmp_path = registry_path.with_name(f"{registry_path.name}.{os.getpid()}.tmp")
     try:
         fd = os.open(str(tmp_path), os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
