@@ -40,11 +40,18 @@ Present the list and ask: "Which worktree should I remove?"
 
 `git worktree remove` deletes the worktree's `docs/` directory **irrecoverably** — that directory is gitignored and worktree-ephemeral, so the phase artifacts it holds (`docs/preparation/`, `docs/architecture/`, `docs/plans/`, `docs/review/`, `docs/decision-logs/`) are gone the instant the worktree is removed. Those artifacts are the **fuller substance** behind each phase's distilled HANDOFF. This step is the single chokepoint that protects them for **all** teardown callers — `peer-review` auto-cleanup, CONSOLIDATE sub-scope early-teardown, and manual `/PACT:worktree-cleanup` alike — so harvest MUST precede remove.
 
-Glob the target worktree's `docs/` for artifacts, then apply this conditional guard:
+Run this exact command, substituting the target worktree's absolute path from Step 1 — the same path Step 2 will remove:
 
-- **Artifacts exist AND a secretary/team is reachable** (the normal workflow-driven teardown): trigger a secretary harvest of the worktree's `docs/` artifacts and **confirm it completes before** proceeding to Step 2. The secretary reads + distills each artifact into pact-memory (its `pact-handoff-harvest` Step 3.5 resolves `artifact_paths` events and reads the disk artifacts while the worktree is still live — this guard is what guarantees that liveness). Do NOT remove the worktree until the harvest is confirmed done.
-- **Artifacts exist but no secretary/team is reachable** (e.g. a manual cleanup in a fresh session with no active team): do NOT silently delete. Surface a **loud warning** that the worktree's `docs/` artifacts have NOT been harvested and will be **irrecoverably deleted** by removal, and let the user decide whether to proceed, harvest manually first, or abort.
-- **No `docs/` artifacts in the worktree**: nothing to protect — proceed directly to Step 2.
+```bash
+[ -d "{abs_worktree}/docs" ] && echo DIR_PRESENT || echo DIR_ABSENT
+find "{abs_worktree}/docs" -type f
+```
+
+Then apply this conditional guard:
+
+- **`find` lists files AND a secretary/team is reachable** (the normal workflow-driven teardown): trigger a secretary harvest of the worktree's `docs/` artifacts and **confirm it completes before** proceeding to Step 2. The secretary reads + distills each artifact into pact-memory (its `pact-handoff-harvest` Step 3.5 resolves `artifact_paths` events and reads the disk artifacts while the worktree is still live — this guard is what guarantees that liveness). Do NOT remove the worktree until the harvest is confirmed done.
+- **`find` lists files but no secretary/team is reachable** (e.g. a manual cleanup in a fresh session with no active team): do NOT silently delete. Surface a **loud warning** that the worktree's `docs/` artifacts have NOT been harvested and will be **irrecoverably deleted** by removal, and let the user decide whether to proceed, harvest manually first, or abort.
+- **Nothing to protect** — `DIR_ABSENT`, or `DIR_PRESENT` with `find` exiting zero and listing no files: proceed directly to Step 2. **Any other result** — `DIR_PRESENT` with `find` exiting non-zero, or either result unestablished — means `docs/` may hold artifacts your instrument could not read: take the loud-warning branch above instead.
 
 This guard is conditional by design: it must NOT unconditionally block, or it would break the no-team manual-cleanup path. (A user who chooses `--force` past the loud warning is the accepted out-of-scope edge.)
 
