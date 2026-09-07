@@ -23,6 +23,7 @@ import json
 import os
 import re
 import shutil
+import stat
 import sys
 import time
 from pathlib import Path
@@ -903,28 +904,76 @@ def _prune_registry_dead_teams(
     Best-effort: never raises. The self-asserted ``@team`` is validated as a safe
     single path segment (``_is_safe_team_segment``) BEFORE any ``teams/<team>``
     path build, so a garbled/adversarial value cannot raise (e.g. a NUL byte) or
-    escape the teams root. A missing registry / unreadable file / write race is
-    swallowed (the hook-fail-open invariant; a stale line is harmless). The
-    rewrite preserves 0o600 and uses O_NOFOLLOW so a planted symlink at the path
-    cannot redirect the write.
+    escape the teams root. A missing registry / unreadable file / non-UTF-8
+    content / write race is swallowed (the hook-fail-open invariant; a stale
+    line is harmless). The
+    rewrite preserves 0o600 and goes via a temp file renamed into place, so the
+    registry is never open for writing: a failed write leaves the original
+    intact, and a planted symlink cannot redirect it.
 
     Args:
         registry_path: the registry file. Defaults to the shared get_registry_path().
         teams_dir: the live-teams root. Defaults to ~/.claude/teams.
 
     Returns:
-        Number of lines pruned (0 if the file is absent or nothing was stale).
+        Number of lines pruned (0 if the file is absent, the teams root cannot
+        be observed, or nothing was stale).
     """
     if registry_path is None:
         registry_path = _get_registry_path()
     if teams_dir is None:
         teams_dir = get_claude_config_dir() / "teams"
+    # SAFETY GUARANTEE 1 of 6 — the unobservable root. Absence or
+    # unreadability of the teams root is NOT evidence that its teams are dead,
+    # so a root this function cannot stat returns 0 and prunes nothing.
+    #
+    # os.stat rather than a directory PREDICATE: `Path.is_dir()` swallows
+    # OSError INTERNALLY and returns False, so on a root the process cannot
+    # traverse it would report every live team as dead from a call that never
+    # raised — no exception, nothing for an `except` below to catch.
+    #
+    # NOT the idiom in `cleanup_old_teams` / `cleanup_old_tasks`, despite the
+    # resemblance: those two survive an unenumerable root only because they
+    # call `iterdir()`, which RAISES into their outer `except OSError`. This
+    # function stats children one at a time, so no backstop fires and the
+    # refusal has to be explicit.
+    try:
+        st = os.stat(teams_dir)
+    except OSError:
+        return 0  # cannot observe the teams root → prune nothing
+    # SAFETY GUARANTEE 2 of 6 — a root that exists but is not a directory.
+    # stat reports that a thing EXISTS, not that it is a directory: on a
+    # plain-file root every per-entry stat below raises ENOTDIR, which is a
+    # statement about a PATH COMPONENT rather than about the leaf, and reading
+    # it as "that team is gone" empties the registry.
+    #
+    # What this line holds that guarantee 6 does not: ORDERING. Guarantee 6
+    # catches the same ENOTDIR per entry, so no assertion on `pruned` or on
+    # the file's contents can tell the two apart — delete this line and a
+    # plain-file root still prunes nothing. What changes is that the registry
+    # gets READ first. Refusing an unusable root before touching the file is
+    # the property, and only a spy on the read can see it.
+    if not stat.S_ISDIR(st.st_mode):
+        return 0  # not a directory → the per-entry probes below are meaningless
 
     try:
+        # SAFETY GUARANTEE 4 of 6 — a DELIBERATE symlink at the registry path
+        # is refused here, before any write. Do not delete this as redundant
+        # with the rewrite below: `os.replace` REPLACES a symlink rather than
+        # refusing it, so without this line a user's deliberate link would be
+        # silently swapped for a regular file.
         if not registry_path.exists() or registry_path.is_symlink():
             return 0
         raw = registry_path.read_text(encoding="utf-8")
-    except OSError:
+    except (OSError, UnicodeDecodeError):
+        # SAFETY GUARANTEE 5 of 6 — a registry that is not valid UTF-8.
+        # UnicodeDecodeError is named explicitly because it subclasses
+        # ValueError, NOT OSError — without it, a registry holding invalid
+        # UTF-8 raises straight out of a function whose contract is
+        # never-raises. A half-written registry is a live possibility: the
+        # rewrite below used to truncate in place, which could leave a
+        # severed multi-byte sequence. Do not widen this to ValueError; a
+        # corrupt registry is UNOBSERVABLE, not stale, so it prunes nothing.
         return 0
 
     kept_lines: list[str] = []
@@ -943,12 +992,29 @@ def _prune_registry_dead_teams(
                 # BEFORE building an FS path: a garbled/adversarial @team (NUL,
                 # control char, slash, '..') must never raise out of the prune
                 # (honor the never-raises contract) nor build an uncontained
-                # teams/<team> path. The is_dir() lives INSIDE this try so even an
-                # unexpected path error drops the line instead of raising.
-                if _is_safe_team_segment(team) and (teams_dir / team).is_dir():
-                    keep = True
-        except (ValueError, OSError):
-            keep = False  # malformed line / path error → drop, never raise
+                # teams/<team> path.
+                if _is_safe_team_segment(team):
+                    try:
+                        os.stat(teams_dir / team)
+                        keep = True
+                    except FileNotFoundError:
+                        keep = False  # verified dead under this root
+                    except OSError:
+                        # SAFETY GUARANTEE 6 of 6 — an unobservable TEAM.
+                        # One deletable unit, one property, one failure
+                        # direction: delete it or turn it into `keep = False`
+                        # and a team we cannot see becomes a team we call dead,
+                        # dropping a live registration.
+                        #
+                        # PermissionError is an OSError and so is
+                        # NotADirectoryError. Neither may reach the handler
+                        # below, which would turn "I cannot tell" back into
+                        # "drop it". Bail out instead, pruning nothing.
+                        return 0
+        except ValueError:
+            # Malformed JSON only. Do NOT widen this back to OSError: that is
+            # the route by which an unobservable team becomes a dropped line.
+            keep = False
         if keep:
             kept_lines.append(stripped)
         else:
@@ -957,20 +1023,39 @@ def _prune_registry_dead_teams(
     if pruned == 0:
         return 0  # nothing stale → leave the file untouched (no needless rewrite)
 
+    # Write a sibling temp and rename it into place: the registry is NEVER
+    # open for writing, so there is no window in which it exists empty on
+    # disk. Writing in place with O_TRUNC truncated at OPEN, so a failing
+    # write (ENOSPC, EDQUOT, EIO — no adversary needed) left 0 bytes behind
+    # and still returned 0, reporting "nothing pruned" over a destroyed file.
+    #
+    # SAFETY GUARANTEE 3 of 6 — the explicit 0600. os.replace does NOT
+    # preserve the destination's mode, so whatever the TEMP carries becomes the
+    # registry's. O_CREAT's mode argument sets 0600 here, but it is masked by
+    # the process umask: at umask 022 the two agree and the fchmod changes
+    # nothing, at umask 200 the mode argument alone yields 0400. The fchmod is
+    # what makes the guarantee umask-INDEPENDENT — it is not what provides
+    # 0600 in the normal case.
+    #
+    # Symlinks: O_CREAT|O_EXCL refuses to open one, and rename operates on the
+    # link rather than its target, so a link planted here cannot redirect the
+    # write. A deliberate link is refused earlier, at guarantee 4.
+    tmp_path = registry_path.with_name(f"{registry_path.name}.{os.getpid()}.tmp")
     try:
-        nofollow = getattr(os, "O_NOFOLLOW", 0)
-        flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC | nofollow
-        fd = os.open(str(registry_path), flags, 0o600)
+        fd = os.open(str(tmp_path), os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
         try:
-            # O_CREAT's mode arg is a no-op when the file already exists, so set
-            # 0o600 explicitly to preserve the register-side permission on rewrite.
             os.fchmod(fd, 0o600)
             payload = ("\n".join(kept_lines) + "\n") if kept_lines else ""
             os.write(fd, payload.encode("utf-8"))
         finally:
             os.close(fd)
+        os.replace(tmp_path, registry_path)
     except OSError:
-        return 0  # write race / symlink (ELOOP) → leave as-is, never raise
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass  # cleanup is best-effort; the registry is intact either way
+        return 0  # never raise; the original file is untouched
 
     return pruned
 
