@@ -946,6 +946,13 @@ def _prune_registry_dead_teams(
     # plain-file root every per-entry stat below raises ENOTDIR, which is a
     # statement about a PATH COMPONENT rather than about the leaf, and reading
     # it as "that team is gone" empties the registry.
+    #
+    # What this line holds that guarantee 6 does not: ORDERING. Guarantee 6
+    # catches the same ENOTDIR per entry, so no assertion on `pruned` or on
+    # the file's contents can tell the two apart — delete this line and a
+    # plain-file root still prunes nothing. What changes is that the registry
+    # gets READ first. Refusing an unusable root before touching the file is
+    # the property, and only a spy on the read can see it.
     if not stat.S_ISDIR(st.st_mode):
         return 0  # not a directory → the per-entry probes below are meaningless
 
