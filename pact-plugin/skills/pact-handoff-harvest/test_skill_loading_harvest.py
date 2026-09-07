@@ -556,11 +556,16 @@ class TestLedgerPruneRulings:
         report = bullet.find("Before removing anything, report what you would remove")
         assert report != -1
         assert "each section header with its byte size" in bullet
-        assert "its ground (verified by journal, reaped directory, or team-wide sibling)" in bullet
+        assert "its ground (verified by journal, or team-wide sibling)" in bullet
         assert "the section count and byte total" in bullet
-        remove = bullet.find("Then remove those sections and nothing else")
+        remove = bullet.find("Then REPLACE each of those sections with its tombstone")
         assert remove != -1
         assert report < remove
+        # The removal IS the record — item 7 substitutes a tombstone rather
+        # than deleting. A rewrite back to write-then-remove, where an agent
+        # can skip the write and still perform a complete-looking removal,
+        # must red here.
+        assert "The record IS the removal" in bullet
 
     # The arms above pin the INGREDIENTS of the verification (paths, event
     # types). A rewrite that keeps every ingredient and flips the CONSEQUENCE
@@ -572,15 +577,17 @@ class TestLedgerPruneRulings:
     def test_failed_verification_keeps_the_section(self, skill_content):
         bullet = _prune_bullet(skill_content)
         # Pinned whole: a present directory with no journal is could-not-verify,
-        # and only an ABSENT directory is the reaped-and-complete case.
+        # and an ABSENT directory is could-not-verify too. Absence under the
+        # reader's config root cannot separate "reaped under mine" from "alive
+        # under another", so neither branch licenses a removal.
         assert (
             "If the directory exists but `{that dir}/session-journal.jsonl` "
             "does not exist, the team cannot be verified from that section: "
             "it stays."
         ) in bullet
         assert (
-            "If the session directory does not exist, the platform has "
-            "reaped the session: the team is complete"
+            "If the session directory does not exist under `{config_dir}`, "
+            "the section cannot be verified from this root: it stays."
         ) in bullet
         # An id-less header resolves by prefix glob only on exactly one match.
         assert "two or more matches mean the section cannot be verified: it stays" in bullet
@@ -621,18 +628,26 @@ class TestLedgerPruneRulings:
             "any other shape counts as no session id"
         ) in bullet
 
-    def test_reaped_directory_is_completion(self, skill_content):
+    def test_reaped_directory_is_not_a_ground(self, skill_content):
         bullet = _prune_bullet(skill_content)
-        # The ground sentence and item 2 each state it; a reader who deletes
-        # one may keep the other, so both are pinned.
-        assert "or by finding that the platform has reaped that session's directory" in bullet
-        assert "the platform has reaped the session: the team is complete, go to item 5" in bullet
+        # INVERTED. This arm used to pin the reaped-directory ground in the two
+        # places that stated it. That ground is deleted: PACT reaps only under
+        # the ending session's own config root and no section records which root
+        # its session ran under, so "reaped under mine" and "alive under another"
+        # produce identical bytes and the ground could never be soundly checked.
+        # Pinned as an ABSENCE rather than removed, because deleting the arm
+        # would leave nothing to red if the branch were reinstated.
+        assert "has reaped" not in bullet
+        # Pins the CONSEQUENCE too, so a reinstatement worded differently from
+        # the original still reds: nothing may route to the team-wide
+        # escalation except a journal verification.
+        assert "the team is complete, go to item 5" not in bullet
 
     def test_id_less_header_resolves_only_on_exactly_one_match(self, skill_content):
         bullet = _prune_bullet(skill_content)
         assert "glob `{config_dir}/pact-sessions/*/XXXXXXXX-*`" in bullet
         assert "exactly one match is the session directory, continue with it as if the header had named it" in bullet
-        assert "no match means the platform has reaped the session, go to item 5" in bullet
+        assert "no match means the session cannot be located from this config root: it stays" in bullet
 
     def test_equal_ts_is_not_later(self, skill_content):
         bullet = _prune_bullet(skill_content)
@@ -641,7 +656,7 @@ class TestLedgerPruneRulings:
     def test_sub_items_run_in_execution_order(self, skill_content):
         bullet = _prune_bullet(skill_content)
         heads = ["Address.", "Existence.", "Reads.", "Ordering.",
-                 "Team-wide removal.", "Report.", "Remove."]
+                 "Team-wide removal.", "Report.", "Replace with a tombstone."]
         positions = [bullet.find(f"**{h}**") for h in heads]
         assert -1 not in positions, positions
         assert positions == sorted(positions), positions
