@@ -44,7 +44,7 @@ Run this exact command, substituting the target worktree's absolute path from St
 
 ```bash
 [ -d "{abs_worktree}/docs" ] && echo DIR_PRESENT || echo DIR_ABSENT
-find "{abs_worktree}/docs" -type f
+find -L "{abs_worktree}/docs" -type f
 ```
 
 Then apply this conditional guard:
