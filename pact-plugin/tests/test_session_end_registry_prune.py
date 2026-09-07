@@ -227,6 +227,47 @@ def test_unobservable_teams_root_prunes_nothing(tmp_path, make_root):
     assert reg_path.stat().st_mtime_ns == mtime_before
 
 
+def test_unlistable_root_refuses_rather_than_pruning_a_dead_line(tmp_path):
+    """Pins the guard's DISCLOSED OVER-REFUSAL: a mode-111 root (traversable,
+    not listable) refuses, keeping a line it could have proved dead.
+
+    Distinct from the four arms above, which use live-only registries where
+    refusing and pruning-correctly both leave 2 lines and cannot be told apart.
+    Here one team is live and one is dead: the guard keeps 2/2, while the
+    per-team stats it declines to run would have kept 1/2 — traversal is
+    permitted, so `(teams_dir / team).is_dir()` still answers correctly.
+
+    NON-VACUITY: both predecessors prune here. Unguarded and root-predicate
+    (`is_dir()`/`exists()`, which a mode-111 root passes) both reach the loop
+    and return 1, dropping the dead line → this arm reddens.
+
+    The trade is deliberate — keeping stale lines is the fail-safe direction
+    and the function's docstring records them as harmless to correctness. This
+    arm does not forbid narrowing the guard to permit an unlistable root; it
+    makes that a change someone has to make on purpose.
+    """
+    teams_dir = tmp_path / "teams"
+    teams_dir.mkdir()
+    (teams_dir / "pact-live").mkdir()  # "pact-dead" deliberately not created
+    reg_path = tmp_path / ".teammate-registry.jsonl"
+    payload = (
+        json.dumps({"session_id": "s1", "value": "alice@pact-live"}) + "\n"
+        + json.dumps({"session_id": "s2", "value": "bob@pact-dead"}) + "\n"
+    )
+    reg_path.write_text(payload, encoding="utf-8")
+    teams_dir.chmod(0o111)
+
+    try:
+        pruned = _prune_registry_dead_teams(
+            registry_path=reg_path, teams_dir=teams_dir
+        )
+    finally:
+        teams_dir.chmod(0o755)
+
+    assert pruned == 0
+    assert reg_path.read_text(encoding="utf-8") == payload  # the dead line too
+
+
 def test_defaults_resolve_without_args(monkeypatch, tmp_path):
     """Calling with no args resolves REGISTRY_PATH + ~/.claude/teams; a missing
     default registry is a clean 0 (no raise)."""
