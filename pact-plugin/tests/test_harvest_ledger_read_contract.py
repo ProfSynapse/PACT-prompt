@@ -1,7 +1,8 @@
 """The ledger read contract: the existence count, and the union rule's three sites.
 
-Two properties of `skills/pact-handoff-harvest/SKILL.md`, both of which can be
-reverted today without reddening anything else in the suite.
+Properties of `skills/pact-handoff-harvest/SKILL.md`, each of which can be
+reverted today without reddening anything else in the suite. Checked when the
+third class was added: deleting any one of them leaves the other two green.
 
 1. `TestExistenceCountSurvivesTruncation` — the section-existence decision is a
    COUNT OVER HEADER LINES, whose answer is complete by construction at any file
@@ -16,6 +17,14 @@ reverted today without reddening anything else in the suite.
    write site and two reader sites with nothing coupling them. Change the write
    side alone and both readers go stale silently, under-reporting the processed
    set with no other test able to see it.
+
+3. `TestEverySiteUsingTheLedgerObeysItsRule` — the rule lives at Step 8 and
+   five other places read or write the same ledger. A site that neither states
+   the rule nor cites it is one an agent executes from memory, which is how the
+   Standard harvest's own population read went five specialist reviews without
+   obeying the discipline it defines. The site set is derived from the file
+   rather than listed here: a site cannot instruct anyone to touch the ledger
+   without naming it.
 
 WHY THE EXTRACTION RATHER THAN A PHRASE PIN: these arms fail if the mechanism is
 removed OR reworded away, because they consume the command rather than matching
