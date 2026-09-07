@@ -368,8 +368,15 @@ class TestHarvestPerTeamSectionDirective:
     # deliberate rewording changes these, update them here with a comment
     # confirming the per-team-section scoping (not whole-file overwrite) is
     # still expressed.
+    # Reworded deliberately: "Overwrite only your own team's section" became
+    # "Touch only your own team's section". The per-team-section scoping is
+    # STILL EXPRESSED, and by both phrases below exactly as before -- the only
+    # change is that the scope rule no longer uses a MODE verb to state it.
+    # "Overwrite" survived a regime change: it was written when overwriting
+    # your own section was the instruction, and the write is now append-only,
+    # so the verb described an operation the skill had come to forbid.
     REQUIRED_PHRASES = (
-        "Overwrite only your own team's section",
+        "Touch only your own team's section",
         "never modify, overwrite, or remove another team's",
     )
 
