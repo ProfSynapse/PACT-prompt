@@ -179,6 +179,10 @@ def _make_root_unreadable(root):
     _make_root_absent,
     _make_root_plain_file,
     _make_root_dangling_symlink,
+    # DO NOT DROP AS REDUNDANT. Measured: the three above pass under a
+    # root-level `is_dir()`/`exists()` guard too, so they pin only that SOME
+    # guard exists. mode-000 is the one that pins its FORM — it is the sole
+    # arm that separates the scandir enumeration from a stat-based predicate.
     _make_root_unreadable,
 ], ids=["absent", "plain-file", "dangling-symlink", "mode-000"])
 def test_unobservable_teams_root_prunes_nothing(tmp_path, make_root):
