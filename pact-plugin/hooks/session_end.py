@@ -928,9 +928,10 @@ def _prune_registry_dead_teams(
     # dead — without this, every `(teams_dir / team).is_dir()` below returns
     # False and the whole registry, live registrations included, is dropped.
     #
-    # NOT the idiom at `:674` / `:766`, despite the resemblance: those two
-    # survive a bad root only because they call `iterdir()`, which RAISES into
-    # their outer `except OSError`. This function never iterates teams_dir — it
+    # NOT the idiom in `cleanup_old_teams` / `cleanup_old_tasks`, despite the
+    # resemblance: those two survive a bad root only because they call
+    # `iterdir()`, which RAISES into their outer `except OSError`. This
+    # function never iterates teams_dir — it
     # only builds `(teams_dir / team).is_dir()`, which returns False instead of
     # raising, so no backstop fires. `is_dir()`/`exists()` on the root are
     # proxies and each has a gap: a mode-000 root with live teams inside is
