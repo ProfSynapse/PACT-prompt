@@ -155,6 +155,78 @@ def test_symlink_registry_is_skipped(prune_env, tmp_path):
     assert real.read_text(encoding="utf-8").strip() == prune_env.line("s1", "alice@pact-dead")
 
 
+def _make_root_absent(root):
+    pass  # the path is simply never created
+
+
+def _make_root_plain_file(root):
+    root.write_text("not a directory", encoding="utf-8")
+
+
+def _make_root_dangling_symlink(root):
+    root.symlink_to(root.parent / "nonexistent-target")
+
+
+def _make_root_unreadable(root):
+    # A root with live teams INSIDE it, which the process cannot enumerate.
+    root.mkdir()
+    (root / "pact-live").mkdir()
+    (root / "pact-also-live").mkdir()
+    root.chmod(0o000)
+
+
+@pytest.mark.parametrize("make_root", [
+    _make_root_absent,
+    _make_root_plain_file,
+    _make_root_dangling_symlink,
+    _make_root_unreadable,
+], ids=["absent", "plain-file", "dangling-symlink", "mode-000"])
+def test_unobservable_teams_root_prunes_nothing(tmp_path, make_root):
+    """CANNOT-OBSERVE guard: a teams root that cannot be ENUMERATED must prune
+    NOTHING — the registry survives byte-identical and is not rewritten.
+
+    Deliberately does NOT use `prune_env` — that fixture mkdirs a readable
+    teams root (line 25), so no existing arm can reach any of these states.
+
+    NON-VACUITY, measured against the unguarded base: every one of these four
+    roots made `(teams_dir / team).is_dir()` return False for every line, so
+    the prune returned 2 and rewrote the file to 0 bytes. Reverting the guard
+    reddens all four. `mode-000` is the arm a root-level `is_dir()`/`exists()`
+    guard does NOT catch: the root passes both, yet each per-team stat inside
+    it fails into False — the same truncation through a different door.
+
+    The mtime assertion catches a rewrite that reproduces identical bytes.
+
+    This is NOT `test_all_dead_empties_the_file` with a broken root: there the
+    root is enumerable and the teams are genuinely gone, which stays a
+    legitimate truncation. The observable-root control is
+    `test_idempotent_no_rewrite_when_nothing_stale`.
+    """
+    teams_dir = tmp_path / "teams"
+    make_root(teams_dir)
+    reg_path = tmp_path / "pact-sessions" / ".teammate-registry.jsonl"
+    reg_path.parent.mkdir(parents=True)
+    payload = (
+        json.dumps({"session_id": "s1", "value": "alice@pact-live"}) + "\n"
+        + json.dumps({"session_id": "s2", "value": "bob@pact-also-live"}) + "\n"
+    )
+    reg_path.write_text(payload, encoding="utf-8")
+    mtime_before = reg_path.stat().st_mtime_ns
+
+    try:
+        pruned = _prune_registry_dead_teams(
+            registry_path=reg_path, teams_dir=teams_dir
+        )
+    finally:
+        # Restore traversal, or tmp_path cleanup fails on the mode-000 arm.
+        if teams_dir.is_dir():
+            teams_dir.chmod(0o755)
+
+    assert pruned == 0
+    assert reg_path.read_text(encoding="utf-8") == payload
+    assert reg_path.stat().st_mtime_ns == mtime_before
+
+
 def test_defaults_resolve_without_args(monkeypatch, tmp_path):
     """Calling with no args resolves REGISTRY_PATH + ~/.claude/teams; a missing
     default registry is a clean 0 (no raise)."""

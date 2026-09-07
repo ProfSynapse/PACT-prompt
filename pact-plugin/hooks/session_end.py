@@ -913,12 +913,37 @@ def _prune_registry_dead_teams(
         teams_dir: the live-teams root. Defaults to ~/.claude/teams.
 
     Returns:
-        Number of lines pruned (0 if the file is absent or nothing was stale).
+        Number of lines pruned (0 if the file is absent, the teams root cannot
+        be observed, or nothing was stale).
     """
     if registry_path is None:
         registry_path = _get_registry_path()
     if teams_dir is None:
         teams_dir = get_claude_config_dir() / "teams"
+    # The question this site needs answered is "can I ENUMERATE the teams
+    # root", and scandir IS that operation rather than a proxy for it. Anything
+    # that makes the root unenumerable raises OSError here and prunes nothing:
+    # absent, a plain file, a dangling symlink, or a root the process cannot
+    # read. Absence/unreadability of the root is NOT evidence the teams are
+    # dead — without this, every `(teams_dir / team).is_dir()` below returns
+    # False and the whole registry, live registrations included, is dropped.
+    #
+    # NOT the idiom at `:674` / `:766`, despite the resemblance: those two
+    # survive a bad root only because they call `iterdir()`, which RAISES into
+    # their outer `except OSError`. This function never iterates teams_dir — it
+    # only builds `(teams_dir / team).is_dir()`, which returns False instead of
+    # raising, so no backstop fires. `is_dir()`/`exists()` on the root are
+    # proxies and each has a gap: a mode-000 root with live teams inside is
+    # both, yet every per-team stat inside it fails into False.
+    #
+    # KNOWN, DELIBERATE OVER-REFUSAL: a mode-111 root (execute, no read) is
+    # stat-able but not listable, so this refuses where per-team stats would
+    # have worked. Keeping the lines is the right direction — the docstring
+    # above records that stale lines are harmless to correctness.
+    try:
+        os.scandir(teams_dir).close()
+    except OSError:
+        return 0  # cannot observe the teams root → prune nothing
 
     try:
         if not registry_path.exists() or registry_path.is_symlink():
