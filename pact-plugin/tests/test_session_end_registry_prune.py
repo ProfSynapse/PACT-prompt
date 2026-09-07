@@ -450,13 +450,23 @@ GUARANTEE_ARMS = {
 def test_every_guarantee_marker_has_an_arm():
     """Each `SAFETY GUARANTEE n of m` in the function is claimed by an arm here.
 
-    ONLY ONE DIRECTION OF THIS IS MECHANISED, and the other is the one that
-    found guarantee 6. This arm checks *every marker has an arm*. It cannot
-    check *every guard-shaped line has a marker* -- there is no way to
-    recognise an unmarked guard automatically, and guarantee 6 was exactly
-    that: a working, well-armed handler whose missing marker made it invisible
-    for six passes. That direction rests on review. When a guard line is added,
-    the marker is the thing that is easy to forget and nothing here will say so.
+    WHAT THIS CATCHES, and it is more than self-consistency. The marker
+    numbers are checked against each other AND against the arms mapped below.
+    The second is the load-bearing half: a marker DELETED with the rest
+    renumbered consistently satisfies every check the markers make about
+    themselves -- totals agree, count equals total, numbers run 1..N -- and is
+    caught only by the set no longer matching GUARANTEE_ARMS. Measured on a
+    blind mutation: guarantee 2's marker removed and the remaining five
+    renumbered to `of 5`, with the guard line itself untouched. A
+    self-consistency check alone would have passed it. A consistent lie is
+    still consistent.
+
+    THE ONE DIRECTION THAT IS NOT MECHANISED is narrower than it first looks:
+    a guard that was NEVER marked. Nothing here can recognise an unmarked
+    guard line, and guarantee 6 was exactly that -- a working, well-armed
+    handler invisible for six passes because no marker named it. That rests on
+    review. A guard that LOSES its marker is caught, so long as
+    GUARANTEE_ARMS still names an arm for it.
 
     COLLATERAL vs TARGETED: `test_defaults_resolve_without_args` reddens when
     guarantee 1 is ablated, but it is NOT listed against it. It exercises the
