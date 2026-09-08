@@ -14,11 +14,17 @@ no-op. Normalization, in order:
   2. Strip leading env assignments (`FOO=1 BAR=2 sleep 5` is still filler).
   3. Strip one optional `command `/`builtin ` prefix.
   4. Strip one optional trailing comment (` # ...`).
-Then deny on \\A(true|sleep ([0-9]+(\\.[0-9]+)?[smhd]?|infinity))\\Z —
+Then deny on \\A(true|sleep (([0-9]+(\\.[0-9]*)?|\\.[0-9]+)[smhd]?|infinity))\\Z —
 anchored \\A...\\Z, never $ (which matches before a single trailing
 newline and would re-make the newline forms order-dependent). Any shell
 metacharacter or composition fails the anchored pattern and is allowed:
 this is an honest-mistake guard, not an adversarial boundary.
+
+Under-block shapes consistent with the grammar, by design: a tab or
+multiple spaces between `sleep` and the duration (the pattern's separator
+is one literal space), and quoted env values containing spaces
+(`FOO="a b" sleep 5` mangles through the env-assignment strip). Both stay
+allowed — the persona layer is the standard; this hook is the floor.
 
 Fail direction: OPEN. Any internal error — malformed stdin, a matcher
 exception — allows the command (exit 0 + stderr note). A load/match
@@ -47,7 +53,7 @@ _DENY_REASON = (
 )
 
 _FILLER_PATTERN = re.compile(
-    r"\A(true|sleep ([0-9]+(\.[0-9]+)?[smhd]?|infinity))\Z"
+    r"\A(true|sleep (([0-9]+(\.[0-9]*)?|\.[0-9]+)[smhd]?|infinity))\Z"
 )
 _ENV_ASSIGNMENT = re.compile(r"\A[A-Za-z_][A-Za-z0-9_]*=\S*\s+")
 _WRAPPER_PREFIX = re.compile(r"\A(?:command|builtin)\s+")
@@ -79,7 +85,7 @@ def main() -> None:
     try:
         try:
             input_data = json.load(sys.stdin)
-        except (json.JSONDecodeError, ValueError) as error:
+        except ValueError as error:
             print(
                 f"wait_filler_gate: malformed stdin JSON — allowing "
                 f"(fail-open): {error}",

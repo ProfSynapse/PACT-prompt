@@ -44,8 +44,10 @@ comment lines must not terminate the §5 slice early.
 
 Counter-test-by-construction (measured at authoring time): this module was
 run against the PRE-AMENDMENT persona before the amendment text landed —
-all 21 cases RED (no pinned phrase pre-existed on its section slice), then
-21/21 GREEN after the amendment. The two heading pins guard the slice
+19 of 21 cases RED (every phrase pin; no pinned phrase pre-existed on its
+section slice) and the 2 heading-anchor cases GREEN (the headings
+pre-existed — they are slice anchors, not amendment text), then 21/21
+GREEN after the amendment. The two heading pins guard the slice
 anchors so a heading rename fails with a clear message rather than 19
 empty-slice phrase failures.
 """

@@ -108,10 +108,13 @@ def _persona_watcher_template() -> str:
     """The watcher template fenced bash block from persona §5. A11 asserts
     the hook never gates the remedy the persona teaches (triad coherence),
     so the allow arm reads the template's exact loop shape from the persona
-    itself — a template edit and this arm cannot drift apart."""
+    itself — a template edit and this arm cannot drift apart. The anchor is
+    the watcher rule's own bold lead ('**Instrument the wait.**'), not the
+    §5 section heading: a future earlier bash fence in §5 would otherwise
+    re-point the extraction silently while the arm stayed green."""
     text = ORCHESTRATOR.read_text(encoding="utf-8")
-    section_start = text.index("### Wait in Silence")
-    fence_open = text.index("```bash\n", section_start) + len("```bash\n")
+    anchor = text.index("**Instrument the wait.**")
+    fence_open = text.index("```bash\n", anchor) + len("```bash\n")
     fence_close = text.index("```", fence_open)
     return text[fence_open:fence_close]
 
@@ -143,6 +146,7 @@ DENY_ARMS = [
     ("D4", "\tsleep 5"),
     ("D5", "true   "),
     ("D6", "sleep 0.5"),
+    ("D6", "sleep .5"),
     ("D7", "sleep 1m"),
     ("D7", "sleep 2h"),
     ("D7", "sleep 10s"),
@@ -346,7 +350,9 @@ def test_s3_stdlib_only_imports():
     """The hook imports stdlib only and never shared.* — one subprocess per
     Bash call in every consumer session keeps import cost minimal, and
     staying out of the shared closure keeps it out of every classifier
-    sweep."""
+    sweep. The membership check is an explicit allowlist rather than
+    sys.stdlib_module_names (3.10+): the CI matrix runs this suite on
+    Python 3.9, where that attribute does not exist."""
     tree = ast.parse(HOOK_PATH.read_text(encoding="utf-8"))
     imported = set()
     for node in ast.walk(tree):
@@ -355,8 +361,9 @@ def test_s3_stdlib_only_imports():
         elif isinstance(node, ast.ImportFrom) and node.module:
             imported.add(node.module.split(".")[0])
     assert "shared" not in imported, f"shared.* import found: {imported}"
-    assert imported <= set(sys.stdlib_module_names), (
-        f"non-stdlib imports: {sorted(imported - set(sys.stdlib_module_names))}"
+    assert imported <= {"__future__", "json", "re", "sys"}, (
+        f"imports outside the stdlib allowlist: "
+        f"{sorted(imported - {'__future__', 'json', 're', 'sys'})}"
     )
 
 
