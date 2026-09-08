@@ -48,16 +48,33 @@ Registration pins:
 S1 (script exists) is auto-covered by
 test_hooks_json.py::TestReferencedScriptsExist once registered.
 
-Mutation-ablation table (the TEST-phase verification spec — NOT executed
-at authoring time; each ablation predicts the flipped arms before running,
-and an ablation whose prediction agrees with the arm proves nothing):
-  drop `sleep` alternative from pattern      -> D2, D6-D8, D14 flip
-  drop whitespace strip                       -> D3-D5, D15 flip
-  drop env-assignment strip                   -> D9, D10, D14 flip
-  drop command/builtin prefix strip           -> D11, D12, D14 flip
-  drop comment strip                          -> D13, D14 flip
-  replace \\Z anchor with $                   -> D15 double-newline arm flips
-  invert fail-open to fail-closed             -> A26-A30 flip
+Mutation-ablation table (the TEST-phase verification spec; each ablation
+predicts the flipped arms before running, and an ablation whose prediction
+agrees with the arm proves nothing). AS-EXECUTED (TEST phase, isolated
+copy) — observed vs predicted, with the two corrections:
+  drop `sleep` alternative from pattern  -> observed 14 flips: every
+      sleep-based deny arm (D2, D4, D6, D7x4, D8, D9, D11, D13, D14,
+      D15x2); unique witnesses D2/D6/D7/D8. (Predicted row listed only the
+      unique-witness subset; 14 is the full flip set.)
+  drop whitespace strip                  -> observed 5: D3, D4, D5, D15x2
+      (unique witnesses D3/D5); as predicted.
+  drop env-assignment strip              -> observed 3: D9, D10, D14; as
+      predicted.
+  drop command/builtin prefix strip      -> observed 3: D11, D12, D14; as
+      predicted.
+  drop comment strip                     -> observed 2: D13, D14; as
+      predicted.
+  replace \\Z anchor with $               -> observed 0 — MASKED, not a
+      missing kill: the strip removes ALL trailing newlines and the
+      interior-newline check runs before the pattern, so no input reaches
+      the match with a trailing newline and $ == \\Z. The anchor is
+      zero-cost defense-in-depth documentation; the newline behavior is
+      certified by D15 flipping under the strip and sleep ablations. Do
+      not expect a test to couple to the anchor.
+  invert fail-open to fail-closed        -> observed 2: A26, A30. A27-A29
+      route through the validation-allow path, not the exception paths —
+      they are validation-allow cases, mislabeled above as fail-open arms;
+      fail-open is load-bearing where it exists (both exception paths).
 A total non-flip across arms is an instrument alarm, not a finding.
 
 Counter-test record (measured at authoring time): this module was run
