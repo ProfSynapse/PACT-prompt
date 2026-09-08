@@ -142,6 +142,7 @@ asks. Each row carries its own verdict; do not read one from the heading:
 | two exclusive items are both `active` | ASK | propose pausing one |
 | active with no branch or worktree | ASK | confirm the work is still live |
 | active and untouched past the cutoff | ASK | confirm it is still live |
+| planned and unranked, untouched past the cutoff | ASK | rank it, or ask whether the work is still intended |
 | `plan` does not resolve | APPLY at exactly ONE candidate | at zero or two-plus, ASK |
 | a `memory` id no longer resolves | ASK | same reason as the relational id — the id was the record |
 | a `memory` id is unverifiable | NEITHER | say the store could not be opened; change nothing |

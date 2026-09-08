@@ -31,7 +31,7 @@ from .paths import get_backlog_dir
 # Schema constants, shared with the write side so a writer cannot emit what a
 # reader rejects.
 SCHEMA_VERSION = 1
-NOTE_MAX_CHARS = 200
+NOTE_MAX_CHARS = 500
 MEMORY_MAX_IDS = 5
 STATUSES = frozenset({"planned", "active", "blocked", "done", "dropped"})
 
@@ -735,7 +735,11 @@ def format_block(data: Dict[str, Any], context_anchor: Optional[float] = None) -
     active = [item for item in items if item.get("status") == "active"]
     planned = sorted(
         (item for item in items if item.get("status") == "planned"),
-        key=_rank_key,
+        # The report's fourth key rides here too — `or ""` sorts a missing
+        # `added` first, same loud-non-conformance choice as `_render`. On any
+        # writer-produced file the stable sort already yielded oldest-first,
+        # so this changes uniformity, not behaviour.
+        key=lambda item: (_rank_key(item), item.get("added") or ""),
     )[:_BLOCK_PLANNED_LIMIT]
     flags = file_local_flags(data)
 

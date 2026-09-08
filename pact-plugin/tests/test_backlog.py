@@ -922,15 +922,17 @@ def test_the_import_closure_probe_detects_a_forbidden_import(tmp_path):
 def test_an_over_long_note_is_rejected_and_nothing_is_written(tmp_path, monkeypatch):
     """RED WHEN the writer truncates. Truncation would lose the intent the
     note exists to carry, so the file must stay absent rather than gain a
-    shortened note."""
+    shortened note. The lengths DERIVE from the constant: the pin is the
+    BEHAVIOUR (over-long refused), so the value moves without touching this."""
     monkeypatch.setenv("CLAUDE_PROJECT_DIR", str(tmp_path))  # the writer keys on this, never the cwd
     path = tmp_path / "demo.json"
-    data = _backlog(tmp_path, items=[_item(note="x" * 201)])
+    over = backlog_store.NOTE_MAX_CHARS + 1
+    data = _backlog(tmp_path, items=[_item(note="x" * over)])
 
     problems = backlog.save(data, path)
 
-    assert problems, "a 201-character note was accepted"
-    assert "201" in problems[0] and "200" in problems[0]
+    assert problems, f"a {over}-character note was accepted"
+    assert str(over) in problems[0] and str(backlog_store.NOTE_MAX_CHARS) in problems[0]
     assert not path.exists(), "a rejected backlog was written anyway"
 
 
@@ -939,7 +941,8 @@ def test_a_note_at_the_limit_is_accepted(tmp_path, monkeypatch):
     note of exactly the permitted length."""
     monkeypatch.setenv("CLAUDE_PROJECT_DIR", str(tmp_path))  # the writer keys on this, never the cwd
     path = tmp_path / "demo.json"
-    assert backlog.save(_backlog(tmp_path, items=[_item(note="x" * 200)]), path) == []
+    note = "x" * backlog_store.NOTE_MAX_CHARS
+    assert backlog.save(_backlog(tmp_path, items=[_item(note=note)]), path) == []
     assert path.exists()
 
 
@@ -1739,7 +1742,7 @@ def test_a_non_conforming_file_still_renders_with_a_note(tmp_path):
     project.mkdir()
     store = tmp_path / "store"
     bad = _backlog(project, items=[_item(title="RENDER ME", status="active")])
-    bad["items"][0]["note"] = "x" * 500          # non-conforming, still readable
+    bad["items"][0]["note"] = "x" * (backlog_store.NOTE_MAX_CHARS + 1)  # non-conforming, still readable
     _write(store, "demo.json", bad)
 
     notice = backlog_store.session_block(str(project), backlog_dir=store)

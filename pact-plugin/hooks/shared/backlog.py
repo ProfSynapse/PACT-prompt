@@ -45,6 +45,7 @@ if _HOOKS_DIR not in sys.path:
 
 from shared.backlog_store import (  # noqa: E402  # follows the sys.path bootstrap
     MEMORY_MAX_IDS,
+    NOTE_MAX_CHARS,
     SCHEMA_VERSION,
     SETTLED,
     STATUSES,
@@ -107,7 +108,10 @@ _EXIT_UNREADABLE = 3
 # reserve for not-executable, not-found and signal deaths.
 _EXIT_USAGE = 64
 
-# An `active` item untouched for longer than this is reported as stale.
+# One threshold serves two flags. On an `active` item, untouched past this
+# means the work stalled; on an UNRANKED `planned` item it means nobody has
+# ordered it. Both readings survive the one value — if a future arc needs them
+# to diverge, that is the day a second constant is earned.
 _STALE_AFTER = timedelta(days=14)
 
 # The tracker is a constant cost, not a per-item one: one batched round trip
@@ -988,19 +992,28 @@ def _staleness_flags(items: List[Dict[str, Any]]) -> List[str]:
     # against a 14-day threshold.
     #
     # THE EDGE THIS PICKS: an item touched exactly _STALE_AFTER days ago does
-    # NOT flag; one touched a day earlier does. That is what `_STALE_AFTER`'s
-    # own comment already says the rule is — untouched for LONGER than this —
-    # so this aligns the behaviour with the stated intent rather than choosing
-    # a new one.
+    # NOT flag; one touched a day earlier does. Both arms share that edge, the
+    # cutoff and the touched-parse — hoisted ONCE so the two flags cannot drift
+    # apart, and disjoint BY STATUS (one status per item), so nothing dedups.
+    # The active arm means the work stalled; the planned arm means nobody
+    # ordered it — an unranked item is exactly the population `_rank_of` sends
+    # to `inf`, and a RANKED planned item never flags because its rank is the
+    # signal that someone ordered it deliberately.
     cutoff = (datetime.now(timezone.utc) - _STALE_AFTER).date()
     flags = []
     for item in items:
-        if item.get("status") != "active":
-            continue
+        status = item.get("status")
         touched = as_datetime(item.get("touched"))
-        if touched is not None and touched.date() < cutoff:
+        if touched is None or touched.date() >= cutoff:
+            continue
+        if status == "active":
             flags.append(
                 f"{_label(item)}: active and untouched since {item.get('touched')}"
+            )
+        elif status == "planned" and not isinstance(item.get("rank"), (int, float)):
+            flags.append(
+                f"{_label(item)}: planned and unranked, "
+                f"untouched since {item.get('touched')}"
             )
     return flags
 
@@ -1154,7 +1167,8 @@ def _add_item_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--note",
         help="One line in the orchestrator's voice, never the user's first "
-             "person. Longer than 200 characters is refused, not shortened.",
+             f"person. Longer than {NOTE_MAX_CHARS} characters is refused, not "
+             "shortened.",
     )
     parser.add_argument(
         "--memory",
@@ -1249,12 +1263,24 @@ def _field_updates(args: argparse.Namespace) -> Dict[str, Any]:
     an empty list and omitting the flag means "leave it" — so without this,
     removing a dependency meant hand-editing a file whose whole design says
     the user never hand-edits it.
+
+    THE REF IS NORMALISED HERE, the single choke point both `add` and `set`
+    route through: what `_issue_number` resolves collapses to the bare number
+    (so `#1602` and a GitHub URL store as `1602`), and everything else —
+    Linear keys, `owner/repo#N`, arbitrary strings — passes byte-identical,
+    because the qualifier IS the meaning. Write-time only; existing stores
+    normalise on their next touch, never by migration.
     """
     ref = getattr(args, "ref", None)
+    number = _issue_number(ref)
+    normalised_ref = None if ref is None else (
+        _CLEAR if ref.lower() == "none" else
+        str(number) if number is not None else ref
+    )
     return {
         "status": getattr(args, "status", None),
         "rank": getattr(args, "rank", None),
-        "ref": None if ref is None else (_CLEAR if ref.lower() == "none" else ref),
+        "ref": normalised_ref,
         "plan": getattr(args, "plan", None),
         "note": getattr(args, "note", None),
         "memory": getattr(args, "memory", None),
@@ -1315,14 +1341,20 @@ def _render(
         shown = [i for i in shown if i.get("status") not in SETTLED]
     items = sorted(
         shown,
-        # Three keys, not two: SETTLED items sort last regardless of rank,
+        # Four keys, not three: SETTLED items sort last regardless of rank,
         # because rank orders WORK TO DO and a settled item has none. Without
         # the first key a dropped item with rank 1 outranks a planned item
-        # with rank 2.
+        # with rank 2. The fourth decides a rank tie by AGE — date-only ISO
+        # strings sort lexicographically, which is chronologically — so the
+        # oldest item wins rather than the tie falling silently through to
+        # file order. `or ""` sorts a MISSING `added` FIRST in its tie group:
+        # the loud choice, surfacing a non-conforming item instead of burying
+        # it. Beyond equal full keys, stable file order stands.
         key=lambda item: (
             item.get("status") in SETTLED,
             item.get("status") != "active",
             _rank_of(item),
+            item.get("added") or "",
         ),
     )
     # The id is emitted for the AGENT, which needs it as the argument to `set`.
