@@ -50,6 +50,7 @@ from shared.backlog_store import (  # noqa: E402  # follows the sys.path bootstr
     STATUSES,
     BacklogFileError,
     BacklogUnreadableError,
+    _archived,
     _enclosing_checkout,
     _resolved,
     as_datetime,
@@ -453,8 +454,10 @@ def _items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
 
 
 def new_item_id(data: Dict[str, Any]) -> str:
-    """Four hex characters, unique within this file."""
-    taken = {item.get("id") for item in _items(data)}
+    """Four hex characters, unique within this file. The taken set spans BOTH
+    lists: an id retired to the archive stays taken, so no live item is ever
+    minted an id a relation could resolve to the wrong record."""
+    taken = {item.get("id") for item in _items(data) + _archived(data)}
     while True:
         candidate = secrets.token_hex(2)
         if candidate not in taken:
