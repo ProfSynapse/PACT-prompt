@@ -735,11 +735,16 @@ def format_block(data: Dict[str, Any], context_anchor: Optional[float] = None) -
     active = [item for item in items if item.get("status") == "active"]
     planned = sorted(
         (item for item in items if item.get("status") == "planned"),
-        # The report's fourth key rides here too — `or ""` sorts a missing
-        # `added` first, same loud-non-conformance choice as `_render`. On any
-        # writer-produced file the stable sort already yielded oldest-first,
-        # so this changes uniformity, not behaviour.
-        key=lambda item: (_rank_key(item), item.get("added") or ""),
+        # The report's fourth key rides here too — a missing or non-string
+        # `added` keys as "" and sorts first, same loud-non-conformance choice
+        # as `_render`; the isinstance test keeps a truthy non-string from
+        # TypeErroring the comparison. On any writer-produced file the stable
+        # sort already yielded oldest-first, so this changes uniformity, not
+        # behaviour.
+        key=lambda item: (
+            _rank_key(item),
+            item.get("added") if isinstance(item.get("added"), str) else "",
+        ),
     )[:_BLOCK_PLANNED_LIMIT]
     flags = file_local_flags(data)
 

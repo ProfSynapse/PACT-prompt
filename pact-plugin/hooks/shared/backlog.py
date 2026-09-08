@@ -557,6 +557,18 @@ def archive_items(data: Dict[str, Any], item_ids: Sequence[str]) -> List[Dict[st
     """
     by_id = {item.get("id"): item for item in _items(data)}
     archived_ids = {item.get("id") for item in _archived(data)}
+    # Same membership-not-`.get()` distinction add_item draws on `items`: an
+    # ABSENT archive is created by setdefault below, but a PRESENT non-list one
+    # would reach `.extend` and raise AttributeError — a traceback where the
+    # design is a named refusal. Checked at ENTRY so the structural problem is
+    # named before any id lookup, the add_item ordering.
+    if "archive" in data and not isinstance(data["archive"], list):
+        archive = data["archive"]
+        raise BacklogWriteError(
+            f"archive is {type(archive).__name__}, expected a list. The backlog "
+            f"does not conform and nothing was written — run `show` to see "
+            f"every schema problem."
+        )
     moving = []
     seen = set()
     for item_id in item_ids:
@@ -585,8 +597,14 @@ def archive_items(data: Dict[str, Any], item_ids: Sequence[str]) -> List[Dict[st
     # `by_id` and refused the first id.
     if moving:
         moving_ids = {item.get("id") for item in moving}
+        # The isinstance guard PRESERVES non-dict entries rather than dropping
+        # them: `.get` on one raises AttributeError, and filtering it OUT of the
+        # rebuilt list would remove the very entry save()'s validate() names —
+        # turning a refusal into a silent discard.
         data["items"] = [
-            item for item in data["items"] if item.get("id") not in moving_ids
+            item
+            for item in data["items"]
+            if not isinstance(item, dict) or item.get("id") not in moving_ids
         ]
         data.setdefault("archive", []).extend(moving)
     return moving
@@ -1440,14 +1458,17 @@ def _render(
         # with rank 2. The fourth decides a rank tie by AGE — date-only ISO
         # strings sort lexicographically, which is chronologically — so the
         # oldest item wins rather than the tie falling silently through to
-        # file order. `or ""` sorts a MISSING `added` FIRST in its tie group:
-        # the loud choice, surfacing a non-conforming item instead of burying
-        # it. Beyond equal full keys, stable file order stands.
+        # file order. A missing or NON-STRING `added` keys as "" and sorts
+        # FIRST in its tie group: the loud choice, surfacing a non-conforming
+        # item instead of burying it — and the isinstance test, not `or ""`,
+        # because a truthy non-string (an int from a hand-edit) would
+        # TypeError the comparison against a string sibling. Beyond equal
+        # full keys, stable file order stands.
         key=lambda item: (
             item.get("status") in SETTLED,
             item.get("status") != "active",
             _rank_of(item),
-            item.get("added") or "",
+            item.get("added") if isinstance(item.get("added"), str) else "",
         ),
     )
     # The id is emitted for the AGENT, which needs it as the argument to `set`.

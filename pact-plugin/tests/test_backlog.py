@@ -4917,7 +4917,16 @@ def test_the_report_sorts_by_status_rank_then_age(tmp_path):
     choice for a non-conforming item), and a fully equal tie keeps file order
     through the stable sort.
 
-    RED WHEN any of the four keys leaves the comparator.
+    THE FULL-TIE PAIR'S ids AND TITLES DISAGREE WITH FILE ORDER ON PURPOSE:
+    the first-in-file item carries the LARGER id and the lexicographically
+    LATER title, so an added ascending tiebreak on either field flips the
+    pair and reddens this arm. A pair whose secondary orderings agree with
+    file order cannot separate stability from an incidental fifth key —
+    measured: `item.get("id")` and `item.get("title")` fifth-key mutations
+    both survived the agreeing fixture green.
+
+    RED WHEN any of the four keys leaves the comparator, and RED WHEN a fifth
+    key joins it.
     """
     missing = _item(item_id="2000", title="PLANNED TIE MISSING ADDED",
                     status="planned", rank=2)
@@ -4932,9 +4941,9 @@ def test_the_report_sorts_by_status_rank_then_age(tmp_path):
         _item(item_id="1005", title="ACTIVE RANK 5", status="active", rank=5,
               added="2026-03-01"),
         missing,
-        _item(item_id="2003", title="FULL TIE FIRST IN FILE", status="planned",
+        _item(item_id="2f04", title="ZZZ FULL TIE FIRST IN FILE", status="planned",
               rank=2, added="2026-01-05"),
-        _item(item_id="2004", title="FULL TIE SECOND IN FILE",
+        _item(item_id="2003", title="AAA FULL TIE SECOND IN FILE",
               status="planned", rank=2, added="2026-01-05"),
         _item(item_id="2001", title="PLANNED TIE OLDER", status="planned",
               rank=2, added="2026-01-01"),
@@ -4953,7 +4962,9 @@ def test_the_report_sorts_by_status_rank_then_age(tmp_path):
     assert ids_in_order == [
         "1001", "1005",                 # active first, rank ascending
         "2000", "2001", "2002",         # the rank-2 tie: missing, then age
-        "2003", "2004",                 # a full tie keeps file order
+        "2f04", "2003",                 # a full tie keeps file order — the pair's
+                                        # ids and titles disagree with it, so no
+                                        # incidental ascending key can fake it
         "3001",                         # unranked sorts last of the live
         "4001", "4002",                 # settled last, ranked before unranked
     ], f"rendered order: {ids_in_order}"
@@ -5613,3 +5624,184 @@ def test_the_two_staleness_flags_are_disjoint_by_status():
         f"ACTIVE ONE: active and untouched since {old}",
         f"PLANNED ONE: planned and unranked, untouched since {old}",
     ], flags
+
+
+# ---------------------------------------------------------------------------
+# Remediation pins: the guard discipline the archive arc's new paths lacked.
+# P1/P2 pin the archive verb's refusal on a store whose shape the verb cannot
+# honour (non-list archive key, non-dict items entry) — refused with a named
+# problem and NOTHING written, never an uncaught AttributeError. P3 pins the
+# render-beside-the-flag contract over a non-string `added`, the field whose
+# sort-key guard mirrored `_rank_key`'s isinstance precedent only after review
+# measured the TypeError. P4/P5 close the mint-side and session-block
+# comparator gaps the same review's mutation sweep surfaced.
+# ---------------------------------------------------------------------------
+
+def test_archive_on_a_non_list_archive_key_refuses_cleanly(tmp_path, monkeypatch, capsys):
+    """G1: the archive verb against a store whose `archive` key is present
+    but NOT a list. The move cannot land, so the command refuses — exit 65,
+    the problem naming `archive`, the file's bytes unchanged. Pre-fix this
+    was an uncaught AttributeError out of `setdefault(...).extend`: a
+    traceback and exit 1, neither a named refusal nor a named exit code.
+
+    Present-but-null is the non-conformance validate already names; absent
+    would be the pre-archive shape and must NOT refuse. The payload is built
+    BY HAND: `_backlog_file(archive=None)` means ABSENT by convention, so it
+    cannot express the state under test. Measured: built through the helper,
+    this arm passed the PRE-fix bytes — the verb created the absent key and
+    succeeded, and the pin certified nothing.
+
+    RED WHEN the verb stops guarding the key it extends.
+    """
+    payload = _backlog(tmp_path, items=[_item(item_id="d001", status="done")])
+    payload["archive"] = None
+    path = tmp_path / "b.json"
+    _write(tmp_path, "b.json", payload)
+    monkeypatch.setattr(backlog, "store_path", lambda backlog_dir=None: path)
+    monkeypatch.setattr(backlog, "project_root", lambda: tmp_path)
+    monkeypatch.setattr(backlog, "checkout_roots", lambda: [str(tmp_path)])
+    before = path.read_bytes()
+
+    code = backlog.main(["archive", "d001"])
+    err = capsys.readouterr().err
+
+    assert code == backlog._EXIT_REFUSED, f"exit {code}"
+    assert "archive" in err, f"the refusal does not name its cause: {err!r}"
+    assert path.read_bytes() == before, "A REFUSAL WROTE"
+
+    # The control that distinguishes refusal from breakage: the SAME command
+    # against a conforming store succeeds, so the refusal above is the
+    # non-list key's doing.
+    path2 = _backlog_file(tmp_path, monkeypatch,
+                          [_item(item_id="d001", status="done")])
+    assert backlog.main(["archive", "d001"]) == backlog._EXIT_OK, (
+        "control: the conforming store refused too — the pin proves nothing"
+    )
+
+
+def test_archive_with_a_non_dict_items_entry_refuses_cleanly(tmp_path, monkeypatch, capsys):
+    """G2: the archive verb against a store holding a non-dict ENTRY in
+    `items`. `_items` filters non-dicts from the lookup, but the post-move
+    rebuild reads every entry — pre-fix the rebuild's `.get` met the bare
+    string and raised AttributeError out of the handler. The guard preserves
+    the entry (filtering it out would silently drop data), so save-time
+    validate names it and the command refuses 65 with nothing written.
+
+    RED WHEN the rebuild reads an entry it did not type-check.
+    """
+    payload = _backlog(tmp_path, items=[_item(item_id="d001", status="done")])
+    payload["items"] = ["not-a-dict", payload["items"][0]]
+    path = tmp_path / "b.json"
+    _write(tmp_path, "b.json", payload)
+    monkeypatch.setattr(backlog, "store_path", lambda backlog_dir=None: path)
+    monkeypatch.setattr(backlog, "project_root", lambda: tmp_path)
+    monkeypatch.setattr(backlog, "checkout_roots", lambda: [str(tmp_path)])
+    before = path.read_bytes()
+
+    code = backlog.main(["archive", "d001"])
+    err = capsys.readouterr().err
+
+    assert code == backlog._EXIT_REFUSED, f"exit {code}"
+    assert "expected an object" in err, (
+        f"save-time validate did not name the non-dict entry: {err!r}"
+    )
+    assert path.read_bytes() == before, "A REFUSAL WROTE"
+
+
+def test_a_non_string_added_renders_beside_its_schema_flag(tmp_path, monkeypatch, capsys):
+    """G3, the render-beside-the-flag contract over a non-string `added`. A
+    hand-edit can write "added": 20260101; validate NAMES it, and the report
+    must still render — the same contract
+    test_a_non_conforming_file_still_renders_with_a_note pins for notes.
+    Pre-fix the sort key compared int against str mid-tie and raised
+    TypeError: `show` escaped as a traceback on exit 1, and session_block's
+    totality mislabeled the crash "could not be read" — the file WAS read;
+    a comparator choked on it.
+
+    Behavior-level on purpose: the contract is rc=0 with the flag visible and
+    the block rendering, not any particular guard mechanism.
+
+    RED WHEN the comparator compares a non-string `added` against a string.
+    """
+    poison = _item(item_id="a001", title="POISON ADDED", status="planned",
+                   rank=None)
+    poison["added"] = 20260101
+    peer = _item(item_id="a002", title="STRING ADDED", status="planned",
+                 rank=None, added="2026-01-02")
+    _backlog_file(tmp_path, monkeypatch, [poison, peer])
+
+    code = backlog.main(["show", "--no-reconcile"])
+    captured = capsys.readouterr()
+
+    assert code == backlog._EXIT_OK, f"exit {code}: {captured.err!r}"
+    assert "added is 20260101" in captured.out, (
+        f"the schema flag for the poison field is missing:\n{captured.out}"
+    )
+    assert "STRING ADDED" in captured.out, "the conforming row did not render"
+
+    # The session block renders too — and must NOT mislabel the crash as an
+    # unreadable file.
+    project = tmp_path / "project"
+    project.mkdir()
+    store = tmp_path / "store"
+    bad = _backlog(project, items=[poison, peer])
+    _write(store, "demo.json", bad)
+    notice = backlog_store.session_block(str(project), backlog_dir=store)
+
+    assert "POISON ADDED" in notice.context, (
+        f"the block did not render:\n{notice.context}\nALERT: {notice.alert}"
+    )
+    assert "does not conform" in notice.context, (
+        "the non-conformance note left the block"
+    )
+    assert "could not be read" not in notice.alert, (
+        f"a comparator crash mislabeled as an unreadable file: {notice.alert!r}"
+    )
+
+
+def test_a_new_id_is_never_one_the_archive_holds(tmp_path, monkeypatch):
+    """The mint side of the id universe: `new_item_id`'s taken set spans BOTH
+    lists, so an id retired to the archive is never reissued to a live item —
+    a relation naming it would resolve to the wrong record. The READ side is
+    pinned beside test_a_live_item_blocked_by_an_archived_one...; this pins
+    the MINT side. The deterministic token_hex sequence yields an archived
+    id, then a LIVE id, then a fresh one: both lists must be consulted.
+
+    RED WHEN the taken set narrows to either list alone.
+    """
+    minted = iter(["aaaa", "c001", "bbbb"])
+    monkeypatch.setattr(backlog.secrets, "token_hex", lambda n: next(minted))
+    data = _backlog(tmp_path, items=[_item(item_id="c001", status="active")])
+    data["archive"] = [_item(item_id="aaaa", status="done")]
+
+    assert backlog.new_item_id(data) == "bbbb", (
+        "an id already taken — archived or live — was reissued"
+    )
+
+
+def test_the_session_block_orders_rank_ties_by_age(tmp_path):
+    """The block comparator's fourth key: `format_block` sorts planned rank
+    ties by `added` ascending, uniform with the report. The fixture's file
+    order is the REVERSE of age order and its ids descend against it too, so
+    neither a dropped key nor an incidental id/title tiebreak can fake the
+    order — and the tie's loser falling off the top-3 cut is the observable
+    the block's own comment names.
+
+    RED WHEN the fourth key leaves the block comparator.
+    """
+    items = [
+        _item(item_id="b303", title="NEWER TIE", status="planned", rank=None,
+              added="2026-01-03"),
+        _item(item_id="b302", title="MIDDLE TIE", status="planned", rank=None,
+              added="2026-01-02"),
+        _item(item_id="b301", title="OLDER TIE", status="planned", rank=None,
+              added="2026-01-01"),
+    ]
+
+    block = backlog_store.format_block(_backlog(tmp_path, items=items))
+
+    next_lines = [l for l in block.splitlines() if l.startswith("  next: ")]
+    assert len(next_lines) == 1, f"no next line:\n{block}"
+    assert next_lines[0] == "  next: OLDER TIE; MIDDLE TIE; NEWER TIE", (
+        f"the block's tie order is not age ascending: {next_lines[0]!r}"
+    )
