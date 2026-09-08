@@ -31,7 +31,7 @@ from .paths import get_backlog_dir
 # Schema constants, shared with the write side so a writer cannot emit what a
 # reader rejects.
 SCHEMA_VERSION = 1
-NOTE_MAX_CHARS = 200
+NOTE_MAX_CHARS = 500
 MEMORY_MAX_IDS = 5
 STATUSES = frozenset({"planned", "active", "blocked", "done", "dropped"})
 
@@ -169,18 +169,47 @@ def validate(obj: Any) -> List[str]:
     for index, item in enumerate(items):
         problems.extend(_validate_item(item, index, seen_ids))
 
+    # `archive` is OPTIONAL — membership, not `.get()`, separates an absent key
+    # (exactly the pre-archive shape, always conforming) from an explicit null
+    # (non-conforming), the same distinction `add_item` draws on `items`.
+    # There is deliberately NO unknown-top-level-key rule: an older reader must
+    # keep validating a newer file clean, so additive keys pass unnamed and the
+    # archive carries its own rules instead of a closed key space.
+    if "archive" in obj:
+        archive = obj["archive"]
+        if not isinstance(archive, list):
+            return problems + [f"archive is {type(archive).__name__}, expected a list"]
+        for index, item in enumerate(archive):
+            # THE SAME seen_ids threads both lists, so a hand-edit that leaves
+            # an id in both is a named duplicate rather than a silent shadow.
+            problems.extend(_validate_item(item, index, seen_ids, kind="archive item"))
+            if isinstance(item, dict) and item.get("status") not in SETTLED:
+                item_id = item.get("id")
+                label = (
+                    f"archive item {item_id!r}"
+                    if isinstance(item_id, str)
+                    else f"archive item {index}"
+                )
+                problems.append(
+                    f"{label}: status is {item.get('status')!r}, "
+                    f"the archive holds settled items only"
+                )
+
     return problems
 
 
-def _validate_item(item: Any, index: int, seen_ids: set) -> List[str]:
+def _validate_item(
+    item: Any, index: int, seen_ids: set, kind: str = "item"
+) -> List[str]:
     """Schema rules for one item. `seen_ids` accumulates across the list so a
-    duplicate id is reported on its second occurrence."""
+    duplicate id is reported on its second occurrence. `kind` is the label's
+    noun — "item" or "archive item" — so a problem names WHICH list holds it."""
     if not isinstance(item, dict):
-        return [f"item {index} is {type(item).__name__}, expected an object"]
+        return [f"{kind} {index} is {type(item).__name__}, expected an object"]
 
     problems: List[str] = []
     item_id = item.get("id")
-    label = f"item {item_id!r}" if isinstance(item_id, str) else f"item {index}"
+    label = f"{kind} {item_id!r}" if isinstance(item_id, str) else f"{kind} {index}"
 
     if not isinstance(item_id, str) or not _ITEM_ID.match(item_id):
         problems.append(f"{label}: id is {item_id!r}, expected four hex characters")
@@ -510,6 +539,26 @@ def _items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
     return [item for item in value if isinstance(item, dict)]
 
 
+def _archived(data: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """The archived item dicts, or an empty list — the same guard `_items`
+    carries, over the archive list.
+
+    `archive` is OPTIONAL in the schema: a file without the key is exactly the
+    pre-archive shape, and absent reads as empty everywhere. A PRESENT but
+    non-list `archive` is non-conformance validate() names, and this function
+    runs on data validate() has already rejected — so the type is tested rather
+    than assumed, same as `_items`.
+
+    ONE DEFINITION, imported by the write side rather than re-declared there
+    the way `_items` is: nothing on the write path needs a differently-shaped
+    archive accessor, so the second copy would buy nothing and could drift.
+    """
+    value = data.get("archive")
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if isinstance(item, dict)]
+
+
 def _resolved(path: Path) -> Path:
     """Absolute, symlink-free form, or the path unchanged when it will not
     resolve. Never raises, so a comparison is always well defined."""
@@ -520,7 +569,7 @@ def _resolved(path: Path) -> Path:
 
 
 def file_local_flags(
-    data: Dict[str, Any], include_settled: bool = False
+    data: Dict[str, Any], include_settled: bool = False, *, subject_pool: str
 ) -> List[str]:
     """Drift visible in the file alone, with no git, tracker or store lookup.
 
@@ -545,19 +594,32 @@ def file_local_flags(
     Narrow `by_id` to live items and both break at once — a live item blocked
     by a done item stops matching and is accused of naming an unknown id,
     which is a FALSE flag replacing a correct one, and the blocked-by rule
-    becomes unreachable by construction. So `by_id` stays whole and only the
-    SUBJECTS narrow.
+    becomes unreachable by construction. So `by_id` spans BOTH lists — the
+    archive is a relocation, not a removal, and an id in it must still resolve —
+    while only the SUBJECTS narrow.
 
     `include_settled` is the view, not the data. A flag against a hidden row
     contradicts the listing beside it; against a row `--all` displays, it does
     not. The default serves the default view.
+
+    `subject_pool` selects WHICH list the subjects come from: "items" (the
+    live list) or "archive" for the `--archived` view, whose displayed rows
+    are the archived ones. KEYWORD-ONLY with NO default: the pool is the
+    answer to "which rows does this report show", and a caller that omits it
+    gets Python's own TypeError rather than a silently assumed list. The
+    universe never varies — only the subjects do.
     """
     items = _items(data)
-    by_id = {item.get("id"): item for item in items if isinstance(item.get("id"), str)}
+    by_id = {
+        item.get("id"): item
+        for item in items + _archived(data)
+        if isinstance(item.get("id"), str)
+    }
+    pool = _archived(data) if subject_pool == "archive" else items
     subjects = (
-        items
+        pool
         if include_settled
-        else [item for item in items if item.get("status") not in SETTLED]
+        else [item for item in pool if item.get("status") not in SETTLED]
     )
     flags: List[str] = []
 
@@ -675,9 +737,18 @@ def format_block(data: Dict[str, Any], context_anchor: Optional[float] = None) -
     active = [item for item in items if item.get("status") == "active"]
     planned = sorted(
         (item for item in items if item.get("status") == "planned"),
-        key=_rank_key,
+        # The report's fourth key rides here too — a missing or non-string
+        # `added` keys as "" and sorts first, same loud-non-conformance choice
+        # as `_render`; the isinstance test keeps a truthy non-string from
+        # TypeErroring the comparison. On any writer-produced file the stable
+        # sort already yielded oldest-first, so this changes uniformity, not
+        # behaviour.
+        key=lambda item: (
+            _rank_key(item),
+            item.get("added") if isinstance(item.get("added"), str) else "",
+        ),
     )[:_BLOCK_PLANNED_LIMIT]
-    flags = file_local_flags(data)
+    flags = file_local_flags(data, subject_pool="items")
 
     lines = [f"PACT backlog ({data.get('project')}):"]
     if active:

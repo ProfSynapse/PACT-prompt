@@ -45,11 +45,13 @@ if _HOOKS_DIR not in sys.path:
 
 from shared.backlog_store import (  # noqa: E402  # follows the sys.path bootstrap
     MEMORY_MAX_IDS,
+    NOTE_MAX_CHARS,
     SCHEMA_VERSION,
     SETTLED,
     STATUSES,
     BacklogFileError,
     BacklogUnreadableError,
+    _archived,
     _enclosing_checkout,
     _resolved,
     as_datetime,
@@ -106,7 +108,10 @@ _EXIT_UNREADABLE = 3
 # reserve for not-executable, not-found and signal deaths.
 _EXIT_USAGE = 64
 
-# An `active` item untouched for longer than this is reported as stale.
+# One threshold serves two flags. On an `active` item, untouched past this
+# means the work stalled; on an UNRANKED `planned` item it means nobody has
+# ordered it. Both readings survive the one value — if a future arc needs them
+# to diverge, that is the day a second constant is earned.
 _STALE_AFTER = timedelta(days=14)
 
 # The tracker is a constant cost, not a per-item one: one batched round trip
@@ -453,8 +458,10 @@ def _items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
 
 
 def new_item_id(data: Dict[str, Any]) -> str:
-    """Four hex characters, unique within this file."""
-    taken = {item.get("id") for item in _items(data)}
+    """Four hex characters, unique within this file. The taken set spans BOTH
+    lists: an id retired to the archive stays taken, so no live item is ever
+    minted an id a relation could resolve to the wrong record."""
+    taken = {item.get("id") for item in _items(data) + _archived(data)}
     while True:
         candidate = secrets.token_hex(2)
         if candidate not in taken:
@@ -534,6 +541,73 @@ def update_item(item: Dict[str, Any], **fields: Any) -> None:
     save(), so a rejected change never reaches the file."""
     _apply_fields(item, fields)
     item["touched"] = _now_iso()[:10]
+
+
+def archive_items(data: Dict[str, Any], item_ids: Sequence[str]) -> List[Dict[str, Any]]:
+    """Move settled items from `items` to `archive`, ALL-OR-NOTHING.
+
+    Every id is checked BEFORE anything moves: an unknown id, an
+    already-archived id (the two are distinguished — one was a valid command
+    yesterday) or a non-settled item refuses the WHOLE command with nothing
+    written, so a multi-id invocation never half-moves. Item fields are
+    untouched — no `touched` stamp: archival is a relocation, not an edit, and
+    falsifying "last meaningful touch" buys nothing (no settled consumer reads
+    it). There is no unarchive verb: nothing asks for a route back, and `set`
+    on an archived id is refused by name rather than reaching save.
+    """
+    by_id = {item.get("id"): item for item in _items(data)}
+    archived_ids = {item.get("id") for item in _archived(data)}
+    # Same membership-not-`.get()` distinction add_item draws on `items`: an
+    # ABSENT archive is created by setdefault below, but a PRESENT non-list one
+    # would reach `.extend` and raise AttributeError — a traceback where the
+    # design is a named refusal. Checked at ENTRY so the structural problem is
+    # named before any id lookup, the add_item ordering.
+    if "archive" in data and not isinstance(data["archive"], list):
+        archive = data["archive"]
+        raise BacklogWriteError(
+            f"archive is {type(archive).__name__}, expected a list. The backlog "
+            f"does not conform and nothing was written — run `show` to see "
+            f"every schema problem."
+        )
+    moving = []
+    seen = set()
+    for item_id in item_ids:
+        if item_id in seen:
+            continue
+        seen.add(item_id)
+        item = by_id.get(item_id)
+        if item is None:
+            if item_id in archived_ids:
+                raise BacklogWriteError(
+                    f"item {item_id!r} is already archived. Nothing was written."
+                )
+            raise BacklogWriteError(
+                f"no item with id {item_id!r}. Nothing was written."
+            )
+        status = item.get("status")
+        if status not in SETTLED:
+            raise BacklogWriteError(
+                f"item {item_id!r} is {status!r} — the archive holds settled "
+                f"items only; settle it first with set --status done|dropped. "
+                f"Nothing was written."
+            )
+        moving.append(item)
+    # Reaching the mutation at all means every id resolved to a live settled
+    # item, which means `items` IS a list — a non-list would have emptied
+    # `by_id` and refused the first id.
+    if moving:
+        moving_ids = {item.get("id") for item in moving}
+        # The isinstance guard PRESERVES non-dict entries rather than dropping
+        # them: `.get` on one raises AttributeError, and filtering it OUT of the
+        # rebuilt list would remove the very entry save()'s validate() names —
+        # turning a refusal into a silent discard.
+        data["items"] = [
+            item
+            for item in data["items"]
+            if not isinstance(item, dict) or item.get("id") not in moving_ids
+        ]
+        data.setdefault("archive", []).extend(moving)
+    return moving
 
 
 # ---------------------------------------------------------------------------
@@ -804,7 +878,9 @@ def reconcile(
     items = _items(data)
     # `--all` DISPLAYS settled items, so their file-local flags contradict
     # nothing and belong. Default False keeps the suppression the default view needs.
-    flags = list(file_local_flags(data, include_settled=include_settled))
+    flags = list(file_local_flags(
+        data, include_settled=include_settled, subject_pool="items"
+    ))
     flags.extend(_ref_flags(items))
     flags.extend(_plan_flags(items, data.get("project_path")))
     flags.extend(_memory_flags(items, store))
@@ -985,19 +1061,28 @@ def _staleness_flags(items: List[Dict[str, Any]]) -> List[str]:
     # against a 14-day threshold.
     #
     # THE EDGE THIS PICKS: an item touched exactly _STALE_AFTER days ago does
-    # NOT flag; one touched a day earlier does. That is what `_STALE_AFTER`'s
-    # own comment already says the rule is — untouched for LONGER than this —
-    # so this aligns the behaviour with the stated intent rather than choosing
-    # a new one.
+    # NOT flag; one touched a day earlier does. Both arms share that edge, the
+    # cutoff and the touched-parse — hoisted ONCE so the two flags cannot drift
+    # apart, and disjoint BY STATUS (one status per item), so nothing dedups.
+    # The active arm means the work stalled; the planned arm means nobody
+    # ordered it — an unranked item is exactly the population `_rank_of` sends
+    # to `inf`, and a RANKED planned item never flags because its rank is the
+    # signal that someone ordered it deliberately.
     cutoff = (datetime.now(timezone.utc) - _STALE_AFTER).date()
     flags = []
     for item in items:
-        if item.get("status") != "active":
-            continue
+        status = item.get("status")
         touched = as_datetime(item.get("touched"))
-        if touched is not None and touched.date() < cutoff:
+        if touched is None or touched.date() >= cutoff:
+            continue
+        if status == "active":
             flags.append(
                 f"{_label(item)}: active and untouched since {item.get('touched')}"
+            )
+        elif status == "planned" and not isinstance(item.get("rank"), (int, float)):
+            flags.append(
+                f"{_label(item)}: planned and unranked, "
+                f"untouched since {item.get('touched')}"
             )
     return flags
 
@@ -1114,16 +1199,27 @@ def build_parser() -> argparse.ArgumentParser:
     sub.required = True
 
     show = sub.add_parser("show", help="Report every item with its drift flags")
-    show.add_argument(
+    view = show.add_mutually_exclusive_group()
+    view.add_argument(
         "--all",
         action="store_true",
         help="Show every item, including done and dropped",
+    )
+    view.add_argument(
+        "--archived",
+        action="store_true",
+        help="Show the archive instead of the live list",
     )
     show.add_argument(
         "--no-reconcile",
         action="store_true",
         help="Skip the tracker, pact-memory and git checks",
     )
+
+    archive = sub.add_parser(
+        "archive", help="Move settled items into the archive"
+    )
+    archive.add_argument("item_ids", nargs="+")
 
     add = sub.add_parser("add", help="Add an item")
     add.add_argument("title")
@@ -1151,7 +1247,8 @@ def _add_item_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--note",
         help="One line in the orchestrator's voice, never the user's first "
-             "person. Longer than 200 characters is refused, not shortened.",
+             f"person. Longer than {NOTE_MAX_CHARS} characters is refused, not "
+             "shortened.",
     )
     parser.add_argument(
         "--memory",
@@ -1213,18 +1310,38 @@ def _handle_write_or_show(args: argparse.Namespace, path: Path) -> int:
     schema = [f"schema: {problem}" for problem in validate(data)]
 
     if args.command == "show":
-        flags = [] if args.no_reconcile else reconcile(data, include_settled=args.all)
-        print(_render(data, schema + flags, show_all=args.all))
+        if args.archived:
+            # The external reconcile arms filter settled items BY CONSTRUCTION,
+            # so they could only ever report on live items — the wrong subject
+            # for this view — while still paying the tracker subprocess.
+            # Skipping them is deliberate, not a shortcut.
+            flags = file_local_flags(data, include_settled=True, subject_pool="archive")
+            print(_render(data, schema + flags, show_archived=True))
+        else:
+            flags = [] if args.no_reconcile else reconcile(data, include_settled=args.all)
+            print(_render(data, schema + flags, show_all=args.all))
         return _EXIT_OK
 
     if args.command == "add":
         item = add_item(data, args.title, **_field_updates(args))
+        done_echo = [f"add ok: {item['id']} {item['title']}"]
+    elif args.command == "archive":
+        moved = archive_items(data, args.item_ids)
+        done_echo = [f"archive ok: {item['id']} {item['title']}" for item in moved]
     else:
         item = find_item(data, args.item_id)
         if item is None:
-            print(f"refused: no item with id {args.item_id!r}", file=sys.stderr)
+            if any(i.get("id") == args.item_id for i in _archived(data)):
+                print(
+                    f"refused: item {args.item_id!r} is archived. "
+                    f"Nothing was written.",
+                    file=sys.stderr,
+                )
+            else:
+                print(f"refused: no item with id {args.item_id!r}", file=sys.stderr)
             return _EXIT_REFUSED
         update_item(item, title=args.title, **_field_updates(args))
+        done_echo = [f"set ok: {item['id']} {item['title']}"]
 
     problems = save(data, path)
     if problems:
@@ -1233,7 +1350,8 @@ def _handle_write_or_show(args: argparse.Namespace, path: Path) -> int:
             print(f"  {problem}", file=sys.stderr)
         return _EXIT_REFUSED
 
-    print(f"{args.command} ok: {item['id']} {item['title']}")
+    for line in done_echo:
+        print(line)
     return _EXIT_OK
 
 
@@ -1246,12 +1364,24 @@ def _field_updates(args: argparse.Namespace) -> Dict[str, Any]:
     an empty list and omitting the flag means "leave it" — so without this,
     removing a dependency meant hand-editing a file whose whole design says
     the user never hand-edits it.
+
+    THE REF IS NORMALISED HERE, the single choke point both `add` and `set`
+    route through: what `_issue_number` resolves collapses to the bare number
+    (so `#1602` and a GitHub URL store as `1602`), and everything else —
+    Linear keys, `owner/repo#N`, arbitrary strings — passes byte-identical,
+    because the qualifier IS the meaning. Write-time only; existing stores
+    normalise on their next touch, never by migration.
     """
     ref = getattr(args, "ref", None)
+    number = _issue_number(ref)
+    normalised_ref = None if ref is None else (
+        _CLEAR if ref.lower() == "none" else
+        str(number) if number is not None else ref
+    )
     return {
         "status": getattr(args, "status", None),
         "rank": getattr(args, "rank", None),
-        "ref": None if ref is None else (_CLEAR if ref.lower() == "none" else ref),
+        "ref": normalised_ref,
         "plan": getattr(args, "plan", None),
         "note": getattr(args, "note", None),
         "memory": getattr(args, "memory", None),
@@ -1283,7 +1413,10 @@ def _list_field(args: argparse.Namespace, name: str) -> Any:
 
 
 def _render(
-    data: Dict[str, Any], flags: Sequence[str], show_all: bool = False
+    data: Dict[str, Any],
+    flags: Sequence[str],
+    show_all: bool = False,
+    show_archived: bool = False,
 ) -> str:
     """The `show` report. BOUNDS THE REPORT, NOT THE STORE.
 
@@ -1299,11 +1432,20 @@ def _render(
     not establish. It names the categories SEPARATELY rather than summing —
     four done items is a working project and four dropped ones is a project
     that keeps abandoning things, and those want different responses.
+
+    `show_archived` renders the ARCHIVE instead of the live list — the same
+    comparator and line format over `_archived(data)`, with the header naming
+    the view. The live views carry the archived-count line whenever the
+    archive is non-empty, so the archive is named on every report: an archive
+    nothing mentions is a file nobody reads, and its rot is silent.
     """
-    lines = [f"{data.get('project')} — {data.get('project_path')}"]
-    shown = _items(data)
+    header = f"{data.get('project')} — {data.get('project_path')}"
+    if show_archived:
+        header += " (archive)"
+    lines = [header]
+    shown = _archived(data) if show_archived else _items(data)
     hidden = {}
-    if not show_all:
+    if not show_all and not show_archived:
         hidden = {
             status: sum(1 for i in shown if i.get("status") == status)
             for status in sorted(SETTLED)
@@ -1312,14 +1454,23 @@ def _render(
         shown = [i for i in shown if i.get("status") not in SETTLED]
     items = sorted(
         shown,
-        # Three keys, not two: SETTLED items sort last regardless of rank,
+        # Four keys, not three: SETTLED items sort last regardless of rank,
         # because rank orders WORK TO DO and a settled item has none. Without
         # the first key a dropped item with rank 1 outranks a planned item
-        # with rank 2.
+        # with rank 2. The fourth decides a rank tie by AGE — date-only ISO
+        # strings sort lexicographically, which is chronologically — so the
+        # oldest item wins rather than the tie falling silently through to
+        # file order. A missing or NON-STRING `added` keys as "" and sorts
+        # FIRST in its tie group: the loud choice, surfacing a non-conforming
+        # item instead of burying it — and the isinstance test, not `or ""`,
+        # because a truthy non-string (an int from a hand-edit) would
+        # TypeError the comparison against a string sibling. Beyond equal
+        # full keys, stable file order stands.
         key=lambda item: (
             item.get("status") in SETTLED,
             item.get("status") != "active",
             _rank_of(item),
+            item.get("added") if isinstance(item.get("added"), str) else "",
         ),
     )
     # The id is emitted for the AGENT, which needs it as the argument to `set`.
@@ -1347,6 +1498,13 @@ def _render(
         # the statuses alone has nothing to agree with.
         parts = " and ".join(f"{n} {status}" for status, n in hidden.items())
         lines.append(f"  {parts} hidden (--all to show)")
+    if not show_archived:
+        # The archive's permanent presence on the read path: counted and its
+        # flag advertised in BOTH live views whenever it is non-empty, absent
+        # entirely when empty. Same no-noun trick as the hidden line.
+        archived = _archived(data)
+        if archived:
+            lines.append(f"  {len(archived)} archived (--archived to show)")
     lines.append("")
     lines.append(f"{len(flags)} flag(s):" if flags else "no drift found")
     lines.extend(f"  {flag}" for flag in flags)

@@ -73,7 +73,9 @@ working project and four dropped items is a project that keeps abandoning
 things, and a reader needs to tell those apart. Singular per category, and a
 category absent from the line entirely at zero. Pass `--all` to see them. The
 line names its own remedy, so the flag is discoverable from the output without
-this file.
+this file. When the archive holds settled items, a second line — `N archived
+(--archived to show)` — names the count and the flag that shows them, in the
+default and `--all` views alike.
 
 Read the output and report to the user in plain language:
 
@@ -142,6 +144,7 @@ asks. Each row carries its own verdict; do not read one from the heading:
 | two exclusive items are both `active` | ASK | propose pausing one |
 | active with no branch or worktree | ASK | confirm the work is still live |
 | active and untouched past the cutoff | ASK | confirm it is still live |
+| planned and unranked, untouched past the cutoff | ASK | rank it, or ask whether the work is still intended |
 | `plan` does not resolve | APPLY at exactly ONE candidate | at zero or two-plus, ASK |
 | a `memory` id no longer resolves | ASK | same reason as the relational id — the id was the record |
 | a `memory` id is unverifiable | NEITHER | say the store could not be opened; change nothing |
@@ -168,15 +171,25 @@ python3 "{plugin_root}/hooks/shared/backlog.py" set <item-id> \
   --status done
 ```
 
-Both accept `--status`, `--rank`, `--ref`, `--plan`, `--note`, and the
-repeatable `--memory`, `--blocked-by`, `--batch-with`, `--exclusive-with`.
+Archive settled items:
+
+```bash
+python3 "{plugin_root}/hooks/shared/backlog.py" archive <item-id> [<item-id>...]
+```
+
+The item is moved out of the live list, not removed: its id still resolves,
+and `show --archived` lists it. Only `done` or `dropped` items archive — a
+live id is refused and nothing is written.
+
+Add and set both accept `--status`, `--rank`, `--ref`, `--plan`, `--note`, and
+the repeatable `--memory`, `--blocked-by`, `--batch-with`, `--exclusive-with`.
 `--ref none` clears a ref. The three list fields clear the same way:
 `--blocked-by none`. Passing `none` alongside an id is refused.
 
 Field rules the writer enforces, and a violation is REFUSED with nothing
 written rather than quietly adjusted:
 
-- `note` is capped at 200 characters. Anything longer goes in the tracker issue
+- `note` is capped at 500 characters. Anything longer goes in the tracker issue
   or in pact-memory, with the note pointing at it.
 - `note` is written in YOUR voice, never in the user's first person. A relay in
   the user's first person gains an authority it never had and no later reader
@@ -230,8 +243,9 @@ the next reconciliation instead.
 | 14 | `blocked_by`, `batch_with`, `exclusive_with` | — | ALWAYS ask |
 | 15 | `title`, `note`, `memory` | — | ALWAYS ask |
 | 16 | removing an item | — | NEVER — and not a gap. The record is kept and the state is expressed with `dropped` instead |
+| 17 | `archive` a settled item | wherever the user says it | no — but ONLY when transcribing their words |
 
-No site writes two status rows. Rows 11-16 are here because a permissions table
+No site writes two status rows. Rows 11-17 are here because a permissions table
 that lists only what is allowed reads as though the omissions are allowed too.
 
 Not on every small action: the file's value is its stability.

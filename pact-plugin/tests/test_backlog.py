@@ -199,6 +199,22 @@ is boring and rebuildable, the questions are not.
              mutation and reading the raised `E` line. A red-set diagonal was
              the wrong instrument for this trio; the assertion identity is the
              right one.
+  order    A CLI-LEVEL pin cannot see a check-then-move inversion. Reordering
+             `archive_items` to mutate inside the check loop survived the arm
+             that drives `main()`: the refusal raises before `save` under ANY
+             loop order, so the file's bytes are unchanged either way and the
+             arm read green on the defect it names. The order is observable
+             only on the IN-MEMORY document — the fix was a second arm calling
+             `archive_items` directly and asserting the raise arrives with
+             `items` unmoved, which kills it. When a mutation touches an
+             intermediate state the CLI discards, pin the function, not the
+             file.
+  tmpname  THE TMPDIR NAME IS IN THE FIXTURE. A bare-word substring scan of
+             the rendered report can match the HEADER's project_path, which
+             under pytest is the tmp dir named after the test itself: the
+             word "hidden" matched `test_the_hidden_line_...` and reddened a
+             correct render. Pin a line's distinctive fragment, never a bare
+             word, when the header carries a path.
 
 Each arm was verified by mutating production source and confirming the NAMED
 test reddens. Every mutation listed was killed, run against an unmutated green
@@ -922,15 +938,17 @@ def test_the_import_closure_probe_detects_a_forbidden_import(tmp_path):
 def test_an_over_long_note_is_rejected_and_nothing_is_written(tmp_path, monkeypatch):
     """RED WHEN the writer truncates. Truncation would lose the intent the
     note exists to carry, so the file must stay absent rather than gain a
-    shortened note."""
+    shortened note. The lengths DERIVE from the constant: the pin is the
+    BEHAVIOUR (over-long refused), so the value moves without touching this."""
     monkeypatch.setenv("CLAUDE_PROJECT_DIR", str(tmp_path))  # the writer keys on this, never the cwd
     path = tmp_path / "demo.json"
-    data = _backlog(tmp_path, items=[_item(note="x" * 201)])
+    over = backlog_store.NOTE_MAX_CHARS + 1
+    data = _backlog(tmp_path, items=[_item(note="x" * over)])
 
     problems = backlog.save(data, path)
 
-    assert problems, "a 201-character note was accepted"
-    assert "201" in problems[0] and "200" in problems[0]
+    assert problems, f"a {over}-character note was accepted"
+    assert str(over) in problems[0] and str(backlog_store.NOTE_MAX_CHARS) in problems[0]
     assert not path.exists(), "a rejected backlog was written anyway"
 
 
@@ -939,7 +957,8 @@ def test_a_note_at_the_limit_is_accepted(tmp_path, monkeypatch):
     note of exactly the permitted length."""
     monkeypatch.setenv("CLAUDE_PROJECT_DIR", str(tmp_path))  # the writer keys on this, never the cwd
     path = tmp_path / "demo.json"
-    assert backlog.save(_backlog(tmp_path, items=[_item(note="x" * 200)]), path) == []
+    note = "x" * backlog_store.NOTE_MAX_CHARS
+    assert backlog.save(_backlog(tmp_path, items=[_item(note=note)]), path) == []
     assert path.exists()
 
 
@@ -1739,7 +1758,7 @@ def test_a_non_conforming_file_still_renders_with_a_note(tmp_path):
     project.mkdir()
     store = tmp_path / "store"
     bad = _backlog(project, items=[_item(title="RENDER ME", status="active")])
-    bad["items"][0]["note"] = "x" * 500          # non-conforming, still readable
+    bad["items"][0]["note"] = "x" * (backlog_store.NOTE_MAX_CHARS + 1)  # non-conforming, still readable
     _write(store, "demo.json", bad)
 
     notice = backlog_store.session_block(str(project), backlog_dir=store)
@@ -3045,7 +3064,7 @@ _COMMANDS_DIR = HOOKS_DIR.parent / "commands"
 # loose in a command file is undetectable by construction (it is unknown), but
 # the CLI GROWING one this list has never heard of is detectable, and that is
 # the moment the blind spot is created.
-_WRITE_VERBS = ("set ", "add ")
+_WRITE_VERBS = ("set ", "add ", "archive ")
 # Spelled counts, for the rules that lead with one. Shared by the read rule and
 # the write rule so the two cannot disagree about what FOUR means.
 _COUNT_WORDS = {1: "ONE", 2: "TWO", 3: "THREE", 4: "FOUR", 5: "FIVE", 6: "SIX"}
@@ -4026,14 +4045,14 @@ def test_every_list_typed_field_reports_its_type(tmp_path):
     for field in backlog_store.RELATIONAL_FIELDS:
         for poison in ("abc", {"k": 1}):
             flags = backlog_store.file_local_flags(
-                {"items": [_item(item_id="aaaa", **{field: poison})]})
+                {"items": [_item(item_id="aaaa", **{field: poison})]}, subject_pool="items")
             assert not any("names unknown id" in f for f in flags), (
                 f"{field}={poison!r} FABRICATED ids instead of being refused: "
                 f"{flags}"
             )
 
     control = backlog_store.file_local_flags(
-        {"items": [_item(item_id="aaaa", blocked_by=["nosuch"])]})
+        {"items": [_item(item_id="aaaa", blocked_by=["nosuch"])]}, subject_pool="items")
     assert any("names unknown id" in p for p in control), (
         f"control: a well-formed list produced no relational flag, so the "
         f"absences above prove nothing: {control}"
@@ -4103,12 +4122,12 @@ def test_a_settled_subject_emits_no_file_local_flag():
     for settled in sorted(backlog_store.SETTLED):
         flags = backlog_store.file_local_flags(
             {"items": [_item(item_id="aaaa", status=settled,
-                             blocked_by=["nosuch"])]})
+                             blocked_by=["nosuch"])]}, subject_pool="items")
         assert flags == [], f"a {settled} subject flagged: {flags}"
 
     control = backlog_store.file_local_flags(
         {"items": [_item(item_id="aaaa", status="planned",
-                         blocked_by=["nosuch"])]})
+                         blocked_by=["nosuch"])]}, subject_pool="items")
     assert control, (
         "control: a planned subject with the same dangling id produced no "
         "flag, so the empties above prove nothing"
@@ -4131,7 +4150,7 @@ def test_a_live_item_blocked_by_a_settled_one_is_told_it_will_not_clear():
     RED WHEN the suppression moves from the subject to the blocker.
     """
     for settled in sorted(backlog_store.SETTLED):
-        flags = backlog_store.file_local_flags({"items": _blocked_pair(settled)})
+        flags = backlog_store.file_local_flags({"items": _blocked_pair(settled)}, subject_pool="items")
         assert len(flags) == 1, f"{settled}: expected one flag, got {flags}"
         assert "will not clear on its own" in flags[0], (
             f"{settled}: the live item was not told its blocker is settled: "
@@ -4142,10 +4161,56 @@ def test_a_live_item_blocked_by_a_settled_one_is_told_it_will_not_clear():
             f"missing, which is a false accusation: {flags[0]}"
         )
 
-    control = backlog_store.file_local_flags({"items": _blocked_pair("planned")})
+    control = backlog_store.file_local_flags({"items": _blocked_pair("planned")}, subject_pool="items")
     assert control == [], (
         f"control: a live blocker produced a flag, so the assertions above "
         f"are not about settledness: {control}"
+    )
+
+
+def test_a_live_item_blocked_by_an_archived_one_is_told_it_will_not_clear():
+    """The load-bearing invariant of the archive: no id ever leaves the
+    universe. A live item blocked by an ARCHIVED item must flag exactly as
+    one blocked by a settled-but-live item — the blocker is settled and will
+    not clear — because `by_id` spans BOTH lists.
+
+    THE FAILURE MODE IS SUBSTITUTION, same as the sibling above: narrow
+    `by_id` to the live list and the archived blocker vanishes, so the flag
+    downgrades to `names unknown id` — a false accusation that the id does
+    not exist, which is the removal-downgrade the archive exists to prevent.
+    Counting flags, or checking one is present, is satisfied by the wrong
+    message; the arm asserts the right message PRESENT and the wrong one
+    ABSENT.
+
+    RED WHEN `by_id` stops unioning the archive.
+    """
+    for settled in sorted(backlog_store.SETTLED):
+        flags = backlog_store.file_local_flags({
+            "items": [_item(item_id="c001", title="LIVE ITEM", status="active",
+                            blocked_by=["a001"])],
+            "archive": [_item(item_id="a001", title="THE BLOCKER",
+                              status=settled)],
+        }, subject_pool="items")
+        assert len(flags) == 1, f"{settled}: expected one flag, got {flags}"
+        assert "will not clear on its own" in flags[0], (
+            f"{settled}: the live item was not told its archived blocker is "
+            f"settled: {flags[0]}"
+        )
+        assert "unknown id" not in flags[0], (
+            f"{settled}: SUBSTITUTION — the blocker is archived, not missing, "
+            f"and was reported as not existing: {flags[0]}"
+        )
+
+    # The universe is not "everything resolves": an id in NEITHER list still
+    # flags unknown, with the archive present and populated — so the absences
+    # above are suppression, not a resolver that takes anything.
+    control = backlog_store.file_local_flags({
+        "items": [_item(item_id="c001", status="active", blocked_by=["ffff"])],
+        "archive": [_item(item_id="a001", status="done")],
+    }, subject_pool="items")
+    assert any("names unknown id 'ffff'" in f for f in control), (
+        f"control: a genuinely absent id produced no unknown-id flag, so the "
+        f"absences above prove nothing: {control}"
     )
 
 
@@ -4159,10 +4224,10 @@ def test_include_settled_restores_the_settled_subjects_own_flags():
     """
     data = {"items": [_item(item_id="aaaa", status="done", blocked_by=["nosuch"])]}
 
-    assert backlog_store.file_local_flags(data) == [], (
+    assert backlog_store.file_local_flags(data, subject_pool="items") == [], (
         "the default view must still hide a settled subject's own drift"
     )
-    restored = backlog_store.file_local_flags(data, include_settled=True)
+    restored = backlog_store.file_local_flags(data, include_settled=True, subject_pool="items")
     assert any("names unknown id" in f for f in restored), (
         f"include_settled=True did not restore the settled subject's flag: "
         f"{restored}"
@@ -4300,7 +4365,7 @@ def test_two_id_less_items_each_flag_against_a_shared_peer():
     flags = backlog_store.file_local_flags({"items": [
         _bare(["aaaa"]), _bare(["aaaa"]),
         _item(item_id="aaaa", title=None, status="active"),
-    ]})
+    ]}, subject_pool="items")
     exclusive = [f for f in flags if "are exclusive and both active" in f]
     assert len(exclusive) == 2, (
         f"two id-less subjects must each flag; a label-keyed dedup collapses "
@@ -4333,7 +4398,7 @@ def test_a_one_sided_exclusive_pair_flags_in_either_id_order():
         flags = backlog_store.file_local_flags({"items": [
             _item(item_id=linker, title=None, status="active", exclusive_with=[peer]),
             _item(item_id=peer, title=None, status="active"),
-        ]})
+        ]}, subject_pool="items")
         exclusive = [f for f in flags if "are exclusive and both active" in f]
         assert exclusive == [expected], (
             f"linker={linker} peer={peer}: expected exactly [{expected!r}], "
@@ -4359,7 +4424,7 @@ def test_a_two_sided_exclusive_pair_flags_once_in_either_visit_order():
     a = _item(item_id="aaaa", title=None, status="active", exclusive_with=["bbbb"])
     b = _item(item_id="bbbb", title=None, status="active", exclusive_with=["aaaa"])
     for label, items in (("aaaa first", [a, b]), ("bbbb first", [b, a])):
-        flags = backlog_store.file_local_flags({"items": items})
+        flags = backlog_store.file_local_flags({"items": items}, subject_pool="items")
         exclusive = [f for f in flags if "are exclusive and both active" in f]
         assert exclusive == [expected], (
             f"{label}: a two-sided link must flag ONCE, not once per side: "
@@ -4814,3 +4879,946 @@ def test_an_unset_project_dir_resolves_the_root_from_the_cwd_repository(tmp_path
     monkeypatch.chdir(sub)
 
     assert backlog.project_root() == main.resolve()
+
+
+# ---------------------------------------------------------------------------
+# The archive list: relocation, not removal. The verb and its refusals, the
+# widened id universe (pinned beside its sibling, above), the views, the
+# deterministic tie-break, the aged-unranked flag, and the prose/constant
+# agreement on the note cap.
+#
+# The pre-existing staleness pin is deliberately UNMODIFIED: the active arm's
+# behaviour is untouched, and its unchanged pass is the pin for that.
+# ---------------------------------------------------------------------------
+
+def _backlog_file(tmp_path, monkeypatch, items, archive=None):
+    """A real backlog file wired to `main()`: the monkeypatch trio, so the
+    write path loads and saves THIS file. `archive=None` leaves the key
+    ABSENT — the pre-archive shape — rather than present-but-empty, because
+    the two are different states the schema keeps apart."""
+    payload = _backlog(tmp_path, items=items)
+    if archive is not None:
+        payload["archive"] = archive
+    path = tmp_path / "b.json"
+    _write(tmp_path, "b.json", payload)
+    monkeypatch.setattr(backlog, "store_path", lambda backlog_dir=None: path)
+    monkeypatch.setattr(backlog, "project_root", lambda: tmp_path)
+    monkeypatch.setattr(backlog, "checkout_roots", lambda: [str(tmp_path)])
+    return path
+
+
+def test_the_report_sorts_by_status_rank_then_age(tmp_path):
+    """Exact rendered order over rank ties and mixed statuses.
+
+    THE FIXTURE'S FILE ORDER IS SCRAMBLED ON PURPOSE: insertion order and the
+    correct order differ, so a comparator reduced to a no-op fails. The
+    fourth key is the one under test — a rank tie decides by `added`
+    ascending, a MISSING `added` sorts FIRST in its tie group (the loud
+    choice for a non-conforming item), and a fully equal tie keeps file order
+    through the stable sort.
+
+    THE FULL-TIE PAIR'S ids AND TITLES DISAGREE WITH FILE ORDER ON PURPOSE:
+    the first-in-file item carries the LARGER id and the lexicographically
+    LATER title, so an added ascending tiebreak on either field flips the
+    pair and reddens this arm. A pair whose secondary orderings agree with
+    file order cannot separate stability from an incidental fifth key —
+    measured: `item.get("id")` and `item.get("title")` fifth-key mutations
+    both survived the agreeing fixture green.
+
+    RED WHEN any of the four keys leaves the comparator, and RED WHEN a fifth
+    key joins it.
+    """
+    missing = _item(item_id="2000", title="PLANNED TIE MISSING ADDED",
+                    status="planned", rank=2)
+    del missing["added"]
+    items = [
+        _item(item_id="3001", title="UNRANKED PLANNED", status="planned",
+              rank=None, added="2026-01-03"),
+        _item(item_id="4002", title="DROPPED", status="dropped", rank=None,
+              added="2026-01-01"),
+        _item(item_id="2002", title="PLANNED TIE NEWER", status="planned",
+              rank=2, added="2026-01-02"),
+        _item(item_id="1005", title="ACTIVE RANK 5", status="active", rank=5,
+              added="2026-03-01"),
+        missing,
+        _item(item_id="2f04", title="ZZZ FULL TIE FIRST IN FILE", status="planned",
+              rank=2, added="2026-01-05"),
+        _item(item_id="2003", title="AAA FULL TIE SECOND IN FILE",
+              status="planned", rank=2, added="2026-01-05"),
+        _item(item_id="2001", title="PLANNED TIE OLDER", status="planned",
+              rank=2, added="2026-01-01"),
+        _item(item_id="1001", title="ACTIVE RANK 1", status="active", rank=1,
+              added="2026-02-01"),
+        _item(item_id="4001", title="DONE", status="done", rank=1,
+              added="2026-01-04"),
+    ]
+
+    report = backlog._render(_backlog(tmp_path, items=items), [], show_all=True)
+
+    rendered = [line for line in report.splitlines() if "[id=" in line]
+    ids_in_order = [
+        re.search(r"\[id=([^\]]+)\]", line).group(1) for line in rendered
+    ]
+    assert ids_in_order == [
+        "1001", "1005",                 # active first, rank ascending
+        "2000", "2001", "2002",         # the rank-2 tie: missing, then age
+        "2f04", "2003",                 # a full tie keeps file order — the pair's
+                                        # ids and titles disagree with it, so no
+                                        # incidental ascending key can fake it
+        "3001",                         # unranked sorts last of the live
+        "4001", "4002",                 # settled last, ranked before unranked
+    ], f"rendered order: {ids_in_order}"
+    assert len(rendered) == len(items), "an item vanished from the report"
+
+
+def test_the_hidden_line_names_each_settled_category_separately(tmp_path):
+    """The exact line, indent and all: categories named SEPARATELY, because
+    four done items and four dropped ones want different responses.
+
+    RED WHEN the line sums the categories, drops the flag hint, or renders
+    under --all (where nothing is hidden).
+    """
+    data = _backlog(tmp_path, items=[
+        _item(item_id="c001", title="LIVE", status="active"),
+        _item(item_id="d001", title="DONE ONE", status="done"),
+        _item(item_id="d002", title="DROPPED ONE", status="dropped"),
+        _item(item_id="d003", title="DROPPED TWO", status="dropped"),
+    ])
+
+    default_lines = backlog._render(data, []).splitlines()
+    assert "  1 done and 2 dropped hidden (--all to show)" in default_lines, (
+        f"the category-separated line changed shape:\n"
+        + "\n".join(default_lines)
+    )
+    assert not any("DONE ONE" in line for line in default_lines), (
+        "the default view displayed a settled item"
+    )
+
+    all_lines = backlog._render(data, [], show_all=True).splitlines()
+    assert not any("hidden (--all to show)" in line for line in all_lines), (
+        "the hidden line rendered under --all, where nothing is hidden"
+    )
+    assert any("DONE ONE" in line for line in all_lines), (
+        "--all did not display the settled items the default view hid"
+    )
+
+    no_settled = backlog._render(
+        _backlog(tmp_path, items=[_item()]), []).splitlines()
+    # The FRAGMENT, not the bare word: the header echoes project_path, and a
+    # tmpdir named after this test contains "hidden" — measured, the bare
+    # word matched the header and this arm reddened against correct code.
+    assert not any("hidden (--all to show)" in line for line in no_settled), (
+        "the hidden line rendered with nothing hidden"
+    )
+
+
+def test_the_archived_count_line_follows_the_archive_not_the_view(tmp_path):
+    """The archive is named on every LIVE report whenever it is non-empty —
+    the property that keeps an archive from rotting silently — and absent
+    everywhere when it is empty. The archived view itself never carries it:
+    the line exists to advertise the archive, and inside the archive there is
+    nothing to advertise.
+
+    RED WHEN the line leaves a live view, leaks into the archived view, or
+    renders at zero.
+    """
+    data = _backlog(tmp_path, items=[_item(item_id="c001", status="active")])
+    data["archive"] = [_item(item_id="a001", status="done"),
+                       _item(item_id="a002", status="dropped")]
+    line = "  2 archived (--archived to show)"
+
+    assert line in backlog._render(data, []).splitlines(), (
+        "the default view stopped naming the archive"
+    )
+    assert line in backlog._render(data, [], show_all=True).splitlines(), (
+        "the --all view stopped naming the archive"
+    )
+    assert line not in backlog._render(data, [], show_archived=True).splitlines(), (
+        "the archived view advertises the archive it is already showing"
+    )
+
+    empty = _backlog(tmp_path, items=[_item(item_id="c001", status="active")])
+    for view in ({}, {"show_all": True}, {"show_archived": True}):
+        lines = backlog._render(empty, [], **view).splitlines()
+        assert not any("archived (--archived to show)" in l for l in lines), (
+            f"the line rendered against an empty archive in {view}"
+        )
+
+
+def test_archive_moves_settled_items_with_their_fields_untouched(tmp_path, monkeypatch, capsys):
+    """The happy path: items relocate from `items` to `archive` in ARGUMENT
+    order, one echo line each, and NOT A FIELD CHANGES — no `touched` stamp,
+    because a relocation is not an edit, and falsifying 'last meaningful
+    touch' buys nothing.
+
+    RED WHEN the move stamps `touched`, alters a field, reorders the echo,
+    or writes nothing.
+    """
+    first = _item(item_id="aa01", title="SETTLED ONE", status="done", rank=3,
+                  note="why it ended", touched="2026-08-20", added="2026-07-01")
+    second = _item(item_id="aa02", title="SETTLED TWO", status="dropped",
+                   touched="2026-08-21", added="2026-07-02")
+    keep = _item(item_id="bb02", title="STILL LIVE", status="active")
+    path = _backlog_file(tmp_path, monkeypatch, [keep, first, second])
+
+    code = backlog.main(["archive", "aa02", "aa01"])
+    captured = capsys.readouterr()
+
+    assert code == backlog._EXIT_OK, captured.err
+    assert captured.out.splitlines() == [
+        "archive ok: aa02 SETTLED TWO",
+        "archive ok: aa01 SETTLED ONE",
+    ], f"the echo changed shape or order: {captured.out!r}"
+    written = json.loads(path.read_text(encoding="utf-8"))
+    assert [i["id"] for i in written["items"]] == ["bb02"]
+    assert [i["id"] for i in written["archive"]] == ["aa02", "aa01"], (
+        "the archive list is not in argument order"
+    )
+    assert written["archive"][0]["touched"] == "2026-08-21", (
+        "archiving stamped `touched` — a relocation is not an edit"
+    )
+    assert written["archive"][0] == second
+    assert written["archive"][1] == first
+
+
+def test_archive_refusals_name_their_cause_and_write_nothing(tmp_path, monkeypatch, capsys):
+    """Three refusal classes — unknown id, already archived, not settled —
+    and each is TWO properties: the named message AND the file's bytes
+    unchanged. A refusal that wrote is the worse bug, and the byte comparison
+    is the half that catches it.
+
+    The pinned FRAGMENTS are the words that distinguish each class: an
+    archived id must not report as unknown, because it was a valid command
+    yesterday, and 'no item with id' sends the agent hunting for a loss that
+    did not happen.
+
+    RED WHEN a refusal writes, or when two classes collapse into one message.
+    """
+    live = _item(item_id="c001", title="LIVE", status="active")
+    settled = _item(item_id="d001", title="SETTLED", status="done")
+    gone = _item(item_id="a001", title="GONE", status="done")
+    path = _backlog_file(tmp_path, monkeypatch, [live, settled], archive=[gone])
+    before = path.read_bytes()
+
+    cases = [
+        (("archive", "ffff"), "no item with id 'ffff'"),
+        (("archive", "a001"), "already archived"),
+        (("archive", "c001"), "the archive holds settled items only"),
+    ]
+    for argv, fragment in cases:
+        code = backlog.main(list(argv))
+        err = capsys.readouterr().err
+        assert code == backlog._EXIT_REFUSED, f"{argv}: exit {code}"
+        assert fragment in err, f"{argv}: {err!r} lacks {fragment!r}"
+        assert "Nothing was written" in err, (
+            f"{argv}: the no-write promise is missing from {err!r}"
+        )
+        assert path.read_bytes() == before, f"{argv}: A REFUSAL WROTE"
+
+        code = backlog.main(["archive", "a001"])
+        err = capsys.readouterr().err
+        assert "no item with id" not in err, (
+            "the already-archived refusal collapsed into the unknown-id "
+            "message — an archived id still exists"
+        )
+
+
+def test_a_multi_id_archive_moves_everything_or_nothing(tmp_path, monkeypatch, capsys):
+    """One bad id refuses the WHOLE command — a half-moved multi-archive is
+    the state all-or-nothing exists to prevent.
+
+    TWO LEVELS, because the CLI alone cannot see the defect: through main()
+    the refusal aborts before save() under ANY loop order, so the file is
+    unchanged either way. The FUNCTION is where the order is observable — a
+    mutate-as-you-check loop raises with the good id already gone from
+    `items`, corrupting the in-memory document a caller holding it still
+    trusts. Measured: the CLI-only version of this arm SURVIVED the inverted
+    loop.
+
+    THE CONTROL RUNS LAST: the same good id alone succeeds, proving the
+    refusal was the bad id's doing and not a fixture that could never move.
+
+    RED WHEN the check-then-move order inverts and the good id moves.
+    """
+    import pytest as _pytest
+
+    good = _item(item_id="d001", title="SETTLED", status="done")
+    bad = _item(item_id="c001", title="NOT SETTLED", status="planned")
+    path = _backlog_file(tmp_path, monkeypatch, [good, bad])
+    before = path.read_bytes()
+
+    code = backlog.main(["archive", "d001", "c001"])
+    err = capsys.readouterr().err
+
+    assert code == backlog._EXIT_REFUSED, err
+    assert "c001" in err and "'planned'" in err, err
+    assert path.read_bytes() == before, "the good id moved with the bad one"
+
+    # The FUNCTION level, where the order is observable: the raise must
+    # arrive with the document UNMOVED.
+    data = backlog.load_or_create(path)
+    with _pytest.raises(backlog.BacklogWriteError):
+        backlog.archive_items(data, ["d001", "c001"])
+    assert [i["id"] for i in data["items"]] == ["d001", "c001"], (
+        "archive_items raised with the good id already moved — the document "
+        "is half-mutated for any caller that keeps it"
+    )
+    assert "archive" not in data, "a refused archive created the archive key"
+
+    code = backlog.main(["archive", "d001"])
+    assert code == backlog._EXIT_OK, (
+        "control: the good id alone did not move — the refusal above proves "
+        "nothing"
+    )
+    written = json.loads(path.read_text(encoding="utf-8"))
+    assert [i["id"] for i in written["archive"]] == ["d001"]
+
+
+def test_duplicate_ids_on_one_archive_line_move_once(tmp_path, monkeypatch, capsys):
+    """`archive aa01 aa01` dedupes: the item moves ONCE and echoes ONCE. The
+    duplicate is the same request said twice, not an error — this pins that
+    friendliness call as DELIBERATE, so a change to refusal is a decision,
+    not a side effect.
+
+    RED WHEN the second occurrence is not skipped — the archive gains the
+    item twice — or when the command starts refusing it.
+    """
+    item = _item(item_id="aa01", title="SETTLED", status="done")
+    path = _backlog_file(tmp_path, monkeypatch, [item])
+
+    code = backlog.main(["archive", "aa01", "aa01"])
+    captured = capsys.readouterr()
+
+    assert code == backlog._EXIT_OK, captured.err
+    assert captured.out.splitlines() == ["archive ok: aa01 SETTLED"], captured.out
+    written = json.loads(path.read_text(encoding="utf-8"))
+    assert len(written["archive"]) == 1, (
+        f"the item moved twice: {written['archive']}"
+    )
+
+
+def test_set_on_an_archived_id_is_refused_by_name(tmp_path, monkeypatch, capsys):
+    """The OTHER verb keeps the settled-only invariant loud: `set` on an
+    archived id refuses with a NAMED message rather than reporting the id
+    unknown — the id still exists, and 'no item' would send the agent
+    hunting for a loss that did not happen.
+
+    RED WHEN the refusal collapses into the unknown-id message, or stops
+    refusing.
+    """
+    gone = _item(item_id="a001", title="GONE", status="done")
+    path = _backlog_file(tmp_path, monkeypatch, [_item(item_id="c001")],
+                         archive=[gone])
+    before = path.read_bytes()
+
+    code = backlog.main(["set", "a001", "--status", "done"])
+    err = capsys.readouterr().err
+
+    assert code == backlog._EXIT_REFUSED
+    assert "is archived" in err and "Nothing was written" in err, err
+    assert "no item with id" not in err, "an archived id reported as UNKNOWN"
+    assert path.read_bytes() == before, "the refusal wrote"
+
+    backlog.main(["set", "ffff", "--status", "done"])
+    assert "no item with id" in capsys.readouterr().err, (
+        "control: the unknown-id message is gone — the distinction above is "
+        "vacuous"
+    )
+
+
+def test_validate_flags_a_present_non_list_archive(tmp_path):
+    """Membership, not `.get()`: an ABSENT archive key is the pre-archive
+    shape and always clean, while an explicit null is non-conformance. The
+    two differ only through `in`, so both arms pin the same line.
+
+    RED WHEN the check reads `.get()` — null and absent collapse, and the
+    null case stops flagging.
+    """
+    data = _backlog(tmp_path, items=[])
+    data["archive"] = None
+    problems = backlog_store.validate(data)
+    assert any("archive is NoneType, expected a list" in p for p in problems), (
+        f"an explicit null archive validated: {problems}"
+    )
+
+    data["archive"] = 5
+    problems = backlog_store.validate(data)
+    assert any("archive is int, expected a list" in p for p in problems), (
+        f"a non-list archive validated: {problems}"
+    )
+
+
+def test_validate_flags_a_non_settled_archive_entry_by_list_name(tmp_path):
+    """The settled-only invariant enforced on the FILE, with the label naming
+    WHICH list, so a hand-edit reports where the problem actually is.
+
+    RED WHEN the rule drops, or the label stops saying 'archive item'.
+    """
+    data = _backlog(tmp_path, items=[])
+    data["archive"] = [_item(item_id="a001", status="planned")]
+    problems = backlog_store.validate(data)
+    assert any(
+        "archive item 'a001'" in p and "the archive holds settled items only" in p
+        for p in problems
+    ), f"a non-settled archive entry validated: {problems}"
+
+
+def test_validate_flags_a_cross_list_duplicate_id(tmp_path):
+    """ONE seen_ids threads both lists: an id in `items` AND `archive` is a
+    named duplicate on its second occurrence, not a silent shadow.
+
+    RED WHEN each list gets its own seen_ids — the cross-list duplicate stops
+    flagging.
+    """
+    data = _backlog(tmp_path, items=[_item(item_id="a001")])
+    data["archive"] = [_item(item_id="a001", status="done")]
+    problems = backlog_store.validate(data)
+    assert any("archive item 'a001'" in p and "id is a duplicate" in p
+               for p in problems), (
+        f"a cross-list duplicate validated: {problems}"
+    )
+
+    # The control that the duplicate rule itself still fires: a WITHIN-list
+    # duplicate flags through the same shared set.
+    data = _backlog(tmp_path, items=[_item(item_id="a001"), _item(item_id="a001")])
+    problems = backlog_store.validate(data)
+    assert any("id is a duplicate" in p for p in problems), (
+        f"control: a within-list duplicate did not flag: {problems}"
+    )
+
+
+def test_an_absent_archive_key_validates_clean(tmp_path):
+    """The pre-archive shape is always conforming: no migration, no rewrite
+    of existing stores.
+
+    RED WHEN `archive` becomes required.
+    """
+    assert backlog_store.validate(_backlog(tmp_path)) == []
+
+
+def test_an_old_shape_file_round_trips_without_gaining_the_archive_key(tmp_path, monkeypatch):
+    """new reads old: a file with NO archive key loads and saves clean, and
+    the key stays ABSENT. Inventing a present-but-empty key would corrupt
+    nothing — but it would rewrite every old file on first touch for no
+    reason, and 'absent means empty' stops being the only rule a reader
+    needs.
+
+    RED WHEN save invents the key.
+    """
+    path = tmp_path / "b.json"
+    _write(tmp_path, "b.json", _backlog(tmp_path, items=[_item()]))
+    monkeypatch.setattr(backlog, "project_root", lambda: tmp_path)
+    monkeypatch.setattr(backlog, "checkout_roots", lambda: [str(tmp_path)])
+
+    data = backlog.load_or_create(path)
+    assert backlog.save(data, path) == []
+
+    written = json.loads(path.read_text(encoding="utf-8"))
+    assert "archive" not in written, "save invented a present-but-empty archive key"
+    assert backlog_store.validate(written) == []
+
+
+def test_a_two_list_file_keeps_its_archive_through_a_save(tmp_path, monkeypatch):
+    """new reads/writes new: the archive list survives load + save EQUAL to
+    what went in — semantic preservation, the property the cross-version
+    design rests on. An old writer round-trips the unknown key through the
+    same dump-the-loaded-dict mechanism, so this arm guards both directions.
+
+    Deliberately NOT whole-file byte identity: save re-serialises, and a byte
+    pin would couple to the serializer's formatting rather than to the
+    property.
+
+    RED WHEN the archive key is dropped or its contents altered on save.
+    """
+    archive = [
+        _item(item_id="a001", title="FIRST SETTLED", status="done",
+              note="why it ended", rank=2),
+        _item(item_id="a002", title="SECOND SETTLED", status="dropped"),
+    ]
+    payload = _backlog(tmp_path, items=[_item(item_id="c001", status="active")])
+    payload["archive"] = archive
+    path = tmp_path / "b.json"
+    _write(tmp_path, "b.json", payload)
+    monkeypatch.setattr(backlog, "project_root", lambda: tmp_path)
+    monkeypatch.setattr(backlog, "checkout_roots", lambda: [str(tmp_path)])
+
+    data = backlog.load_or_create(path)
+    assert backlog.save(data, path) == []
+
+    written = json.loads(path.read_text(encoding="utf-8"))
+    assert written["archive"] == archive, "the archive did not survive a save"
+    assert "__baseline_bytes__" not in written, "the CAS baseline leaked to disk"
+    assert backlog_store.validate(written) == []
+
+
+def test_the_archived_view_lists_the_archive_under_a_named_header(tmp_path):
+    """The view renders the ARCHIVE's rows under a header naming the view,
+    through the same comparator — the first two keys are constant across
+    settled items, so rank then age decide.
+
+    THE FILE ORDER IS INVERTED ON PURPOSE: a view that rendered file order
+    passes an unsorted fixture.
+
+    RED WHEN the view renders the live list, drops the header marker, or
+    stops ordering.
+    """
+    older = _item(item_id="a001", title="ARCHIVED OLDER", status="done",
+                  rank=None, added="2026-01-01")
+    newer = _item(item_id="a002", title="ARCHIVED NEWER", status="dropped",
+                  rank=None, added="2026-02-01")
+    data = _backlog(tmp_path, items=[_item(item_id="c001", title="LIVE ROW",
+                                           status="active")])
+    data["archive"] = [newer, older]
+
+    lines = backlog._render(data, [], show_archived=True).splitlines()
+
+    assert lines[0].endswith(" (archive)"), f"the header does not name the view: {lines[0]!r}"
+    assert data["project"] in lines[0] and data["project_path"] in lines[0]
+    rendered = [l for l in lines if "[id=" in l]
+    assert [re.search(r"\[id=([^\]]+)\]", l).group(1) for l in rendered] == [
+        "a001", "a002"], "the archive did not render oldest-first"
+    assert not any("LIVE ROW" in l for l in lines), (
+        "a live row leaked into the archive view"
+    )
+
+    empty = backlog._render(
+        _backlog(tmp_path, items=[_item()]), [], show_archived=True).splitlines()
+    assert empty[0].endswith(" (archive)")
+    assert "  (no items)" in empty, "an empty archive stopped rendering its named empty state"
+
+
+def test_the_archived_view_scopes_flags_to_the_rows_it_shows(tmp_path, monkeypatch, capsys):
+    """Flags in the archived view are ABOUT archived rows: a flag against a
+    hidden live row would contradict the listing beside it. The external
+    reconcile arms never run — they filter settled items by construction, so
+    they could only report on the wrong subject while paying the tracker.
+
+    THE COMPLEMENT RUNS IN THE SAME ARM: the default view must flag the LIVE
+    item and not the archived one, or 'scoped' is indistinguishable from
+    'silent'.
+
+    RED WHEN the subject_pool dispatch inverts, and RED WHEN the view starts
+    calling reconcile.
+    """
+    live = _item(item_id="c001", title="LIVE ROW", status="active",
+                 blocked_by=["f001"])
+    gone = _item(item_id="a001", title="ARCHIVED ROW", status="done",
+                 blocked_by=["f002"])
+    _backlog_file(tmp_path, monkeypatch, [live], archive=[gone])
+    real_reconcile = backlog.reconcile
+    calls = []
+    monkeypatch.setattr(backlog, "reconcile", lambda *a, **k: calls.append(1) or [])
+
+    code = backlog.main(["show", "--archived"])
+    out = capsys.readouterr().out
+
+    assert code == backlog._EXIT_OK
+    assert calls == [], "the archived view ran the external reconcile arms"
+    assert "a001: blocked_by names unknown id 'f002'" in out, (
+        f"the displayed row's drift did not flag:\n{out}"
+    )
+    assert "f001" not in out, "a LIVE row's drift leaked into the archive view"
+
+    monkeypatch.setattr(backlog, "reconcile", real_reconcile)
+    backlog.main(["show"])
+    default_out = capsys.readouterr().out
+    assert "c001: blocked_by names unknown id 'f001'" in default_out, (
+        f"complement: the live row's drift did not flag in the default view:\n"
+        f"{default_out}"
+    )
+    assert "f002" not in default_out, (
+        "complement: an ARCHIVED row's drift leaked into the default view"
+    )
+
+
+def test_no_reconcile_under_the_archived_view_is_a_no_op(tmp_path, monkeypatch, capsys):
+    """`show --archived --no-reconcile` is accepted and changes NOTHING: the
+    archived view never reconciles, so the flag has nothing left to skip.
+    This pins the no-op as DELIBERATE — a change to refuse the combination is
+    a decision, not a side effect.
+
+    RED WHEN the combination starts refusing, or when the flag changes what
+    the view renders.
+    """
+    gone = _item(item_id="a001", title="ARCHIVED ROW", status="done",
+                 blocked_by=["f002"])
+    _backlog_file(tmp_path, monkeypatch, [_item(item_id="c001", status="active")],
+                  archive=[gone])
+
+    assert backlog.main(["show", "--archived"]) == backlog._EXIT_OK
+    plain = capsys.readouterr().out
+    assert backlog.main(["show", "--archived", "--no-reconcile"]) == backlog._EXIT_OK
+    flagged = capsys.readouterr().out
+
+    assert flagged == plain, "--no-reconcile changed the archived view's output"
+
+
+def test_show_all_and_show_archived_together_is_a_usage_error(tmp_path):
+    """The two views are mutually exclusive, and the combination is a
+    MALFORMED COMMAND LINE — exit _EXIT_USAGE, never _EXIT_REFUSED: the tool
+    did not decline anything, the invocation never made sense. Subprocess, so
+    the code asserted is the one the agent's shell sees.
+
+    RED WHEN the mutual-exclusion group dissolves (the flags combine into a
+    confused render) or the exit lands on any other code.
+    """
+    store, _project = _cli_store(tmp_path / "x", [_item()])
+    code, out = _run_cli(store, "show", "--all", "--archived")
+    assert code == backlog._EXIT_USAGE, f"exit {code}:\n{out}"
+    assert "not allowed with argument" in out, f"the conflict is unnamed:\n{out}"
+
+
+def test_next_md_states_the_note_cap_the_writer_enforces():
+    """The cap is stated in TWO places: the constant the writer enforces and
+    the prose the agent reads, and this arm is their only synchronisation
+    mechanism. A moved constant with stale prose instructs the agent to aim
+    under a limit that no longer exists, or to truncate under one that grew.
+
+    RED WHEN the number in next.md's cap sentence diverges from
+    NOTE_MAX_CHARS — and RED WHEN the sentence is reworded, because a miss
+    means the arm is reading nothing, which is the failure, not a pass.
+    """
+    match = re.search(r"`note` is capped at (\d+) characters", _next_md())
+    assert match, (
+        "the cap sentence is gone or reworded — this arm is reading nothing "
+        "and must be re-aimed, not deleted"
+    )
+    assert int(match.group(1)) == backlog_store.NOTE_MAX_CHARS, (
+        f"next.md says {match.group(1)}, the writer enforces "
+        f"{backlog_store.NOTE_MAX_CHARS}"
+    )
+
+
+def test_write_time_ref_normalisation_collapses_only_what_the_tracker_resolves():
+    """The matrix, at the single choke point both `add` and `set` route
+    through. A resolvable ref — bare number, #-prefixed, a GitHub URL —
+    stores the BARE NUMBER. Everything else stores BYTE-IDENTICAL: the
+    `owner/repo#N` qualifier IS the meaning (collapsing it would re-target
+    the ref to this repo's tracker), a Linear key is opaque, and an arbitrary
+    string is the user's own pointer.
+
+    RED WHEN the resolver's reach extends past 'digits this tracker can
+    address', or when `none` stops clearing.
+    """
+    import argparse
+
+    def stored(ref):
+        return backlog._field_updates(argparse.Namespace(ref=ref))["ref"]
+
+    collapses = [
+        ("1602", "1602"),     # already bare — idempotent
+        ("#1602", "1602"),
+        ("https://github.com/owner/repo/issues/1602", "1602"),
+        ("https://github.com/owner/repo/pull/1602/", "1602"),
+    ]
+    for given, expected in collapses:
+        assert stored(given) == expected, (
+            f"{given!r} stored {stored(given)!r}, expected {expected!r}"
+        )
+
+    byte_identical = [
+        "other-owner/other-repo#175",  # the qualifier is the meaning
+        "ENG-123",                     # an opaque tracker key
+        "the user's own pointer",      # an arbitrary string
+    ]
+    for given in byte_identical:
+        assert stored(given) == given, (
+            f"{given!r} was rewritten to {stored(given)!r}"
+        )
+
+    assert stored("none") is backlog._CLEAR, "--ref none stopped clearing"
+    assert stored(None) is None, "an unpassed --ref stopped leaving the field alone"
+
+
+def test_add_stores_a_hash_ref_as_the_bare_number(tmp_path, monkeypatch):
+    """The choke point is WIRED: `add --ref` routes through it, so what the
+    agent typed lands normalised on disk. Without this arm the unit matrix is
+    vacuous against a rewrite of `add`'s handler that skips `_field_updates`.
+
+    RED WHEN `add` stops routing through `_field_updates`.
+    """
+    path = _backlog_file(tmp_path, monkeypatch, [])
+
+    assert backlog.main(["add", "Track the thing", "--ref", "#1602"]) == backlog._EXIT_OK
+
+    written = json.loads(path.read_text(encoding="utf-8"))
+    assert written["items"][0]["ref"] == "1602", written["items"][0]
+
+
+def test_planned_and_unranked_flags_at_the_same_threshold_not_before():
+    """The planned arm's edge is the active arm's edge: exactly `_STALE_AFTER`
+    days is quiet, a day older flags — one cutoff serves both by ruling, so
+    the construction mirrors the active arm's pin verbatim.
+
+    Both sides are asserted, because a comparison that never flags satisfies
+    the quiet case alone.
+
+    RED WHEN the planned arm leaves `_staleness_flags`, and RED WHEN its edge
+    moves off the active arm's.
+    """
+    from datetime import datetime, timedelta, timezone
+
+    def _age(days):
+        touched = (datetime.now(timezone.utc) - timedelta(days=days)).date().isoformat()
+        return backlog._staleness_flags(
+            [_item(status="planned", rank=None, touched=touched)])
+
+    assert _age(14) == [], "an unranked planned item at exactly the threshold flagged"
+    flags = _age(15)
+    assert len(flags) == 1, "an unranked planned item past the threshold did not flag"
+    touched = (datetime.now(timezone.utc) - timedelta(days=15)).date().isoformat()
+    assert flags[0] == f"An item: planned and unranked, untouched since {touched}", (
+        f"the wording moved: {flags[0]!r}"
+    )
+    assert _age(13) == []
+
+
+def test_a_ranked_planned_item_never_flags_however_old():
+    """Rank is the deliberate-ordering signal the flag exists to distinguish:
+    someone ordered this work, so silence about it is correct at ANY age.
+
+    THE CONTROL IS THE SAME ITEM WITH rank REMOVED. Without it, an absent
+    flag is equally consistent with 'correctly exempt' and 'the planned arm
+    is gone'.
+
+    RED WHEN the isinstance guard leaves the planned arm.
+    """
+    from datetime import datetime, timedelta, timezone
+    old = (datetime.now(timezone.utc) - timedelta(days=60)).date().isoformat()
+
+    assert backlog._staleness_flags(
+        [_item(status="planned", rank=2, touched=old)]) == [], (
+        "a RANKED planned item flagged"
+    )
+    assert backlog._staleness_flags(
+        [_item(status="blocked", rank=None, touched=old)]) == [], (
+        "a blocked item is in neither arm, and flagged"
+    )
+    control = backlog._staleness_flags(
+        [_item(status="planned", rank=None, touched=old)])
+    assert len(control) == 1, (
+        f"control: the unranked twin did not flag — every absence above is "
+        f"vacuous: {control}"
+    )
+
+
+def test_the_two_staleness_flags_are_disjoint_by_status():
+    """An active item and an unranked planned item, both past the cutoff,
+    flag ONE EACH — never two for one item, and never the wrong wording for
+    the status. One status per item makes the arms disjoint BY CONSTRUCTION;
+    the whole-list equality pins cardinality, wording and disjointness at
+    once.
+
+    RED WHEN either arm reads the other's status.
+    """
+    from datetime import datetime, timedelta, timezone
+    old = (datetime.now(timezone.utc) - timedelta(days=60)).date().isoformat()
+
+    flags = backlog._staleness_flags([
+        _item(item_id="ac01", title="ACTIVE ONE", status="active", touched=old),
+        _item(item_id="pl01", title="PLANNED ONE", status="planned", rank=None,
+              touched=old),
+    ])
+
+    assert flags == [
+        f"ACTIVE ONE: active and untouched since {old}",
+        f"PLANNED ONE: planned and unranked, untouched since {old}",
+    ], flags
+
+
+# ---------------------------------------------------------------------------
+# Remediation pins: the guard discipline the archive arc's new paths lacked.
+# P1/P2 pin the archive verb's refusal on a store whose shape the verb cannot
+# honour (non-list archive key, non-dict items entry) — refused with a named
+# problem and NOTHING written, never an uncaught AttributeError. P3 pins the
+# render-beside-the-flag contract over a non-string `added`, the field whose
+# sort-key guard mirrored `_rank_key`'s isinstance precedent only after review
+# measured the TypeError. P4/P5 close the mint-side and session-block
+# comparator gaps the same review's mutation sweep surfaced.
+# ---------------------------------------------------------------------------
+
+def test_archive_on_a_non_list_archive_key_refuses_cleanly(tmp_path, monkeypatch, capsys):
+    """G1: the archive verb against a store whose `archive` key is present
+    but NOT a list. The move cannot land, so the command refuses — exit 65,
+    the problem naming `archive`, the file's bytes unchanged. Pre-fix this
+    was an uncaught AttributeError out of `setdefault(...).extend`: a
+    traceback and exit 1, neither a named refusal nor a named exit code.
+
+    Present-but-null is the non-conformance validate already names; absent
+    would be the pre-archive shape and must NOT refuse. The payload is built
+    BY HAND: `_backlog_file(archive=None)` means ABSENT by convention, so it
+    cannot express the state under test. Measured: built through the helper,
+    this arm passed the PRE-fix bytes — the verb created the absent key and
+    succeeded, and the pin certified nothing.
+
+    RED WHEN the verb stops guarding the key it extends.
+    """
+    payload = _backlog(tmp_path, items=[_item(item_id="d001", status="done")])
+    payload["archive"] = None
+    path = tmp_path / "b.json"
+    _write(tmp_path, "b.json", payload)
+    monkeypatch.setattr(backlog, "store_path", lambda backlog_dir=None: path)
+    monkeypatch.setattr(backlog, "project_root", lambda: tmp_path)
+    monkeypatch.setattr(backlog, "checkout_roots", lambda: [str(tmp_path)])
+    before = path.read_bytes()
+
+    code = backlog.main(["archive", "d001"])
+    err = capsys.readouterr().err
+
+    assert code == backlog._EXIT_REFUSED, f"exit {code}"
+    assert "archive" in err, f"the refusal does not name its cause: {err!r}"
+    assert path.read_bytes() == before, "A REFUSAL WROTE"
+
+    # The control that distinguishes refusal from breakage: the SAME command
+    # against a conforming store succeeds, so the refusal above is the
+    # non-list key's doing.
+    path2 = _backlog_file(tmp_path, monkeypatch,
+                          [_item(item_id="d001", status="done")])
+    assert backlog.main(["archive", "d001"]) == backlog._EXIT_OK, (
+        "control: the conforming store refused too — the pin proves nothing"
+    )
+
+
+def test_archive_with_a_non_dict_items_entry_refuses_cleanly(tmp_path, monkeypatch, capsys):
+    """G2: the archive verb against a store holding a non-dict ENTRY in
+    `items`. `_items` filters non-dicts from the lookup, but the post-move
+    rebuild reads every entry — pre-fix the rebuild's `.get` met the bare
+    string and raised AttributeError out of the handler. The guard preserves
+    the entry (filtering it out would silently drop data), so save-time
+    validate names it and the command refuses 65 with nothing written.
+
+    RED WHEN the rebuild reads an entry it did not type-check.
+    """
+    payload = _backlog(tmp_path, items=[_item(item_id="d001", status="done")])
+    payload["items"] = ["not-a-dict", payload["items"][0]]
+    path = tmp_path / "b.json"
+    _write(tmp_path, "b.json", payload)
+    monkeypatch.setattr(backlog, "store_path", lambda backlog_dir=None: path)
+    monkeypatch.setattr(backlog, "project_root", lambda: tmp_path)
+    monkeypatch.setattr(backlog, "checkout_roots", lambda: [str(tmp_path)])
+    before = path.read_bytes()
+
+    code = backlog.main(["archive", "d001"])
+    err = capsys.readouterr().err
+
+    assert code == backlog._EXIT_REFUSED, f"exit {code}"
+    assert "expected an object" in err, (
+        f"save-time validate did not name the non-dict entry: {err!r}"
+    )
+    assert path.read_bytes() == before, "A REFUSAL WROTE"
+
+
+def test_a_non_string_added_renders_beside_its_schema_flag(tmp_path, monkeypatch, capsys):
+    """G3, the render-beside-the-flag contract over a non-string `added`. A
+    hand-edit can write "added": 20260101; validate NAMES it, and the report
+    must still render — the same contract
+    test_a_non_conforming_file_still_renders_with_a_note pins for notes.
+    Pre-fix the sort key compared int against str mid-tie and raised
+    TypeError: `show` escaped as a traceback on exit 1, and session_block's
+    totality mislabeled the crash "could not be read" — the file WAS read;
+    a comparator choked on it.
+
+    Behavior-level on purpose: the contract is rc=0 with the flag visible and
+    the block rendering, not any particular guard mechanism.
+
+    RED WHEN the comparator compares a non-string `added` against a string.
+    """
+    poison = _item(item_id="a001", title="POISON ADDED", status="planned",
+                   rank=None)
+    poison["added"] = 20260101
+    peer = _item(item_id="a002", title="STRING ADDED", status="planned",
+                 rank=None, added="2026-01-02")
+    _backlog_file(tmp_path, monkeypatch, [poison, peer])
+
+    code = backlog.main(["show", "--no-reconcile"])
+    captured = capsys.readouterr()
+
+    assert code == backlog._EXIT_OK, f"exit {code}: {captured.err!r}"
+    assert "added is 20260101" in captured.out, (
+        f"the schema flag for the poison field is missing:\n{captured.out}"
+    )
+    assert "STRING ADDED" in captured.out, "the conforming row did not render"
+
+    # The session block renders too — and must NOT mislabel the crash as an
+    # unreadable file.
+    project = tmp_path / "project"
+    project.mkdir()
+    store = tmp_path / "store"
+    bad = _backlog(project, items=[poison, peer])
+    _write(store, "demo.json", bad)
+    notice = backlog_store.session_block(str(project), backlog_dir=store)
+
+    assert "POISON ADDED" in notice.context, (
+        f"the block did not render:\n{notice.context}\nALERT: {notice.alert}"
+    )
+    assert "does not conform" in notice.context, (
+        "the non-conformance note left the block"
+    )
+    assert "could not be read" not in notice.alert, (
+        f"a comparator crash mislabeled as an unreadable file: {notice.alert!r}"
+    )
+
+
+def test_a_new_id_is_never_one_the_archive_holds(tmp_path, monkeypatch):
+    """The mint side of the id universe: `new_item_id`'s taken set spans BOTH
+    lists, so an id retired to the archive is never reissued to a live item —
+    a relation naming it would resolve to the wrong record. The READ side is
+    pinned beside test_a_live_item_blocked_by_an_archived_one...; this pins
+    the MINT side. The deterministic token_hex sequence yields an archived
+    id, then a LIVE id, then a fresh one: both lists must be consulted.
+
+    RED WHEN the taken set narrows to either list alone.
+    """
+    minted = iter(["aaaa", "c001", "bbbb"])
+    monkeypatch.setattr(backlog.secrets, "token_hex", lambda n: next(minted))
+    data = _backlog(tmp_path, items=[_item(item_id="c001", status="active")])
+    data["archive"] = [_item(item_id="aaaa", status="done")]
+
+    assert backlog.new_item_id(data) == "bbbb", (
+        "an id already taken — archived or live — was reissued"
+    )
+
+
+def test_the_session_block_orders_rank_ties_by_age(tmp_path):
+    """The block comparator's fourth key: `format_block` sorts planned rank
+    ties by `added` ascending, uniform with the report. The fixture's file
+    order is the REVERSE of age order and its ids descend against it too, so
+    neither a dropped key nor an incidental id/title tiebreak can fake the
+    order — and the tie's loser falling off the top-3 cut is the observable
+    the block's own comment names.
+
+    RED WHEN the fourth key leaves the block comparator.
+    """
+    items = [
+        _item(item_id="b303", title="NEWER TIE", status="planned", rank=None,
+              added="2026-01-03"),
+        _item(item_id="b302", title="MIDDLE TIE", status="planned", rank=None,
+              added="2026-01-02"),
+        _item(item_id="b301", title="OLDER TIE", status="planned", rank=None,
+              added="2026-01-01"),
+    ]
+
+    block = backlog_store.format_block(_backlog(tmp_path, items=items))
+
+    next_lines = [l for l in block.splitlines() if l.startswith("  next: ")]
+    assert len(next_lines) == 1, f"no next line:\n{block}"
+    assert next_lines[0] == "  next: OLDER TIE; MIDDLE TIE; NEWER TIE", (
+        f"the block's tie order is not age ascending: {next_lines[0]!r}"
+    )
+
+
+def test_file_local_flags_requires_the_subject_pool_argument():
+    """arch-F2: `subject_pool` is REQUIRED — which list's rows are being
+    flagged is part of the call's meaning, and the default let a caller omit
+    it, silently flagging the live list from a context showing the archive.
+    The parameter's NAME is part of the contract: a TypeError about a
+    DIFFERENT missing argument must not satisfy this pin, so the match is on
+    `subject_pool`. The assertion is contract-level: positional-required and
+    keyword-only-required both raise a TypeError naming the parameter.
+
+    RED WHEN the default returns — the call below raises nothing.
+    """
+    import pytest as _pytest
+
+    with _pytest.raises(TypeError, match="subject_pool"):
+        backlog_store.file_local_flags({"items": []})
