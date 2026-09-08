@@ -4045,14 +4045,14 @@ def test_every_list_typed_field_reports_its_type(tmp_path):
     for field in backlog_store.RELATIONAL_FIELDS:
         for poison in ("abc", {"k": 1}):
             flags = backlog_store.file_local_flags(
-                {"items": [_item(item_id="aaaa", **{field: poison})]})
+                {"items": [_item(item_id="aaaa", **{field: poison})]}, subject_pool="items")
             assert not any("names unknown id" in f for f in flags), (
                 f"{field}={poison!r} FABRICATED ids instead of being refused: "
                 f"{flags}"
             )
 
     control = backlog_store.file_local_flags(
-        {"items": [_item(item_id="aaaa", blocked_by=["nosuch"])]})
+        {"items": [_item(item_id="aaaa", blocked_by=["nosuch"])]}, subject_pool="items")
     assert any("names unknown id" in p for p in control), (
         f"control: a well-formed list produced no relational flag, so the "
         f"absences above prove nothing: {control}"
@@ -4122,12 +4122,12 @@ def test_a_settled_subject_emits_no_file_local_flag():
     for settled in sorted(backlog_store.SETTLED):
         flags = backlog_store.file_local_flags(
             {"items": [_item(item_id="aaaa", status=settled,
-                             blocked_by=["nosuch"])]})
+                             blocked_by=["nosuch"])]}, subject_pool="items")
         assert flags == [], f"a {settled} subject flagged: {flags}"
 
     control = backlog_store.file_local_flags(
         {"items": [_item(item_id="aaaa", status="planned",
-                         blocked_by=["nosuch"])]})
+                         blocked_by=["nosuch"])]}, subject_pool="items")
     assert control, (
         "control: a planned subject with the same dangling id produced no "
         "flag, so the empties above prove nothing"
@@ -4150,7 +4150,7 @@ def test_a_live_item_blocked_by_a_settled_one_is_told_it_will_not_clear():
     RED WHEN the suppression moves from the subject to the blocker.
     """
     for settled in sorted(backlog_store.SETTLED):
-        flags = backlog_store.file_local_flags({"items": _blocked_pair(settled)})
+        flags = backlog_store.file_local_flags({"items": _blocked_pair(settled)}, subject_pool="items")
         assert len(flags) == 1, f"{settled}: expected one flag, got {flags}"
         assert "will not clear on its own" in flags[0], (
             f"{settled}: the live item was not told its blocker is settled: "
@@ -4161,7 +4161,7 @@ def test_a_live_item_blocked_by_a_settled_one_is_told_it_will_not_clear():
             f"missing, which is a false accusation: {flags[0]}"
         )
 
-    control = backlog_store.file_local_flags({"items": _blocked_pair("planned")})
+    control = backlog_store.file_local_flags({"items": _blocked_pair("planned")}, subject_pool="items")
     assert control == [], (
         f"control: a live blocker produced a flag, so the assertions above "
         f"are not about settledness: {control}"
@@ -4190,7 +4190,7 @@ def test_a_live_item_blocked_by_an_archived_one_is_told_it_will_not_clear():
                             blocked_by=["a001"])],
             "archive": [_item(item_id="a001", title="THE BLOCKER",
                               status=settled)],
-        })
+        }, subject_pool="items")
         assert len(flags) == 1, f"{settled}: expected one flag, got {flags}"
         assert "will not clear on its own" in flags[0], (
             f"{settled}: the live item was not told its archived blocker is "
@@ -4207,7 +4207,7 @@ def test_a_live_item_blocked_by_an_archived_one_is_told_it_will_not_clear():
     control = backlog_store.file_local_flags({
         "items": [_item(item_id="c001", status="active", blocked_by=["ffff"])],
         "archive": [_item(item_id="a001", status="done")],
-    })
+    }, subject_pool="items")
     assert any("names unknown id 'ffff'" in f for f in control), (
         f"control: a genuinely absent id produced no unknown-id flag, so the "
         f"absences above prove nothing: {control}"
@@ -4224,10 +4224,10 @@ def test_include_settled_restores_the_settled_subjects_own_flags():
     """
     data = {"items": [_item(item_id="aaaa", status="done", blocked_by=["nosuch"])]}
 
-    assert backlog_store.file_local_flags(data) == [], (
+    assert backlog_store.file_local_flags(data, subject_pool="items") == [], (
         "the default view must still hide a settled subject's own drift"
     )
-    restored = backlog_store.file_local_flags(data, include_settled=True)
+    restored = backlog_store.file_local_flags(data, include_settled=True, subject_pool="items")
     assert any("names unknown id" in f for f in restored), (
         f"include_settled=True did not restore the settled subject's flag: "
         f"{restored}"
@@ -4365,7 +4365,7 @@ def test_two_id_less_items_each_flag_against_a_shared_peer():
     flags = backlog_store.file_local_flags({"items": [
         _bare(["aaaa"]), _bare(["aaaa"]),
         _item(item_id="aaaa", title=None, status="active"),
-    ]})
+    ]}, subject_pool="items")
     exclusive = [f for f in flags if "are exclusive and both active" in f]
     assert len(exclusive) == 2, (
         f"two id-less subjects must each flag; a label-keyed dedup collapses "
@@ -4398,7 +4398,7 @@ def test_a_one_sided_exclusive_pair_flags_in_either_id_order():
         flags = backlog_store.file_local_flags({"items": [
             _item(item_id=linker, title=None, status="active", exclusive_with=[peer]),
             _item(item_id=peer, title=None, status="active"),
-        ]})
+        ]}, subject_pool="items")
         exclusive = [f for f in flags if "are exclusive and both active" in f]
         assert exclusive == [expected], (
             f"linker={linker} peer={peer}: expected exactly [{expected!r}], "
@@ -4424,7 +4424,7 @@ def test_a_two_sided_exclusive_pair_flags_once_in_either_visit_order():
     a = _item(item_id="aaaa", title=None, status="active", exclusive_with=["bbbb"])
     b = _item(item_id="bbbb", title=None, status="active", exclusive_with=["aaaa"])
     for label, items in (("aaaa first", [a, b]), ("bbbb first", [b, a])):
-        flags = backlog_store.file_local_flags({"items": items})
+        flags = backlog_store.file_local_flags({"items": items}, subject_pool="items")
         exclusive = [f for f in flags if "are exclusive and both active" in f]
         assert exclusive == [expected], (
             f"{label}: a two-sided link must flag ONCE, not once per side: "
@@ -5805,3 +5805,20 @@ def test_the_session_block_orders_rank_ties_by_age(tmp_path):
     assert next_lines[0] == "  next: OLDER TIE; MIDDLE TIE; NEWER TIE", (
         f"the block's tie order is not age ascending: {next_lines[0]!r}"
     )
+
+
+def test_file_local_flags_requires_the_subject_pool_argument():
+    """arch-F2: `subject_pool` is REQUIRED — which list's rows are being
+    flagged is part of the call's meaning, and the default let a caller omit
+    it, silently flagging the live list from a context showing the archive.
+    The parameter's NAME is part of the contract: a TypeError about a
+    DIFFERENT missing argument must not satisfy this pin, so the match is on
+    `subject_pool`. The assertion is contract-level: positional-required and
+    keyword-only-required both raise a TypeError naming the parameter.
+
+    RED WHEN the default returns — the call below raises nothing.
+    """
+    import pytest as _pytest
+
+    with _pytest.raises(TypeError, match="subject_pool"):
+        backlog_store.file_local_flags({"items": []})

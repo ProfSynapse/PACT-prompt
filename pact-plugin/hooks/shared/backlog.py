@@ -878,7 +878,9 @@ def reconcile(
     items = _items(data)
     # `--all` DISPLAYS settled items, so their file-local flags contradict
     # nothing and belong. Default False keeps the suppression the default view needs.
-    flags = list(file_local_flags(data, include_settled=include_settled))
+    flags = list(file_local_flags(
+        data, include_settled=include_settled, subject_pool="items"
+    ))
     flags.extend(_ref_flags(items))
     flags.extend(_plan_flags(items, data.get("project_path")))
     flags.extend(_memory_flags(items, store))

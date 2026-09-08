@@ -569,7 +569,7 @@ def _resolved(path: Path) -> Path:
 
 
 def file_local_flags(
-    data: Dict[str, Any], include_settled: bool = False, subject_pool: str = "items"
+    data: Dict[str, Any], include_settled: bool = False, *, subject_pool: str
 ) -> List[str]:
     """Drift visible in the file alone, with no git, tracker or store lookup.
 
@@ -603,9 +603,11 @@ def file_local_flags(
     not. The default serves the default view.
 
     `subject_pool` selects WHICH list the subjects come from: "items" (the
-    default, today's behaviour) or "archive" for the `--archived` view, whose
-    displayed rows are the archived ones. The universe never varies — only the
-    subjects do.
+    live list) or "archive" for the `--archived` view, whose displayed rows
+    are the archived ones. KEYWORD-ONLY with NO default: the pool is the
+    answer to "which rows does this report show", and a caller that omits it
+    gets Python's own TypeError rather than a silently assumed list. The
+    universe never varies — only the subjects do.
     """
     items = _items(data)
     by_id = {
@@ -746,7 +748,7 @@ def format_block(data: Dict[str, Any], context_anchor: Optional[float] = None) -
             item.get("added") if isinstance(item.get("added"), str) else "",
         ),
     )[:_BLOCK_PLANNED_LIMIT]
-    flags = file_local_flags(data)
+    flags = file_local_flags(data, subject_pool="items")
 
     lines = [f"PACT backlog ({data.get('project')}):"]
     if active:
