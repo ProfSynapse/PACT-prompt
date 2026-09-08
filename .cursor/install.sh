@@ -42,5 +42,27 @@ python -m pip install \
   model2vec \
   ruff
 
+# Claude Code CLI — enables the live end-to-end plugin smoke test
+# (.cursor/smoke-test.sh). Installed into a user-local npm prefix so no sudo is
+# needed; node/npm come from the base image. Idempotent: skipped when present.
+NPM_GLOBAL="$HOME/.npm-global"
+export PATH="$NPM_GLOBAL/bin:$PATH"
+if ! command -v claude >/dev/null 2>&1; then
+  if command -v npm >/dev/null 2>&1; then
+    mkdir -p "$NPM_GLOBAL"
+    npm install -g --prefix "$NPM_GLOBAL" @anthropic-ai/claude-code
+  else
+    echo "WARNING: npm not found; skipping Claude Code CLI install (live smoke test unavailable)." >&2
+  fi
+fi
+
+# Put the CLI on PATH for future interactive shells (idempotent).
+BASHRC="$HOME/.bashrc"
+LINE='export PATH="$HOME/.npm-global/bin:$PATH"'
+if [ -f "$BASHRC" ] && ! grep -Fqx "$LINE" "$BASHRC"; then
+  printf '\n# Claude Code CLI (installed by .cursor/install.sh)\n%s\n' "$LINE" >> "$BASHRC"
+fi
+
 echo "PACT plugin environment ready. Activate with: source .venv/bin/activate"
 echo "Run the suite with: cd pact-plugin && python -m pytest -ra"
+echo "Live plugin smoke test: bash .cursor/smoke-test.sh (needs ANTHROPIC_API_KEY for the live phase)"
