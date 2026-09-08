@@ -46,6 +46,7 @@ MUST_BE_SYNC = {
     "validate_handoff.py",  # Validates agent output
     "agent_handoff_emitter.py",  # Writes agent_handoff journal event on TaskCompleted
     "git_commit_check.py",  # Checks git commit conventions
+    "wait_filler_gate.py",  # Denies bare true/sleep filler commands
     "track_files.py",     # Tracks file edits (PostToolUse, non-async)
     "precompact_state_reminder.py",  # Emits state snapshot before compaction
     "postcompact_archive.py",  # Archives compact_summary to disk for session_init + secretary
