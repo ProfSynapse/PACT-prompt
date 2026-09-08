@@ -543,6 +543,55 @@ def update_item(item: Dict[str, Any], **fields: Any) -> None:
     item["touched"] = _now_iso()[:10]
 
 
+def archive_items(data: Dict[str, Any], item_ids: Sequence[str]) -> List[Dict[str, Any]]:
+    """Move settled items from `items` to `archive`, ALL-OR-NOTHING.
+
+    Every id is checked BEFORE anything moves: an unknown id, an
+    already-archived id (the two are distinguished — one was a valid command
+    yesterday) or a non-settled item refuses the WHOLE command with nothing
+    written, so a multi-id invocation never half-moves. Item fields are
+    untouched — no `touched` stamp: archival is a relocation, not an edit, and
+    falsifying "last meaningful touch" buys nothing (no settled consumer reads
+    it). There is no unarchive verb: nothing asks for a route back, and `set`
+    on an archived id is refused by name rather than reaching save.
+    """
+    by_id = {item.get("id"): item for item in _items(data)}
+    archived_ids = {item.get("id") for item in _archived(data)}
+    moving = []
+    seen = set()
+    for item_id in item_ids:
+        if item_id in seen:
+            continue
+        seen.add(item_id)
+        item = by_id.get(item_id)
+        if item is None:
+            if item_id in archived_ids:
+                raise BacklogWriteError(
+                    f"item {item_id!r} is already archived. Nothing was written."
+                )
+            raise BacklogWriteError(
+                f"no item with id {item_id!r}. Nothing was written."
+            )
+        status = item.get("status")
+        if status not in SETTLED:
+            raise BacklogWriteError(
+                f"item {item_id!r} is {status!r} — the archive holds settled "
+                f"items only; settle it first with set --status done|dropped. "
+                f"Nothing was written."
+            )
+        moving.append(item)
+    # Reaching the mutation at all means every id resolved to a live settled
+    # item, which means `items` IS a list — a non-list would have emptied
+    # `by_id` and refused the first id.
+    if moving:
+        moving_ids = {item.get("id") for item in moving}
+        data["items"] = [
+            item for item in data["items"] if item.get("id") not in moving_ids
+        ]
+        data.setdefault("archive", []).extend(moving)
+    return moving
+
+
 # ---------------------------------------------------------------------------
 # Resolution — pact-memory in-process, the tracker in one batched call
 # ---------------------------------------------------------------------------
@@ -1130,16 +1179,27 @@ def build_parser() -> argparse.ArgumentParser:
     sub.required = True
 
     show = sub.add_parser("show", help="Report every item with its drift flags")
-    show.add_argument(
+    view = show.add_mutually_exclusive_group()
+    view.add_argument(
         "--all",
         action="store_true",
         help="Show every item, including done and dropped",
+    )
+    view.add_argument(
+        "--archived",
+        action="store_true",
+        help="Show the archive instead of the live list",
     )
     show.add_argument(
         "--no-reconcile",
         action="store_true",
         help="Skip the tracker, pact-memory and git checks",
     )
+
+    archive = sub.add_parser(
+        "archive", help="Move settled items into the archive"
+    )
+    archive.add_argument("item_ids", nargs="+")
 
     add = sub.add_parser("add", help="Add an item")
     add.add_argument("title")
@@ -1230,18 +1290,38 @@ def _handle_write_or_show(args: argparse.Namespace, path: Path) -> int:
     schema = [f"schema: {problem}" for problem in validate(data)]
 
     if args.command == "show":
-        flags = [] if args.no_reconcile else reconcile(data, include_settled=args.all)
-        print(_render(data, schema + flags, show_all=args.all))
+        if args.archived:
+            # The external reconcile arms filter settled items BY CONSTRUCTION,
+            # so they could only ever report on live items — the wrong subject
+            # for this view — while still paying the tracker subprocess.
+            # Skipping them is deliberate, not a shortcut.
+            flags = file_local_flags(data, include_settled=True, subject_pool="archive")
+            print(_render(data, schema + flags, show_archived=True))
+        else:
+            flags = [] if args.no_reconcile else reconcile(data, include_settled=args.all)
+            print(_render(data, schema + flags, show_all=args.all))
         return _EXIT_OK
 
     if args.command == "add":
         item = add_item(data, args.title, **_field_updates(args))
+        done_echo = [f"add ok: {item['id']} {item['title']}"]
+    elif args.command == "archive":
+        moved = archive_items(data, args.item_ids)
+        done_echo = [f"archive ok: {item['id']} {item['title']}" for item in moved]
     else:
         item = find_item(data, args.item_id)
         if item is None:
-            print(f"refused: no item with id {args.item_id!r}", file=sys.stderr)
+            if any(i.get("id") == args.item_id for i in _archived(data)):
+                print(
+                    f"refused: item {args.item_id!r} is archived. "
+                    f"Nothing was written.",
+                    file=sys.stderr,
+                )
+            else:
+                print(f"refused: no item with id {args.item_id!r}", file=sys.stderr)
             return _EXIT_REFUSED
         update_item(item, title=args.title, **_field_updates(args))
+        done_echo = [f"set ok: {item['id']} {item['title']}"]
 
     problems = save(data, path)
     if problems:
@@ -1250,7 +1330,8 @@ def _handle_write_or_show(args: argparse.Namespace, path: Path) -> int:
             print(f"  {problem}", file=sys.stderr)
         return _EXIT_REFUSED
 
-    print(f"{args.command} ok: {item['id']} {item['title']}")
+    for line in done_echo:
+        print(line)
     return _EXIT_OK
 
 
@@ -1312,7 +1393,10 @@ def _list_field(args: argparse.Namespace, name: str) -> Any:
 
 
 def _render(
-    data: Dict[str, Any], flags: Sequence[str], show_all: bool = False
+    data: Dict[str, Any],
+    flags: Sequence[str],
+    show_all: bool = False,
+    show_archived: bool = False,
 ) -> str:
     """The `show` report. BOUNDS THE REPORT, NOT THE STORE.
 
@@ -1328,11 +1412,20 @@ def _render(
     not establish. It names the categories SEPARATELY rather than summing —
     four done items is a working project and four dropped ones is a project
     that keeps abandoning things, and those want different responses.
+
+    `show_archived` renders the ARCHIVE instead of the live list — the same
+    comparator and line format over `_archived(data)`, with the header naming
+    the view. The live views carry the archived-count line whenever the
+    archive is non-empty, so the archive is named on every report: an archive
+    nothing mentions is a file nobody reads, and its rot is silent.
     """
-    lines = [f"{data.get('project')} — {data.get('project_path')}"]
-    shown = _items(data)
+    header = f"{data.get('project')} — {data.get('project_path')}"
+    if show_archived:
+        header += " (archive)"
+    lines = [header]
+    shown = _archived(data) if show_archived else _items(data)
     hidden = {}
-    if not show_all:
+    if not show_all and not show_archived:
         hidden = {
             status: sum(1 for i in shown if i.get("status") == status)
             for status in sorted(SETTLED)
@@ -1382,6 +1475,13 @@ def _render(
         # the statuses alone has nothing to agree with.
         parts = " and ".join(f"{n} {status}" for status, n in hidden.items())
         lines.append(f"  {parts} hidden (--all to show)")
+    if not show_archived:
+        # The archive's permanent presence on the read path: counted and its
+        # flag advertised in BOTH live views whenever it is non-empty, absent
+        # entirely when empty. Same no-noun trick as the hidden line.
+        archived = _archived(data)
+        if archived:
+            lines.append(f"  {len(archived)} archived (--archived to show)")
     lines.append("")
     lines.append(f"{len(flags)} flag(s):" if flags else "no drift found")
     lines.extend(f"  {flag}" for flag in flags)

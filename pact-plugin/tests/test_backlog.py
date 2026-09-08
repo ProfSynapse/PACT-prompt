@@ -3048,7 +3048,7 @@ _COMMANDS_DIR = HOOKS_DIR.parent / "commands"
 # loose in a command file is undetectable by construction (it is unknown), but
 # the CLI GROWING one this list has never heard of is detectable, and that is
 # the moment the blind spot is created.
-_WRITE_VERBS = ("set ", "add ")
+_WRITE_VERBS = ("set ", "add ", "archive ")
 # Spelled counts, for the rules that lead with one. Shared by the read rule and
 # the write rule so the two cannot disagree about what FOUR means.
 _COUNT_WORDS = {1: "ONE", 2: "TWO", 3: "THREE", 4: "FOUR", 5: "FIVE", 6: "SIX"}
