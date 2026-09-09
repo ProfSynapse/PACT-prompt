@@ -45,10 +45,20 @@ class TestLintCheckHelp:
     def test_bare_run_exits_two_with_files_example_no_verdict(self):
         proc = _run()
         assert proc.returncode == 2
+        assert "Examples:" in proc.stderr
         assert "--files" in proc.stderr
+        assert ".py" in proc.stderr
         assert "IMPORT-HYGIENE:" not in proc.stdout
         assert "IMPORT-HYGIENE:" not in proc.stderr
         assert "Running lint check in:" not in proc.stdout
+
+    def test_empty_directory_arg_refuses_like_bare_run(self):
+        proc = _run("")
+        assert proc.returncode == 2
+        assert "Examples:" in proc.stderr
+        assert "--files" in proc.stderr
+        assert "IMPORT-HYGIENE:" not in proc.stdout
+        assert "Running lint check in:" not in (proc.stdout + proc.stderr)
 
     def test_files_help_only_is_help_not_skipped(self):
         proc = _run("--files", "--help")

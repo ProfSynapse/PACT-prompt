@@ -5847,30 +5847,27 @@ def test_file_local_flags_requires_the_subject_pool_argument():
 
 
 class TestBacklogTeachExamples:
-    def test_every_subcommand_help_contains_examples(self, tmp_path):
-        script = Path(__file__).parent.parent / "hooks" / "shared" / "backlog.py"
+    def test_every_subcommand_help_contains_examples(self):
         for verb in ("show", "archive", "add", "set", "repair"):
             r = subprocess.run(
-                [sys.executable, str(script), verb, "--help"],
+                [sys.executable, BACKLOG_CLI, verb, "--help"],
                 capture_output=True, text=True,
             )
             assert r.returncode == 0, verb
             assert "Examples:" in r.stdout, verb
 
     def test_archive_help_has_item_id_example(self):
-        script = Path(__file__).parent.parent / "hooks" / "shared" / "backlog.py"
         r = subprocess.run(
-            [sys.executable, str(script), "archive", "--help"],
+            [sys.executable, BACKLOG_CLI, "archive", "--help"],
             capture_output=True, text=True,
         )
         assert r.returncode == 0
         assert "Examples:" in r.stdout
-        assert "archive" in r.stdout
+        assert "archive item-id" in r.stdout
 
     def test_archive_without_ids_exits_usage_with_example(self):
-        script = Path(__file__).parent.parent / "hooks" / "shared" / "backlog.py"
         r = subprocess.run(
-            [sys.executable, str(script), "archive"],
+            [sys.executable, BACKLOG_CLI, "archive"],
             capture_output=True, text=True,
         )
         assert r.returncode == backlog._EXIT_USAGE

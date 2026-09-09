@@ -46,7 +46,6 @@ Directory permissions: 0o700 (owner only)
 
 from __future__ import annotations
 
-import argparse
 import fcntl
 import json
 import os
@@ -1654,37 +1653,27 @@ def _atomic_write(path: Path, data: bytes) -> bool:
 # --- CLI ---
 
 
-def _cli_examples(*lines: str) -> str:
-    return "Examples:\n" + "\n".join(f"  {line}" for line in lines)
+def _build_cli():
+    """Build the journal CLI. argparse stays off the hook import path."""
+    import argparse
 
+    def _cli_examples(*lines: str) -> str:
+        return "Examples:\n" + "\n".join(f"  {line}" for line in lines)
 
-class _TeachParser(argparse.ArgumentParser):
-    """Usage errors stay exit 2 and append one pasteable example on stderr."""
+    class _TeachParser(argparse.ArgumentParser):
+        """Usage errors stay exit 2 and append one pasteable example on stderr."""
 
-    _teach_example = ""
+        _teach_example = ""
 
-    def error(self, message):
-        self.print_usage(sys.stderr)
-        extra = (
-            f"\nExamples:\n  {self._teach_example}\n"
-            if self._teach_example
-            else "\n"
-        )
-        self.exit(2, f"{self.prog}: error: {message}{extra}")
+        def error(self, message):
+            self.print_usage(sys.stderr)
+            extra = (
+                f"\nExamples:\n  {self._teach_example}\n"
+                if self._teach_example
+                else "\n"
+            )
+            self.exit(2, f"{self.prog}: error: {message}{extra}")
 
-
-def main() -> int:
-    """
-    CLI entry point for session journal operations.
-
-    Subcommands:
-        write  — Append an event via make_event() + append_event()
-        read   — Read events, optionally filtered by type, output JSON
-        read-last — Read the most recent event of a given type, output JSON
-
-    Returns:
-        0 on success, 1 on error.
-    """
     prog = sys.argv[0]
     fmt = argparse.RawDescriptionHelpFormatter
     write_ex = f"{prog} write --type decision --session-dir /abs/session --stdin"
@@ -1763,8 +1752,22 @@ def main() -> int:
     last_p.add_argument("--since", default=None,
                         help="Arc-scope lower bound (inclusive): only consider "
                              "events with ts >= this ISO-8601 UTC timestamp.")
+    return parser
 
-    args = parser.parse_args()
+
+def main() -> int:
+    """
+    CLI entry point for session journal operations.
+
+    Subcommands:
+        write  — Append an event via make_event() + append_event()
+        read   — Read events, optionally filtered by type, output JSON
+        read-last — Read the most recent event of a given type, output JSON
+
+    Returns:
+        0 on success, 1 on error.
+    """
+    args = _build_cli().parse_args()
 
     if args.command == "write":
         # Resolve the JSON payload from either --stdin or --data. The

@@ -5192,8 +5192,6 @@ class TestArcScopingMalformedResilience:
 
 
 class TestJournalTeachExamples:
-    """First-cut Examples: on --help and one pasteable line on usage errors."""
-
     def test_write_help_contains_examples_and_stdin(self):
         result = subprocess.run(
             [sys.executable, _SJ_SCRIPT, "write", "--help"],

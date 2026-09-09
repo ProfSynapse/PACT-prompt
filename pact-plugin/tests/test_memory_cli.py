@@ -176,7 +176,7 @@ class TestCliArgParsing:
     def test_build_parser_returns_parser(self):
         parser = build_parser()
         assert parser is not None
-        assert parser.prog == "pact-memory"
+        assert parser.prog == sys.argv[0]
 
     def test_save_subcommand_parsed(self):
         parser = build_parser()
@@ -2572,7 +2572,8 @@ class TestCliHelpOutput:
             main(["--help"])
         assert exc_info.value.code == 0
         captured = capsys.readouterr()
-        assert "pact-memory" in captured.out
+        assert "PACT Memory" in captured.out
+        assert "Examples:" in captured.out
 
     def test_main_help_lists_subcommands(self, capsys):
         with pytest.raises(SystemExit) as exc_info:

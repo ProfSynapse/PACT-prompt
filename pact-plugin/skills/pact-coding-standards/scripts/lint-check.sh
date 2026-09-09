@@ -21,7 +21,7 @@
 #     the --files shape).
 # Usage:
 #   ./lint-check.sh --files FILE.py [FILE.py ...]   # import-hygiene mode
-#   ./lint-check.sh [directory]                     # legacy whole-tree mode
+#   ./lint-check.sh DIRECTORY                       # legacy whole-tree mode
 # ============================================================================
 
 # ────────────────────────────────────────────────────────────────────────────
@@ -47,7 +47,7 @@ if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
     exit 0
 fi
 
-if [ "$#" -eq 0 ]; then
+if [ "$#" -eq 0 ] || [ -z "${1}" ]; then
     echo "error: lint-check.sh requires --files FILE.py [FILE.py ...] (or a directory for legacy whole-tree mode)" >&2
     echo "Examples:" >&2
     echo "  $0 --files /abs/path/to/modified.py" >&2
