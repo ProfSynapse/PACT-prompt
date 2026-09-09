@@ -6,22 +6,38 @@
 # Two phases:
 #   1. Offline: `claude plugin validate` on the plugin + marketplace (no auth).
 #   2. Live:    a single headless `-p` turn with the plugin loaded and the
-#               orchestrator persona selected. Requires ANTHROPIC_API_KEY.
+#               orchestrator persona selected.
 #
-# The live phase is skipped (not failed) when ANTHROPIC_API_KEY is absent, so
-# the offline phase still runs in environments without the secret.
+# Live auth is either ANTHROPIC_API_KEY (Cloud Agents) or an existing Claude
+# Code login (`claude auth status`). The live phase is skipped (not failed)
+# when neither is present, so the offline phase still runs without credentials.
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PLUGIN_DIR="$REPO_ROOT/pact-plugin"
 
-# Resolve the claude CLI (user-local npm prefix from install.sh, or PATH).
-export PATH="$HOME/.npm-global/bin:$PATH"
+# Resolve the claude CLI: local installs (~/.local/bin), Cloud Agent npm
+# prefix from install.sh, then PATH.
+export PATH="$HOME/.local/bin:$HOME/.npm-global/bin:$PATH"
 if ! command -v claude >/dev/null 2>&1; then
   echo "FAIL: claude CLI not found. Run .cursor/install.sh first." >&2
   exit 1
 fi
 echo "claude version: $(claude --version)"
+
+claude_logged_in() {
+  # Parse only the boolean; never print status (it includes email/org).
+  local status
+  status="$(claude auth status --json 2>/dev/null)" || return 1
+  printf '%s' "$status" | python3 -c '
+import json, sys
+try:
+    data = json.load(sys.stdin)
+except Exception:
+    sys.exit(1)
+sys.exit(0 if data.get("loggedIn") is True else 1)
+' 2>/dev/null
+}
 
 echo
 echo "== Phase 1: offline plugin + marketplace validation =="
@@ -30,10 +46,18 @@ claude plugin validate "$REPO_ROOT"
 
 echo
 echo "== Phase 2: live headless session =="
-if [ -z "${ANTHROPIC_API_KEY:-}" ]; then
-  echo "SKIP: ANTHROPIC_API_KEY not set — offline validation passed; skipping live model call."
+LIVE_AUTH=""
+if [ -n "${ANTHROPIC_API_KEY:-}" ]; then
+  LIVE_AUTH="ANTHROPIC_API_KEY"
+elif claude_logged_in; then
+  LIVE_AUTH="Claude Code login"
+fi
+
+if [ -z "$LIVE_AUTH" ]; then
+  echo "SKIP: no ANTHROPIC_API_KEY and Claude Code is not logged in — offline validation passed; skipping live model call."
   exit 0
 fi
+echo "live auth: $LIVE_AUTH"
 
 # Prerequisites the plugin documents for agent operation.
 export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
