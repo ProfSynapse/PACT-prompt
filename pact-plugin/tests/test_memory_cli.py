@@ -2598,6 +2598,36 @@ class TestCliHelpOutput:
         assert "--limit" in captured.out
         assert "query" in captured.out.lower()
 
+    def test_main_help_contains_examples(self, capsys):
+        with pytest.raises(SystemExit) as exc_info:
+            main(["--help"])
+        assert exc_info.value.code == 0
+        captured = capsys.readouterr()
+        assert "Examples:" in captured.out
+
+    def test_every_subcommand_help_contains_examples(self, capsys):
+        verbs = (
+            "save", "search", "list", "get", "status",
+            "setup", "update", "delete", "sync",
+        )
+        for verb in verbs:
+            with pytest.raises(SystemExit) as exc_info:
+                main([verb, "--help"])
+            assert exc_info.value.code == 0, verb
+            captured = capsys.readouterr()
+            assert "Examples:" in captured.out, verb
+
+    def test_get_without_id_is_argparse_usage_with_example(self, capsys):
+        with pytest.raises(SystemExit) as exc_info:
+            main(["get"])
+        assert exc_info.value.code == 2
+        captured = capsys.readouterr()
+        assert captured.out == ""
+        assert "Examples:" in captured.err
+        assert "get" in captured.err
+        with pytest.raises(json.JSONDecodeError):
+            json.loads(captured.err)
+
 
 # ---------------------------------------------------------------------------
 # save(sync_to_claude=...) — the Working Memory projection, made optional

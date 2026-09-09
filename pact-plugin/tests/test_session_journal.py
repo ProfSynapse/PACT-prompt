@@ -5189,3 +5189,35 @@ class TestArcScopingMalformedResilience:
         # prior(1) excluded by ts; malformed skipped; missing-ts(4) fail-open
         # included; current(2,3) ts-scoped in
         assert task_ids == ["2", "3", "4"]
+
+
+class TestJournalTeachExamples:
+    """First-cut Examples: on --help and one pasteable line on usage errors."""
+
+    def test_write_help_contains_examples_and_stdin(self):
+        result = subprocess.run(
+            [sys.executable, _SJ_SCRIPT, "write", "--help"],
+            capture_output=True, text=True,
+        )
+        assert result.returncode == 0
+        assert "Examples:" in result.stdout
+        assert "--stdin" in result.stdout or "--type" in result.stdout
+
+    def test_every_subcommand_help_contains_examples(self):
+        for verb in ("write", "read", "read-last"):
+            result = subprocess.run(
+                [sys.executable, _SJ_SCRIPT, verb, "--help"],
+                capture_output=True, text=True,
+            )
+            assert result.returncode == 0, verb
+            assert "Examples:" in result.stdout, verb
+
+    def test_write_missing_flags_exits_2_with_example(self):
+        result = subprocess.run(
+            [sys.executable, _SJ_SCRIPT, "write"],
+            capture_output=True, text=True,
+        )
+        assert result.returncode == 2
+        assert "write" in result.stderr
+        assert "Examples:" in result.stderr
+        assert result.stdout == ""

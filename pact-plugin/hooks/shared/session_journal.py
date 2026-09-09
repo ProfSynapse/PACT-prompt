@@ -46,6 +46,7 @@ Directory permissions: 0o700 (owner only)
 
 from __future__ import annotations
 
+import argparse
 import fcntl
 import json
 import os
@@ -1653,6 +1654,25 @@ def _atomic_write(path: Path, data: bytes) -> bool:
 # --- CLI ---
 
 
+def _cli_examples(*lines: str) -> str:
+    return "Examples:\n" + "\n".join(f"  {line}" for line in lines)
+
+
+class _TeachParser(argparse.ArgumentParser):
+    """Usage errors stay exit 2 and append one pasteable example on stderr."""
+
+    _teach_example = ""
+
+    def error(self, message):
+        self.print_usage(sys.stderr)
+        extra = (
+            f"\nExamples:\n  {self._teach_example}\n"
+            if self._teach_example
+            else "\n"
+        )
+        self.exit(2, f"{self.prog}: error: {message}{extra}")
+
+
 def main() -> int:
     """
     CLI entry point for session journal operations.
@@ -1665,16 +1685,31 @@ def main() -> int:
     Returns:
         0 on success, 1 on error.
     """
-    import argparse
-
-    parser = argparse.ArgumentParser(
-        description="Session journal CLI — append and query JSONL events.",
+    prog = sys.argv[0]
+    fmt = argparse.RawDescriptionHelpFormatter
+    write_ex = f"{prog} write --type decision --session-dir /abs/session --stdin"
+    read_ex = f"{prog} read --session-dir /abs/session"
+    last_ex = (
+        f"{prog} read-last --type phase_transition --session-dir /abs/session"
     )
-    sub = parser.add_subparsers(dest="command")
+
+    parser = _TeachParser(
+        description="Session journal CLI — append and query JSONL events.",
+        formatter_class=fmt,
+        epilog=_cli_examples(write_ex, read_ex, last_ex),
+    )
+    parser._teach_example = write_ex
+    sub = parser.add_subparsers(dest="command", parser_class=_TeachParser)
     sub.required = True
 
     # --- write ---
-    write_p = sub.add_parser("write", help="Append an event to the journal")
+    write_p = sub.add_parser(
+        "write",
+        help="Append an event to the journal",
+        formatter_class=fmt,
+        epilog=_cli_examples(write_ex),
+    )
+    write_p._teach_example = write_ex
     write_p.add_argument("--type", required=True, dest="event_type",
                          help="Event type string (e.g. phase_transition)")
     write_p.add_argument("--session-dir", required=True,
@@ -1697,7 +1732,13 @@ def main() -> int:
                                  "(mutually exclusive with --data)")
 
     # --- read ---
-    read_p = sub.add_parser("read", help="Read events (JSON array to stdout)")
+    read_p = sub.add_parser(
+        "read",
+        help="Read events (JSON array to stdout)",
+        formatter_class=fmt,
+        epilog=_cli_examples(read_ex),
+    )
+    read_p._teach_example = read_ex
     read_p.add_argument("--session-dir", required=True,
                         help="Session directory path")
     read_p.add_argument("--type", default=None, dest="event_type",
@@ -1708,8 +1749,13 @@ def main() -> int:
                              "not string-compared; fail-open on unparseable.")
 
     # --- read-last ---
-    last_p = sub.add_parser("read-last",
-                            help="Read the most recent event of a type")
+    last_p = sub.add_parser(
+        "read-last",
+        help="Read the most recent event of a type",
+        formatter_class=fmt,
+        epilog=_cli_examples(last_ex),
+    )
+    last_p._teach_example = last_ex
     last_p.add_argument("--session-dir", required=True,
                         help="Session directory path")
     last_p.add_argument("--type", required=True, dest="event_type",

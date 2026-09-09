@@ -816,6 +816,25 @@ def _positive_int(value):
     return ivalue
 
 
+def _cli_examples(*lines: str) -> str:
+    return "Examples:\n" + "\n".join(f"  {line}" for line in lines)
+
+
+class _TeachParser(argparse.ArgumentParser):
+    """Usage errors stay argparse exit 2 and append one pasteable example."""
+
+    _teach_example = ""
+
+    def error(self, message):
+        self.print_usage(sys.stderr)
+        extra = (
+            f"\nExamples:\n  {self._teach_example}\n"
+            if self._teach_example
+            else "\n"
+        )
+        self.exit(2, f"{self.prog}: error: {message}{extra}")
+
+
 def build_parser():
     """Build the argparse parser with all subcommands."""
     # Shared parent parser for the hidden --db-path flag.
@@ -826,17 +845,39 @@ def build_parser():
         help=argparse.SUPPRESS,  # Hidden flag for testing
     )
 
-    parser = argparse.ArgumentParser(
+    prog = sys.argv[0]
+    fmt = argparse.RawDescriptionHelpFormatter
+    examples = {
+        "save": f"{prog} save --stdin",
+        "search": f'{prog} search "query"',
+        "list": f"{prog} list",
+        "get": f"{prog} get <memory-id>",
+        "status": f"{prog} status",
+        "setup": f"{prog} setup",
+        "update": f"{prog} update <memory-id> --stdin",
+        "delete": f"{prog} delete <memory-id>",
+        "sync": f"{prog} sync",
+    }
+
+    parser = _TeachParser(
         prog="pact-memory",
         description="PACT Memory CLI — persistent memory for PACT agents",
+        formatter_class=fmt,
+        epilog=_cli_examples(*examples.values()),
     )
+    parser._teach_example = examples["save"]
 
-    subparsers = parser.add_subparsers(dest="command")
+    subparsers = parser.add_subparsers(dest="command", parser_class=_TeachParser)
 
     # save
     save_parser = subparsers.add_parser(
-        "save", help="Save a memory object", parents=[parent]
+        "save",
+        help="Save a memory object",
+        parents=[parent],
+        formatter_class=fmt,
+        epilog=_cli_examples(examples["save"]),
     )
+    save_parser._teach_example = examples["save"]
     save_parser.add_argument("json_data", nargs="?", help="JSON memory object")
     save_parser.add_argument(
         "--stdin", action="store_true", help="Read JSON from stdin"
@@ -863,8 +904,13 @@ def build_parser():
 
     # search
     search_parser = subparsers.add_parser(
-        "search", help="Search memories", parents=[parent]
+        "search",
+        help="Search memories",
+        parents=[parent],
+        formatter_class=fmt,
+        epilog=_cli_examples(examples["search"]),
     )
+    search_parser._teach_example = examples["search"]
     search_parser.add_argument("query", help="Search query text")
     search_parser.add_argument(
         "--limit", type=_positive_int, default=5, help="Max results (default: 5)"
@@ -888,8 +934,13 @@ def build_parser():
 
     # list
     list_parser = subparsers.add_parser(
-        "list", help="List recent memories", parents=[parent]
+        "list",
+        help="List recent memories",
+        parents=[parent],
+        formatter_class=fmt,
+        epilog=_cli_examples(examples["list"]),
     )
+    list_parser._teach_example = examples["list"]
     list_parser.add_argument(
         "--limit", type=_positive_int, default=20, help="Max results (default: 20)"
     )
@@ -909,21 +960,34 @@ def build_parser():
             "returns NOT_FOUND. Prefix is case-insensitive."
         ),
         parents=[parent],
+        formatter_class=fmt,
+        epilog=_cli_examples(examples["get"]),
     )
+    get_parser._teach_example = examples["get"]
     get_parser.add_argument(
         "memory_id",
         help="Full 32-char memory ID, or a unique prefix of >= 7 characters",
     )
 
     # status
-    subparsers.add_parser(
-        "status", help="Show memory system status", parents=[parent]
+    status_parser = subparsers.add_parser(
+        "status",
+        help="Show memory system status",
+        parents=[parent],
+        formatter_class=fmt,
+        epilog=_cli_examples(examples["status"]),
     )
+    status_parser._teach_example = examples["status"]
 
     # setup
-    subparsers.add_parser(
-        "setup", help="Initialize the memory system", parents=[parent]
+    setup_parser = subparsers.add_parser(
+        "setup",
+        help="Initialize the memory system",
+        parents=[parent],
+        formatter_class=fmt,
+        epilog=_cli_examples(examples["setup"]),
     )
+    setup_parser._teach_example = examples["setup"]
 
     # update
     update_parser = subparsers.add_parser(
@@ -937,7 +1001,10 @@ def build_parser():
             "returns NOT_FOUND. Prefix is case-insensitive."
         ),
         parents=[parent],
+        formatter_class=fmt,
+        epilog=_cli_examples(examples["update"]),
     )
+    update_parser._teach_example = examples["update"]
     update_parser.add_argument(
         "memory_id",
         help="Full 32-char memory ID, or a unique prefix of >= 7 characters",
@@ -968,7 +1035,10 @@ def build_parser():
             "returns NOT_FOUND. Prefix is case-insensitive."
         ),
         parents=[parent],
+        formatter_class=fmt,
+        epilog=_cli_examples(examples["delete"]),
     )
+    delete_parser._teach_example = examples["delete"]
     delete_parser.add_argument(
         "memory_id",
         help="Full 32-char memory ID, or a unique prefix of >= 7 characters",
@@ -986,7 +1056,10 @@ def build_parser():
             "sync_status 'empty' and leaves the file untouched."
         ),
         parents=[parent],
+        formatter_class=fmt,
+        epilog=_cli_examples(examples["sync"]),
     )
+    sync_parser._teach_example = examples["sync"]
     sync_parser.add_argument(
         "--claude-md-root",
         default=None,

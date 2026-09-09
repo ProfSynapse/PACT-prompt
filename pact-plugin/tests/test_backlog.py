@@ -5844,3 +5844,35 @@ def test_file_local_flags_requires_the_subject_pool_argument():
 
     with _pytest.raises(TypeError, match="subject_pool"):
         backlog_store.file_local_flags({"items": []})
+
+
+class TestBacklogTeachExamples:
+    def test_every_subcommand_help_contains_examples(self, tmp_path):
+        script = Path(__file__).parent.parent / "hooks" / "shared" / "backlog.py"
+        for verb in ("show", "archive", "add", "set", "repair"):
+            r = subprocess.run(
+                [sys.executable, str(script), verb, "--help"],
+                capture_output=True, text=True,
+            )
+            assert r.returncode == 0, verb
+            assert "Examples:" in r.stdout, verb
+
+    def test_archive_help_has_item_id_example(self):
+        script = Path(__file__).parent.parent / "hooks" / "shared" / "backlog.py"
+        r = subprocess.run(
+            [sys.executable, str(script), "archive", "--help"],
+            capture_output=True, text=True,
+        )
+        assert r.returncode == 0
+        assert "Examples:" in r.stdout
+        assert "archive" in r.stdout
+
+    def test_archive_without_ids_exits_usage_with_example(self):
+        script = Path(__file__).parent.parent / "hooks" / "shared" / "backlog.py"
+        r = subprocess.run(
+            [sys.executable, str(script), "archive"],
+            capture_output=True, text=True,
+        )
+        assert r.returncode == backlog._EXIT_USAGE
+        assert "Examples:" in r.stderr
+        assert "archive" in r.stderr

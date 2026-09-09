@@ -470,18 +470,6 @@ Before completing CODE phase:
 
 ## Scripts
 
-### Lint Check Script
-
-A helper script is available at `scripts/lint-check.sh` to run project linters.
-
-```bash
-# From within the skill directory:
-chmod +x scripts/lint-check.sh
-
-# Run (legacy whole-tree mode — project-type detection over a directory)
-./scripts/lint-check.sh
-```
-
 ### Import Hygiene Check (--files mode)
 
 Behavioral tests cannot see an unused import — a dead `import os` passes
@@ -497,6 +485,18 @@ One separately quoted absolute path per file, never one quoted list — a filena
 
 (When your dispatch names a plugin root, the script lives at
 `<plugin-root>/skills/pact-coding-standards/scripts/lint-check.sh`.)
+
+A bare `lint-check.sh` with no arguments is refused. Do not present it as a lint command.
+
+### Lint Check Script (legacy directory mode)
+
+Whole-tree project-type detection is reachable only with a directory argument:
+
+```bash
+# From within the skill directory:
+chmod +x scripts/lint-check.sh
+./scripts/lint-check.sh /path/to/project
+```
 
 **Verdict-line contract** — the LAST stdout line is always exactly one of:
 

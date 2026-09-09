@@ -675,3 +675,24 @@ class TestParseTsTrailingZAnchor:
         # A string with NO trailing Z is returned byte-for-byte unchanged.
         assert _normalize_trailing_z(
             "2026-06-25T00:00:00+00:00") == "2026-06-25T00:00:00+00:00"
+
+
+class TestHarvestTeachExamples:
+    def test_both_subcommand_helps_contain_examples(self):
+        for verb in ("resolve-session-dir", "resolve-artifacts"):
+            r = _run_cli(verb, "--help")
+            assert r.returncode == 0, verb
+            assert "Examples:" in r.stdout, verb
+
+    def test_resolve_session_dir_help_names_context_file(self):
+        r = _run_cli("resolve-session-dir", "--help")
+        assert r.returncode == 0
+        assert "--context-file" in r.stdout
+        assert "Examples:" in r.stdout
+
+    def test_missing_context_file_usage_has_example_empty_stdout(self):
+        r = _run_cli("resolve-session-dir")
+        assert r.returncode == 2
+        assert r.stdout == ""
+        assert "Examples:" in r.stderr
+        assert "resolve-session-dir" in r.stderr
