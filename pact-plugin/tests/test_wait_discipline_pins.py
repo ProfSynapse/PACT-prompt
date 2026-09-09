@@ -46,10 +46,10 @@ Counter-test-by-construction (measured at authoring time): this module was
 run against the PRE-AMENDMENT persona before the amendment text landed —
 19 of 21 cases RED (every phrase pin; no pinned phrase pre-existed on its
 section slice) and the 2 heading-anchor cases GREEN (the headings
-pre-existed — they are slice anchors, not amendment text), then 21/21
-GREEN after the amendment. The two heading pins guard the slice
-anchors so a heading rename fails with a clear message rather than 19
-empty-slice phrase failures.
+pre-existed — they are slice anchors, not amendment text), then the full
+module GREEN after the amendment. The two heading pins guard the slice
+anchors so a heading rename fails with a clear message rather than an
+empty-slice failure per phrase pin.
 """
 
 from pathlib import Path
@@ -114,7 +114,7 @@ def _section(path: Path, heading: str) -> str:
 def test_section_heading_present(heading: str):
     """The section heading must exist as an exact line — it is the slice
     anchor for every phrase pin in this module, so a rename must fail here
-    with the cause named, not as 19 empty-slice phrase failures."""
+    with the cause named, not as an empty-slice failure per phrase pin."""
     assert heading in _raw(ORCHESTRATOR).splitlines(), (
         f"pact-orchestrator.md: heading {heading!r} not found as an exact "
         f"line. If the section was intentionally renamed, update this pin "
@@ -192,5 +192,5 @@ def test_rule_phrase_present(heading: str, phrase: str):
 # against the pre-amendment persona, the 2 heading cases were GREEN (the
 # headings pre-existed — they are the slice anchors, not amendment text)
 # and all 19 phrase cases were RED (no pinned phrase pre-existed on its
-# slice). Post-amendment: 21/21 GREEN.
+# slice). Post-amendment: the full module GREEN.
 # ---------------------------------------------------------------------------

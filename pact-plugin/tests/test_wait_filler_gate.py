@@ -7,7 +7,8 @@ consultation doc): every arm is an acceptance criterion.
 
 Deny arms D1-D15 (exit 2 + hookSpecificOutput deny envelope):
   bare builtin/sleep, leading/trailing whitespace incl. ALL trailing
-  newlines, duration suffixes (s/m/h/d), fractional N, `infinity`, env
+  newlines, space/tab separators between `sleep` and the duration,
+  duration suffixes (s/m/h/d), fractional N, `infinity`, env
   assignments, one `command `/`builtin ` prefix, one trailing comment, and
   the full normalization chain composed.
 
@@ -87,10 +88,10 @@ Counter-test record (measured at authoring time): this module was run
 against the repo BEFORE hooks/wait_filler_gate.py existed (TDD red-first):
 56 failed, 1 passed — every hook-dependent case red, the single green
 being the S4 seam-non-membership pin (it imports only the classifier, not
-the hook). Post-implementation: 57/57 green at authoring (alongside
-test_hooks_json.py, whose MUST_BE_SYNC sibling pin covers the async-flip
-shape); 58 at remediation cycle 1 (D6 twin); 59 with the trailing-dot
-admission arm added at the cycle-1 re-review.
+the hook). Post-implementation: the full module green at authoring
+(alongside test_hooks_json.py, whose MUST_BE_SYNC sibling pin covers the
+async-flip shape), again at remediation cycle 1 (D6 twin), and again
+with the trailing-dot admission arm added at the cycle-1 re-review.
 """
 
 import ast
@@ -150,6 +151,8 @@ def _bash_payload(command: str) -> str:
 DENY_ARMS = [
     ("D1", "true"),
     ("D2", "sleep 30"),
+    ("D2", "sleep  30"),
+    ("D2", "sleep\t30"),
     ("D3", "  true"),
     ("D4", "\tsleep 5"),
     ("D5", "true   "),
