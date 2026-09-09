@@ -50,39 +50,47 @@ test_hooks_json.py::TestReferencedScriptsExist once registered.
 
 Mutation-ablation table (the TEST-phase verification spec; each ablation
 predicts the flipped arms before running, and an ablation whose prediction
-agrees with the arm proves nothing). AS-EXECUTED (TEST phase, isolated
-copy) — observed vs predicted, with the two corrections:
-  drop `sleep` alternative from pattern  -> observed 14 flips: every
-      sleep-based deny arm (D2, D4, D6, D7x4, D8, D9, D11, D13, D14,
-      D15x2); unique witnesses D2/D6/D7/D8. (Predicted row listed only the
-      unique-witness subset; 14 is the full flip set.)
+agrees with the arm proves nothing). AS-EXECUTED, RE-RUN at remediation
+cycle 1 against the post-widen grammar (isolated copy, 59 cases incl. the
+D6 `.5`/`5.` widened-grammar arms; the pre-widen cycle-0 run observed 14
+on the sleep row — the widen moved it by exactly the new arms):
+  drop `sleep` alternative from pattern  -> observed 16 flips: every
+      sleep-based deny arm (D2, D4, D6x3, D7x4, D8, D9, D11, D13, D14,
+      D15x2); unique witnesses D2/D6/D7/D8.
   drop whitespace strip                  -> observed 5: D3, D4, D5, D15x2
-      (unique witnesses D3/D5); as predicted.
-  drop env-assignment strip              -> observed 3: D9, D10, D14; as
-      predicted.
-  drop command/builtin prefix strip      -> observed 3: D11, D12, D14; as
-      predicted.
-  drop comment strip                     -> observed 2: D13, D14; as
-      predicted.
+      (unique witnesses D3/D5).
+  drop env-assignment strip              -> observed 3: D9, D10, D14.
+  drop command/builtin prefix strip      -> observed 3: D11, D12, D14.
+  drop comment strip                     -> observed 2: D13, D14.
   replace \\Z anchor with $               -> observed 0 — MASKED, not a
       missing kill: the strip removes ALL trailing newlines and the
       interior-newline check runs before the pattern, so no input reaches
       the match with a trailing newline and $ == \\Z. The anchor is
       zero-cost defense-in-depth documentation; the newline behavior is
       certified by D15 flipping under the strip and sleep ablations. Do
-      not expect a test to couple to the anchor.
+      not expect a test to couple to the anchor. (Confirmed structural at
+      cycle 1: a pyc same-second-mtime collision in the copy produced a
+      stale-bytecode restore false-red; the anchor re-run with __pycache__
+      cleared still observed 0.)
   invert fail-open to fail-closed        -> observed 2: A26, A30. A27-A29
       route through the validation-allow path, not the exception paths —
-      they are validation-allow cases, mislabeled above as fail-open arms;
-      fail-open is load-bearing where it exists (both exception paths).
+      they are validation-allow cases, not fail-open arms; fail-open is
+      load-bearing where it exists (both exception paths).
+  drop the leading-dot alternative       -> observed 1: the D6 'sleep .5'
+      twin (the widened grammar's new member is load-bearing).
+  narrow \\.[0-9]* back to \\.[0-9]+      -> observed 1: the D6 'sleep 5.'
+      arm (pins the trailing-dot admission — without the arm this
+      narrowing ships silently).
 A total non-flip across arms is an instrument alarm, not a finding.
 
 Counter-test record (measured at authoring time): this module was run
 against the repo BEFORE hooks/wait_filler_gate.py existed (TDD red-first):
 56 failed, 1 passed — every hook-dependent case red, the single green
 being the S4 seam-non-membership pin (it imports only the classifier, not
-the hook). Post-implementation: 57/57 green (alongside test_hooks_json.py,
-whose MUST_BE_SYNC sibling pin covers the async-flip shape).
+the hook). Post-implementation: 57/57 green at authoring (alongside
+test_hooks_json.py, whose MUST_BE_SYNC sibling pin covers the async-flip
+shape); 58 at remediation cycle 1 (D6 twin); 59 with the trailing-dot
+admission arm added at the cycle-1 re-review.
 """
 
 import ast
@@ -147,6 +155,7 @@ DENY_ARMS = [
     ("D5", "true   "),
     ("D6", "sleep 0.5"),
     ("D6", "sleep .5"),
+    ("D6", "sleep 5."),
     ("D7", "sleep 1m"),
     ("D7", "sleep 2h"),
     ("D7", "sleep 10s"),
