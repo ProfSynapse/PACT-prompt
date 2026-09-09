@@ -860,6 +860,7 @@ def build_parser():
     }
 
     parser = _TeachParser(
+        prog=prog,
         description="PACT Memory CLI — persistent memory for PACT agents",
         formatter_class=fmt,
         epilog=_cli_examples(*examples.values()),

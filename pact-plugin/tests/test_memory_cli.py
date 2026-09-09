@@ -178,6 +178,15 @@ class TestCliArgParsing:
         assert parser is not None
         assert parser.prog == sys.argv[0]
 
+    def test_build_parser_prog_keeps_invoked_directory(self, monkeypatch):
+        invoked = "/abs/path/to/cli.py"
+        monkeypatch.setattr(sys, "argv", [invoked])
+        parser = build_parser()
+        assert parser.prog == invoked
+        help_text = parser.format_help()
+        assert invoked in help_text
+        assert "Examples:" in help_text
+
     def test_save_subcommand_parsed(self):
         parser = build_parser()
         args = parser.parse_args(["save", '{"context": "test"}'])

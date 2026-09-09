@@ -265,6 +265,7 @@ def main() -> int:
     )
 
     parser = _TeachParser(
+        prog=prog,
         description="PACT harvest CLI — off-lead session-dir + artifact "
         "supersede resolutions for the pact-handoff-harvest skill.",
         formatter_class=fmt,

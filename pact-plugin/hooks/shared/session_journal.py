@@ -1683,6 +1683,7 @@ def _build_cli():
     )
 
     parser = _TeachParser(
+        prog=prog,
         description="Session journal CLI — append and query JSONL events.",
         formatter_class=fmt,
         epilog=_cli_examples(write_ex, read_ex, last_ex),

@@ -1235,6 +1235,7 @@ def build_parser() -> argparse.ArgumentParser:
     repair_ex = f"{prog} repair"
 
     parser = _UsageErrorParser(
+        prog=prog,
         description="PACT cross-session backlog — the user's ordered intent, "
         "reconciled against git, the tracker and pact-memory.",
         formatter_class=fmt,
