@@ -38,6 +38,7 @@ import json
 import os
 import re
 import secrets
+import shlex
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -1124,6 +1125,44 @@ def check_settings_well_formed() -> Optional[str]:
         return None
 
 
+def _persist_project_dir_env(project_dir: str) -> None:
+    """Append `export CLAUDE_PROJECT_DIR=<value>` to the platform's CLAUDE_ENV_FILE.
+
+    CLAUDE_ENV_FILE is the platform's sanctioned SessionStart channel for
+    persisting env vars into subsequent Bash-tool environments; the plugin has
+    no other route to make CLAUDE_PROJECT_DIR ambient for skill-spawned CLIs
+    (the platform delivers it to hook processes only). Called from main() only
+    when BOTH $CLAUDE_ENV_FILE and $CLAUDE_PROJECT_DIR are present — the
+    both-present condition is the structural guard that keeps an env-absent
+    frame's cwd-fallback value out of the export. The checks below are the
+    defensive layer so the helper stays total when called directly in tests.
+
+    Producer-side shlex.quote: the env file is sourced by a shell, so a path
+    containing spaces or `$` must arrive quoted. Dedupe on the identical
+    export line keeps resume/compact/clear re-fires idempotent.
+
+    Never raises: SessionStart hot path (same total contract as the outer
+    safety net). A failed append fails open to the pre-fix status quo.
+    """
+    env_file = os.environ.get("CLAUDE_ENV_FILE")
+    if not env_file or not os.environ.get("CLAUDE_PROJECT_DIR"):
+        return
+    if not os.path.isabs(project_dir):
+        return
+    line = f"export CLAUDE_PROJECT_DIR={shlex.quote(project_dir)}"
+    try:
+        try:
+            existing = Path(env_file).read_text(encoding="utf-8")
+        except FileNotFoundError:
+            existing = ""
+        if line in existing.splitlines():
+            return
+        with open(env_file, "a", encoding="utf-8") as fh:
+            fh.write(line + "\n")
+    except OSError:
+        pass
+
+
 def main():
     """
     Main entry point for the SessionStart hook.
@@ -1179,7 +1218,20 @@ def main():
             input_data = {}
             stdin_json_error = str(exc)
 
-        project_dir = os.environ.get("CLAUDE_PROJECT_DIR", ".")
+        # Resolve-once: the env value verbatim when the platform delivers it,
+        # else the absolute cwd (os.getcwd() is always absolute and physical —
+        # matching the platform's own resolved CLAUDE_PROJECT_DIR). This single
+        # value feeds BOTH the session-context record and the env-file export,
+        # so the exported == recorded invariant holds by construction. The
+        # former "." default is gone: env-absent frames now record the absolute
+        # cwd.
+        project_dir = os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
+        # Env-file export gate: only frames where the platform delivered BOTH
+        # the env-file channel and the project dir append — an env-absent
+        # frame never reaches the append, so the cwd fallback is never
+        # exported (the structural guard).
+        if os.environ.get("CLAUDE_ENV_FILE") and os.environ.get("CLAUDE_PROJECT_DIR"):
+            _persist_project_dir_env(project_dir)
         context_parts = []
         system_messages = []
 
