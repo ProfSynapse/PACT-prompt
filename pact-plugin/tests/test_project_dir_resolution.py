@@ -1101,6 +1101,55 @@ class TestSyncCliEnvelope:
             f"the refusal must name both values; stderr: {proc.stderr!r}"
         )
 
+    def test_sync_cli_with_declared_root_proceeds_under_disagreement(self, tmp_path):
+        """The warrant at the CLI layer: `sync --claude-md-root <env-scoped
+        root>` under an env/record disagreement exits 0 and projects under the
+        NAMED root (containment warrant, not steering — resolution is
+        env-first and unchanged). The refusal row above is the counter arm."""
+        umbrella = make_umbrella(tmp_path)
+        umbrella_md = _seed_claude_md(umbrella.project)
+        other = tmp_path / "other"
+        other_md = _seed_claude_md(other)
+        store = tmp_path / "memory.db"
+        env = child_env(
+            umbrella.config_root, home=tmp_path, session_id=SID,
+            project_dir=other, memory_dir=tmp_path / "memdir",
+        )
+        # Seed under the env scope with NO record yet on disk (no disagreement
+        # until the context file exists — write it after the seed).
+        seed_env = dict(env)
+        del seed_env["CLAUDE_CODE_SESSION_ID"]
+        setup = subprocess.run(
+            [sys.executable, str(_MEMORY_CLI), "setup", "--db-path", str(store)],
+            capture_output=True, text=True, env=seed_env, cwd=str(other), timeout=120,
+        )
+        assert setup.returncode == 0, f"store setup failed: {setup.stderr[:400]!r}"
+        save = subprocess.run(
+            [sys.executable, str(_MEMORY_CLI), "save", "--db-path", str(store),
+             json.dumps({"context": "WARRANT-CLI-TOKEN", "goal": "g"})],
+            capture_output=True, text=True, env=seed_env, cwd=str(other), timeout=120,
+        )
+        assert save.returncode == 0, f"seed save failed: {save.stderr[:400]!r}"
+        write_session_context(umbrella.config_root, SID, umbrella.project)
+
+        proc = subprocess.run(
+            [sys.executable, str(_MEMORY_CLI), "sync", "--db-path", str(store),
+             "--claude-md-root", str(other)],
+            capture_output=True, text=True, env=env, cwd=str(other), timeout=120,
+        )
+        assert proc.returncode == 0, (
+            f"a warranted sync refused at the CLI layer: {proc.stderr[:400]!r}"
+        )
+        assert "SCOPE_DISAGREEMENT" not in proc.stderr
+        envelope = json.loads(proc.stdout)
+        assert envelope["ok"] is True and envelope["result"]["sync_status"] == "wrote"
+        assert "WARRANT-CLI-TOKEN" in other_md.read_text(encoding="utf-8"), (
+            "the projection did not land under the named root"
+        )
+        assert "WARRANT-CLI-TOKEN" not in umbrella_md.read_text(encoding="utf-8"), (
+            "the projection reached the record-scoped file despite the warrant"
+        )
+
 
 # ---------------------------------------------------------------------------
 # Edge: READS proceed under an env/record disagreement (the liberal half)
