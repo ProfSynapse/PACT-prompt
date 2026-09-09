@@ -57,7 +57,10 @@ D6 `.5`/`5.` widened-grammar arms; the pre-widen cycle-0 run observed 14
 on the sleep row — the widen moved it by exactly the new arms):
   drop `sleep` alternative from pattern  -> observed 16 flips: every
       sleep-based deny arm (D2, D4, D6x3, D7x4, D8, D9, D11, D13, D14,
-      D15x2); unique witnesses D2/D6/D7/D8.
+      D15x2); unique witnesses D2/D6/D7/D8. (Cycle-2 addendum: the
+      separator widen added two D2 separator arms, so a post-cycle-2
+      re-run observes 18 with D2x3 — the 16 and its enumeration are
+      as-executed at cycle 1.)
   drop whitespace strip                  -> observed 5: D3, D4, D5, D15x2
       (unique witnesses D3/D5).
   drop env-assignment strip              -> observed 3: D9, D10, D14.
