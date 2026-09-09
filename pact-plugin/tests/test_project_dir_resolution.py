@@ -381,6 +381,22 @@ class TestWriteRefusalOnDisagreement:
             memory.sync()
         assert memory.last_sync_status == wm.SyncResult.REFUSED
 
+    def test_refusal_text_carries_the_textual_comparison_note(self, tmp_path, monkeypatch):
+        """F6: the remedy names the comparison rule (verbatim, not resolved),
+        so a symlinked/case-differing spelling's refusal is self-explanatory.
+        One assertion through one write path — the pin that makes an
+        F6-removal arm killable."""
+        umbrella = make_umbrella(tmp_path)
+        _arm_record(monkeypatch, tmp_path, umbrella.project)
+        other = tmp_path / "other"
+        other.mkdir()
+        monkeypatch.setenv("CLAUDE_PROJECT_DIR", str(other))
+
+        memory = PACTMemory()
+        with pytest.raises(ProjectScopeDisagreementError) as excinfo:
+            memory.save({"context": "c", "goal": "g"})
+        assert "comparison is textual" in str(excinfo.value)
+
     def test_agreement_with_a_trailing_slash_does_not_refuse(self, tmp_path, monkeypatch):
         """normpath collapses the spelling difference; the predicate — not a
         full save — is the unit under test here."""
