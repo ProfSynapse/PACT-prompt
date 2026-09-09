@@ -1668,7 +1668,7 @@ def _build_cli():
         def error(self, message):
             self.print_usage(sys.stderr)
             extra = (
-                f"\nExamples:\n  {self._teach_example}\n"
+                f"\n\nExamples:\n  {self._teach_example}\n"
                 if self._teach_example
                 else "\n"
             )
@@ -1676,10 +1676,16 @@ def _build_cli():
 
     prog = sys.argv[0]
     fmt = argparse.RawDescriptionHelpFormatter
-    write_ex = f"{prog} write --type decision --session-dir /abs/session --stdin"
-    read_ex = f"{prog} read --session-dir /abs/session"
+    # Interpreter-prefixed so a pasted example executes verbatim: the script
+    # has no shebang or exec bit, so the bare path is not shell-executable.
+    write_ex = (
+        f'python3 "{prog}" write'
+        " --type decision --session-dir /abs/session --stdin"
+    )
+    read_ex = f'python3 "{prog}" read --session-dir /abs/session'
     last_ex = (
-        f"{prog} read-last --type phase_transition --session-dir /abs/session"
+        f'python3 "{prog}" read-last'
+        " --type phase_transition --session-dir /abs/session"
     )
 
     parser = _TeachParser(

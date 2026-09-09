@@ -235,7 +235,7 @@ class _TeachParser(argparse.ArgumentParser):
     def error(self, message):
         self.print_usage(sys.stderr)
         extra = (
-            f"\nExamples:\n  {self._teach_example}\n"
+            f"\n\nExamples:\n  {self._teach_example}\n"
             if self._teach_example
             else "\n"
         )
@@ -257,11 +257,15 @@ def main() -> int:
     """
     prog = sys.argv[0]
     fmt = argparse.RawDescriptionHelpFormatter
+    # Interpreter-prefixed so a pasted example executes verbatim: the script
+    # has no shebang or exec bit, so the bare path is not shell-executable.
     session_ex = (
-        f"{prog} resolve-session-dir --context-file /abs/pact-session-context.json"
+        f'python3 "{prog}" resolve-session-dir'
+        " --context-file /abs/pact-session-context.json"
     )
     artifacts_ex = (
-        f"{prog} resolve-artifacts --session-dir /abs/session --feature slug"
+        f'python3 "{prog}" resolve-artifacts'
+        " --session-dir /abs/session --feature slug"
     )
 
     parser = _TeachParser(

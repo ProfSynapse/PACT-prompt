@@ -1214,7 +1214,7 @@ class _UsageErrorParser(argparse.ArgumentParser):
 
     def error(self, message):
         extra = (
-            f"\nExamples:\n  {self._teach_example}\n"
+            f"\n\nExamples:\n  {self._teach_example}\n"
             if self._teach_example
             else "\n"
         )
@@ -1228,11 +1228,13 @@ def build_parser() -> argparse.ArgumentParser:
     """Argument grammar, separated so it is testable without running anything."""
     prog = sys.argv[0]
     fmt = argparse.RawDescriptionHelpFormatter
-    show_ex = f"{prog} show"
-    archive_ex = f"{prog} archive item-id"
-    add_ex = f'{prog} add "title"'
-    set_ex = f"{prog} set item-id --status done"
-    repair_ex = f"{prog} repair"
+    # Interpreter-prefixed so a pasted example executes verbatim: the script
+    # has no shebang or exec bit, so the bare path is not shell-executable.
+    show_ex = f'python3 "{prog}" show'
+    archive_ex = f'python3 "{prog}" archive item-id'
+    add_ex = f'python3 "{prog}" add "title"'
+    set_ex = f'python3 "{prog}" set item-id --status done'
+    repair_ex = f'python3 "{prog}" repair'
 
     parser = _UsageErrorParser(
         prog=prog,

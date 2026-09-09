@@ -22,6 +22,9 @@
 # Usage:
 #   ./lint-check.sh --files FILE.py [FILE.py ...]   # import-hygiene mode
 #   ./lint-check.sh DIRECTORY                       # legacy whole-tree mode
+#   ./lint-check.sh --help | -h                     # usage + example, exit 0
+#   A bare run (no arguments, or an empty first argument) is refused:
+#   usage error + example on stderr, exit 2.
 # ============================================================================
 
 # ────────────────────────────────────────────────────────────────────────────
@@ -228,8 +231,9 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-# Directory to check (default to current)
-DIR="${1:-.}"
+# Directory to check. Never defaulted: a bare or empty first argument is
+# refused by the teach prefix above, so $1 is always a non-empty string here.
+DIR="${1}"
 
 echo "Running lint check in: $DIR"
 echo "----------------------------------------"

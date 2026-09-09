@@ -529,6 +529,17 @@ linter is installed it falls back to the stdlib AST checker
 imports treated as advisory). A checker crash degrades to `SKIPPED` — the
 check fails open and never blocks you on its own breakage.
 
+### Teach examples for agent-facing CLIs
+
+When you add or change an agent-facing CLI, teach it with examples that
+paste-execute verbatim: build every example as
+`python3 "<script-path>" <verb> ...` — bare `python3`, never a pinned
+interpreter, and always quote the script path. In `--help`, the epilog lists
+all of the CLI's examples; a usage error appends exactly one example — the
+offending subcommand's own — separated from the error line by a blank line.
+Keep each CLI's pre-existing usage-error exit code; teaching examples never
+changes an exit contract.
+
 ---
 
 ## Detailed References

@@ -71,3 +71,16 @@ class TestLintCheckHelp:
         assert proc.returncode == 0
         lines = [line for line in proc.stdout.splitlines() if line]
         assert lines[-1] == "IMPORT-HYGIENE: SKIPPED (no arguments given)"
+
+    def test_files_mixed_with_real_path_and_help_is_files_mode(self):
+        # Mixed args: a real .py plus --help. The all-help gate does NOT
+        # fire (the .py path is not a help flag), so the run degrades to
+        # normal --files mode: --help is reported as a non-.py argument on
+        # stderr and the checked file still gets a verdict line.
+        target = _SCRIPT.parent / "check_unused_imports.py"
+        proc = _run("--files", str(target), "--help")
+        assert proc.returncode in (0, 1)
+        assert "Examples:" not in (proc.stdout + proc.stderr)
+        assert "not a .py path, ignored: --help" in proc.stderr
+        lines = [line for line in proc.stdout.splitlines() if line]
+        assert lines[-1].startswith("IMPORT-HYGIENE: ")

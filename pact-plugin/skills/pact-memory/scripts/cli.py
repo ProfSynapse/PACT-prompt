@@ -828,7 +828,7 @@ class _TeachParser(argparse.ArgumentParser):
     def error(self, message):
         self.print_usage(sys.stderr)
         extra = (
-            f"\nExamples:\n  {self._teach_example}\n"
+            f"\n\nExamples:\n  {self._teach_example}\n"
             if self._teach_example
             else "\n"
         )
@@ -847,16 +847,18 @@ def build_parser():
 
     prog = sys.argv[0]
     fmt = argparse.RawDescriptionHelpFormatter
+    # Interpreter-prefixed so a pasted example executes verbatim: the script
+    # has no shebang or exec bit, so the bare path is not shell-executable.
     examples = {
-        "save": f"{prog} save --stdin",
-        "search": f'{prog} search "query"',
-        "list": f"{prog} list",
-        "get": f"{prog} get <memory-id>",
-        "status": f"{prog} status",
-        "setup": f"{prog} setup",
-        "update": f"{prog} update <memory-id> --stdin",
-        "delete": f"{prog} delete <memory-id>",
-        "sync": f"{prog} sync",
+        "save": f'python3 "{prog}" save --stdin',
+        "search": f'python3 "{prog}" search "query"',
+        "list": f'python3 "{prog}" list',
+        "get": f'python3 "{prog}" get <memory-id>',
+        "status": f'python3 "{prog}" status',
+        "setup": f'python3 "{prog}" setup',
+        "update": f'python3 "{prog}" update <memory-id> --stdin',
+        "delete": f'python3 "{prog}" delete <memory-id>',
+        "sync": f'python3 "{prog}" sync',
     }
 
     parser = _TeachParser(
