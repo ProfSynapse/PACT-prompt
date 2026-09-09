@@ -578,9 +578,13 @@ class PACTMemory:
         # FAIL CLOSED on an env/record disagreement, BEFORE any store work: the
         # row would land under the env-derived project while the session's other
         # readers follow the record — the silent mis-scope this refusal exists
-        # to make visible. Reads are unaffected; only writes refuse.
+        # to make visible. Reads are unaffected; only writes refuse. The status
+        # channel reports the refusal FIRST, matching the ambient-guard refusal
+        # class — a caller that only reads `last_sync_status` sees a deliberate
+        # refusal, not an absent status.
         disagreement = env_record_project_dir_disagreement()
         if disagreement is not None:
+            self._last_sync_status = SyncResult.REFUSED
             raise ProjectScopeDisagreementError(
                 format_project_dir_disagreement(*disagreement)
             )
@@ -1187,9 +1191,11 @@ class PACTMemory:
         # rebuild would project the env-derived project's records over the
         # record-scoped file. Refuse BEFORE the query, and raise so the CLI
         # can envelope the refusal on stderr rather than report a falsy
-        # outcome with the reason invisible.
+        # outcome with the reason invisible. The status channel reports the
+        # refusal FIRST, matching save() and the ambient-guard refusal class.
         disagreement = env_record_project_dir_disagreement()
         if disagreement is not None:
+            self._last_sync_status = SyncResult.REFUSED
             raise ProjectScopeDisagreementError(
                 format_project_dir_disagreement(*disagreement)
             )

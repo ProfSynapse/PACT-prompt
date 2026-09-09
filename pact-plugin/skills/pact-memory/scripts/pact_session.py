@@ -207,11 +207,25 @@ def get_project_dir_from_session_record() -> str:
     rung to the reader's cwd ABOVE the git rung, inverting the precedence the
     rung exists to establish.
 
+    The record's session_id field is cross-checked against the env id that
+    LOCATED the file: a MISMATCH means the globbed record is not this
+    session's own (a misfiled or planted record), so it reads as no record.
+    An ABSENT field is accepted — legacy records predate the always-written
+    field, and the locating glob already matched the env id's directory.
+
     Returns "" on every failure: no env id, no unique context file, corrupt
-    JSON, non-mapping payload, non-string/non-absolute field. Never raises.
+    JSON, non-mapping payload, non-string/non-absolute field, session_id
+    mismatch. Never raises.
     """
-    found = _discover_context_record().get("project_dir", "")
+    record = _discover_context_record()
+    found = record.get("project_dir", "")
     if not isinstance(found, str) or not os.path.isabs(found):
+        return ""
+    record_session = record.get("session_id")
+    if record_session is not None and (
+        not isinstance(record_session, str)
+        or record_session != os.environ.get("CLAUDE_CODE_SESSION_ID", "")
+    ):
         return ""
     return found
 
@@ -260,7 +274,11 @@ def format_project_dir_disagreement(env_value: str, record_value: str) -> str:
         f"CLAUDE_PROJECT_DIR ({env_value}) disagrees with this session's "
         f"recorded project directory ({record_value}); the write was refused "
         f"rather than scoped silently. Nothing was written. Run without the "
-        f"override, or re-export CLAUDE_PROJECT_DIR to the recorded value."
+        f"override, or re-export CLAUDE_PROJECT_DIR to the recorded value. "
+        f"The comparison is textual (normcase/normpath, not resolved): a "
+        f"symlinked or case-differing spelling of the same directory refuses "
+        f"although identical, and re-exporting the recorded value is the "
+        f"remedy for that spelling."
     )
 
 
