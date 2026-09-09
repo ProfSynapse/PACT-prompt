@@ -12,6 +12,7 @@ fixtures; nothing here is injected.
 
 import json
 import os
+import shlex
 import subprocess
 from pathlib import Path
 from types import SimpleNamespace
@@ -194,8 +195,6 @@ def source_export_line(env_file: Path, name: str) -> Optional[str]:
     row asserts the value a spawned Bash WOULD see. shlex.split is the honest
     inverse of the producer's shlex.quote.
     """
-    import shlex
-
     if not env_file.exists():
         return None
     prefix = f"export {name}="

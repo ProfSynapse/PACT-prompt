@@ -23,6 +23,7 @@ import io
 import json
 import os
 import shlex
+import subprocess
 from pathlib import Path
 from unittest.mock import patch
 
@@ -139,3 +140,85 @@ class TestPersistProjectDirEnvHelper:
         monkeypatch.setenv("CLAUDE_PROJECT_DIR", _PROJECT_DIR)
         monkeypatch.delenv("CLAUDE_ENV_FILE", raising=False)
         session_init._persist_project_dir_env(_PROJECT_DIR)  # must not raise
+
+    # -- Fail-open pins (the never-raises contract on the SessionStart hot path)
+    def test_env_file_in_nonexistent_directory_fails_open(self, monkeypatch, tmp_path):
+        """The append's open() raises FileNotFoundError when the parent is
+        missing; the helper must swallow it (OSError arm) — no raise, no file."""
+        env_file = tmp_path / "no-such-dir" / "session-env.sh"
+        monkeypatch.setenv("CLAUDE_PROJECT_DIR", _PROJECT_DIR)
+        monkeypatch.setenv("CLAUDE_ENV_FILE", str(env_file))
+        session_init._persist_project_dir_env(_PROJECT_DIR)  # must not raise
+        assert not env_file.exists()
+
+    def test_non_utf8_env_file_fails_open_without_appending(self, monkeypatch, tmp_path):
+        """A non-UTF-8 pre-existing env file raises UnicodeDecodeError on
+        read_text — a ValueError, NOT an OSError. The widened catch must
+        swallow it locally: no raise, and NO append (the whole body is
+        skipped, so the foreign bytes are preserved byte-identical)."""
+        env_file = tmp_path / "session-env.sh"
+        bad = b"\xff\xfe\x00not-utf8"
+        env_file.write_bytes(bad)
+        monkeypatch.setenv("CLAUDE_PROJECT_DIR", _PROJECT_DIR)
+        monkeypatch.setenv("CLAUDE_ENV_FILE", str(env_file))
+        session_init._persist_project_dir_env(_PROJECT_DIR)  # must not raise
+        assert env_file.read_bytes() == bad, (
+            "a failed read must skip the append — foreign content is preserved"
+        )
+
+    # -- Foreign-content append shape (the channel file can carry other hooks' lines)
+    def test_append_after_unterminated_last_line_starts_on_its_own_line(
+        self, monkeypatch, tmp_path
+    ):
+        """An unterminated foreign last line gets its newline written FIRST —
+        the export never glues onto it, and the prior variable survives a real
+        shell source intact."""
+        env_file = tmp_path / "session-env.sh"
+        env_file.write_text("export PRIOR=1", encoding="utf-8")  # no trailing newline
+        monkeypatch.setenv("CLAUDE_PROJECT_DIR", _PROJECT_DIR)
+        monkeypatch.setenv("CLAUDE_ENV_FILE", str(env_file))
+        session_init._persist_project_dir_env(_PROJECT_DIR)
+        assert env_file.read_text(encoding="utf-8") == (
+            f"export PRIOR=1\nexport CLAUDE_PROJECT_DIR={shlex.quote(_PROJECT_DIR)}\n"
+        )
+        probe = subprocess.run(
+            ["bash", "-c", 'source "$1" && printf "%s|%s" "$PRIOR" "$CLAUDE_PROJECT_DIR"',
+             "_", str(env_file)],
+            capture_output=True, text=True, timeout=30,
+        )
+        assert probe.returncode == 0, f"source failed: {probe.stderr!r}"
+        assert probe.stdout == f"1|{_PROJECT_DIR}", (
+            f"the glued-line corruption would read PRIOR=1export...; got {probe.stdout!r}"
+        )
+
+    def test_append_after_terminated_last_line_adds_no_blank_line(
+        self, monkeypatch, tmp_path
+    ):
+        env_file = tmp_path / "session-env.sh"
+        env_file.write_text("export PRIOR=1\n", encoding="utf-8")
+        monkeypatch.setenv("CLAUDE_PROJECT_DIR", _PROJECT_DIR)
+        monkeypatch.setenv("CLAUDE_ENV_FILE", str(env_file))
+        session_init._persist_project_dir_env(_PROJECT_DIR)
+        assert env_file.read_text(encoding="utf-8") == (
+            f"export PRIOR=1\nexport CLAUDE_PROJECT_DIR={shlex.quote(_PROJECT_DIR)}\n"
+        )
+
+    def test_newline_bearing_value_refire_appends_no_duplicate(self, monkeypatch, tmp_path):
+        """A path containing a literal newline quotes to a MULTI-LINE
+        single-quoted string (valid when sourced). The dedupe must self-match
+        it on re-fire — raw-text match of the terminated logical line, not
+        splitlines() membership, which false-misses and accumulates a
+        duplicate on every resume/compact/clear re-fire."""
+        env_file = tmp_path / "session-env.sh"
+        newline_dir = "/Users/example/My\nProject"
+        monkeypatch.setenv("CLAUDE_PROJECT_DIR", newline_dir)
+        monkeypatch.setenv("CLAUDE_ENV_FILE", str(env_file))
+        session_init._persist_project_dir_env(newline_dir)
+        after_first = env_file.read_text(encoding="utf-8")
+        assert "CLAUDE_PROJECT_DIR" in after_first
+        session_init._persist_project_dir_env(newline_dir)
+        assert env_file.read_text(encoding="utf-8") == after_first, (
+            "re-fire appended a duplicate — the dedupe does not self-match a "
+            "newline-bearing value"
+        )
+        assert after_first.count("CLAUDE_PROJECT_DIR") == 1

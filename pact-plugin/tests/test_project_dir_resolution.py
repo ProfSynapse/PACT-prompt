@@ -189,6 +189,38 @@ class TestSessionRecordReader:
         monkeypatch.delenv("CLAUDE_CODE_SESSION_ID", raising=False)
         assert pact_session.get_project_dir_from_session_record() == ""
 
+    def test_mismatched_session_id_in_the_record_is_rejected(self, tmp_path, monkeypatch):
+        """The payload's session_id must equal the env id that LOCATED the
+        file: a mismatch means the globbed record is not this session's own
+        (misfiled or planted), so it reads as no record and resolution falls
+        through to the git rung."""
+        umbrella = make_umbrella(tmp_path)
+        enable_record_discovery(monkeypatch, pact_session)
+        monkeypatch.setenv("CLAUDE_CODE_SESSION_ID", SID)
+        write_session_context(
+            Path.home() / ".claude", SID, umbrella.project,
+            body=json.dumps({"session_id": "some-other-session", "project_dir": str(umbrella.project)}),
+        )
+        monkeypatch.delenv("CLAUDE_PROJECT_DIR", raising=False)
+        assert pact_session.get_project_dir_from_session_record() == ""
+        repo = _git_repo(tmp_path / "fallthrough-repo")
+        monkeypatch.chdir(repo)
+        assert PACTMemory._detect_project_id() == "fallthrough-repo", (
+            "a rejected record must fall through to the git rung, not answer"
+        )
+
+    def test_absent_session_id_field_is_accepted(self, tmp_path, monkeypatch):
+        """Legacy records predate the always-written field; the locating glob
+        already matched the env id's directory, so an ABSENT field serves."""
+        umbrella = make_umbrella(tmp_path)
+        enable_record_discovery(monkeypatch, pact_session)
+        monkeypatch.setenv("CLAUDE_CODE_SESSION_ID", SID)
+        write_session_context(
+            Path.home() / ".claude", SID, umbrella.project,
+            body=json.dumps({"project_dir": str(umbrella.project)}),
+        )
+        assert pact_session.get_project_dir_from_session_record() == str(umbrella.project)
+
 
 # ---------------------------------------------------------------------------
 # Precedence: _detect_project_id's Strategy 1.5 (record below env, above git)
@@ -321,6 +353,33 @@ class TestWriteRefusalOnDisagreement:
             memory.sync()
         assert str(other) in str(excinfo.value)
         assert str(umbrella.project) in str(excinfo.value)
+
+    def test_save_refusal_reports_refused_on_the_status_channel(self, tmp_path, monkeypatch):
+        """Channel parity: a caller that only reads last_sync_status after the
+        typed exception must see a deliberate REFUSAL, not an absent status —
+        matching the ambient-guard refusal class."""
+        umbrella = make_umbrella(tmp_path)
+        _arm_record(monkeypatch, tmp_path, umbrella.project)
+        other = tmp_path / "other"
+        other.mkdir()
+        monkeypatch.setenv("CLAUDE_PROJECT_DIR", str(other))
+
+        memory = PACTMemory()
+        with pytest.raises(ProjectScopeDisagreementError):
+            memory.save({"context": "c", "goal": "g"})
+        assert memory.last_sync_status == wm.SyncResult.REFUSED
+
+    def test_sync_refusal_reports_refused_on_the_status_channel(self, tmp_path, monkeypatch):
+        umbrella = make_umbrella(tmp_path)
+        _arm_record(monkeypatch, tmp_path, umbrella.project)
+        other = tmp_path / "other"
+        other.mkdir()
+        monkeypatch.setenv("CLAUDE_PROJECT_DIR", str(other))
+
+        memory = PACTMemory(project_id="proj")
+        with pytest.raises(ProjectScopeDisagreementError):
+            memory.sync()
+        assert memory.last_sync_status == wm.SyncResult.REFUSED
 
     def test_agreement_with_a_trailing_slash_does_not_refuse(self, tmp_path, monkeypatch):
         """normpath collapses the spelling difference; the predicate — not a
@@ -1024,3 +1083,63 @@ class TestSyncCliEnvelope:
         assert other.name in proc.stderr and umbrella.project.name in proc.stderr, (
             f"the refusal must name both values; stderr: {proc.stderr!r}"
         )
+
+
+# ---------------------------------------------------------------------------
+# Edge: READS proceed under an env/record disagreement (the liberal half)
+# ---------------------------------------------------------------------------
+
+class TestLiberalReadsUnderDisagreement:
+    def test_cli_reads_proceed_and_follow_the_env_scope(self, tmp_path):
+        """Reads never refuse: a disagreeing env prefix is a deliberate
+        per-command cross-scope inspection. The child lists and gets the
+        ENV-scoped record while the record names a different project — exit 0,
+        env-scoped answer, no refusal on stderr."""
+        umbrella = make_umbrella(tmp_path)
+        other = tmp_path / "other"
+        other.mkdir()
+        store = tmp_path / "memory.db"
+        # Seed a record under the ENV scope with NO session behind it (no
+        # record, no disagreement — the write proceeds).
+        seed_env = child_env(
+            umbrella.config_root, home=tmp_path, project_dir=other,
+            memory_dir=tmp_path / "memdir",
+        )
+        setup = subprocess.run(
+            [sys.executable, str(_MEMORY_CLI), "setup", "--db-path", str(store)],
+            capture_output=True, text=True, env=seed_env, cwd=str(other), timeout=120,
+        )
+        assert setup.returncode == 0, f"store setup failed: {setup.stderr[:400]!r}"
+        save = subprocess.run(
+            [sys.executable, str(_MEMORY_CLI), "save", "--db-path", str(store),
+             json.dumps({"context": "LIBERAL-READ-SEED", "goal": "g"})],
+            capture_output=True, text=True, env=seed_env, cwd=str(other), timeout=120,
+        )
+        assert save.returncode == 0, f"seed save failed: {save.stderr[:400]!r}"
+        seed_id = json.loads(save.stdout)["result"]["memory_id"]
+        assert _memory_store_scopes(store) == ["other"]
+
+        # Now read with a DISAGREEING session record armed (record=umbrella,
+        # env=other): both read verbs must proceed and follow the env scope.
+        write_session_context(umbrella.config_root, SID, umbrella.project)
+        read_env = child_env(
+            umbrella.config_root, home=tmp_path, session_id=SID,
+            project_dir=other, memory_dir=tmp_path / "memdir",
+        )
+        listed = subprocess.run(
+            [sys.executable, str(_MEMORY_CLI), "list", "--db-path", str(store)],
+            capture_output=True, text=True, env=read_env, cwd=str(other), timeout=120,
+        )
+        assert listed.returncode == 0, f"list refused a read: {listed.stderr[:400]!r}"
+        assert "SCOPE_DISAGREEMENT" not in listed.stderr
+        assert "LIBERAL-READ-SEED" in listed.stdout, (
+            f"list under a disagreeing env did not follow the env scope: "
+            f"{listed.stdout[:400]!r}"
+        )
+        got = subprocess.run(
+            [sys.executable, str(_MEMORY_CLI), "get", "--db-path", str(store), seed_id],
+            capture_output=True, text=True, env=read_env, cwd=str(other), timeout=120,
+        )
+        assert got.returncode == 0, f"get refused a read: {got.stderr[:400]!r}"
+        assert "SCOPE_DISAGREEMENT" not in got.stderr
+        assert "LIBERAL-READ-SEED" in got.stdout
