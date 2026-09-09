@@ -74,6 +74,9 @@ def _run_main_capture(stdin_data, monkeypatch, tmp_path, *, peer_return=_PEER_SE
     from session_init import main
 
     monkeypatch.setenv("CLAUDE_PROJECT_DIR", _PROJECT_DIR)
+    # session_init.main() now appends to $CLAUDE_ENV_FILE when both vars are
+    # present — keep these drives hermetic against an ambient env file.
+    monkeypatch.delenv("CLAUDE_ENV_FILE", raising=False)
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
 
     with patch("session_init.setup_plugin_symlinks", return_value=None), \

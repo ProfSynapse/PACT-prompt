@@ -154,6 +154,9 @@ def _run_compact_main(tmp_path, monkeypatch, session_id,
         payload["agent_type"] = agent_type
 
     monkeypatch.setenv("CLAUDE_PROJECT_DIR", "/test/project")
+    # session_init.main() now appends to $CLAUDE_ENV_FILE when both vars are
+    # present — keep these drives hermetic against an ambient env file.
+    monkeypatch.delenv("CLAUDE_ENV_FILE", raising=False)
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
 
     with patch("session_init.setup_plugin_symlinks", return_value=None), \

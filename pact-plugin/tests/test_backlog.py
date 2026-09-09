@@ -4662,6 +4662,17 @@ def test_an_unset_or_non_directory_project_dir_still_refuses(tmp_path, monkeypat
         def main_repo_root(start=None):
             return None
 
+        # The session-record channel, inert: under pytest the real discovery
+        # refuses, and these arms pin the no-record behaviour, so the double
+        # answers "no record" / "no disagreement" explicitly.
+        @staticmethod
+        def get_project_dir_from_session_record():
+            return ""
+
+        @staticmethod
+        def env_record_project_dir_disagreement():
+            return None
+
     monkeypatch.delenv("CLAUDE_PROJECT_DIR", raising=False)
     monkeypatch.setattr(backlog, "_memory_api", lambda: _NoGit)
     try:
@@ -4739,6 +4750,17 @@ def test_a_directory_inside_a_repository_git_cannot_read_still_refuses(tmp_path,
 
         @staticmethod
         def main_repo_root(start=None):
+            return None
+
+        # The session-record channel, inert: under pytest the real discovery
+        # refuses, and these arms pin the no-record behaviour, so the double
+        # answers "no record" / "no disagreement" explicitly.
+        @staticmethod
+        def get_project_dir_from_session_record():
+            return ""
+
+        @staticmethod
+        def env_record_project_dir_disagreement():
             return None
 
     monkeypatch.setattr(backlog, "_memory_api", lambda: _NoGit)

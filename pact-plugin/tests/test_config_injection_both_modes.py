@@ -65,6 +65,9 @@ def _emit(frame, monkeypatch, tmp_path):
     injection test uses, so the REAL classify_session_role -> gate ->
     format_pact_runtime_config path executes."""
     monkeypatch.setenv("CLAUDE_PROJECT_DIR", _PROJECT_DIR)
+    # session_init.main() now appends to $CLAUDE_ENV_FILE when both vars are
+    # present — keep these drives hermetic against an ambient env file.
+    monkeypatch.delenv("CLAUDE_ENV_FILE", raising=False)
     # PACT_PR_GREEDY_FIX on so a PRESENT block is unambiguous (ON text); the gate
     # decision under test is presence/absence, independent of the value.
     monkeypatch.setenv("PACT_PR_GREEDY_FIX", "1")

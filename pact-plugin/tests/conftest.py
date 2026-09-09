@@ -336,6 +336,32 @@ def _scrub_claude_plugin_root_env():
 
 
 @pytest.fixture(autouse=True)
+def _scrub_claude_env_file_env():
+    """Pop + restore ``os.environ['CLAUDE_ENV_FILE']`` around every test.
+    Runs for EVERY test (autouse).
+
+    session_init.main() reads ``CLAUDE_ENV_FILE`` and APPENDS an
+    ``export CLAUDE_PROJECT_DIR=...`` line to it whenever the variable and
+    ``CLAUDE_PROJECT_DIR`` are both present. A suite running inside a real
+    hook process (or a developer shell that sourced one) carries a LIVE
+    session env file in the environment, and every main()-driving test that
+    sets ``CLAUDE_PROJECT_DIR`` would append a bogus export line to that live
+    file — the same ambient-env hazard class ``_scrub_claude_plugin_root_env``
+    closes. Same posture: POP at setup so every test starts from a
+    guaranteed-unset baseline, restore the original at teardown. Tests that
+    exercise the env-file channel set the variable explicitly via
+    ``monkeypatch.setenv`` (which overrides the scrub for that test).
+    """
+    _UNSET = object()
+    original = os.environ.pop("CLAUDE_ENV_FILE", _UNSET)
+    yield
+    if original is _UNSET:
+        os.environ.pop("CLAUDE_ENV_FILE", None)
+    else:
+        os.environ["CLAUDE_ENV_FILE"] = original
+
+
+@pytest.fixture(autouse=True)
 def _isolate_config_root_to_tmp(tmp_path, monkeypatch):
     """Redirect the Claude Code config/state root to a per-test tmp tree for
     EVERY test (autouse, opt-OUT), via TWO mechanisms: scrub any inherited

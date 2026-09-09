@@ -256,7 +256,10 @@ class TestProjectDirDivergenceResidual:
     def _resolve_under_root(self, wm, root: Path, monkeypatch):
         """Drive working_memory._get_claude_md_path so it resolves under
         ``root`` via the cwd fallback: env unset + git-root detection forced to
-        fail, so the resolver falls through env → git → cwd, landing on root."""
+        fail. The session-record rung between them is inert here (the discovery
+        refuses test processes, and no CLAUDE_CODE_SESSION_ID is set), so the
+        resolver falls through env -> record(absent) -> git -> cwd, landing on
+        root."""
         # env unset → skip the env-var branch
         monkeypatch.delenv("CLAUDE_PROJECT_DIR", raising=False)
 
