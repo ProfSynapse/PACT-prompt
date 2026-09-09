@@ -207,9 +207,34 @@ def project_root() -> Path:
     resolved directory, so the stored name and the stored paths agree; the
     inputs on which the two would diverge are the ones this function refuses,
     and a refusal writes nothing.
+
+    TWO SESSION-RECORD RULES SIT AROUND THAT ANCHOR, both reached through the
+    existing `_memory_api()` channel (no new import direction):
+
+    - DISAGREEMENT REFUSES. When CLAUDE_PROJECT_DIR and the session record are
+      both present and name different directories, the write fails closed,
+      naming both values and the remedy. Reads stay liberal (env wins); a
+      write under a disagreed scope is the silent mis-scope this family of
+      issues pays for.
+    - ABSENCE ANCHORS ON THE RECORD. When CLAUDE_PROJECT_DIR is unset, the
+      recorded project_dir stands in for it below, so an umbrella session
+      whose env var never arrived still resolves the session's own scope
+      instead of refusing. The refusal itself is unchanged — it stays the
+      guard for shells with no session behind them (cron, manual CLI).
     """
-    project_dir = os.environ.get("CLAUDE_PROJECT_DIR")
-    root = _memory_api().main_repo_root(project_dir)
+    memory_api = _memory_api()
+    disagreement = memory_api.env_record_project_dir_disagreement()
+    if disagreement is not None:
+        raise BacklogWriteError(
+            memory_api.format_project_dir_disagreement(*disagreement)
+        )
+    env_dir = os.environ.get("CLAUDE_PROJECT_DIR")
+    record_dir = "" if env_dir else memory_api.get_project_dir_from_session_record()
+    # `source` names where the anchor came from so the refusal below never
+    # attributes a recorded value to the (unset) variable, or vice versa.
+    project_dir = env_dir or record_dir or None
+    source = "CLAUDE_PROJECT_DIR" if env_dir else "the session record's project_dir"
+    root = memory_api.main_repo_root(project_dir)
     if root is not None:
         return root
     if project_dir and Path(project_dir).is_dir():
@@ -219,11 +244,11 @@ def project_root() -> Path:
         if _enclosing_checkout(resolved) is None:
             return resolved
         why = (
-            f"CLAUDE_PROJECT_DIR={project_dir!r} sits inside a repository git "
+            f"{source}={project_dir!r} sits inside a repository git "
             f"could not read"
         )
     elif project_dir:
-        why = f"CLAUDE_PROJECT_DIR={project_dir!r} does not name an existing directory"
+        why = f"{source}={project_dir!r} does not name an existing directory"
     else:
         why = "CLAUDE_PROJECT_DIR is unset"
     raise BacklogWriteError(

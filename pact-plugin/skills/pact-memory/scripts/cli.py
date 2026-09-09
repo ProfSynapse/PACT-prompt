@@ -52,7 +52,7 @@ from scripts.database import (
     AmbiguousPrefixError,
     PrefixTooShortError,
 )
-from scripts.memory_api import PACTMemory
+from scripts.memory_api import PACTMemory, ProjectScopeDisagreementError
 from scripts.setup_memory import ensure_initialized, get_setup_status
 
 
@@ -530,6 +530,10 @@ def cmd_save(args, db_path=None):
         if claude_md_root:
             save_kwargs["claude_md_root"] = Path(claude_md_root)
         memory_id = memory.save(memory_dict, **save_kwargs)
+    except ProjectScopeDisagreementError as exc:
+        # A deliberate fail-closed refusal (env vs session record), not bad
+        # input: the message already names both values and the remedy.
+        _error("SCOPE_DISAGREEMENT", _scrub(str(exc)))
     except ValueError as exc:
         _error(
             "ValueError",
@@ -750,7 +754,11 @@ def cmd_sync(args, db_path=None):
     claude_md_root = getattr(args, "claude_md_root", None)
     if claude_md_root:
         sync_kwargs["claude_md_root"] = Path(claude_md_root)
-    memory_ids = memory.sync(**sync_kwargs)
+    try:
+        memory_ids = memory.sync(**sync_kwargs)
+    except ProjectScopeDisagreementError as exc:
+        # Same deliberate refusal shape as cmd_save: both values + remedy.
+        _error("SCOPE_DISAGREEMENT", _scrub(str(exc)))
     _success({
         "sync_status": memory.last_sync_status,
         "projected": len(memory_ids),

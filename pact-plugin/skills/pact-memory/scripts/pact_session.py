@@ -82,11 +82,18 @@ _discovered_session_id = _DISCOVERY_UNSET
 _discovered_for_env = None
 
 
-def _resolve_context_on_disk(env_session: str) -> str:
-    """Find the one context file naming this session id, and read the id back.
+def _context_record_on_disk(env_session: str) -> dict:
+    """Find the one context file naming this session id, and parse it.
 
-    The expensive half of discovery, split out so it can be cached without the
-    guards being cached with it.
+    The shared glob+parse half of discovery, split out so the session-id
+    reader and the project_dir reader share one derivation (and one set of
+    failure modes) instead of drifting into two.
+
+    Returns the parsed mapping, or {} on any failure: the glob raised, the
+    match count was not exactly one (uniqueness was measured on one machine,
+    not guaranteed, so picking the first would be a coin toss over which
+    project's session this is), the file did not parse, or the payload was
+    not a mapping. Fail-open by posture: callers land on their own fallback.
     """
     try:
         sessions_root = get_claude_config_dir() / "pact-sessions"
@@ -94,22 +101,26 @@ def _resolve_context_on_disk(env_session: str) -> str:
         safe_session = _UNSAFE_SLUG_CHARS_RE.sub("_", env_session)
         matches = list(sessions_root.glob(f"*/{safe_session}/pact-session-context.json"))
     except OSError:
-        return ""
+        return {}
 
-    # Fail closed on anything but a single match. Uniqueness was measured on one
-    # machine, not guaranteed, so picking the first would be a coin toss over
-    # which project's session this is.
     if len(matches) != 1:
-        return ""
+        return {}
 
     try:
         data = json.loads(matches[0].read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError, ValueError):
-        return ""
+        return {}
 
-    if not isinstance(data, dict):
-        return ""
-    found = data.get("session_id", "")
+    return data if isinstance(data, dict) else {}
+
+
+def _resolve_context_on_disk(env_session: str) -> str:
+    """Find the one context file naming this session id, and read the id back.
+
+    The expensive half of session-id discovery, split out so it can be cached
+    without the guards being cached with it.
+    """
+    found = _context_record_on_disk(env_session).get("session_id", "")
     return found if isinstance(found, str) else ""
 
 
@@ -144,6 +155,113 @@ def _discover_session_id() -> str:
         _discovered_session_id = _resolve_context_on_disk(env_session)
         _discovered_for_env = env_session
     return _discovered_session_id
+
+
+_discovered_record = _DISCOVERY_UNSET
+_discovered_record_for_env = None
+
+
+def _discover_context_record() -> dict:
+    """Return this session's parsed context record, discovered from the env id.
+
+    The record route of the same discovery `_discover_session_id` performs,
+    with the SAME two guards (a test process is refused before any read; no
+    env id means no answer) and the same cache discipline: the filesystem
+    lookup is cached, the guards are re-run on every call. The guards are
+    duplicated here rather than shared through `_discover_session_id` because
+    that function's cache is pinned by tests that count its calls to
+    `_resolve_context_on_disk` — routing id discovery through this record
+    cache would let a warm record cache starve that call count.
+
+    Returns {} whenever the answer is not unambiguous.
+    """
+    # Twin guard pair of _discover_session_id's — keep in sync.
+    if os.environ.get("PYTEST_CURRENT_TEST"):
+        return {}
+    env_session = os.environ.get("CLAUDE_CODE_SESSION_ID", "")
+    if not env_session:
+        return {}
+
+    global _discovered_record, _discovered_record_for_env
+    if _discovered_record is _DISCOVERY_UNSET or _discovered_record_for_env != env_session:
+        _discovered_record = _context_record_on_disk(env_session)
+        _discovered_record_for_env = env_session
+    return _discovered_record
+
+
+def get_project_dir_from_session_record() -> str:
+    """Return this session's recorded project_dir, or "" when unavailable.
+
+    The session-record rung of the project-scope read contract: below
+    CLAUDE_PROJECT_DIR (a present declaration wins), ABOVE any git/cwd
+    derivation (in a multi-repo workspace the cwd's git root can be the WRONG
+    scope; the record is the session's own resolved identity, written by
+    session_init at SessionStart).
+
+    Existence is deliberately NOT checked: the value is a scope ANCHOR, and a
+    recorded directory deleted between sessions is the caller-resolver's
+    fall-through case, not a discovery failure.
+
+    A NON-ABSOLUTE recorded value is rejected. Records written before the
+    resolve-once fix could hold "." — resolving that HERE would alias this
+    rung to the reader's cwd ABOVE the git rung, inverting the precedence the
+    rung exists to establish.
+
+    Returns "" on every failure: no env id, no unique context file, corrupt
+    JSON, non-mapping payload, non-string/non-absolute field. Never raises.
+    """
+    found = _discover_context_record().get("project_dir", "")
+    if not isinstance(found, str) or not os.path.isabs(found):
+        return ""
+    return found
+
+
+class ProjectScopeDisagreementError(RuntimeError):
+    """A WRITE was refused because CLAUDE_PROJECT_DIR and the session record
+    name different project directories.
+
+    Raised on write paths only (backlog set, memory save, working-memory
+    sync). READS follow the env value: deliberate per-command cross-scope
+    inspection is legitimate, but a write under a disagreed scope is the
+    silent mis-scope this family of issues pays for. The message carries BOTH
+    values and the remedy.
+    """
+
+
+def env_record_project_dir_disagreement() -> tuple[str, str] | None:
+    """Return (env_value, record_value) when both are present AND disagree.
+
+    None when either side is absent (nothing to disagree with) or the two
+    match. Comparison is normcase(normpath(...)) string equality, NOT
+    resolved-path equality: the record holds the platform's value verbatim so
+    textual equality is the invariant by construction, while normpath
+    collapses a trailing slash or '.' segments. Resolving would DERIVE (a
+    symlinked alias would pass), and derivation is what the verbatim rule
+    exists to avoid — a disagreeing write must refuse, not be reconciled.
+    """
+    env_value = os.environ.get("CLAUDE_PROJECT_DIR", "")
+    if not env_value:
+        return None
+    record_value = get_project_dir_from_session_record()
+    if not record_value:
+        return None
+    env_norm = os.path.normcase(os.path.normpath(env_value))
+    record_norm = os.path.normcase(os.path.normpath(record_value))
+    if env_norm == record_norm:
+        return None
+    return env_value, record_value
+
+
+def format_project_dir_disagreement(env_value: str, record_value: str) -> str:
+    """The ONE refusal text every write path raises on an env/record
+    disagreement — both values and the remedy, so the refusal is a visible
+    decision instead of a silent winner."""
+    return (
+        f"CLAUDE_PROJECT_DIR ({env_value}) disagrees with this session's "
+        f"recorded project directory ({record_value}); the write was refused "
+        f"rather than scoped silently. Nothing was written. Run without the "
+        f"override, or re-export CLAUDE_PROJECT_DIR to the recorded value."
+    )
 
 
 def get_session_id_from_context_file(

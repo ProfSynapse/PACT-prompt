@@ -44,6 +44,26 @@ try:
 except ImportError:
     from config import STORE_ORIGIN_HOME, store_path_origin
 
+# Same dual-import idiom as the config import above. pact_session carries the
+# sys.path bootstrap that makes hooks/shared importable from this package (the
+# precedent the amended twin comments below now cite), and holds the
+# session-record project_dir rung plus the env/record disagreement refusal
+# this module's resolvers and sync guard consume.
+try:
+    from .pact_session import (
+        ProjectScopeDisagreementError,
+        env_record_project_dir_disagreement,
+        format_project_dir_disagreement,
+        get_project_dir_from_session_record,
+    )
+except ImportError:
+    from pact_session import (
+        ProjectScopeDisagreementError,
+        env_record_project_dir_disagreement,
+        format_project_dir_disagreement,
+        get_project_dir_from_session_record,
+    )
+
 # Configure logging
 logger = logging.getLogger(__name__)
 
@@ -162,8 +182,10 @@ COMPRESSED_ENTRY_TOKEN_CEILING = 128
 # writers append `: ` and the value.
 _MEMORY_ID_LABEL = "**Memory ID**"
 
-# Pin caps constants (twin copy of hooks/pin_caps.py — cannot import across
-# the skills-to-hooks package boundary). Drift-detection test in
+# Pin caps constants (twin copy of hooks/pin_caps.py — the import IS possible
+# but requires the sys.path bootstrap pact_session.py in this directory
+# carries; the drift-gated twin remains the chosen mechanism here).
+# Drift-detection test in
 # tests/test_staleness.py guards against divergence; if you change these,
 # update hooks/pin_caps.py in the SAME commit.
 #
@@ -181,9 +203,10 @@ OVERRIDE_RATIONALE_MAX = 120
 # PACT-managed boundary marker prefixes. Used by _find_terminator_offset to
 # terminate section scans on any PACT boundary marker. The canonical
 # definition lives in hooks/shared/claude_md_manager.py as
-# PACT_BOUNDARY_PREFIXES — this module cannot import from hooks/shared/
-# (separate package boundary), so the alternation is inlined here. The
-# three prefixes rarely change; if a 4th is added, update this string.
+# PACT_BOUNDARY_PREFIXES — importing it would require the sys.path bootstrap
+# pact_session.py in this directory carries, so the alternation is inlined
+# here instead. The three prefixes rarely change; if a 4th is added, update
+# this string.
 _PACT_BOUNDARY_ALT = "PACT_MEMORY_|PACT_MANAGED_|PACT_ROUTING_"
 
 # Session-block boundary marker prefix, and it is deliberately NOT a member of
@@ -210,7 +233,9 @@ _SESSION_BOUNDARY_ALT = "SESSION_"
 _SESSION_END_MARKER = f"<!-- {_SESSION_BOUNDARY_ALT}END -->"
 
 # Managed-region boundary markers. Twin copies of the canonical definitions
-# in hooks/shared/claude_md_manager.py (cannot import — separate package).
+# in hooks/shared/claude_md_manager.py (the import would require the sys.path
+# bootstrap pact_session.py in this directory carries; the drift-gated twin
+# remains the chosen mechanism here).
 _MANAGED_START_MARKER = "<!-- PACT_MANAGED_START: Managed by pact-plugin - do not edit this block -->"
 _MANAGED_END_MARKER = "<!-- PACT_MANAGED_END -->"
 
@@ -232,8 +257,9 @@ MEMORY_START_MARKER = "<!-- PACT_MEMORY_START -->"
 MEMORY_END_MARKER = "<!-- PACT_MEMORY_END -->"
 
 # file_lock: vendored twin of hooks/shared/claude_md_manager.file_lock —
-# skills/pact-memory/scripts/ cannot import from hooks/shared/ (separate
-# package boundary). Cross-process correctness is preserved because
+# the import IS possible via the sys.path bootstrap pact_session.py in this
+# directory carries; the drift-gated twin remains the chosen mechanism here.
+# Cross-process correctness is preserved because
 # fcntl.flock serializes on the sidecar inode, not the Python object: a hook
 # process and this skill process locking the SAME .{name}.lock sidecar
 # contend on the same kernel lock. The drift-detection test
@@ -245,8 +271,9 @@ _LOCK_TIMEOUT_SECONDS = 5.0
 _LOCK_POLL_INTERVAL = 0.1
 
 # _sanitize_prompt_field: vendored twin of
-# hooks/shared/session_resume._sanitize_prompt_field — skills/pact-memory/
-# scripts/ cannot import from hooks/shared/ (separate package boundary).
+# hooks/shared/session_resume._sanitize_prompt_field — the import IS possible
+# via the sys.path bootstrap pact_session.py in this directory carries; the
+# drift-gated twin remains the chosen mechanism here.
 # The drift-detection test (TestSanitizePromptFieldTwinCopyDrift in
 # tests/test_staleness.py) guards byte-alignment of the function body with
 # the canonical copy; if you change either, update both in the SAME commit.
@@ -297,8 +324,9 @@ _PROMPT_CONTROL_CHARS_RE = re.compile("[\\x00-\\x1f\\x7f-\\x9f\\u2028\\u2029]+")
 def file_lock(target_file: Path):
     """Acquire an exclusive sidecar file lock for a target CLAUDE.md path.
 
-    Twin of hooks/shared/claude_md_manager.file_lock — kept local because
-    skills/pact-memory/scripts/ cannot import from hooks/shared/. Body MUST
+    Twin of hooks/shared/claude_md_manager.file_lock — kept local as a
+    drift-gated twin; importing the canonical would require the sys.path
+    bootstrap pact_session.py in this directory carries. Body MUST
     stay byte-identical to the canonical copy (drift test enforces this).
 
     NOT RE-ENTRANT: fcntl.flock is non-re-entrant at the OS level. Nesting one
@@ -395,8 +423,10 @@ class ContainmentError(OSError):
     catches it via `except OSError`. Callers convert it to an OPAQUE skip
     message that does not leak the resolved victim path.
 
-    Twin of ContainmentError in `hooks/shared/claude_md_manager.py` (this module
-    cannot import from hooks/shared). The two class defs are trivial markers;
+    Twin of ContainmentError in `hooks/shared/claude_md_manager.py` (importing
+    it would require the sys.path bootstrap pact_session.py in this directory
+    carries; the twin remains the chosen mechanism). The two class defs are
+    trivial markers;
     the load-bearing logic is the containment CHECK inside `_atomic_write_text`,
     drift-gated by TestAtomicWriteTwinCopyDrift.
     """
@@ -428,10 +458,10 @@ def _detect_line_ending(name: str, parent_fd: int) -> str:
     writes its LF template to a name that is not there, so nothing converts.
     A read failure reports LF for the same reason.
 
-    Twin copy: the canonical definition is in `hooks/shared/claude_md_manager.py`
-    and this module cannot import from `hooks/shared/` (separate package), the
-    same constraint that produced the `file_lock` and `_atomic_write_text`
-    twins. The two bodies are gated identical by
+    Twin copy: the canonical definition is in `hooks/shared/claude_md_manager.py`;
+    importing it would require the sys.path bootstrap pact_session.py in this
+    directory carries, the same consideration that keeps the `file_lock` and
+    `_atomic_write_text` twins. The two bodies are gated identical by
     TestLineEndingHelperTwinCopyDrift.
 
     Args:
@@ -480,8 +510,9 @@ def _restore_line_ending(content: str, line_ending: str) -> str:
     keeps its early return, so an LF file is byte-identical to what this wrote
     before.
 
-    Twin copy: the canonical definition is in `hooks/shared/claude_md_manager.py`
-    and this module cannot import from `hooks/shared/` (separate package). The
+    Twin copy: the canonical definition is in `hooks/shared/claude_md_manager.py`;
+    importing it would require the sys.path bootstrap pact_session.py in this
+    directory carries. The
     two bodies are gated identical by TestLineEndingHelperTwinCopyDrift.
 
     Args:
@@ -596,9 +627,10 @@ def _atomic_write_text(target: Path, content: str, project_root: Path) -> None:
     version-invariant end-to-end, and a symlink loop still raises upstream.
 
     NOTE: a deliberate duplicate of `_atomic_write_text` in
-    `hooks/shared/claude_md_manager.py`. This module cannot import from
-    `hooks/shared/` (separate package), the same constraint that produced the
-    `file_lock` twin above. This twin IS drift-gated by
+    `hooks/shared/claude_md_manager.py`. Importing it would require the
+    sys.path bootstrap pact_session.py in this directory carries, the same
+    consideration that keeps the `file_lock` twin above. This twin IS
+    drift-gated by
     TestAtomicWriteTwinCopyDrift: the
     containment CHECK is a security invariant that must not silently diverge
     between the hook and skill copies (#1118-class hazard). That gate compares
@@ -854,7 +886,8 @@ def extract_managed_region(content: str) -> Optional[Tuple[str, int]]:
     is deliberately deferred rather than invented here.
 
     Twin of hooks/shared/claude_md_manager.extract_managed_region — kept
-    local because skills/pact-memory/scripts/ cannot import from hooks/shared/.
+    local as a drift-gated twin; importing the canonical would require the
+    sys.path bootstrap pact_session.py in this directory carries.
 
     Returns (region_text, start_offset) where start_offset is the absolute
     position of the first character after MANAGED_START_MARKER. Returns None
@@ -1035,14 +1068,15 @@ def _get_claude_md_path() -> Optional[Path]:
     """
     Get the path to CLAUDE.md in the project root.
 
-    Uses CLAUDE_PROJECT_DIR environment variable if set, then falls back
-    to git worktree/repo root detection, then to current working directory.
-    At each level, checks both `.claude/CLAUDE.md` (new default) and
-    `./CLAUDE.md` (legacy) in priority order.
+    Uses CLAUDE_PROJECT_DIR environment variable if set, then the session
+    record's project_dir, then git worktree/repo root detection, then the
+    current working directory. At each level, checks both `.claude/CLAUDE.md`
+    (new default) and `./CLAUDE.md` (legacy) in priority order.
 
     Note: This mirrors the resolution strategy in hooks/staleness.py
-    (get_project_claude_md_path). Kept as a local copy because this
-    module lives in skills/ and cannot import from hooks/.
+    (get_project_claude_md_path). Kept as a local copy: importing staleness
+    would require the sys.path bootstrap pact_session.py in this directory
+    carries, and the drift-noted twin remains the chosen mechanism here.
 
     Returns:
         Path to CLAUDE.md if it exists, None otherwise.
@@ -1050,6 +1084,19 @@ def _get_claude_md_path() -> Optional[Path]:
     project_dir = os.environ.get("CLAUDE_PROJECT_DIR")
     if project_dir:
         found = _find_existing_claude_md(Path(project_dir))
+        if found is not None:
+            return found
+
+    # Session-record rung: the directory session_init recorded at SessionStart,
+    # discovered via the CLAUDE_CODE_SESSION_ID glob in pact_session. Below env
+    # (a present declaration wins), ABOVE the git/cwd derivations — in a
+    # multi-repo workspace the cwd's git root can be the WRONG scope. The
+    # existence coupling is preserved: the record supplies the base to PROBE,
+    # and a miss falls through exactly like an env miss (this resolver never
+    # creates CLAUDE.md).
+    record_dir = get_project_dir_from_session_record()
+    if record_dir:
+        found = _find_existing_claude_md(Path(record_dir))
         if found is not None:
             return found
 
@@ -1095,6 +1142,15 @@ def _resolve_display_claude_md_with_base() -> Tuple[Optional[Path], Optional[Pat
     thin wrapper returning `[0]`):
       1. CLAUDE_PROJECT_DIR env var, if set -> that dir's .claude/CLAUDE.md
          (preferred) or ./CLAUDE.md (legacy).
+      1.5. Session record — the project_dir session_init recorded at
+         SessionStart -> the same probe under the recorded dir. Below env
+         (a present declaration wins), above the git derivations: in a
+         multi-repo workspace the cwd's git root can be the WRONG scope. The
+         existence coupling is preserved — the record supplies the base to
+         PROBE and a miss falls through; this resolver never creates
+         CLAUDE.md. (Numbered 1.5, matching memory_api's Strategy 1.5, so the
+         long-standing branch-2/branch-3 references to the git anchors below
+         keep their meaning.)
       2. Git worktree root via `git rev-parse --show-toplevel` -> the same
          .claude/-then-legacy probe under the worktree root.
       3. Main repo root via `git rev-parse --git-common-dir`.parent -> the
@@ -1134,6 +1190,15 @@ def _resolve_display_claude_md_with_base() -> Tuple[Optional[Path], Optional[Pat
         project_dir = os.environ.get("CLAUDE_PROJECT_DIR")
         if project_dir:
             base = Path(project_dir)
+            found = _find_existing_claude_md(base)
+            if found is not None:
+                return found, base
+
+        # Branch 1.5: session record (see the docstring's ordering). Same probe
+        # shape as the env branch; a miss falls through to the git anchors.
+        record_dir = get_project_dir_from_session_record()
+        if record_dir:
+            base = Path(record_dir)
             found = _find_existing_claude_md(base)
             if found is not None:
                 return found, base
@@ -1556,7 +1621,8 @@ def _sanitize_prompt_field(
     """Sanitize a record field value for interpolation into CLAUDE.md.
 
     Twin of hooks/shared/session_resume._sanitize_prompt_field — kept local
-    because skills/pact-memory/scripts/ cannot import from hooks/shared/.
+    as a drift-gated twin; importing the canonical would require the sys.path
+    bootstrap pact_session.py in this directory carries.
     Body MUST stay byte-identical to the canonical copy (drift test enforces
     this); this docstring is allowed to differ. Change either copy and you
     change both in the SAME commit.
@@ -1965,8 +2031,9 @@ def _project_root_of(claude_md_path: Path) -> Path:
     re-derivation from the leaf.
 
     The two-layout knowledge is owned by `hooks/shared/claude_md_manager.py`
-    (`_DOT_CLAUDE_RELATIVE` / `_LEGACY_RELATIVE`); this module cannot import
-    from that package and vendors twins throughout, so this mirrors it. If a
+    (`_DOT_CLAUDE_RELATIVE` / `_LEGACY_RELATIVE`); importing it would require
+    the sys.path bootstrap pact_session.py in this directory carries, and
+    this module vendors twins throughout, so this mirrors it. If a
     THIRD location is ever supported, this must be swept with the others.
     """
     parent = claude_md_path.parent
@@ -2059,6 +2126,41 @@ class SyncResult:
 
 class AmbientSyncRefused(RuntimeError):
     """Raised when a test process would sync to an ambiently-resolved CLAUDE.md."""
+
+
+def _refuse_ambient_sync_on_project_dir_disagreement(
+    target: Optional[Path],
+    claude_md_root: Optional[Path] = None,
+) -> None:
+    """Refuse an AMBIENT working-memory sync when CLAUDE_PROJECT_DIR and the
+    session record name different project directories.
+
+    The write-path half of the read contract's disagreement policy. READS
+    follow the env value (deliberate per-command cross-scope inspection is
+    legitimate); WRITES fail closed, because a sync under a disagreed scope
+    projects one scope's records over another scope's file — the silent
+    mis-scope this family of issues pays for. The refusal text (both values +
+    remedy) comes from pact_session's ONE formatter, shared with the backlog
+    and memory-save refusals so all three paths say the same words.
+
+    SCOPE mirrors the sibling ambient guards deliberately: an explicit
+    `target` or a declared `claude_md_root` is a warrant that names the
+    destination, making the ambient disagreement moot.
+
+    Raises ProjectScopeDisagreementError rather than returning a falsy
+    SyncResult, matching the sibling guard's rationale: a quiet falsy would
+    leave a deliberate refusal indistinguishable from a broken one.
+    """
+    if target is not None:
+        return
+    if claude_md_root is not None:
+        return
+    disagreement = env_record_project_dir_disagreement()
+    if disagreement is None:
+        return
+    raise ProjectScopeDisagreementError(
+        format_project_dir_disagreement(*disagreement)
+    )
 
 
 def _refuse_ambient_target_under_pytest(
@@ -2264,7 +2366,7 @@ def sync_to_claude_md(
     it is the whole section: the pre-formatted entries, newest first, are
     written in place of whatever the section holds, and the file's existing
     entries are not consulted. `memory`, `files` and `memory_id` are ignored
-    on that arm. Everything else -- resolution, both ambient guards, the
+    on that arm. Everything else -- resolution, the ambient guards, the
     lock, the splice window, the budget, containment and the `SyncResult` --
     is the same code on both arms, which is why the replace is a keyword here
     and not a second writer.
@@ -2367,9 +2469,12 @@ def sync_to_claude_md(
         A REFUSAL DOES NOT COME BACK THIS WAY. The ambient-target guard RAISES
         `AmbientSyncRefused` before any of these returns, so `SyncResult.REFUSED`
         is produced by whoever catches it, not here. See the guard's own
-        docstring for why it raises rather than returns.
+        docstring for why it raises rather than returns. The disagreement guard
+        beside it raises `ProjectScopeDisagreementError` the same way, and for
+        the same reason.
     """
     _refuse_ambient_target_under_pytest(target, claude_md_root)
+    _refuse_ambient_sync_on_project_dir_disagreement(target, claude_md_root)
 
     if target is not None:
         claude_md_path = Path(target)

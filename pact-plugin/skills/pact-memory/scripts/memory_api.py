@@ -73,9 +73,21 @@ from .working_memory import (
 from .memory_init import ensure_memory_ready, get_embedding_catchup_status
 # Dual import: relative (when loaded as package) vs absolute (when tests add scripts/ to sys.path)
 try:
-    from .pact_session import get_session_id_from_context_file
+    from .pact_session import (
+        ProjectScopeDisagreementError,
+        env_record_project_dir_disagreement,
+        format_project_dir_disagreement,
+        get_project_dir_from_session_record,
+        get_session_id_from_context_file,
+    )
 except ImportError:
-    from pact_session import get_session_id_from_context_file
+    from pact_session import (
+        ProjectScopeDisagreementError,
+        env_record_project_dir_disagreement,
+        format_project_dir_disagreement,
+        get_project_dir_from_session_record,
+        get_session_id_from_context_file,
+    )
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -244,8 +256,9 @@ class PACTMemory:
 
         Args:
             project_id: Project identifier. If not provided, auto-detected using
-                        (in order): CLAUDE_PROJECT_DIR env var, git repo root,
-                        or current working directory basename.
+                        (in order): CLAUDE_PROJECT_DIR env var, the session
+                        record's project_dir, git repo root, or current working
+                        directory basename (home scope warns).
             session_id: Session identifier. Auto-detected from context file if not provided.
             db_path: Custom database path. Uses default if not provided.
         """
@@ -309,16 +322,76 @@ class PACTMemory:
         return start  # fallback: use original
 
     @staticmethod
+    def _project_name_for_declared_dir(declared_dir: str, source: str) -> str:
+        """Name the project a DECLARED directory belongs to.
+
+        Shared by Strategy 1 (CLAUDE_PROJECT_DIR) and Strategy 1.5 (the
+        session record): both carry one directory naming the session's scope,
+        and both must derive the project name from it identically.
+
+        When the directory points below a repo's root (a worktree OR an
+        in-repo subdirectory), its basename is not the project name and would
+        fragment the project_id across sessions. Prefer the MAIN repo's
+        basename so every session of a project shares one key, aligning these
+        branches with the git-root and cwd-marker branches (Strategies 2/3),
+        which already resolve to the repo root. The rewrite fires when git
+        resolves a main repo whose root differs from the declared path; only
+        a repo-root declared path or a non-git path (where the main anchor
+        equals, or cannot be resolved from, the declared path) keeps the
+        declared basename — RESOLVED, so a symlinked project dir names its
+        target, which is the path the git branch above and the backlog writer
+        already record. A path that will not resolve keeps its unresolved
+        basename.
+
+        Args:
+            declared_dir: The directory value (env var or session record).
+            source: Label for the debug log naming where the value came from.
+        """
+        try:
+            declared_root = Path(declared_dir).resolve()
+        except (OSError, RuntimeError):
+            declared_root = None
+        # The local name is declared_main_root, NOT main_repo_root: rebinding
+        # the module-level helper's own name would make it local for the whole
+        # method and raise UnboundLocalError on the call itself.
+        declared_main_root = main_repo_root(declared_dir)
+        # Compare via normcase so a case-insensitive filesystem does not
+        # fire the rewrite for paths that differ only in case (a no-op on
+        # case-sensitive systems, where normcase is identity).
+        if (
+            declared_main_root is not None
+            and declared_root is not None
+            and os.path.normcase(str(declared_main_root)) != os.path.normcase(str(declared_root))
+        ):
+            logger.debug(
+                "project_id detected from %s worktree main repo: %s",
+                source,
+                declared_main_root.name,
+            )
+            return declared_main_root.name
+        project_name = (declared_root or Path(declared_dir)).name
+        logger.debug("project_id detected from %s: %s", source, project_name)
+        return project_name
+
+    @staticmethod
     def _detect_project_id() -> Optional[str]:
         """
-        Detect project ID from environment with multiple fallback strategies.
+        Detect project ID with multiple fallback strategies.
 
         Detection order:
         1. CLAUDE_PROJECT_DIR environment variable (original behavior)
+        1.5. Session record — the project_dir session_init persisted at
+           SessionStart, discovered via the CLAUDE_CODE_SESSION_ID glob in
+           pact_session. BELOW env (a present declaration wins) and ABOVE git:
+           in a multi-repo workspace the cwd's git root can be the WRONG
+           scope, so the session's own recorded identity outranks it.
         2. Git repository root via 'git rev-parse --git-common-dir' (worktree-safe)
         3. Current working directory — walked UP to the nearest project marker
            (.git, .claude/, or CLAUDE.md at either location). This handles the
-           case where the user runs the CLI from a subdirectory.
+           case where the user runs the CLI from a subdirectory. A walk that
+           lands on the HOME directory WARNS: home scope means every project
+           shares one memory space, and silent home scope is a mis-scope
+           vector.
 
         Returns:
             Project ID string (directory basename), or None if all methods fail.
@@ -326,44 +399,14 @@ class PACTMemory:
         # Strategy 1: Environment variable (original behavior)
         project_dir = os.environ.get("CLAUDE_PROJECT_DIR")
         if project_dir:
-            # When CLAUDE_PROJECT_DIR points below a repo's root (a worktree OR
-            # an in-repo subdirectory), its basename is not the project name and
-            # would fragment the project_id across sessions. Prefer the MAIN
-            # repo's basename so every session of a project shares one key,
-            # aligning this env branch (Strategy 1) with the git-root and
-            # cwd-marker branches (Strategies 2/3), which already resolve to the
-            # repo root. The rewrite fires when git resolves a main repo whose
-            # root differs from the env path; only a repo-root env path or a
-            # non-git path (where the main anchor equals, or cannot be resolved
-            # from, the env path) keeps the env basename — RESOLVED, so a
-            # symlinked project dir names its target, which is the path the
-            # git branch above and the backlog writer already record. A path
-            # that will not resolve keeps its unresolved basename.
-            # The local name is env_main_root, NOT main_repo_root: rebinding
-            # the module-level helper's own name inside this method would make
-            # it local for the whole method and raise UnboundLocalError on the
-            # call itself.
-            try:
-                env_root = Path(project_dir).resolve()
-            except (OSError, RuntimeError):
-                env_root = None
-            env_main_root = main_repo_root(project_dir)
-            # Compare via normcase so a case-insensitive filesystem does not
-            # fire the rewrite for paths that differ only in case (a no-op on
-            # case-sensitive systems, where normcase is identity).
-            if (
-                env_main_root is not None
-                and env_root is not None
-                and os.path.normcase(str(env_main_root)) != os.path.normcase(str(env_root))
-            ):
-                logger.debug(
-                    "project_id detected from CLAUDE_PROJECT_DIR worktree main repo: %s",
-                    env_main_root.name,
-                )
-                return env_main_root.name
-            project_name = (env_root or Path(project_dir)).name
-            logger.debug("project_id detected from CLAUDE_PROJECT_DIR: %s", project_name)
-            return project_name
+            return PACTMemory._project_name_for_declared_dir(project_dir, "CLAUDE_PROJECT_DIR")
+
+        # Strategy 1.5: session record (inert under pytest — the discovery
+        # refuses test processes — so the replica in test_project_id.py needs
+        # no record leg to stay equivalent here).
+        record_dir = get_project_dir_from_session_record()
+        if record_dir:
+            return PACTMemory._project_name_for_declared_dir(record_dir, "session record")
 
         # Strategy 2: Git repository root (worktree-safe)
         # main_repo_root() carries the --git-common-dir resolution and the
@@ -392,6 +435,23 @@ class PACTMemory:
             cwd_root = PACTMemory._find_project_root(Path.cwd())
             cwd_name = cwd_root.name
             if cwd_name:
+                # Home scope is the last resort, and it must not be silent: a
+                # walk that lands on the home directory (typically via the
+                # .claude marker there) scopes every save to the USER, and
+                # searches under a project then silently miss. Warn so the
+                # mis-scope is visible.
+                try:
+                    home = Path.home().resolve()
+                except (OSError, RuntimeError):
+                    home = None
+                if home is not None and os.path.normcase(str(cwd_root)) == os.path.normcase(str(home)):
+                    logger.warning(
+                        "project_id resolved to the HOME directory (%s); memories "
+                        "will be scoped to user scope %r, not a project. Run from "
+                        "the project directory or set CLAUDE_PROJECT_DIR.",
+                        cwd_root,
+                        cwd_name,
+                    )
                 logger.debug("project_id detected from cwd: %s", cwd_name)
                 return cwd_name
         except OSError:
@@ -514,6 +574,16 @@ class PACTMemory:
         # save; a stale value would make that promise false in exactly the
         # silent way this channel exists to remove.
         self._last_sync_status = None
+
+        # FAIL CLOSED on an env/record disagreement, BEFORE any store work: the
+        # row would land under the env-derived project while the session's other
+        # readers follow the record — the silent mis-scope this refusal exists
+        # to make visible. Reads are unaffected; only writes refuse.
+        disagreement = env_record_project_dir_disagreement()
+        if disagreement is not None:
+            raise ProjectScopeDisagreementError(
+                format_project_dir_disagreement(*disagreement)
+            )
 
         # Ensure memory system is ready (lazy initialization)
         _ensure_ready()
@@ -1113,6 +1183,16 @@ class PACTMemory:
             # reports the None beside it, which is what makes it diagnosable.
             self._last_sync_status = SyncResult.EMPTY
             return []
+        # Same fail-closed rule as save(): on an env/record disagreement the
+        # rebuild would project the env-derived project's records over the
+        # record-scoped file. Refuse BEFORE the query, and raise so the CLI
+        # can envelope the refusal on stderr rather than report a falsy
+        # outcome with the reason invisible.
+        disagreement = env_record_project_dir_disagreement()
+        if disagreement is not None:
+            raise ProjectScopeDisagreementError(
+                format_project_dir_disagreement(*disagreement)
+            )
         records = self.list(limit=MAX_WORKING_MEMORIES)
         payload = [r.to_dict() for r in records]
         try:

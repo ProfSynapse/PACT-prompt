@@ -1,8 +1,12 @@
 """
-Tests for PACTMemory._detect_project_id() -- 3-strategy fallback detection.
+Tests for PACTMemory._detect_project_id() -- multi-strategy fallback detection.
 
 Tests cover:
 1. Strategy 1: CLAUDE_PROJECT_DIR env var
+1.5. Strategy 1.5: session-record project_dir (between env and git). NOT
+   exercised here: the record discovery refuses test processes, so the real
+   leg is inert in this suite and the replica below stays equivalent without
+   it. The leg's own coverage lives in test_project_dir_resolution.py.
 2. Strategy 2: git rev-parse --git-common-dir (worktree-safe repo root)
 3. Strategy 3: Current working directory basename
 4. Fallback ordering when strategies fail
@@ -122,6 +126,12 @@ def _detect_project_id_under_test():
     This function mirrors the implementation in memory_api.py. The
     test_source_equivalence test verifies that the source of the real
     method matches this replica, so any drift will be caught.
+
+    NO RECORD LEG, DELIBERATELY. The real method's Strategy 1.5 consults the
+    session record through pact_session, whose discovery refuses test
+    processes (PYTEST_CURRENT_TEST), so under this suite the leg is inert and
+    the replica is equivalent without it. Do not "repair" the replica by
+    adding one — the leg's coverage lives in test_project_dir_resolution.py.
     """
     import logging
     logger = logging.getLogger(__name__)
@@ -252,19 +262,30 @@ class TestSourceEquivalence:
         """The replica logic should match the real _detect_project_id method body.
 
         Verifies key implementation markers are present AND ordered correctly:
-        Strategy 1 (env var) before Strategy 2 (git) before Strategy 3 (cwd).
-        This catches accidental strategy reordering that substring checks alone miss.
+        Strategy 1 (env var) before Strategy 1.5 (session record) before
+        Strategy 2 (git) before Strategy 3 (cwd). This catches accidental
+        strategy reordering that substring checks alone miss. The 1.5 position
+        is load-bearing: BELOW env and ABOVE git, because in a multi-repo
+        workspace the cwd's git root can be the wrong scope.
         """
         real_source = _extract_method_body(_MEMORY_API_PATH, "_detect_project_id")
         assert real_source is not None, "Could not find _detect_project_id in memory_api.py"
 
         # Check key implementation lines are present
         assert 'os.environ.get("CLAUDE_PROJECT_DIR")' in real_source
-        # Strategies 1 and 2 reach git through the module-level main_repo_root()
-        # helper rather than each spawning their own subprocess. The subprocess
+        # The env and record strategies name a project from a declared directory
+        # through the shared _project_name_for_declared_dir helper; the git
+        # derivation markers that used to sit inline moved with it and are
+        # pinned on the helper by
+        # test_declared_dir_helper_carries_the_main_repo_rewrite.
+        assert "_project_name_for_declared_dir(project_dir," in real_source
+        # Strategy 1.5: the session-record rung between env and git.
+        assert "get_project_dir_from_session_record()" in real_source
+        assert "_project_name_for_declared_dir(record_dir," in real_source
+        # Strategy 2 reaches git through the module-level main_repo_root()
+        # helper rather than spawning its own subprocess. The subprocess
         # markers this assertion used to carry moved with it and are pinned on
         # the helper by test_main_repo_root_carries_the_git_derivation.
-        assert "main_repo_root(project_dir)" in real_source
         assert "repo_root = main_repo_root()" in real_source
         # Strategy 3 now walks up from cwd to find the nearest project marker.
         assert "_find_project_root(Path.cwd())" in real_source
@@ -272,17 +293,37 @@ class TestSourceEquivalence:
         # Verify strategy ordering in the CODE (not docstring).
         # Use code-specific markers that won't appear in the docstring.
         pos_env = real_source.index('os.environ.get("CLAUDE_PROJECT_DIR")')
+        pos_record = real_source.index("get_project_dir_from_session_record()")
         pos_git = real_source.index("repo_root = main_repo_root()")
         pos_cwd = real_source.index("_find_project_root(Path.cwd())")
 
-        assert pos_env < pos_git, (
+        assert pos_env < pos_record, (
             f"Strategy ordering violation: env var (pos {pos_env}) should appear "
-            f"before git (pos {pos_git})"
+            f"before the session record (pos {pos_record})"
+        )
+        assert pos_record < pos_git, (
+            f"Strategy ordering violation: session record (pos {pos_record}) "
+            f"should appear before git (pos {pos_git})"
         )
         assert pos_git < pos_cwd, (
             f"Strategy ordering violation: git (pos {pos_git}) should appear "
             f"before cwd (pos {pos_cwd})"
         )
+
+    def test_declared_dir_helper_carries_the_main_repo_rewrite(self):
+        """The extracted helper holds the worktree/main-repo rewrite both
+        declared-directory strategies (env, session record) share.
+
+        These markers moved out of _detect_project_id when Strategy 1's inline
+        derivation collapsed onto _project_name_for_declared_dir, so they are
+        pinned here rather than dropped — the same migration pattern as
+        test_main_repo_root_carries_the_git_derivation.
+        """
+        helper_body = _extract_method_body(_MEMORY_API_PATH, "_project_name_for_declared_dir")
+        assert helper_body is not None, "_project_name_for_declared_dir must exist in memory_api.py"
+        assert "main_repo_root(declared_dir)" in helper_body
+        assert "os.path.normcase" in helper_body
+        assert "declared_root or Path(declared_dir)" in helper_body
 
     def test_main_repo_root_carries_the_git_derivation(self):
         """The extracted helper holds what the two strategies used to duplicate.
