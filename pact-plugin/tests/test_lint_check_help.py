@@ -48,6 +48,9 @@ class TestLintCheckHelp:
         assert "Examples:" in proc.stderr
         assert "--files" in proc.stderr
         assert ".py" in proc.stderr
+        # Full example line, content-pinned: the pasteable unit itself, not
+        # tokens that also occur in the usage/error lines above it.
+        assert f"  {_SCRIPT} --files /abs/path/to/modified.py" in proc.stderr
         assert "IMPORT-HYGIENE:" not in proc.stdout
         assert "IMPORT-HYGIENE:" not in proc.stderr
         assert "Running lint check in:" not in proc.stdout
