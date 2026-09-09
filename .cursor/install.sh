@@ -65,4 +65,4 @@ fi
 
 echo "PACT plugin environment ready. Activate with: source .venv/bin/activate"
 echo "Run the suite with: cd pact-plugin && python -m pytest -ra"
-echo "Live plugin smoke test: bash .cursor/smoke-test.sh (needs ANTHROPIC_API_KEY for the live phase)"
+echo "Live plugin smoke test: bash .cursor/smoke-test.sh (needs ANTHROPIC_API_KEY or a Claude Code login for the live phase)"
