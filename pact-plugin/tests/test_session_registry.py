@@ -9,6 +9,9 @@ tests live in commit G's test files; this file is the module's own unit suite.)
 """
 
 import json
+import os
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -325,3 +328,86 @@ class TestConfigRootInlineParity:
             "CLAUDE_CONFIG_DIR — the containment anchor is not co-routed through the "
             "inline _config_root() (register() would silently bail)"
         )
+
+
+# ---------------------------------------------------------------------------
+# CLI teach examples (main block via subprocess)
+# ---------------------------------------------------------------------------
+
+_SR_SCRIPT = str(
+    Path(__file__).parent.parent / "hooks" / "shared" / "session_registry.py"
+)
+
+
+class TestRegistryTeachExamples:
+    # Full example line, content-pinned. prog is the invoked script path
+    # (_SR_SCRIPT), so the rendered example is the exact pasteable string:
+    # interpreter-prefixed, quoted script path, concrete flags. The epilog is
+    # unwrapped (RawDescriptionHelpFormatter), so a full-line assertion is
+    # width-safe at any COLUMNS.
+    _EXAMPLE = f'python3 "{_SR_SCRIPT}" register --name "<name>@<team>"'
+
+    def test_top_level_help_lists_the_example_line(self):
+        r = subprocess.run(
+            [sys.executable, _SR_SCRIPT, "--help"],
+            capture_output=True, text=True,
+        )
+        assert r.returncode == 0
+        assert self._EXAMPLE in r.stdout
+
+    def test_register_help_carries_the_example_line(self):
+        r = subprocess.run(
+            [sys.executable, _SR_SCRIPT, "register", "--help"],
+            capture_output=True, text=True,
+        )
+        assert r.returncode == 0
+        assert self._EXAMPLE in r.stdout
+
+    def test_missing_name_exits_2_with_example(self):
+        r = subprocess.run(
+            [sys.executable, _SR_SCRIPT, "register"],
+            capture_output=True, text=True,
+        )
+        assert r.returncode == 2
+        assert r.stdout == ""
+        assert "error:" in r.stderr
+        # One blank line between the error line and the example.
+        assert f"\n\nExamples:\n  {self._EXAMPLE}\n" in r.stderr
+
+    def test_bare_invocation_is_usage_error_with_one_example(self):
+        r = subprocess.run(
+            [sys.executable, _SR_SCRIPT],
+            capture_output=True, text=True,
+        )
+        assert r.returncode == 2
+        assert r.stdout == ""
+        assert "error:" in r.stderr
+        assert self._EXAMPLE in r.stderr
+
+    def test_unknown_top_level_flag_is_usage_error_with_one_example(self):
+        r = subprocess.run(
+            [sys.executable, _SR_SCRIPT, "--nope"],
+            capture_output=True, text=True,
+        )
+        assert r.returncode == 2
+        assert r.stdout == ""
+        assert "error:" in r.stderr
+        assert self._EXAMPLE in r.stderr
+
+    def test_pasted_example_executes_hermetically(self, tmp_path, monkeypatch):
+        # The one live paste-execute the bar allows: hermetic by
+        # construction — CLAUDE_CONFIG_DIR redirected into the sandbox and
+        # $CLAUDE_CODE_SESSION_ID removed, so register() takes its documented
+        # session-absent no-op and writes nothing. Proves the rendered line
+        # is shell-executable verbatim (interpreter prefix + quoted path).
+        env = {
+            k: v for k, v in os.environ.items()
+            if k != "CLAUDE_CODE_SESSION_ID"
+        }
+        env["CLAUDE_CONFIG_DIR"] = str(tmp_path)
+        r = subprocess.run(
+            self._EXAMPLE, shell=True, capture_output=True, text=True, env=env,
+        )
+        assert r.returncode == 0, r.stderr
+        assert "Permission denied" not in r.stderr
+        assert list(tmp_path.rglob("*")) == []
