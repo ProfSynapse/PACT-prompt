@@ -166,3 +166,41 @@ def child_env(
     if memory_dir is not None:
         env["PACT_TEST_MEMORY_DIR"] = str(memory_dir)
     return env
+
+
+def git_flake_shim(tmp_path: Path) -> Path:
+    """A PATH shim dir whose `git` ALWAYS fails — the #1600 induced-flakiness
+    experiment as a permanent fixture.
+
+    Prepended to PATH it makes every git subprocess exit 1, so a resolution
+    arm can prove its answer cannot have come from git. Pair every shimmed arm
+    with a shim-LIVE control (an arm where git's death changes the answer) —
+    without it, a shim that never took effect reads identically to the
+    invariant it exists to prove.
+    """
+    shim_dir = tmp_path / "git-shim"
+    shim_dir.mkdir(exist_ok=True)
+    shim = shim_dir / "git"
+    shim.write_text("#!/bin/sh\necho 'git: disabled by test shim' >&2\nexit 1\n")
+    shim.chmod(0o755)
+    return shim_dir
+
+
+def source_export_line(env_file: Path, name: str) -> Optional[str]:
+    """Parse `export NAME=<shlex-quoted value>` back out of an env file.
+
+    pytest standing in for the platform's source step: the platform reads
+    CLAUDE_ENV_FILE and exports the lines into the next Bash tool env; the
+    row asserts the value a spawned Bash WOULD see. shlex.split is the honest
+    inverse of the producer's shlex.quote.
+    """
+    import shlex
+
+    if not env_file.exists():
+        return None
+    prefix = f"export {name}="
+    for line in env_file.read_text(encoding="utf-8").splitlines():
+        if line.startswith(prefix):
+            parts = shlex.split(line[len(prefix):])
+            return parts[0] if parts else ""
+    return None

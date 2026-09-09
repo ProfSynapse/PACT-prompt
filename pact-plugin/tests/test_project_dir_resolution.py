@@ -25,9 +25,9 @@ enable_record_discovery (the test_session_discovery_route pattern — the
 refusal reads os.environ, so deleting PYTEST_CURRENT_TEST supplies the REAL
 predicate a different input) plus a real context file written into the
 redirected tmp config root. No getter is monkeypatched: every row exercises
-the shipped discovery chain. The one subprocess row crosses the real process
-boundary with a constructed env (child_env), because Path.home patching does
-not cross it.
+the shipped discovery chain. The subprocess rows (R1/R2/R4/R5 + the CLI
+envelope rows) cross the real process boundary with a constructed env
+(child_env), because Path.home patching does not cross it.
 """
 
 from __future__ import annotations
@@ -35,6 +35,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import sqlite3
 import subprocess
 import sys
 from pathlib import Path
@@ -44,7 +45,9 @@ import pytest
 from fixtures.project_dir import (
     child_env,
     enable_record_discovery,
+    git_flake_shim,
     make_umbrella,
+    source_export_line,
     write_session_context,
 )
 # EVERY import here goes through the `scripts.` package route, deliberately.
@@ -64,6 +67,9 @@ from shared import backlog
 _MEMORY_CLI = (
     Path(__file__).parent.parent / "skills" / "pact-memory" / "scripts" / "cli.py"
 )
+_BACKLOG_CLI = Path(__file__).parent.parent / "hooks" / "shared" / "backlog.py"
+_SESSION_INIT = Path(__file__).parent.parent / "hooks" / "session_init.py"
+_PACT_MEMORY_ROOT = Path(__file__).parent.parent / "skills" / "pact-memory"
 SID = "record-rung-session-0001"
 
 
@@ -549,3 +555,472 @@ class TestCliRefusalEnvelope:
         assert "PYTEST_CURRENT_TEST" not in env
         assert "CLAUDE_CODE_SESSION_ID" not in env
         assert env["HOME"] == str(tmp_path)
+
+
+# ---------------------------------------------------------------------------
+# R1 — #1613 acceptance: an umbrella session writes unprefixed (subprocess)
+# ---------------------------------------------------------------------------
+
+def _memory_store_scopes(store: Path) -> list:
+    """The project_id of every row in the store — the scope the writer USED,
+    read from the DB rather than inferred from an exit code."""
+    with sqlite3.connect(str(store)) as conn:
+        return [row[0] for row in conn.execute("SELECT project_id FROM memories")]
+
+
+class TestR1UmbrellaAcceptance:
+    """The #1613 acceptance shape end-to-end: env var ABSENT, session record
+    armed, cwd = the umbrella. backlog set, memory save, and WM sync all run
+    unprefixed and land under the recorded scope. Every leg is a real
+    subprocess with a constructed env — the boundary the issue measured."""
+
+    def _env(self, umbrella, tmp_path, memory_dir):
+        return child_env(
+            umbrella.config_root,
+            home=tmp_path,
+            session_id=SID,
+            memory_dir=memory_dir,
+        )
+
+    def test_r1_backlog_add_and_set_unprefixed_key_on_the_record(self, tmp_path):
+        umbrella = make_umbrella(tmp_path)
+        write_session_context(umbrella.config_root, SID, umbrella.project)
+        store = tmp_path / "store"
+        store.mkdir()
+        env = self._env(umbrella, tmp_path, None)
+
+        add = subprocess.run(
+            [sys.executable, str(_BACKLOG_CLI), "--backlog-dir", str(store),
+             "add", "umbrella item"],
+            capture_output=True, text=True, env=env, cwd=str(umbrella.project),
+        )
+        assert add.returncode == 0, f"unprefixed add refused: {add.stderr!r}"
+        written = store / "umbrella.json"
+        assert written.exists(), (
+            f"add did not key on the record basename; store holds "
+            f"{sorted(p.name for p in store.iterdir())}"
+        )
+        item_id = json.loads(written.read_text(encoding="utf-8"))["items"][0]["id"]
+        set_ = subprocess.run(
+            [sys.executable, str(_BACKLOG_CLI), "--backlog-dir", str(store),
+             "set", item_id, "--status", "active"],
+            capture_output=True, text=True, env=env, cwd=str(umbrella.project),
+        )
+        assert set_.returncode == 0, f"unprefixed set refused: {set_.stderr!r}"
+
+    def test_r1_memory_save_and_sync_unprefixed_scope_the_record(self, tmp_path):
+        """The acceptance shape faithfully: the DEFAULT store (a real session
+        passes no --db-path), so the store lands under the child's tmp HOME
+        with origin 'home' — and the ambient-sync guard's redirected-store
+        refusal does not fire. (That guard is the incident class of the
+        scratch-store incident, not a defect in this fix.)"""
+        umbrella = make_umbrella(tmp_path)
+        claude_md = _seed_claude_md(umbrella.project)
+        write_session_context(umbrella.config_root, SID, umbrella.project)
+        env = self._env(umbrella, tmp_path, None)
+        default_store = tmp_path / ".claude" / "pact-memory" / "memory.db"
+
+        save = subprocess.run(
+            [sys.executable, str(_MEMORY_CLI), "save",
+             json.dumps({"context": "R1-UMBRELLA-SAVE", "goal": "g"})],
+            capture_output=True, text=True, env=env, cwd=str(umbrella.project),
+            timeout=120,
+        )
+        assert save.returncode == 0, f"unprefixed save failed: {save.stderr[:400]!r}"
+        save_envelope = json.loads(save.stdout)
+        assert save_envelope["ok"] is True
+        assert save_envelope["result"]["sync_status"] == "wrote", (
+            f"save's WM sync leg did not write: {save_envelope}"
+        )
+        assert default_store.exists(), "save did not create the default store"
+        assert _memory_store_scopes(default_store) == ["umbrella"], (
+            f"the save did not scope to the recorded project: "
+            f"{_memory_store_scopes(default_store)}"
+        )
+        assert "R1-UMBRELLA-SAVE" in claude_md.read_text(encoding="utf-8"), (
+            "save's sync leg did not land in the umbrella CLAUDE.md"
+        )
+
+        # The standalone sync surface, unprefixed (a rebuild over the same
+        # record keeps the section intact).
+        sync = subprocess.run(
+            [sys.executable, str(_MEMORY_CLI), "sync"],
+            capture_output=True, text=True, env=env, cwd=str(umbrella.project),
+            timeout=120,
+        )
+        assert sync.returncode == 0, f"unprefixed sync failed: {sync.stderr[:400]!r}"
+        sync_envelope = json.loads(sync.stdout)
+        assert sync_envelope["ok"] is True, f"sync envelope: {sync_envelope}"
+        assert sync_envelope["result"]["project_id"] == "umbrella"
+        assert "R1-UMBRELLA-SAVE" in claude_md.read_text(encoding="utf-8"), (
+            "the standalone sync did not project the umbrella scope's record"
+        )
+
+    def test_r1_resolution_probe_equals_the_recorded_value(self, tmp_path):
+        """The acceptance probe in pytest form: a hook-side reader inside the
+        session resolves the SAME value the session record carries."""
+        umbrella = make_umbrella(tmp_path)
+        write_session_context(umbrella.config_root, SID, umbrella.project)
+        env = self._env(umbrella, tmp_path, None)
+        probe = subprocess.run(
+            [sys.executable, "-c",
+             "import sys; sys.path.insert(0, sys.argv[1]); "
+             "from scripts.pact_session import get_project_dir_from_session_record as g; "
+             "print(g())",
+             str(_PACT_MEMORY_ROOT)],
+            capture_output=True, text=True, env=env, cwd=str(umbrella.project),
+        )
+        assert probe.returncode == 0, f"probe failed: {probe.stderr[:400]!r}"
+        assert probe.stdout.strip() == str(umbrella.project)
+
+
+# ---------------------------------------------------------------------------
+# R2 — #1485: cwd in a git sub-repo of the umbrella
+# ---------------------------------------------------------------------------
+
+class TestR2SubRepoCwd:
+    """The exact #1485 frame: cwd inside the umbrella's git sub-repo (no
+    CLAUDE.md of its own), env absent, record naming the umbrella. Without the
+    record rung the git strategy answers the SUB-repo's basename."""
+
+    def test_r2_record_outranks_the_subrepo_git_root(self, tmp_path, monkeypatch):
+        umbrella = make_umbrella(tmp_path)
+        _arm_record(monkeypatch, tmp_path, umbrella.project)
+        monkeypatch.delenv("CLAUDE_PROJECT_DIR", raising=False)
+        monkeypatch.chdir(umbrella.subrepo)
+        assert PACTMemory._detect_project_id() == "umbrella"
+
+    def test_r2_record_outranks_the_marker_walk_when_the_subrepo_has_its_own_claude_md(
+        self, tmp_path, monkeypatch
+    ):
+        """Anti-correlated arm: the sub-repo carrying its OWN CLAUDE.md means
+        the marker walk would resolve the sub-repo — the fixture's natural
+        ordering AGREES with the wrong answer, so a full-tie fixture would
+        mask a precedence mutation. The record must still win."""
+        umbrella = make_umbrella(tmp_path)
+        umbrella_md = _seed_claude_md(umbrella.project)
+        _seed_claude_md(umbrella.subrepo)  # the marker walk's answer, if reached
+        _arm_record(monkeypatch, tmp_path, umbrella.project)
+        monkeypatch.delenv("CLAUDE_PROJECT_DIR", raising=False)
+        monkeypatch.chdir(umbrella.subrepo)
+        assert wm._get_claude_md_path() == umbrella_md
+
+    def test_r2_subprocess_save_from_the_subrepo_scopes_the_umbrella(self, tmp_path):
+        umbrella = make_umbrella(tmp_path)
+        write_session_context(umbrella.config_root, SID, umbrella.project)
+        store = tmp_path / "memory.db"
+        env = child_env(
+            umbrella.config_root, home=tmp_path, session_id=SID,
+            memory_dir=tmp_path / "memdir",
+        )
+        setup = subprocess.run(
+            [sys.executable, str(_MEMORY_CLI), "setup", "--db-path", str(store)],
+            capture_output=True, text=True, env=env, cwd=str(umbrella.subrepo),
+            timeout=120,
+        )
+        assert setup.returncode == 0, f"store setup failed: {setup.stderr[:400]!r}"
+        save = subprocess.run(
+            [sys.executable, str(_MEMORY_CLI), "save", "--db-path", str(store),
+             json.dumps({"context": "R2-SUBREPO-SAVE", "goal": "g"})],
+            capture_output=True, text=True, env=env, cwd=str(umbrella.subrepo),
+            timeout=120,
+        )
+        assert save.returncode == 0, f"save from the sub-repo failed: {save.stderr[:400]!r}"
+        assert _memory_store_scopes(store) == ["umbrella"], (
+            f"cwd in the sub-repo mis-scoped the save: {_memory_store_scopes(store)}"
+        )
+
+
+# ---------------------------------------------------------------------------
+# R3 — #1005: ambiguous cwd; the record outranks the home/user fallback
+# ---------------------------------------------------------------------------
+
+class TestR3AmbiguousCwd:
+    def test_r3_record_outranks_an_ambiguous_cwd(self, tmp_path, monkeypatch):
+        """cwd in a bare directory whose marker walk would land on the tmp HOME
+        config dir (answering the tmp basename): without the record rung the
+        answer is the walk's; with it, the record's. The no-record/no-env
+        negative half is pinned by TestHomeScopeWarning (the last resort warns
+        rather than silently scoping home)."""
+        umbrella = make_umbrella(tmp_path)
+        _arm_record(monkeypatch, tmp_path, umbrella.project)
+        monkeypatch.delenv("CLAUDE_PROJECT_DIR", raising=False)
+        bare = tmp_path / "bare"
+        bare.mkdir()
+        monkeypatch.chdir(bare)
+        assert PACTMemory._detect_project_id() == "umbrella"
+
+
+# ---------------------------------------------------------------------------
+# R4 — #1600: bimodal git cannot split parent and child
+# ---------------------------------------------------------------------------
+
+class TestR4BimodalGit:
+    """The git-flake shim makes every git subprocess fail. The CONTROL arm
+    proves the shim is live (git's death changes the worktree answer); the
+    INVARIANT arms prove the record rung's answer does not depend on git at
+    all, in-process or across the process boundary."""
+
+    def _worktree_pair(self, tmp_path):
+        main = _git_repo(tmp_path / "main-proj")
+        linked = tmp_path / "wt"
+        subprocess.run(
+            ["git", "-C", str(main), "worktree", "add", "-q", str(linked), "-b", "wt"],
+            check=True, capture_output=True,
+            env={**os.environ, "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_SYSTEM": os.devnull},
+        )
+        return main, linked
+
+    def test_r4_control_git_death_changes_the_worktree_answer(self, tmp_path, monkeypatch):
+        """CONTROL, not a result row: cwd in a linked worktree, NO record. Git
+        alive answers the MAIN repo (Strategy 2); git dead falls to the marker
+        walk, which names the WORKTREE. The two answers differing is the proof
+        the shim took effect — and the bimodal shape #1600 recorded."""
+        main, linked = self._worktree_pair(tmp_path)
+        monkeypatch.delenv("CLAUDE_PROJECT_DIR", raising=False)
+        monkeypatch.chdir(linked)
+        assert PACTMemory._detect_project_id() == "main-proj"  # git alive
+
+        shim = git_flake_shim(tmp_path)
+        monkeypatch.setenv("PATH", f"{shim}{os.pathsep}{os.environ.get('PATH', '')}")
+        assert PACTMemory._detect_project_id() == "wt", (
+            "git's death did NOT change the answer — the shim is not live and "
+            "the invariant arms below prove nothing"
+        )
+
+    def test_r4_record_answer_is_git_independent(self, tmp_path, monkeypatch):
+        umbrella = make_umbrella(tmp_path)
+        _arm_record(monkeypatch, tmp_path, umbrella.project)
+        monkeypatch.delenv("CLAUDE_PROJECT_DIR", raising=False)
+        monkeypatch.chdir(umbrella.subrepo)
+        shim = git_flake_shim(tmp_path)
+        monkeypatch.setenv("PATH", f"{shim}{os.pathsep}{os.environ.get('PATH', '')}")
+        assert PACTMemory._detect_project_id() == "umbrella"
+
+    def test_r4_parent_and_child_agree_with_git_broken(self, tmp_path, monkeypatch):
+        """The one-value invariant across the boundary: the parent's in-process
+        resolution and the child CLI's scope are ONE value under broken git —
+        the parent/subprocess disagreement #1600 measured cannot recur."""
+        umbrella = make_umbrella(tmp_path)
+        _arm_record(monkeypatch, tmp_path, umbrella.project)
+        monkeypatch.delenv("CLAUDE_PROJECT_DIR", raising=False)
+        shim = git_flake_shim(tmp_path)
+        monkeypatch.setenv("PATH", f"{shim}{os.pathsep}{os.environ.get('PATH', '')}")
+        monkeypatch.chdir(umbrella.subrepo)
+        parent_answer = PACTMemory._detect_project_id()
+
+        store = tmp_path / "memory.db"
+        env = child_env(
+            umbrella.config_root, home=tmp_path, session_id=SID,
+            memory_dir=tmp_path / "memdir",
+        )
+        env["PATH"] = f"{shim}{os.pathsep}{env['PATH']}"
+        setup = subprocess.run(
+            [sys.executable, str(_MEMORY_CLI), "setup", "--db-path", str(store)],
+            capture_output=True, text=True, env=env, cwd=str(umbrella.subrepo),
+            timeout=120,
+        )
+        assert setup.returncode == 0, f"store setup failed: {setup.stderr[:400]!r}"
+        save = subprocess.run(
+            [sys.executable, str(_MEMORY_CLI), "save", "--db-path", str(store),
+             json.dumps({"context": "R4-BROKEN-GIT", "goal": "g"})],
+            capture_output=True, text=True, env=env, cwd=str(umbrella.subrepo),
+            timeout=120,
+        )
+        assert save.returncode == 0, f"child save failed: {save.stderr[:400]!r}"
+        assert _memory_store_scopes(store) == [parent_answer] == ["umbrella"]
+
+    def test_r4_backlog_set_with_record_and_broken_git(self, tmp_path):
+        """backlog's writer runs git twice (main-root + worktree list); with
+        git dead and the env absent, the record anchor plus the stat-based
+        enclosing-checkout walk still resolve the umbrella — no refusal."""
+        umbrella = make_umbrella(tmp_path)
+        write_session_context(umbrella.config_root, SID, umbrella.project)
+        store = tmp_path / "store"
+        store.mkdir()
+        shim = git_flake_shim(tmp_path)
+        env = child_env(umbrella.config_root, home=tmp_path, session_id=SID)
+        env["PATH"] = f"{shim}{os.pathsep}{env['PATH']}"
+        add = subprocess.run(
+            [sys.executable, str(_BACKLOG_CLI), "--backlog-dir", str(store),
+             "add", "broken-git item"],
+            capture_output=True, text=True, env=env, cwd=str(umbrella.project),
+        )
+        assert add.returncode == 0, (
+            f"backlog add refused under broken git despite the record: {add.stderr!r}"
+        )
+        assert (store / "umbrella.json").exists()
+
+
+# ---------------------------------------------------------------------------
+# R5 — the env-file channel: real session_init writes BOTH halves over the
+# real process boundary, and a spawned-Bash child inherits the recorded value
+# ---------------------------------------------------------------------------
+
+class TestR5EnvFileSeam:
+    """R5's two forms, per the probe outcome: the LITERAL os.environ leg is
+    claimed for the standard spawned-Bash path only (the dogfood probe passed
+    there with control-leg causation — tests/runbooks/claude-env-file-probe.md);
+    this row drives the real writer and the platform's source step is played
+    by source_export_line. Teammate-mode (in-process/tmux) propagation is
+    UNVERIFIED at the platform layer and NOT claimed here — those sessions are
+    covered by the rung-2 resolution-equality rows (R1/R2), and the
+    distinction is recorded, not erased."""
+
+    def test_r5_session_init_writes_record_and_export_and_a_bash_child_inherits(
+        self, tmp_path
+    ):
+        umbrella = make_umbrella(tmp_path)
+        env_file = tmp_path / "session-env.sh"
+        sid5 = "r5-env-file-session-0001"
+        env = child_env(
+            umbrella.config_root, home=tmp_path, session_id=sid5,
+            project_dir=umbrella.project, memory_dir=tmp_path / "memdir",
+        )
+        env["CLAUDE_ENV_FILE"] = str(env_file)
+        frame = {
+            "source": "startup",
+            "session_id": sid5,
+            "agent_type": "pact-orchestrator",  # lead frame: persist is lead-gated
+        }
+        proc = subprocess.run(
+            [sys.executable, str(_SESSION_INIT)],
+            input=json.dumps(frame),
+            capture_output=True, text=True, env=env, cwd=str(umbrella.project),
+            timeout=180,
+        )
+        assert proc.returncode == 0, (
+            f"session_init failed in the stripped frame: {proc.stderr[:600]!r}"
+        )
+
+        # The RECORD half, written by the real writer (Tier 2 — no stubbed
+        # persist_context).
+        ctx_path = (
+            umbrella.config_root / "pact-sessions" / "umbrella" / sid5
+            / "pact-session-context.json"
+        )
+        assert ctx_path.exists(), (
+            f"the real writer left no record; config root holds "
+            f"{sorted(str(p) for p in umbrella.config_root.rglob('*'))}"
+        )
+        recorded = json.loads(ctx_path.read_text(encoding="utf-8"))["project_dir"]
+        assert recorded == str(umbrella.project)
+
+        # The EXPORT half — and the exported == recorded invariant.
+        exported = source_export_line(env_file, "CLAUDE_PROJECT_DIR")
+        assert exported is not None, (
+            f"no CLAUDE_PROJECT_DIR export in the env file: "
+            f"{env_file.read_text(encoding='utf-8')!r}"
+        )
+        assert exported == recorded
+
+        # The spawned-Bash leg: the platform sources the env file, so the
+        # child sees os.environ['CLAUDE_PROJECT_DIR'] == the recorded value —
+        # and a write under it agrees with the record (no refusal).
+        bash_env = child_env(
+            umbrella.config_root, home=tmp_path, session_id=sid5,
+            project_dir=exported, memory_dir=tmp_path / "memdir2",
+        )
+        probe = subprocess.run(
+            [sys.executable, "-c",
+             "import os; v = os.environ['CLAUDE_PROJECT_DIR']; print(v)"],
+            capture_output=True, text=True, env=bash_env, cwd=str(umbrella.project),
+        )
+        assert probe.stdout.strip() == recorded, (
+            "the env-file value a spawned Bash inherits differs from the "
+            "session record — the exported == recorded invariant is broken"
+        )
+        store = tmp_path / "memory.db"
+        setup = subprocess.run(
+            [sys.executable, str(_MEMORY_CLI), "setup", "--db-path", str(store)],
+            capture_output=True, text=True, env=bash_env, cwd=str(umbrella.project),
+            timeout=120,
+        )
+        assert setup.returncode == 0, f"store setup failed: {setup.stderr[:400]!r}"
+        save = subprocess.run(
+            [sys.executable, str(_MEMORY_CLI), "save", "--db-path", str(store),
+             json.dumps({"context": "R5-EXPORTED", "goal": "g"})],
+            capture_output=True, text=True, env=bash_env, cwd=str(umbrella.project),
+            timeout=120,
+        )
+        assert save.returncode == 0, (
+            f"a write under the exported value refused despite record agreement: "
+            f"{save.stderr[:400]!r}"
+        )
+        assert _memory_store_scopes(store) == ["umbrella"]
+
+
+# ---------------------------------------------------------------------------
+# Edge: symlinked spellings — slug equality on reads, verbatim refusal on writes
+# ---------------------------------------------------------------------------
+
+class TestSymlinkEdges:
+    def test_symlinked_record_names_the_target(self, tmp_path, monkeypatch):
+        """A recorded SYMLINK path resolves to the target's basename for the
+        project name — one project, one key, however the session was launched."""
+        umbrella = make_umbrella(tmp_path)
+        link = tmp_path / "linked-umbrella"
+        link.symlink_to(umbrella.project)
+        _arm_record(monkeypatch, tmp_path, link)
+        monkeypatch.delenv("CLAUDE_PROJECT_DIR", raising=False)
+        assert pact_session.get_project_dir_from_session_record() == str(link), (
+            "the reader must return the recorded value VERBATIM"
+        )
+        assert PACTMemory._detect_project_id() == "umbrella"
+
+    def test_symlinked_env_alias_of_the_record_refuses_on_writes(self, tmp_path, monkeypatch):
+        """The verbatim comparison's conservative direction: env naming a
+        SYMLINK ALIAS of the recorded dir disagrees textually, so writes REFUSE
+        although the target is identical. This is the designed trade — a loud
+        refusal with the remedy beats a silent derivation — and this pin is
+        what kills a mutation that 'fixes' the comparison by resolving both
+        sides."""
+        umbrella = make_umbrella(tmp_path)
+        _arm_record(monkeypatch, tmp_path, umbrella.project)
+        link = tmp_path / "alias"
+        link.symlink_to(umbrella.project)
+        monkeypatch.setenv("CLAUDE_PROJECT_DIR", str(link))
+
+        memory = PACTMemory()  # constructed AFTER the env manipulation
+        with pytest.raises(ProjectScopeDisagreementError) as excinfo:
+            memory.save({"context": "c", "goal": "g"})
+        text = str(excinfo.value)
+        assert str(link) in text and str(umbrella.project) in text
+        assert "re-export CLAUDE_PROJECT_DIR" in text
+
+
+# ---------------------------------------------------------------------------
+# Edge: the sync CLI envelopes the refusal exactly like save
+# ---------------------------------------------------------------------------
+
+class TestSyncCliEnvelope:
+    def test_sync_cli_envelopes_the_refusal_on_stderr(self, tmp_path):
+        """The second CLI write path's envelope: cmd_sync catches
+        ProjectScopeDisagreementError into SCOPE_DISAGREEMENT on stderr,
+        naming both values."""
+        umbrella = make_umbrella(tmp_path)
+        _seed_claude_md(umbrella.project)
+        write_session_context(umbrella.config_root, SID, umbrella.project)
+        other = tmp_path / "other"
+        _seed_claude_md(other)  # a REAL writable target, so the refusal is non-vacuous
+        store = tmp_path / "memory.db"
+        env = child_env(
+            umbrella.config_root, home=tmp_path, session_id=SID,
+            project_dir=other, memory_dir=tmp_path / "memdir",
+        )
+        setup = subprocess.run(
+            [sys.executable, str(_MEMORY_CLI), "setup", "--db-path", str(store)],
+            capture_output=True, text=True, env=env, cwd=str(tmp_path), timeout=120,
+        )
+        assert setup.returncode == 0, f"store setup failed: {setup.stderr[:400]!r}"
+        proc = subprocess.run(
+            [sys.executable, str(_MEMORY_CLI), "sync", "--db-path", str(store)],
+            capture_output=True, text=True, env=env, cwd=str(tmp_path), timeout=120,
+        )
+        assert proc.returncode != 0, f"a disagreeing sync exited 0: {proc.stdout!r}"
+        assert "SCOPE_DISAGREEMENT" in proc.stderr, (
+            f"the envelope type is missing from stderr: {proc.stderr!r}"
+        )
+        assert other.name in proc.stderr and umbrella.project.name in proc.stderr, (
+            f"the refusal must name both values; stderr: {proc.stderr!r}"
+        )
