@@ -1138,11 +1138,17 @@ def _persist_project_dir_env(project_dir: str) -> None:
     defensive layer so the helper stays total when called directly in tests.
 
     Producer-side shlex.quote: the env file is sourced by a shell, so a path
-    containing spaces or `$` must arrive quoted. Dedupe on the identical
-    export line keeps resume/compact/clear re-fires idempotent.
+    containing spaces or `$` must arrive quoted. Dedupe matches the TERMINATED
+    full logical line against the raw file text (not splitlines() membership):
+    a quoted value can itself contain a newline, and only the raw-text match
+    self-matches on re-fire. An unterminated foreign last line gets its
+    newline written first, so the export starts on its own line instead of
+    gluing onto it.
 
     Never raises: SessionStart hot path (same total contract as the outer
-    safety net). A failed append fails open to the pre-fix status quo.
+    safety net). A failed append fails open to the pre-fix status quo —
+    OSError AND UnicodeError (a non-UTF-8 env file) both fail open locally
+    rather than escaping into main()'s outer net and degrading the frame.
     """
     env_file = os.environ.get("CLAUDE_ENV_FILE")
     if not env_file or not os.environ.get("CLAUDE_PROJECT_DIR"):
@@ -1155,11 +1161,14 @@ def _persist_project_dir_env(project_dir: str) -> None:
             existing = Path(env_file).read_text(encoding="utf-8")
         except FileNotFoundError:
             existing = ""
-        if line in existing.splitlines():
+        if f"{line}\n" in existing:
             return
+        payload = line + "\n"
+        if existing and not existing.endswith("\n"):
+            payload = "\n" + payload
         with open(env_file, "a", encoding="utf-8") as fh:
-            fh.write(line + "\n")
-    except OSError:
+            fh.write(payload)
+    except (OSError, UnicodeError):
         pass
 
 
