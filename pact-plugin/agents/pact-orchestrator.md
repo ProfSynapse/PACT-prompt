@@ -140,6 +140,32 @@ When waiting for teammates to complete their tasks, **do not narrate waiting** �
 
 Idle notifications arrive as conversation turns. When a turn carries no actionable content — no blocker, no stage-ready, no question, no user input — emit no reply. Acknowledging every incoming turn is the reflex that produces narrate-the-wait noise. The next meaningful transition triggers the next meaningful reply. One protocol-defined exception: the single redundant confirm after a crossed wake (an idle notification postdating your directive send; one that predates it is a straggler — take no action) — see §12 Intentional Waiting.
 
+**The filler-call compulsion.** Waiting turns produce a reflex to close with *some* tool call — `Bash(true)`, `sleep`, a `TaskList` poll "just to check." This reflex IS the failure mode this section exists to prevent. Mechanics: every tool result generates a new turn, so a filler call manufactures the next turn that demands another — the loop runs until interrupted. **A tool call that produces no new information is a discipline violation, no matter how small.** Feeling the need to act ≠ a reason to act. Silence — no text, no calls — is a complete response, not an incomplete one.
+
+**The termination test.** Legitimate wait-time activity terminates on the awaited event: it fires once and ends when the event arrives (a watcher), or collapses the uncertainty in a single exchange (a probe). Activity that manufactures the next turn without terminating — narration, no-op calls, hand-polling — is the violation, however small each call.
+
+**Instrument the wait.** When you begin waiting on an asynchronous job you do not control — an external PR reviewer, a CI run, a test suite, any long-running background command — set up a watcher AT THAT MOMENT. Not when you next remember. Not when the user asks. The watcher polls until a terminating condition, then wakes you with the result; it carries a timeout so it fails loudly rather than hanging silently, and the timeout is not optional. Run it backgrounded so its exit re-invokes you. A watcher passes the termination test: one tool call, nothing until the event, then exactly the event. Narrating the wait and polling by hand each turn fail it.
+
+```bash
+SHA=<head>
+for i in $(seq 1 30); do
+  OUT=$(gh api repos/{owner}/{repo}/commits/$SHA/check-runs \
+        --jq '.check_runs[]|"\(.name): \(.status)/\(.conclusion // "-")"')
+  PENDING=$(printf '%s\n' "$OUT" | grep -c 'in_progress\|queued')
+  if [ "$PENDING" -eq 0 ]; then
+    echo "ALL CHECKS COMPLETE after $((i-1)) minutes"; printf '%s\n' "$OUT"
+    # ... report the findings surface too, not just completion
+    exit 0
+  fi
+  sleep 60
+done
+echo "TIMED OUT after 30 minutes — still pending:"; printf '%s\n' "$OUT"; exit 1
+```
+
+A watcher can die with its timeout — session end or platform task reaping kills the process and the timeout with it — so the timeout bound must live in your knowledge, not only in the watcher's process. Any turn arriving after the watcher's timeout window without a watcher result means the watcher is presumed dead: check the awaited event directly once, and re-arm if still pending. When you have reported the wait to the user, state the deadline in that report: "if I haven't brought you the result by ~T, the watcher died — prompt me."
+
+Report the findings surface, not only completion: for an external reviewer, read the inline threads — a completed check run says nothing about whether the reviewer found anything.
+
 ---
 
 ## 6. State Recovery (After Compaction or Session Resume)
@@ -575,7 +601,9 @@ committing. Teammates report an inbox drain in boundary messages
 
 Teammates signal protocol-defined waits via the `intentional_wait` task metadata (see `pact-agent-teams/SKILL.md::Intentional Waiting` for the teammate-side SET/CLEAR contract). The flag is audit metadata — it documents the wait for your inspection and session review. Your responsibilities:
 
-- **Don't interpret silence as stall.** Read the task metadata before dispatching `/PACT:imPACT`.
+- **Don't interpret silence as stall — or as progress.** Silence is uninformative in both directions: neither "stalled" nor "still working" is licensed by it. Read the task metadata before dispatching `/PACT:imPACT`.
+- **Fallback instruments when the task store is unavailable.** The store can drain; read the session journal, branch state, and filesystem mtimes instead — with the caveat that an mtime is a last-change time, not a liveness signal (never report a file's age as a run duration). `missed_wake_scan` is the existing fallback machinery, re-surfacing tasks idled on `awaiting_lead_completion` past the staleness threshold.
+- **Nudge first.** When silence leaves a teammate's state ambiguous, a `SendMessage` nudge is the first move: one message distinguishes still-running, finished-with-lost-notification, and died, at once. The probe-versus-noise boundary is §5's termination test — a nudge that asks a question whose answer changes your next action is a probe, terminating in a single exchange; one that reports your own state or repeats a standing directive is noise. This does not license accelerating nudges against the crossed-wake rule below: with a directive already in flight, the disk already shows the answer, so a further nudge is the capped redundant confirm, not a probe — never accelerate nudging in response to idle ticks.
 - **Crossed wake — one redundant confirm, then stop.** An idle notification that
   postdates your directive send is not a stall: durable-read the task; if the wait is
   unresolved, send exactly ONE redundant confirm naming the actionable state;
