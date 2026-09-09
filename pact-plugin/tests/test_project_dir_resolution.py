@@ -39,6 +39,7 @@ import sqlite3
 import subprocess
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -1159,3 +1160,153 @@ class TestLiberalReadsUnderDisagreement:
         assert got.returncode == 0, f"get refused a read: {got.stderr[:400]!r}"
         assert "SCOPE_DISAGREEMENT" not in got.stderr
         assert "LIBERAL-READ-SEED" in got.stdout
+
+
+# ---------------------------------------------------------------------------
+# Cycle-2: the refusal surface extends to update()/delete() and the
+# retrieved-sync projection warns through its swallow
+# ---------------------------------------------------------------------------
+
+def _store_row_context(store: Path, memory_id: str) -> str:
+    with sqlite3.connect(str(store)) as conn:
+        return conn.execute(
+            "SELECT context FROM memories WHERE id = ?", (memory_id,)
+        ).fetchone()[0]
+
+
+class TestUpdateDeleteRefusalOnDisagreement:
+    """update()/delete() are writes: under an env/record disagreement they
+    refuse with both values + remedy BEFORE any store mutation; under
+    agreement they proceed (the guard must not over-fire)."""
+
+    def _seed_and_arm(self, tmp_path, monkeypatch):
+        """A committed row scoped to the env project (written with NO session
+        behind it), then the disagreement armed on top of it."""
+        umbrella = make_umbrella(tmp_path)
+        other = tmp_path / "other"
+        other.mkdir()
+        monkeypatch.setenv("CLAUDE_PROJECT_DIR", str(other))
+        memory = PACTMemory()  # constructed AFTER the env manipulation
+        seed_id = memory.save({"context": "CYCLE2-SEED", "goal": "g"})
+        _arm_record(monkeypatch, tmp_path, umbrella.project)
+        return umbrella, other, memory, seed_id
+
+    def test_update_refuses_naming_both_values_before_any_mutation(
+        self, tmp_path, monkeypatch
+    ):
+        umbrella, other, memory, seed_id = self._seed_and_arm(tmp_path, monkeypatch)
+        store = tmp_path / ".claude" / "pact-memory" / "memory.db"
+        before = _store_row_context(store, seed_id)
+
+        with pytest.raises(ProjectScopeDisagreementError) as excinfo:
+            memory.update(seed_id, {"context": "CYCLE2-MUTATED"})
+        text = str(excinfo.value)
+        assert str(other) in text, "the refusal does not name the env value"
+        assert str(umbrella.project) in text, "the refusal does not name the record"
+        assert "re-export CLAUDE_PROJECT_DIR" in text, "the refusal names no remedy"
+        assert _store_row_context(store, seed_id) == before, (
+            "a refused update still mutated the row"
+        )
+
+    def test_delete_refuses_naming_both_values_before_any_mutation(
+        self, tmp_path, monkeypatch
+    ):
+        umbrella, other, memory, seed_id = self._seed_and_arm(tmp_path, monkeypatch)
+        store = tmp_path / ".claude" / "pact-memory" / "memory.db"
+
+        with pytest.raises(ProjectScopeDisagreementError) as excinfo:
+            memory.delete(seed_id)
+        text = str(excinfo.value)
+        assert str(other) in text and str(umbrella.project) in text
+        assert "re-export CLAUDE_PROJECT_DIR" in text
+        assert _store_row_context(store, seed_id) == "CYCLE2-SEED", (
+            "a refused delete still removed the row"
+        )
+
+    def test_agreement_update_and_delete_proceed(self, tmp_path, monkeypatch):
+        """The guard must not over-fire: with env == record, update and delete
+        behave exactly as before."""
+        umbrella = make_umbrella(tmp_path)
+        _arm_record(monkeypatch, tmp_path, umbrella.project)
+        monkeypatch.setenv("CLAUDE_PROJECT_DIR", str(umbrella.project))
+        memory = PACTMemory()
+        seed_id = memory.save({"context": "CYCLE2-AGREE", "goal": "g"})
+
+        assert memory.update(seed_id, {"context": "CYCLE2-UPDATED"}) == seed_id
+        store = tmp_path / ".claude" / "pact-memory" / "memory.db"
+        assert "CYCLE2-UPDATED" in _store_row_context(store, seed_id)
+        assert memory.delete(seed_id) == seed_id
+
+
+class TestRetrievedSyncWarnsUnderDisagreement:
+    def test_search_swallow_warns_with_the_disagreement_and_does_not_raise(
+        self, tmp_path, monkeypatch, caplog
+    ):
+        """The retrieved-context projection is a read side-effect: under a
+        disagreement the projection's guard raises, search()'s swallow turns
+        it into a WARNING that names the disagreement, and no exception
+        escapes to the caller."""
+        umbrella = make_umbrella(tmp_path)
+        _arm_record(monkeypatch, tmp_path, umbrella.project)
+        other = tmp_path / "other"
+        other.mkdir()
+        monkeypatch.setenv("CLAUDE_PROJECT_DIR", str(other))
+
+        fake_result = SimpleNamespace(
+            id="fake-memory-id",
+            to_dict=lambda: {"context": "CYCLE2-RETRIEVED", "goal": "g"},
+        )
+        monkeypatch.setattr(
+            "scripts.memory_api.graph_enhanced_search",
+            lambda *a, **kw: [fake_result],
+        )
+        memory = PACTMemory(project_id="proj")
+        with caplog.at_level(logging.WARNING):
+            results = memory.search("anything", sync_to_claude=True)
+        assert results == [fake_result], "the read itself must not refuse"
+        warnings = [r.getMessage() for r in caplog.records if r.levelno >= logging.WARNING]
+        assert any(
+            "disagrees" in w and str(other) in w and str(umbrella.project) in w
+            for w in warnings
+        ), (
+            f"the swallow's warning does not name the disagreement: {warnings}"
+        )
+
+
+class TestWarrantedSyncProceedsUnderDisagreement:
+    """The claude_md_root warrant on the public sync path: a caller that
+    DECLARES the containment anchor has named its destination, so the ambient
+    disagreement is moot — the write proceeds to the named root, NOT the
+    record scope. The no-warrant path still refuses (TestWriteRefusalOn-
+    Disagreement and the TestSyncCliEnvelope row are the counter arms)."""
+
+    def test_sync_with_declared_root_proceeds_to_the_named_destination(
+        self, tmp_path, monkeypatch
+    ):
+        """The declared root is a CONTAINMENT warrant, not a steering knob:
+        the display resolver still resolves env-first (branch 1), so the
+        honest shape is env == the named destination's root, with the warrant
+        making the ambient disagreement (record names the umbrella) moot."""
+        umbrella = make_umbrella(tmp_path)
+        umbrella_md = _seed_claude_md(umbrella.project)
+        other = tmp_path / "other"
+        other_md = _seed_claude_md(other)
+        monkeypatch.setenv("CLAUDE_PROJECT_DIR", str(other))
+        # A record committed under the env scope with NO session behind it.
+        memory = PACTMemory()
+        memory.save({"context": "WARRANT-TOKEN", "goal": "g"})
+        # NOW the disagreement is armed (record=umbrella, env=other).
+        _arm_record(monkeypatch, tmp_path, umbrella.project)
+
+        written_ids = memory.sync(claude_md_root=other)
+        assert memory.last_sync_status == wm.SyncResult.WROTE, (
+            f"a warranted sync under disagreement must proceed; got "
+            f"{memory.last_sync_status}"
+        )
+        assert written_ids, "the warranted sync projected no records"
+        assert "WARRANT-TOKEN" in other_md.read_text(encoding="utf-8"), (
+            "the projection did not land under the NAMED root"
+        )
+        assert "WARRANT-TOKEN" not in umbrella_md.read_text(encoding="utf-8"), (
+            "the projection reached the record-scoped file despite the warrant"
+        )
