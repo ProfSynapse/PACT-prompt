@@ -1036,7 +1036,20 @@ class PACTMemory:
                 dict-list item contains unknown sub-object keys.
             PrefixTooShortError: prefix is shorter than the minimum.
             AmbiguousPrefixError: prefix matches more than one memory.
+            ProjectScopeDisagreementError: CLAUDE_PROJECT_DIR and the session
+                record name different project directories (fail-closed write
+                refusal; reads follow env).
         """
+        # Same fail-closed rule as save()/sync(), evaluated at CALL time — the
+        # constructor-bound project_id may predate a mid-process disagreement.
+        # update() has no sync-status channel, so there is no REFUSED line to
+        # set here; the typed exception is the refusal's whole surface.
+        disagreement = env_record_project_dir_disagreement()
+        if disagreement is not None:
+            raise ProjectScopeDisagreementError(
+                format_project_dir_disagreement(*disagreement)
+            )
+
         # Ensure memory system is ready (lazy initialization)
         _ensure_ready()
 
@@ -1096,7 +1109,18 @@ class PACTMemory:
         Raises:
             PrefixTooShortError: prefix is shorter than the minimum.
             AmbiguousPrefixError: prefix matches more than one memory.
+            ProjectScopeDisagreementError: CLAUDE_PROJECT_DIR and the session
+                record name different project directories (fail-closed write
+                refusal; reads follow env).
         """
+        # Same fail-closed rule as save()/sync(), evaluated at CALL time.
+        # delete() has no status channel; the typed exception is the surface.
+        disagreement = env_record_project_dir_disagreement()
+        if disagreement is not None:
+            raise ProjectScopeDisagreementError(
+                format_project_dir_disagreement(*disagreement)
+            )
+
         # Ensure memory system is ready (lazy initialization)
         _ensure_ready()
 
@@ -1175,6 +1199,12 @@ class PACTMemory:
         carries the outcome as for save(); `empty` means nothing was
         projected -- no project id resolved, or the project has no records --
         and the file was not touched.
+
+        Refuses (raises ProjectScopeDisagreementError, status `refused`) when
+        CLAUDE_PROJECT_DIR and the session record disagree — UNLESS the caller
+        declares `claude_md_root`: an explicit destination warrant is
+        containment-checked downstream, so the ambient disagreement is moot
+        and the warranted call proceeds.
         """
         self._last_sync_status = None
         if self._project_id is None:
@@ -1193,12 +1223,21 @@ class PACTMemory:
         # can envelope the refusal on stderr rather than report a falsy
         # outcome with the reason invisible. The status channel reports the
         # refusal FIRST, matching save() and the ambient-guard refusal class.
-        disagreement = env_record_project_dir_disagreement()
-        if disagreement is not None:
-            self._last_sync_status = SyncResult.REFUSED
-            raise ProjectScopeDisagreementError(
-                format_project_dir_disagreement(*disagreement)
-            )
+        #
+        # THE WARRANT EXCEPTION: a caller that declares `claude_md_root` has
+        # named and containment-checked the destination, so the ambient
+        # disagreement is moot — the module-layer guard in working_memory
+        # already exempts a declared anchor, and the public API honors the
+        # same warrant rather than refusing a warranted call. save() keeps
+        # the unconditional refusal: its mis-scope vector is the DB ROW,
+        # which no CLAUDE.md destination warrant covers.
+        if claude_md_root is None:
+            disagreement = env_record_project_dir_disagreement()
+            if disagreement is not None:
+                self._last_sync_status = SyncResult.REFUSED
+                raise ProjectScopeDisagreementError(
+                    format_project_dir_disagreement(*disagreement)
+                )
         records = self.list(limit=MAX_WORKING_MEMORIES)
         payload = [r.to_dict() for r in records]
         try:

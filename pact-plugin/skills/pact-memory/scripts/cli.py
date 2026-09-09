@@ -691,6 +691,9 @@ def cmd_update(args, db_path=None):
     memory = PACTMemory(db_path=db_path)
     try:
         resolved_id = memory.update(args.memory_id, updates, replace=args.replace)
+    except ProjectScopeDisagreementError as exc:
+        # Same deliberate refusal shape as cmd_save: both values + remedy.
+        _error("SCOPE_DISAGREEMENT", _scrub(str(exc)))
     except PrefixTooShortError as exc:
         # Order: PrefixTooShortError IS a ValueError; catch it before the
         # field-validation ValueError handler below.
@@ -776,6 +779,9 @@ def cmd_delete(args, db_path=None):
     memory = PACTMemory(db_path=db_path)
     try:
         resolved_id = memory.delete(args.memory_id)
+    except ProjectScopeDisagreementError as exc:
+        # Same deliberate refusal shape as cmd_save: both values + remedy.
+        _error("SCOPE_DISAGREEMENT", _scrub(str(exc)))
     except PrefixTooShortError as exc:
         _error("PREFIX_TOO_SHORT", str(exc), minimum=exc.minimum)
     except AmbiguousPrefixError as exc:

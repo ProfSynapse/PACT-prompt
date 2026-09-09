@@ -2917,6 +2917,14 @@ def sync_retrieved_to_claude_md(
     # process can legitimately drive it.
     _refuse_ambient_target_under_pytest(None, claude_md_root)
 
+    # The disagreement guard joins it: this function is the FOURTH write path,
+    # and its raise lands in the `except Exception` swallow at the tail, whose
+    # warning interpolates the refusal text — so the diagnostic names both
+    # values and the remedy even though the reason channel reads FAILED (the
+    # one production caller passes sync_to_claude=False, so the guard is inert
+    # in production today; it protects the path's future re-enablement).
+    _refuse_ambient_sync_on_project_dir_disagreement(None, claude_md_root)
+
     claude_md_path, resolved_root = _resolve_display_claude_md_with_base()
 
     # Declared anchor replaces the containment base; it does not steer
