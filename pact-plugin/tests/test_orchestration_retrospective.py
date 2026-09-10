@@ -966,8 +966,9 @@ class TestTheRunnerDivideIsEnforcedAtRunTime:
 
 class TestComPACTDoesNotInvokeTheRetrospective:
     """Scope pin for a load-bearing docstring claim with no test: variety_
-    divergence.py's `resolve_arc_start` argues its None-for-comPACT history
-    is safe because "a comPACT workflow does not invoke the retrospective".
+    divergence.py's `resolve_arc_start` rests its never-mis-scopes argument
+    (no retro-path caller passes a comPACT/rePACT feature id) on the
+    boundary claim "a comPACT workflow does not invoke the retrospective".
     The claim's basis is STRUCTURAL, and this pins it as it exists today.
 
     The line between reference and invocation, derived from what the
