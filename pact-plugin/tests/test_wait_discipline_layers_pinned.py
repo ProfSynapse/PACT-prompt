@@ -17,10 +17,12 @@ sequence L1 -> L2 -> L3 within the section.
 
 PRESENCE pins, not counts — same convention as test_wake_ordering_pinned.py
 (see that module's docstring for the lockstep-cost rationale). Matching
-reuses its _phrase/_normalized/_lines_outside_fences helpers via sibling
-import: backtick-and-whitespace-normalized phrase matching (tool language is
-inline-code formatted in the shipped markdown), line-anchored exact heading
-pins outside fenced code blocks.
+reuses its _phrase/_lines_outside_fences helpers via sibling import:
+backtick-and-whitespace-normalized phrase matching over the FENCE-EXCLUDED
+lines — a pinned phrase is real prose and is not satisfiable by fenced
+example content (the heading pins' fence exclusion extended to phrases;
+measured hole this closed at the bottom of this file) — plus line-anchored
+exact heading pins outside fenced code blocks.
 
 No protocol-extract mirror: the SET/CLEAR contract the extracts reference is
 unchanged by this amendment (it adds a wait-classification subsection, not
@@ -35,9 +37,7 @@ import pytest
 
 from test_wake_ordering_pinned import (  # noqa: E402 — sibling harness reuse
     _lines_outside_fences,
-    _normalized,
     _phrase,
-    _raw,
 )
 
 PLUGIN_ROOT = Path(__file__).resolve().parent.parent
@@ -88,6 +88,15 @@ SILENCE_PINS = [
 ]
 
 
+def _fence_excluded(path: Path) -> str:
+    """Backtick-and-whitespace-normalized text of the fence-EXCLUDED lines.
+    Phrase pins match real prose only: a pinned phrase moved — or
+    duplicated — into a fenced code block satisfies no pin and counts in no
+    census (see the fence counter-check record at the bottom of this
+    file)."""
+    return _phrase("\n".join(_lines_outside_fences(path)))
+
+
 def test_discipline_heading_present():
     """The subsection must exist as an exact heading line (fence-excluded,
     line-anchored) so it is discoverable and its anchor slug is a stable
@@ -100,15 +109,19 @@ def test_discipline_heading_present():
 
 
 def _intentional_waiting_section() -> str:
-    """Normalized text of the '## Intentional Waiting' section only, so the
-    ordering pin cannot be satisfied by layer mentions elsewhere in the file."""
-    text = _raw(SKILL)
-    marker = "\n## Intentional Waiting"
-    anchor = text.find(marker)
-    assert anchor != -1, "SKILL.md must contain '## Intentional Waiting' section"
-    start = anchor + 1
-    next_h2 = text.find("\n## ", start)
-    return _phrase(text[start : next_h2 if next_h2 != -1 else len(text)])
+    """Fence-excluded, normalized text of the '## Intentional Waiting'
+    section only, so the ordering pin cannot be satisfied by layer mentions
+    elsewhere in the file or by fenced example content inside the
+    section."""
+    lines = _lines_outside_fences(SKILL)
+    starts = [i for i, line in enumerate(lines) if line == "## Intentional Waiting"]
+    assert starts, "SKILL.md must contain '## Intentional Waiting' section"
+    start = starts[0]
+    end = next(
+        (i for i in range(start + 1, len(lines)) if lines[i].startswith("## ")),
+        len(lines),
+    )
+    return _phrase("\n".join(lines[start:end]))
 
 
 def test_layers_ordered_within_section():
@@ -154,12 +167,14 @@ def _pin_cases():
 )
 def test_wait_discipline_phrase_present(phrase: str):
     """Each load-bearing phrase of the wait-discipline layers must be present
-    on the teammate teaching surface. Matching is backtick-and-whitespace-
-    normalized: hard-wrap and inline-code renderings both satisfy the pin; a
-    re-WORD does not. If a phrase was changed intentionally, update the pin in
-    lockstep — otherwise the layer it carries eroded on a runtime-loaded
-    surface."""
-    assert _phrase(phrase) in _normalized(SKILL), (
+    on the teammate teaching surface as REAL PROSE. Matching is
+    backtick-and-whitespace-normalized over the fence-excluded lines:
+    hard-wrap and inline-code renderings both satisfy the pin, fenced
+    example content does NOT (moving the teaching into a code fence erodes
+    the surface and must flip the pin), and a re-WORD does not. If a phrase
+    was changed intentionally, update the pin in lockstep — otherwise the
+    layer it carries eroded on a runtime-loaded surface."""
+    assert _phrase(phrase) in _fence_excluded(SKILL), (
         f"{SKILL.name}: wait-discipline phrase {phrase!r} not found "
         f"(backtick-and-whitespace-normalized match). If the wording was "
         f"changed intentionally, update the pin in lockstep; otherwise a "
@@ -175,9 +190,18 @@ def test_wait_discipline_phrase_present(phrase: str):
 # {20 failed, 0 passed} — the full module flips; no pin is satisfiable by
 # pre-amendment prose. Post-restore: 20/20 green.
 #
-# Occurrence census (measured, normalized text): every pinned phrase occurs
-# exactly 1x in SKILL.md, so the layers are INDIVIDUALLY DISTINGUISHABLE —
-# deleting any one layer's paragraph flips exactly that layer's phrase pins
-# plus the shared ordering pin (its missing-anchor assert), while the other
-# two layers' phrase pins stay green.
+# Occurrence census (measured, fence-excluded normalized text): every
+# pinned phrase occurs exactly 1x in SKILL.md, so the layers are
+# INDIVIDUALLY DISTINGUISHABLE — deleting any one layer's paragraph flips
+# exactly that layer's phrase pins plus the shared ordering pin (its
+# missing-anchor assert), while the other two layers' phrase pins stay
+# green.
+#
+# Fence-exclusion counter-check (measured 2026-09-10, remediation cycle 2):
+# moving a pinned phrase out of prose and back in only inside a ``` fence —
+# pre-fix module stayed {20 passed} (the hole: fenced content satisfied the
+# phrase pin); fence-excluded matching flips exactly the moved phrase's pin
+# {1 failed, 19 passed}. A fenced DUPLICATE (prose occurrence kept) leaves
+# the module green and the census at 1x — the fenced copy is invisible to
+# pins and census alike (pre-fix census counted it: 2x).
 # ---------------------------------------------------------------------------
