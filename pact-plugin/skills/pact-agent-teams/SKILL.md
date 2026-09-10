@@ -385,10 +385,16 @@ inside a message-driven wake), so the team-lead's channel is the only push.
 Either split the work into timeout-sized chunks run in-turn, or transfer the
 watch explicitly: stage the current state, `SendMessage` the team-lead the
 pending-work description, and flag the wait with `expected_resolver=lead`.
+Set a free-form `reason` that names the transferred watch (e.g.
+`awaiting_lead_takeover`), not `awaiting_lead_completion` — that reason names
+the HANDOFF/teachback acceptance wait, and a transferred watch must read as
+the different wait it is on task-file inspection.
 
 Silence is uninformative in both directions, and narrating a wait is noise in
 both. Do not emit "still running" or "waiting on the gate" turns while your own
-work runs, and do not reply to a turn that carries no actionable content. A
+work runs, and do not reply to a turn that carries no actionable content. That
+reply rule is the wait-context instance of [§Idle Discipline](#idle-discipline)'s
+say-nothing rule. A
 bare filler call (`true`, `sleep <N>`) manufactures the next turn without
 producing new information — the `wait_filler_gate` hook denies exactly these —
 so if the turn has nothing to advance, end it with no tool call at all.
