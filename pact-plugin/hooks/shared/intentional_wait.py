@@ -67,6 +67,7 @@ KNOWN_REASONS = frozenset({
     "awaiting_user_decision",
     "awaiting_blocker_resolution",
     "awaiting_lead_completion",
+    "awaiting_lead_takeover",
 })
 
 KNOWN_RESOLVERS = frozenset({"lead", "peer", "user", "external"})

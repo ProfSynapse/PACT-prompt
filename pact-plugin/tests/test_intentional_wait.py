@@ -950,6 +950,7 @@ class TestKnownReasonsLiteralRegressionGuard:
         "awaiting_user_decision",
         "awaiting_blocker_resolution",
         "awaiting_lead_completion",
+        "awaiting_lead_takeover",
     }
 
     def test_exact_set(self):
