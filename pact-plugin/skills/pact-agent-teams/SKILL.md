@@ -359,6 +359,40 @@ team-lead's next user prompt or session start. The schema primitives
 define the teammate-facing metadata contract for protocol-defined waits. Using the flag documents the wait intent for the team-lead's task-file
 inspection and for post-hoc session review.
 
+The waits above are **protocol waits**: a named resolver drives completion and
+you idle until they wake you. **Self-started work** — your own verification
+gates, builds, long-running commands — has no external resolver; nobody but
+you is watching it. The discipline for that class is the three layers below.
+
+### Wait Discipline for Self-Started Work
+
+**Layer 1 — In-turn when it fits.** Run a long command as a normal foreground
+call whenever it fits the `Bash` tool timeout (declared max 600000 ms). Most
+verifications finish in seconds; run them in-turn and the wait never exists as
+a turn boundary.
+
+**Layer 2 — Never hold an unflagged dependency.** Before ending ANY turn whose
+deliverable depends on unfinished work, SET `intentional_wait{reason,
+expected_resolver, since}` per the SET subsection below — the dead-man's handle
+that makes a stalled watcher detectable instead of silent. This is
+unconditional: it does not depend on any wake channel.
+
+**Layer 3 — Escalate what you cannot hold.** Work that genuinely exceeds the
+timeout must not sit invisibly in a backgrounded process. Do not background it
+and end the turn expecting the completion notification to re-invoke you — a
+teammate's background-task notification is wake-on-read (it surfaces only
+inside a message-driven wake), so the team-lead's channel is the only push.
+Either split the work into timeout-sized chunks run in-turn, or transfer the
+watch explicitly: stage the current state, `SendMessage` the team-lead the
+pending-work description, and flag the wait with `expected_resolver=lead`.
+
+Silence is uninformative in both directions, and narrating a wait is noise in
+both. Do not emit "still running" or "waiting on the gate" turns while your own
+work runs, and do not reply to a turn that carries no actionable content. A
+bare filler call (`true`, `sleep <N>`) manufactures the next turn without
+producing new information — the `wait_filler_gate` hook denies exactly these —
+so if the turn has nothing to advance, end it with no tool call at all.
+
 ### SET — before going idle
 
 ```python
