@@ -1198,6 +1198,10 @@ def _branch_and_worktree_names(project_path: Any = None) -> Optional[List[str]]:
 # CLI
 # ---------------------------------------------------------------------------
 
+def _cli_examples(*lines: str) -> str:
+    return "Examples:\n" + "\n".join(f"  {line}" for line in lines)
+
+
 class _UsageErrorParser(argparse.ArgumentParser):
     """Exits `_EXIT_USAGE` on a malformed command line, not argparse's default 2.
 
@@ -1206,16 +1210,40 @@ class _UsageErrorParser(argparse.ArgumentParser):
     and a caller holding `build_parser()` gets it too.
     """
 
+    _teach_example = ""
+
     def error(self, message):
-        self.exit(_EXIT_USAGE, f"{self.format_usage()}{self.prog}: error: {message}\n")
+        extra = (
+            f"\n\nExamples:\n  {self._teach_example}\n"
+            if self._teach_example
+            else "\n"
+        )
+        self.exit(
+            _EXIT_USAGE,
+            f"{self.format_usage()}{self.prog}: error: {message}{extra}",
+        )
 
 
 def build_parser() -> argparse.ArgumentParser:
     """Argument grammar, separated so it is testable without running anything."""
+    prog = sys.argv[0]
+    fmt = argparse.RawDescriptionHelpFormatter
+    # Interpreter-prefixed so a pasted example executes verbatim: the script
+    # has no shebang or exec bit, so the bare path is not shell-executable.
+    show_ex = f'python3 "{prog}" show'
+    archive_ex = f'python3 "{prog}" archive item-id'
+    add_ex = f'python3 "{prog}" add "title"'
+    set_ex = f'python3 "{prog}" set item-id --status done'
+    repair_ex = f'python3 "{prog}" repair'
+
     parser = _UsageErrorParser(
+        prog=prog,
         description="PACT cross-session backlog — the user's ordered intent, "
         "reconciled against git, the tracker and pact-memory.",
+        formatter_class=fmt,
+        epilog=_cli_examples(show_ex, archive_ex, add_ex, set_ex, repair_ex),
     )
+    parser._teach_example = show_ex
     parser.add_argument(
         "--backlog-dir",
         help="Override the store directory. Testing seam; omit in normal use.",
@@ -1223,7 +1251,13 @@ def build_parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="command")
     sub.required = True
 
-    show = sub.add_parser("show", help="Report every item with its drift flags")
+    show = sub.add_parser(
+        "show",
+        help="Report every item with its drift flags",
+        formatter_class=fmt,
+        epilog=_cli_examples(show_ex),
+    )
+    show._teach_example = show_ex
     view = show.add_mutually_exclusive_group()
     view.add_argument(
         "--all",
@@ -1242,20 +1276,42 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     archive = sub.add_parser(
-        "archive", help="Move settled items into the archive"
+        "archive",
+        help="Move settled items into the archive",
+        formatter_class=fmt,
+        epilog=_cli_examples(archive_ex),
     )
+    archive._teach_example = archive_ex
     archive.add_argument("item_ids", nargs="+")
 
-    add = sub.add_parser("add", help="Add an item")
+    add = sub.add_parser(
+        "add",
+        help="Add an item",
+        formatter_class=fmt,
+        epilog=_cli_examples(add_ex),
+    )
+    add._teach_example = add_ex
     add.add_argument("title")
     _add_item_arguments(add)
 
-    update = sub.add_parser("set", help="Change fields on an existing item")
+    update = sub.add_parser(
+        "set",
+        help="Change fields on an existing item",
+        formatter_class=fmt,
+        epilog=_cli_examples(set_ex),
+    )
+    update._teach_example = set_ex
     update.add_argument("item_id")
     _add_item_arguments(update)
     update.add_argument("--title")
 
-    fix = sub.add_parser("repair", help="Move a corrupt backlog aside and start fresh")
+    fix = sub.add_parser(
+        "repair",
+        help="Move a corrupt backlog aside and start fresh",
+        formatter_class=fmt,
+        epilog=_cli_examples(repair_ex),
+    )
+    fix._teach_example = repair_ex
     fix.add_argument(
         "--force",
         action="store_true",

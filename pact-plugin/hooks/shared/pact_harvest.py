@@ -223,6 +223,25 @@ def _session_dir_is_contained(session_dir: str) -> bool:
     return candidate == root or root in candidate.parents
 
 
+def _cli_examples(*lines: str) -> str:
+    return "Examples:\n" + "\n".join(f"  {line}" for line in lines)
+
+
+class _TeachParser(argparse.ArgumentParser):
+    """Usage errors stay exit 2 (STOP) and append one example on stderr only."""
+
+    _teach_example = ""
+
+    def error(self, message):
+        self.print_usage(sys.stderr)
+        extra = (
+            f"\n\nExamples:\n  {self._teach_example}\n"
+            if self._teach_example
+            else "\n"
+        )
+        self.exit(2, f"{self.prog}: error: {message}{extra}")
+
+
 def main() -> int:
     """CLI entry point for harvest-domain resolutions.
 
@@ -236,18 +255,38 @@ def main() -> int:
         0 ok (incl. legitimately-empty), 2 unresolved/bad-input (skill stop
         trigger), 1 reserved for an uncaught internal error.
     """
-    parser = argparse.ArgumentParser(
+    prog = sys.argv[0]
+    fmt = argparse.RawDescriptionHelpFormatter
+    # Interpreter-prefixed so a pasted example executes verbatim: the script
+    # has no shebang or exec bit, so the bare path is not shell-executable.
+    session_ex = (
+        f'python3 "{prog}" resolve-session-dir'
+        " --context-file /abs/pact-session-context.json"
+    )
+    artifacts_ex = (
+        f'python3 "{prog}" resolve-artifacts'
+        " --session-dir /abs/session --feature slug"
+    )
+
+    parser = _TeachParser(
+        prog=prog,
         description="PACT harvest CLI — off-lead session-dir + artifact "
         "supersede resolutions for the pact-handoff-harvest skill.",
+        formatter_class=fmt,
+        epilog=_cli_examples(session_ex, artifacts_ex),
     )
-    sub = parser.add_subparsers(dest="command")
+    parser._teach_example = session_ex
+    sub = parser.add_subparsers(dest="command", parser_class=_TeachParser)
     sub.required = True
 
     # --- resolve-session-dir ---
     session_p = sub.add_parser(
         "resolve-session-dir",
         help="Reconstruct the absolute session dir from a context file",
+        formatter_class=fmt,
+        epilog=_cli_examples(session_ex),
     )
+    session_p._teach_example = session_ex
     session_p.add_argument(
         "--context-file",
         required=True,
@@ -258,7 +297,10 @@ def main() -> int:
     artifacts_p = sub.add_parser(
         "resolve-artifacts",
         help="Emit the superseded artifact paths-by-workflow for a feature",
+        formatter_class=fmt,
+        epilog=_cli_examples(artifacts_ex),
     )
+    artifacts_p._teach_example = artifacts_ex
     artifacts_p.add_argument(
         "--session-dir",
         required=True,

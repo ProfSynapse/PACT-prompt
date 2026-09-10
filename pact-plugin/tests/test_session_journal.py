@@ -5189,3 +5189,71 @@ class TestArcScopingMalformedResilience:
         # prior(1) excluded by ts; malformed skipped; missing-ts(4) fail-open
         # included; current(2,3) ts-scoped in
         assert task_ids == ["2", "3", "4"]
+
+
+class TestJournalTeachExamples:
+    # Full example lines, content-pinned. prog is the invoked script path
+    # (_SJ_SCRIPT), so each rendered example is the exact pasteable string:
+    # interpreter-prefixed, quoted script path, concrete flags. The epilog is
+    # unwrapped (RawDescriptionHelpFormatter), so a full-line assertion is
+    # width-safe at any COLUMNS.
+    _EXAMPLES = {
+        "write": (
+            f'python3 "{_SJ_SCRIPT}" write'
+            " --type decision --session-dir /abs/session --stdin"
+        ),
+        "read": f'python3 "{_SJ_SCRIPT}" read --session-dir /abs/session',
+        "read-last": (
+            f'python3 "{_SJ_SCRIPT}" read-last'
+            " --type phase_transition --session-dir /abs/session"
+        ),
+    }
+
+    def test_top_level_help_lists_every_example_line(self):
+        result = subprocess.run(
+            [sys.executable, _SJ_SCRIPT, "--help"],
+            capture_output=True, text=True,
+        )
+        assert result.returncode == 0
+        for line in self._EXAMPLES.values():
+            assert line in result.stdout, line
+
+    def test_every_subcommand_help_carries_its_own_example(self):
+        for verb, line in self._EXAMPLES.items():
+            result = subprocess.run(
+                [sys.executable, _SJ_SCRIPT, verb, "--help"],
+                capture_output=True, text=True,
+            )
+            assert result.returncode == 0, verb
+            assert line in result.stdout, verb
+
+    def test_write_missing_flags_exits_2_with_example(self):
+        result = subprocess.run(
+            [sys.executable, _SJ_SCRIPT, "write"],
+            capture_output=True, text=True,
+        )
+        assert result.returncode == 2
+        assert "error:" in result.stderr
+        assert result.stdout == ""
+        # One blank line between the error line and the example.
+        assert f"\n\nExamples:\n  {self._EXAMPLES['write']}\n" in result.stderr
+
+    def test_bare_invocation_is_usage_error_with_one_example(self):
+        result = subprocess.run(
+            [sys.executable, _SJ_SCRIPT],
+            capture_output=True, text=True,
+        )
+        assert result.returncode == 2
+        assert result.stdout == ""
+        assert "error:" in result.stderr
+        assert self._EXAMPLES["write"] in result.stderr
+
+    def test_unknown_top_level_flag_is_usage_error_with_one_example(self):
+        result = subprocess.run(
+            [sys.executable, _SJ_SCRIPT, "--nope"],
+            capture_output=True, text=True,
+        )
+        assert result.returncode == 2
+        assert result.stdout == ""
+        assert "error:" in result.stderr
+        assert self._EXAMPLES["write"] in result.stderr

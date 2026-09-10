@@ -21,8 +21,41 @@
 #     the --files shape).
 # Usage:
 #   ./lint-check.sh --files FILE.py [FILE.py ...]   # import-hygiene mode
-#   ./lint-check.sh [directory]                     # legacy whole-tree mode
+#   ./lint-check.sh DIRECTORY                       # legacy whole-tree mode
+#   ./lint-check.sh --help | -h                     # usage + example, exit 0
+#   A bare run (no arguments, or an empty first argument) is refused:
+#   usage error + example on stderr, exit 2.
 # ============================================================================
+
+# ────────────────────────────────────────────────────────────────────────────
+# Teach prefix: --help / -h, bare refuse, and `--files` plus only help flags.
+# Runs BEFORE --files mode and BEFORE `set -e`. Empty remaining after --files
+# is NOT help (vacuous all-help would steal the SKIPPED contract).
+# ────────────────────────────────────────────────────────────────────────────
+_print_lint_help() {
+    cat <<EOF
+Usage: $0 --files FILE.py [FILE.py ...]
+       $0 DIRECTORY
+
+Examples:
+  $0 --files /abs/path/to/modified.py
+
+--files checks exactly the named .py files (import-hygiene).
+DIRECTORY is legacy whole-tree mode. A bare run (no arguments) is refused.
+EOF
+}
+
+if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
+    _print_lint_help
+    exit 0
+fi
+
+if [ "$#" -eq 0 ] || [ -z "${1}" ]; then
+    echo "error: lint-check.sh requires --files FILE.py [FILE.py ...] (or a directory for legacy whole-tree mode)" >&2
+    echo "Examples:" >&2
+    echo "  $0 --files /abs/path/to/modified.py" >&2
+    exit 2
+fi
 
 # ────────────────────────────────────────────────────────────────────────────
 # Import-hygiene mode (--files). Runs BEFORE `set -e` is enabled: this mode
@@ -31,6 +64,19 @@
 # verdict contract).
 # ────────────────────────────────────────────────────────────────────────────
 if [ "$1" = "--files" ]; then
+    if [ "$#" -gt 1 ]; then
+        _all_help=1
+        for _arg in "${@:2}"; do
+            if [ "$_arg" != "--help" ] && [ "$_arg" != "-h" ]; then
+                _all_help=0
+                break
+            fi
+        done
+        if [ "$_all_help" -eq 1 ]; then
+            _print_lint_help
+            exit 0
+        fi
+    fi
     shift
     SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
@@ -185,8 +231,9 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-# Directory to check (default to current)
-DIR="${1:-.}"
+# Directory to check. Never defaulted: a bare or empty first argument is
+# refused by the teach prefix above, so $1 is always a non-empty string here.
+DIR="${1}"
 
 echo "Running lint check in: $DIR"
 echo "----------------------------------------"

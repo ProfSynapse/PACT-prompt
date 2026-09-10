@@ -269,33 +269,51 @@ def _resync_staleness_resolver_bindings():
 
 
 @pytest.fixture(autouse=True)
-def _restore_claude_project_dir_env():
-    """Snapshot + restore ``os.environ['CLAUDE_PROJECT_DIR']`` around every test
-    (#930). Runs for EVERY test (autouse).
+def _scrub_claude_project_dir_env():
+    """Pop + restore ``os.environ['CLAUDE_PROJECT_DIR']`` around every test.
+    Runs for EVERY test (autouse).
 
-    Some concurrency tests (test_working_memory_concurrency*.py) set
-    ``os.environ['CLAUDE_PROJECT_DIR']`` via DIRECT assignment (NOT
-    ``monkeypatch.setenv``), so it is never restored and LEAKS into later tests
-    — an order-dependent pollution vector. A leaked ``CLAUDE_PROJECT_DIR``
-    redirects ``CLAUDE_PROJECT_DIR``-keyed resolvers (e.g.
-    ``staleness.get_project_claude_md_path``) away from the test's intended root,
-    so a later test silently resolves the wrong project dir. ``monkeypatch``-
-    based env tests are immune (auto-revert); the leak is the direct-assignment
-    ones specifically.
+    Two hazards, one variable:
 
-    This fixture SNAPSHOTS the var at setup and RESTORES it at teardown
-    (set-to-original, or DELETE if it was originally unset) — an unconditional
-    restore, immune to dirty-baseline chains, and a no-op for the vast majority
-    of tests that never touch it. Co-located with the other env/module-state
-    autouse resets (``_reset_pact_context_state`` / ``_reset_specialist_registry_cache``
-    / ``_resync_staleness_resolver_bindings``). CLAUDE_PROJECT_DIR is the
-    CONFIRMED leaker (the only ``CLAUDE_*`` the working_memory tests set); if a
-    sibling direct-assignment leak is ever confirmed (e.g. ``CLAUDE_PLUGIN_ROOT``
-    in test_plugin_manifest.py), generalize this snapshot to the ``CLAUDE_*``
-    namespace.
+    1. CROSS-TEST LEAK (#930). Some concurrency tests
+       (test_working_memory_concurrency*.py) set ``CLAUDE_PROJECT_DIR`` via
+       DIRECT assignment (NOT ``monkeypatch.setenv``), so it is never restored
+       and LEAKS into later tests — an order-dependent pollution vector that
+       redirects ``CLAUDE_PROJECT_DIR``-keyed resolvers (e.g.
+       ``staleness.get_project_claude_md_path``) away from the test's intended
+       root. The setup-time POP makes every test start from a
+       guaranteed-unset baseline regardless of what an earlier test left
+       behind — strictly stronger than the snapshot/restore-only posture this
+       fixture used before (a leaked value could survive into the next test's
+       setup when the snapshot recorded it).
+
+    2. AMBIENT-ENV LEAK (the machine-state family). ``CLAUDE_PROJECT_DIR`` is
+       a LIVE input to production code under test: ``pact_context.init()``
+       derives the session context path from it, and
+       ``backlog.project_root()`` anchors project resolution on it (NOT the
+       process cwd). Running the suite inside a shell that exports the var
+       (a Claude Code hook process, or a developer shell that sourced one)
+       therefore flips environment-sensitive tests from deterministic to
+       machine-dependent: measured as three pre-existing red failures on dev
+       machines that are green on CI (where the var is unset) —
+       test_backlog's "refusal: no root" exit-code arm (reconcile
+       unexpectedly succeeds against the real repo), and both
+       test_bootstrap_prompt_gate no-session tests (init() re-derives a
+       path the test's ``_context_path = None`` patch cannot prevent, and
+       the heal path can then WRITE a context file through the live root).
+       Same posture as the sibling ``_scrub_claude_plugin_root_env`` /
+       ``_scrub_claude_env_file_env``: POP at setup, restore the original
+       ambient value at teardown. Tests that exercise the var set it
+       explicitly via ``monkeypatch.setenv`` (which overrides the scrub for
+       that test); the direct-assignment concurrency tests are unaffected
+       (they set it after setup, inside the test body).
+
+    Co-located with the other env/module-state autouse resets
+    (``_reset_pact_context_state`` / ``_reset_specialist_registry_cache`` /
+    ``_resync_staleness_resolver_bindings``).
     """
     _UNSET = object()
-    original = os.environ.get("CLAUDE_PROJECT_DIR", _UNSET)
+    original = os.environ.pop("CLAUDE_PROJECT_DIR", _UNSET)
     yield
     if original is _UNSET:
         os.environ.pop("CLAUDE_PROJECT_DIR", None)

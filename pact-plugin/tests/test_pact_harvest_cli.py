@@ -675,3 +675,58 @@ class TestParseTsTrailingZAnchor:
         # A string with NO trailing Z is returned byte-for-byte unchanged.
         assert _normalize_trailing_z(
             "2026-06-25T00:00:00+00:00") == "2026-06-25T00:00:00+00:00"
+
+
+class TestHarvestTeachExamples:
+    # Full example lines, content-pinned. prog is the invoked script path
+    # (_CLI), so each rendered example is the exact pasteable string:
+    # interpreter-prefixed, quoted script path, concrete flags. The epilog is
+    # unwrapped (RawDescriptionHelpFormatter), so a full-line assertion is
+    # width-safe at any COLUMNS.
+    _EXAMPLES = {
+        "resolve-session-dir": (
+            f'python3 "{_CLI}" resolve-session-dir'
+            " --context-file /abs/pact-session-context.json"
+        ),
+        "resolve-artifacts": (
+            f'python3 "{_CLI}" resolve-artifacts'
+            " --session-dir /abs/session --feature slug"
+        ),
+    }
+
+    def test_top_level_help_lists_every_example_line(self):
+        r = _run_cli("--help")
+        assert r.returncode == 0
+        for line in self._EXAMPLES.values():
+            assert line in r.stdout, line
+
+    def test_every_subcommand_help_carries_its_own_example(self):
+        for verb, line in self._EXAMPLES.items():
+            r = _run_cli(verb, "--help")
+            assert r.returncode == 0, verb
+            assert line in r.stdout, verb
+
+    def test_missing_context_file_usage_has_example_empty_stdout(self):
+        r = _run_cli("resolve-session-dir")
+        assert r.returncode == 2
+        assert r.stdout == ""
+        assert "error:" in r.stderr
+        # One blank line between the error line and the example.
+        assert (
+            f"\n\nExamples:\n  {self._EXAMPLES['resolve-session-dir']}\n"
+            in r.stderr
+        )
+
+    def test_bare_invocation_is_usage_error_with_one_example(self):
+        r = _run_cli()
+        assert r.returncode == 2
+        assert r.stdout == ""
+        assert "error:" in r.stderr
+        assert self._EXAMPLES["resolve-session-dir"] in r.stderr
+
+    def test_unknown_top_level_flag_is_usage_error_with_one_example(self):
+        r = _run_cli("--nope")
+        assert r.returncode == 2
+        assert r.stdout == ""
+        assert "error:" in r.stderr
+        assert self._EXAMPLES["resolve-session-dir"] in r.stderr

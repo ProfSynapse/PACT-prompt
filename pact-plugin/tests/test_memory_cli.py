@@ -176,7 +176,19 @@ class TestCliArgParsing:
     def test_build_parser_returns_parser(self):
         parser = build_parser()
         assert parser is not None
-        assert parser.prog == "pact-memory"
+        assert parser.prog == sys.argv[0]
+
+    def test_build_parser_prog_keeps_invoked_directory(self, monkeypatch):
+        invoked = "/abs/path/to/cli.py"
+        monkeypatch.setattr(sys, "argv", [invoked])
+        parser = build_parser()
+        assert parser.prog == invoked
+        help_text = parser.format_help()
+        assert invoked in help_text
+        assert "Examples:" in help_text
+        # The example line carries the executable shape: interpreter prefix
+        # and the quoted invoked path.
+        assert f'python3 "{invoked}" save --stdin' in help_text
 
     def test_save_subcommand_parsed(self):
         parser = build_parser()
@@ -2572,7 +2584,8 @@ class TestCliHelpOutput:
             main(["--help"])
         assert exc_info.value.code == 0
         captured = capsys.readouterr()
-        assert "pact-memory" in captured.out
+        assert "PACT Memory" in captured.out
+        assert "Examples:" in captured.out
 
     def test_main_help_lists_subcommands(self, capsys):
         with pytest.raises(SystemExit) as exc_info:
@@ -2597,6 +2610,78 @@ class TestCliHelpOutput:
         captured = capsys.readouterr()
         assert "--limit" in captured.out
         assert "query" in captured.out.lower()
+
+    def test_main_help_contains_examples(self, capsys):
+        with pytest.raises(SystemExit) as exc_info:
+            main(["--help"])
+        assert exc_info.value.code == 0
+        captured = capsys.readouterr()
+        # Full example lines, content-pinned. In-process the examples are
+        # argv[0]-relative: the parser is built inside main() with the test
+        # process's argv[0], so the known constant is sys.argv[0]. The epilog
+        # is unwrapped (RawDescriptionHelpFormatter), so full-line assertions
+        # are width-safe at any COLUMNS.
+        for line in self._example_lines().values():
+            assert line in captured.out, line
+
+    def test_every_subcommand_help_contains_examples(self, capsys):
+        for verb in self._example_lines():
+            with pytest.raises(SystemExit) as exc_info:
+                main([verb, "--help"])
+            assert exc_info.value.code == 0, verb
+            captured = capsys.readouterr()
+            assert self._example_lines()[verb] in captured.out, verb
+
+    def test_get_without_id_is_argparse_usage_with_example(self, capsys):
+        with pytest.raises(SystemExit) as exc_info:
+            main(["get"])
+        assert exc_info.value.code == 2
+        captured = capsys.readouterr()
+        assert captured.out == ""
+        # One blank line between the error line and the example.
+        assert (
+            f"\n\nExamples:\n  {self._example_lines()['get']}\n"
+            in captured.err
+        )
+        with pytest.raises(json.JSONDecodeError):
+            json.loads(captured.err)
+
+    def test_bare_invocation_prints_help_with_examples_exit_one(self, capsys):
+        # This CLI's pre-existing bare contract: subparsers are not required,
+        # so main() prints the full help (epilog Examples included) to stderr
+        # and exits 1 — not the argparse usage-error path.
+        with pytest.raises(SystemExit) as exc_info:
+            main([])
+        assert exc_info.value.code == 1
+        captured = capsys.readouterr()
+        assert captured.out == ""
+        assert self._example_lines()["save"] in captured.err
+
+    def test_unknown_top_level_flag_is_usage_error_with_one_example(self, capsys):
+        with pytest.raises(SystemExit) as exc_info:
+            main(["--nope"])
+        assert exc_info.value.code == 2
+        captured = capsys.readouterr()
+        assert captured.out == ""
+        assert "error:" in captured.err
+        assert self._example_lines()["save"] in captured.err
+
+    @staticmethod
+    def _example_lines():
+        # Interpreter-prefixed, quoted script path, concrete flags: the exact
+        # strings build_parser() renders as pasteable examples.
+        prog = sys.argv[0]
+        return {
+            "save": f'python3 "{prog}" save --stdin',
+            "search": f'python3 "{prog}" search "query"',
+            "list": f'python3 "{prog}" list',
+            "get": f'python3 "{prog}" get <memory-id>',
+            "status": f'python3 "{prog}" status',
+            "setup": f'python3 "{prog}" setup',
+            "update": f'python3 "{prog}" update <memory-id> --stdin',
+            "delete": f'python3 "{prog}" delete <memory-id>',
+            "sync": f'python3 "{prog}" sync',
+        }
 
 
 # ---------------------------------------------------------------------------

@@ -5844,3 +5844,67 @@ def test_file_local_flags_requires_the_subject_pool_argument():
 
     with _pytest.raises(TypeError, match="subject_pool"):
         backlog_store.file_local_flags({"items": []})
+
+
+class TestBacklogTeachExamples:
+    # Full example lines, content-pinned. prog is the invoked script path
+    # (BACKLOG_CLI), so each rendered example is the exact pasteable string:
+    # interpreter-prefixed, quoted script path, concrete flags. The epilog is
+    # unwrapped (RawDescriptionHelpFormatter), so a full-line assertion is
+    # width-safe at any COLUMNS.
+    _EXAMPLES = {
+        "show": f'python3 "{BACKLOG_CLI}" show',
+        "archive": f'python3 "{BACKLOG_CLI}" archive item-id',
+        "add": f'python3 "{BACKLOG_CLI}" add "title"',
+        "set": f'python3 "{BACKLOG_CLI}" set item-id --status done',
+        "repair": f'python3 "{BACKLOG_CLI}" repair',
+    }
+
+    def test_top_level_help_lists_every_example_line(self):
+        r = subprocess.run(
+            [sys.executable, BACKLOG_CLI, "--help"],
+            capture_output=True, text=True,
+        )
+        assert r.returncode == 0
+        for line in self._EXAMPLES.values():
+            assert line in r.stdout, line
+
+    def test_every_subcommand_help_carries_its_own_example(self):
+        for verb, line in self._EXAMPLES.items():
+            r = subprocess.run(
+                [sys.executable, BACKLOG_CLI, verb, "--help"],
+                capture_output=True, text=True,
+            )
+            assert r.returncode == 0, verb
+            assert line in r.stdout, verb
+
+    def test_archive_without_ids_exits_usage_with_its_example(self):
+        r = subprocess.run(
+            [sys.executable, BACKLOG_CLI, "archive"],
+            capture_output=True, text=True,
+        )
+        assert r.returncode == backlog._EXIT_USAGE
+        # One blank line between the error line and the example.
+        assert (
+            f"\n\nExamples:\n  {self._EXAMPLES['archive']}\n" in r.stderr
+        )
+
+    def test_bare_invocation_is_usage_error_with_one_example(self):
+        r = subprocess.run(
+            [sys.executable, BACKLOG_CLI],
+            capture_output=True, text=True,
+        )
+        assert r.returncode == backlog._EXIT_USAGE
+        assert r.stdout == ""
+        assert "error:" in r.stderr
+        assert self._EXAMPLES["show"] in r.stderr
+
+    def test_unknown_top_level_flag_is_usage_error_with_one_example(self):
+        r = subprocess.run(
+            [sys.executable, BACKLOG_CLI, "--nope"],
+            capture_output=True, text=True,
+        )
+        assert r.returncode == backlog._EXIT_USAGE
+        assert r.stdout == ""
+        assert "error:" in r.stderr
+        assert self._EXAMPLES["show"] in r.stderr

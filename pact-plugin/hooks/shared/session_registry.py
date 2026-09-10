@@ -384,15 +384,49 @@ def _read_lead_session_id(team: str) -> str:
 
 if __name__ == "__main__":
     import argparse
+    import sys
 
-    parser = argparse.ArgumentParser(
-        description="PACT teammate session registry (self-registration)."
+    # Teach helpers live inside __main__ (argparse stays off the module import
+    # path — this is a hooks/shared leaf imported by other hooks).
+    def _cli_examples(*lines: str) -> str:
+        return "Examples:\n" + "\n".join(f"  {line}" for line in lines)
+
+    class _TeachParser(argparse.ArgumentParser):
+        """Usage errors stay argparse exit 2 and append one pasteable example."""
+
+        _teach_example = ""
+
+        def error(self, message):
+            self.print_usage(sys.stderr)
+            extra = (
+                f"\n\nExamples:\n  {self._teach_example}\n"
+                if self._teach_example
+                else "\n"
+            )
+            self.exit(2, f"{self.prog}: error: {message}{extra}")
+
+    # Interpreter-prefixed so a pasted example executes verbatim: the script
+    # has no shebang or exec bit, so the bare path is not shell-executable.
+    prog = sys.argv[0]
+    fmt = argparse.RawDescriptionHelpFormatter
+    register_ex = f'python3 "{prog}" register --name "<name>@<team>"'
+
+    parser = _TeachParser(
+        prog=prog,
+        description="PACT teammate session registry (self-registration).",
+        formatter_class=fmt,
+        epilog=_cli_examples(register_ex),
     )
-    subparsers = parser.add_subparsers(dest="command")
+    parser._teach_example = register_ex
+    subparsers = parser.add_subparsers(dest="command", parser_class=_TeachParser)
     subparsers.required = True
     reg = subparsers.add_parser(
-        "register", help="register own session_id -> name@team"
+        "register",
+        help="register own session_id -> name@team",
+        formatter_class=fmt,
+        epilog=_cli_examples(register_ex),
     )
+    reg._teach_example = register_ex
     reg.add_argument(
         "--name", required=True, help="the teammate's own '<name>@<team>' value"
     )
