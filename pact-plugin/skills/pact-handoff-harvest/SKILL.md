@@ -431,7 +431,7 @@ After processing HANDOFFs, gather calibration metrics for the orchestrator's var
     summary="Calibration check: variety {X}")
   ```
 - On team-lead's response, compute the full CalibrationRecord and save to pact-memory with entities `['orchestration_calibration', '{domain}']`
-- **Consumer exclusivity guard**: the calibration figures read the `variety_assessed` stream ONLY (the Step 10 selection above). `task_metadata_snapshot` events also carry `variety` payloads, but the snapshot is a recovery/breadth source for sibling-key CONTENT (Step 3.1) and must NEVER become an additive second source for the calibration figures — counting both would double-count dispatches.
+- **Consumer exclusivity guard**: the calibration figures read the `variety_assessed` stream ONLY (the Step 10 selection above). `task_metadata_snapshot` events also carry `variety` payloads, but the snapshot is a recovery/breadth source for sibling-key CONTENT (Step 3.1) and must NEVER become an additive second source for the calibration figures — counting both would double-count the feature score.
 
 ---
 

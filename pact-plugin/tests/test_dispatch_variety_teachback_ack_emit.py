@@ -36,8 +36,9 @@ LEAD = "PACT:pact-orchestrator"
 TEAMMATE = "pact-devops-engineer"
 VARIETY = {"novelty": 3, "scope": 3, "uncertainty": 3, "risk": 3, "total": 12}
 
-# The canonical 5 keys the dispatch_variety emit must project to (§5.1: the 4
-# dimensions + total — the *_rationale strings are NOT mirrored).
+# The canonical 5 keys the dispatch_variety emit must project to
+# (§Per-Dispatch Variety Stamping: the 4 dimensions + total — the
+# *_rationale strings are NOT mirrored).
 CANONICAL_VARIETY_KEYS = {"novelty", "scope", "uncertainty", "risk", "total"}
 
 # A realistic on-disk stamp as the orchestrator writes it: the 5 canonical keys
@@ -79,12 +80,13 @@ class TestM9DispatchVariety:
         assert len(dv) == 1
         assert dv[0]["task_id"] == "99"
         assert dv[0]["variety"] == VARIETY
-        # The projection is canonical: exactly the 5 §5.1 keys, no extras.
+        # The projection is canonical: exactly the 5
+        # §Per-Dispatch Variety Stamping keys, no extras.
         assert set(dv[0]["variety"].keys()) == CANONICAL_VARIETY_KEYS
 
     def test_emit_projects_to_canonical_keys_dropping_rationales(self, emit_events):
-        """§5.1 trim: a stamp carrying *_rationale strings emits ONLY the 4
-        dimensions + total — the rationale keys are NOT mirrored to the journal.
+        """§Per-Dispatch Variety Stamping trim: a stamp carrying *_rationale
+        strings emits ONLY the 4 dimensions + total — the rationale keys are NOT mirrored to the journal.
         NON-VACUITY: the input dict explicitly contains four *_rationale keys;
         without the projection the emitted variety would carry all 9 keys."""
         tlg.evaluate_lifecycle({

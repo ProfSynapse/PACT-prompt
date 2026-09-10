@@ -114,7 +114,8 @@ _REQUIRED_FIELDS_BY_TYPE: dict[str, dict[str, type]] = {
     # task_id is the Task-B id; variety is the 5-key dict (4 dims + total).
     # The emitter PROJECTS metadata.variety to exactly these 5 keys
     # (DISPATCH_VARIETY_KEYS) before append — the *_rationale strings are NOT
-    # mirrored (pact-variety.md §5.1). WRITE-ONLY today: no consumer reads
+    # mirrored (pact-variety.md §Per-Dispatch Variety Stamping). WRITE-ONLY
+    # today: no consumer reads
     # this type. wrap-up Q5 does not — its dispatch-side population is the
     # `dispatch_site` stream, and its as-dispatched fallbacks are the
     # `dispatch_site` event's own variety and the dispatch-marked
