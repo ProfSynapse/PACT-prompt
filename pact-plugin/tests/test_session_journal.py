@@ -797,6 +797,218 @@ class TestReadLastEvent:
         assert result is None
 
 
+class TestReadLastEventExcludeScope:
+    """`exclude_scope` — the per-dispatch-mirror guard for read-last.
+
+    Bugbot T1 (cycle 3): orchestrate's post-compaction recovery reads the
+    feature's `variety_assessed` via read-last, and per-dispatch mirrors
+    (`scope: "dispatch"`) land LATER in the journal than the feature-level
+    assessment — so an unfiltered reverse scan returns a Task-B dispatch
+    total as the feature assessment. The exclusion skips any event whose
+    TOP-LEVEL `scope` equals the given value; events with no `scope` field
+    or a different value are unaffected, and the exclusion threads BOTH
+    scan paths (tail window and full-slurp fallback) so an excluded event
+    found in the tail cannot be resurrected by the fallback.
+    """
+
+    def _write_journal(self, session_dir, events):
+        from shared.session_journal import make_event
+
+        path = Path(session_dir) / "session-journal.jsonl"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        lines = [
+            json.dumps(make_event(**spec)) for spec in events
+        ]
+        path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        return path
+
+    FEATURE = {
+        "event_type": "variety_assessed",
+        "task_id": "5",
+        "variety": {"total": 9},
+        "ts": "2026-09-10T08:00:00Z",
+    }
+    DISPATCH_LATER = {
+        "event_type": "variety_assessed",
+        "task_id": "7",
+        "scope": "dispatch",
+        "variety": {"total": 4},
+        "ts": "2026-09-10T09:00:00Z",
+    }
+    DISPATCH_LATEST = {
+        "event_type": "variety_assessed",
+        "task_id": "8",
+        "scope": "dispatch",
+        "variety": {"total": 5},
+        "ts": "2026-09-10T10:00:00Z",
+    }
+
+    def test_unfiltered_read_returns_the_dispatch_mirror(self, session_dir):
+        """The defect itself, as a control: without the exclusion the
+        reverse scan returns the LATEST dispatch mirror."""
+        from shared.session_journal import read_last_event_from
+
+        self._write_journal(
+            session_dir,
+            [self.FEATURE, self.DISPATCH_LATER, self.DISPATCH_LATEST],
+        )
+        event = read_last_event_from(session_dir, "variety_assessed")
+        assert event is not None
+        assert event["task_id"] == "8"
+
+    def test_exclude_scope_returns_the_feature_event(self, session_dir):
+        """The fix: with the exclusion, the scan skips both dispatch
+        mirrors and returns the feature-level assessment."""
+        from shared.session_journal import read_last_event_from
+
+        self._write_journal(
+            session_dir,
+            [self.FEATURE, self.DISPATCH_LATER, self.DISPATCH_LATEST],
+        )
+        event = read_last_event_from(
+            session_dir, "variety_assessed", exclude_scope="dispatch"
+        )
+        assert event is not None
+        assert event["task_id"] == "5"
+        assert event["variety"] == {"total": 9}
+
+    def test_all_matching_excluded_returns_none(self, session_dir):
+        """Every event of the type carries the excluded scope → None (the
+        caller's no-event fail-open path), never a resurrection of an
+        excluded event via the full-slurp fallback."""
+        from shared.session_journal import read_last_event_from
+
+        self._write_journal(
+            session_dir, [self.DISPATCH_LATER, self.DISPATCH_LATEST]
+        )
+        assert read_last_event_from(
+            session_dir, "variety_assessed", exclude_scope="dispatch"
+        ) is None
+
+    def test_other_scope_values_and_absent_scope_are_kept(
+        self, session_dir,
+    ):
+        """The exclusion is VALUE-exact: an event carrying a different
+        top-level scope value, and one with no scope field, both remain
+        readable."""
+        from shared.session_journal import read_last_event_from
+
+        other_scope = {
+            "event_type": "variety_assessed",
+            "task_id": "9",
+            "scope": "review",
+            "variety": {"total": 6},
+            "ts": "2026-09-10T11:00:00Z",
+        }
+        self._write_journal(
+            session_dir, [self.FEATURE, self.DISPATCH_LATER, other_scope]
+        )
+        event = read_last_event_from(
+            session_dir, "variety_assessed", exclude_scope="dispatch"
+        )
+        assert event is not None
+        assert event["task_id"] == "9"
+
+    def test_exclusion_threads_the_full_slurp_fallback(
+        self, journal_home, session_dir,
+    ):
+        """Large-journal arm: the feature event sits DEEP (outside the
+        tail window) behind padding, dispatch mirrors sit near EOF. The
+        exclusion must hold on the fallback path too — the tail holds only
+        excluded matches, the full slurp must still skip them and return
+        the deep feature event."""
+        from shared.session_journal import (
+            _TAIL_WINDOW_BYTES,
+            append_event,
+            get_journal_path,
+            make_event,
+            read_last_event_from,
+        )
+
+        def pad(past_bytes):
+            """Append filler until the journal grows by `past_bytes` beyond
+            its current size, pushing earlier events out of the tail
+            window."""
+            start = (
+                journal_path.stat().st_size if journal_path.exists() else 0
+            )
+            while (
+                not journal_path.exists()
+                or journal_path.stat().st_size < start + past_bytes
+            ):
+                append_event(
+                    make_event("checkpoint", phase="filler", data="x" * 400)
+                )
+
+        journal_path = Path(get_journal_path())
+        pad(_TAIL_WINDOW_BYTES + 1024)
+        append_event(make_event(
+            "variety_assessed",
+            task_id="5",
+            variety={"total": 9},
+            ts="2026-09-10T08:00:00Z",
+        ))
+        # Push the feature event out of the tail window, then land a
+        # dispatch mirror at EOF so the tail holds ONLY an excluded match.
+        pad(_TAIL_WINDOW_BYTES + 1024)
+        append_event(make_event(
+            "variety_assessed",
+            task_id="7",
+            scope="dispatch",
+            variety={"total": 4},
+            ts="2026-09-10T09:00:00Z",
+        ))
+
+        event = read_last_event_from(
+            session_dir, "variety_assessed", exclude_scope="dispatch"
+        )
+        assert event is not None
+        assert event["task_id"] == "5"
+
+    def test_cli_exclude_scope_flag_filters(
+        self, journal_home, session_dir,
+    ):
+        """The CLI flag reaches the same exclusion: the recovery prose
+        invokes read-last through the CLI, so the pin is on the flag
+        path, not only the Python API."""
+        self._write_journal(
+            session_dir,
+            [self.FEATURE, self.DISPATCH_LATER, self.DISPATCH_LATEST],
+        )
+        result = subprocess.run(
+            [
+                sys.executable, _SJ_SCRIPT, "read-last",
+                "--session-dir", str(session_dir),
+                "--type", "variety_assessed",
+                "--exclude-scope", "dispatch",
+            ],
+            capture_output=True, text=True,
+            env={**os.environ, "HOME": str(journal_home)},
+        )
+        assert result.returncode == 0, result.stderr
+        assert json.loads(result.stdout)["task_id"] == "5"
+
+    def test_cli_without_the_flag_returns_the_dispatch_mirror(
+        self, journal_home, session_dir,
+    ):
+        """CLI default is byte-identical to the pre-flag behavior."""
+        self._write_journal(
+            session_dir,
+            [self.FEATURE, self.DISPATCH_LATER, self.DISPATCH_LATEST],
+        )
+        result = subprocess.run(
+            [
+                sys.executable, _SJ_SCRIPT, "read-last",
+                "--session-dir", str(session_dir),
+                "--type", "variety_assessed",
+            ],
+            capture_output=True, text=True,
+            env={**os.environ, "HOME": str(journal_home)},
+        )
+        assert result.returncode == 0, result.stderr
+        assert json.loads(result.stdout)["task_id"] == "8"
+
+
 # ---------------------------------------------------------------------------
 # _read_last_event_at() — tail-streamed branch coverage
 # ---------------------------------------------------------------------------
@@ -1023,13 +1235,20 @@ class TestReadLastEventTailStreamed:
             f"expected_seek_pos={expected_seek_pos}."
         )
 
-        # Monkeypatch _scan_lines_for_event to count invocations.
+        # Monkeypatch _scan_lines_for_event to count invocations. The
+        # wrapper's signature must forward `exclude_scope` (added with the
+        # per-dispatch-mirror guard): _read_last_event_at passes it
+        # positionally on every scan path, and a wrapper that drops it
+        # raises TypeError inside the outer fail-open except, which reads
+        # downstream as "no event found".
         call_count = {"n": 0}
         original_scan = sj._scan_lines_for_event
 
-        def counting_scan(lines, event_type, since=None):
+        def counting_scan(lines, event_type, since=None, exclude_scope=None):
             call_count["n"] += 1
-            return original_scan(lines, event_type, since)
+            return original_scan(
+                lines, event_type, since, exclude_scope
+            )
 
         monkeypatch.setattr(sj, "_scan_lines_for_event", counting_scan)
 

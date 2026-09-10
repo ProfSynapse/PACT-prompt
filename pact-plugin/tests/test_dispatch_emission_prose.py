@@ -159,6 +159,54 @@ class TestWrapUpQ5Consumption:
         assert "--type variety_assessed --since '{arc_start}'" in wrap_up
 
 
+class TestRecoveryReadLastUsesTheFilteredForm:
+    """The post-compaction recovery read must exclude per-dispatch mirrors.
+
+    orchestrate.md's state-recovery step reads the feature's
+    `variety_assessed` via `read-last`, and per-dispatch mirrors land LATER
+    in the journal than the feature-level assessment — without the
+    `--exclude-scope dispatch` flag the reverse scan returns a Task-B
+    dispatch total as the feature assessment, silently corrupting the
+    variety-band gates rebuilt after compaction. The prose and the CLI
+    flag are pinned against each other so neither can drift alone.
+    """
+
+    def test_recovery_read_carries_the_exclusion(self):
+        text = (COMMANDS / "orchestrate.md").read_text()
+        assert (
+            "read-last --session-dir '{session_dir}' --type "
+            "variety_assessed --exclude-scope dispatch" in text
+        ), (
+            "orchestrate.md's post-compaction variety recovery must use "
+            "the --exclude-scope dispatch form; an unfiltered read-last "
+            "returns a per-dispatch mirror as the feature assessment"
+        )
+
+    def test_the_flag_name_matches_the_cli_registration(self):
+        """Prose/CLI spelling agreement: the flag the prose names is the
+        flag the parser registers, so a rename on one side reddens here
+        rather than silently stranding the other."""
+        import sys
+
+        hooks = str(PLUGIN_ROOT / "hooks")
+        if hooks not in sys.path:
+            sys.path.insert(0, hooks)
+        from shared import session_journal as sj
+
+        parser = sj._build_cli()
+        # argparse exposes each subparser's option strings; assert the
+        # read-last subparser carries --exclude-scope.
+        actions_by_command = {
+            choice: sub
+            for choice, sub in parser._subparsers._group_actions[0].choices.items()  # noqa: SLF001
+        }
+        last = actions_by_command["read-last"]
+        option_strings = {
+            opt for a in last._actions for opt in a.option_strings  # noqa: SLF001
+        }
+        assert "--exclude-scope" in option_strings
+
+
 class TestDiscriminatorConstant:
     """The code-side spelling and the prose-side spelling agree. The
     consumers import VARIETY_ASSESSED_DISPATCH_SCOPE; the emission sites

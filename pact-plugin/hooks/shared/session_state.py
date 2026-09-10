@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import json
 import re
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -40,7 +41,7 @@ from shared.constants import (
     VARIETY_ASSESSED_DISPATCH_SCOPE,
 )
 from shared.paths import get_claude_config_dir
-from shared.session_journal import read_events_from
+from shared.session_journal import _parse_ts, read_events_from
 
 
 # Maximum length for sanitized render-bound strings. Matches the
@@ -268,6 +269,48 @@ def _derive_phase_from_journal(
     return max(active_entries)[1]
 
 
+def _latest_feature_level_variety_event(
+    events: list[dict[str, Any]],
+) -> dict[str, Any] | None:
+    """Return the LATEST-ts feature-level `variety_assessed` event, or None.
+
+    Feature-level means: type `variety_assessed` AND NOT dispatch-marked
+    (top-level `scope` equal to VARIETY_ASSESSED_DISPATCH_SCOPE). LATEST is
+    the greatest PARSED instant, first-wins on an equal instant — the same
+    selection direction as `variety_divergence.resolve_arc_start`, because
+    both pick a CURRENT-ARC boundary/marker: in a resumed multi-arc session
+    the latest feature-level event is the current arc's, while the FIRST
+    binds renders to a prior arc. An event with a missing or unparseable
+    `ts` cannot be ordered against the others and is skipped; if no
+    feature-level event has a usable `ts`, None (the caller's fail-open
+    paths take over, exactly as when no `variety_assessed` exists at all).
+
+    Uses `session_journal._parse_ts` (the module this file already
+    imports from) rather than a local copy: the Z-vs-+00:00 normalization
+    is one implementation with three call sites across modules, and a
+    fourth copy here would be the drift the extraction exists to prevent.
+    """
+    latest: dict[str, Any] | None = None
+    latest_dt: datetime | None = None
+    for event in events:
+        if not isinstance(event, dict):
+            continue
+        if event.get("type") != "variety_assessed":
+            continue
+        if event.get("scope") == VARIETY_ASSESSED_DISPATCH_SCOPE:
+            continue
+        try:
+            dt = _parse_ts(event.get("ts"))
+            # Strict `>` keeps the FIRST of two equal instants — the
+            # boundary-selection direction; see the docstring.
+            if latest_dt is None or dt > latest_dt:
+                latest_dt = dt
+                latest = event
+        except (ValueError, TypeError):
+            continue
+    return latest
+
+
 def _derive_feature_from_journal(
     events: list[dict[str, Any]],
 ) -> tuple[str | None, str | None]:
@@ -275,21 +318,24 @@ def _derive_feature_from_journal(
     Return (feature_id, feature_subject) derived from the session
     journal.
 
-    Primary source: the `task_id` of the first feature-level
-    variety_assessed event. Feature-level events are written by the
-    orchestrate feature assessment, the comPACT feature task, and the
-    rePACT sub-feature task — each once per arc — so this is the
-    unambiguous feature marker whenever present, and in a comPACT/rePACT
-    session the primary source now resolves where the agent_dispatch
-    fallback below used to (the derived feature shifts to the
-    comPACT/rePACT feature task itself — a closer marker, intended;
+    Primary source: the `task_id` of the LATEST feature-level
+    variety_assessed event (selected by `_latest_feature_level_variety_event`).
+    Feature-level events are written by the orchestrate feature assessment,
+    the comPACT feature task, and the rePACT sub-feature task — each once
+    per arc — so this is the unambiguous feature marker whenever present,
+    and in a comPACT/rePACT session the primary source resolves where the
+    agent_dispatch fallback below used to (the derived feature shifts to
+    the comPACT/rePACT feature task itself — a closer marker, intended;
     legacy journals carry no such events and render identically). The
-    FIRST event by ts wins, so a resumed multi-arc session derives its
-    earliest arc's feature — the pre-existing multi-feature semantics,
-    unchanged. Dispatch-marked events (TOP-LEVEL `scope` equal to
-    VARIETY_ASSESSED_DISPATCH_SCOPE — the per-dispatch mirrors the
-    dispatch command prose writes at the Task-B stamp site) are excluded
-    BEFORE the first-event selection: they can land before any
+    LATEST event by parsed ts wins, so a resumed multi-arc session derives
+    its CURRENT arc's feature — the same current-arc selection
+    `resolve_arc_start` applies. (The earlier first-event premise bound
+    compaction/briefing renders to the OLDEST arc once per-arc feature
+    events existed; first==latest in a single-arc session, so only
+    resumed sessions change behavior.) Dispatch-marked events (TOP-LEVEL
+    `scope` equal to VARIETY_ASSESSED_DISPATCH_SCOPE — the per-dispatch
+    mirrors the dispatch command prose writes at the Task-B stamp site)
+    are excluded from the selection: they can land before any
     feature-level event (a plan-mode consultation in a fresh session is
     the likeliest ordering), and this helper breaks on EVENT ORDERING,
     not on task-id collision — an un-excluded per-dispatch event would
@@ -320,18 +366,10 @@ def _derive_feature_from_journal(
     OR non-system agent_dispatch — correctly reflects "no feature task
     yet declared".
     """
-    variety_events = sorted(
-        [
-            e
-            for e in events
-            if e.get("type") == "variety_assessed"
-            and e.get("scope") != VARIETY_ASSESSED_DISPATCH_SCOPE
-        ],
-        key=lambda e: e.get("ts", ""),
-    )
+    feature_event = _latest_feature_level_variety_event(events)
     feature_id: str | None = None
-    if variety_events:
-        raw_id = variety_events[0].get("task_id")
+    if feature_event is not None:
+        raw_id = feature_event.get("task_id")
         if isinstance(raw_id, str) and raw_id:
             feature_id = raw_id
 
@@ -395,31 +433,27 @@ def _derive_variety_from_journal(
     events: list[dict[str, Any]],
 ) -> Any:
     """
-    Return the variety dict from the first variety_assessed event, or
-    None if no such event exists. Opaque passthrough — this helper does
-    not interpret the dict; consumers resolve the scalar total they need.
-    Keeping the full dict preserves future flexibility (the
-    novelty/scope/uncertainty/risk dimensions stay available to consumers
-    that want them; the compaction-hook render resolves a single total
-    via the shared `resolve_variety_total` helper, which prefers the
-    canonical `total` key — see its docstring for the fallback chain).
-    Dispatch-marked events (TOP-LEVEL `scope` equal to
-    VARIETY_ASSESSED_DISPATCH_SCOPE) are excluded for the same reason
-    `_derive_feature_from_journal` excludes them: the FIRST event must
-    mean feature-level, and a per-dispatch mirror can land first. An
-    event with no `scope` field remains feature-level by construction.
+    Return the variety dict from the LATEST feature-level
+    variety_assessed event, or None if no such event exists (selected by
+    `_latest_feature_level_variety_event`, the same current-arc selection
+    `_derive_feature_from_journal` uses — the two helpers must agree on
+    WHICH event is the feature's, or a resumed session renders one arc's
+    feature id under another arc's variety). Opaque passthrough — this
+    helper does not interpret the dict; consumers resolve the scalar
+    total they need. Keeping the full dict preserves future flexibility
+    (the novelty/scope/uncertainty/risk dimensions stay available to
+    consumers that want them; the compaction-hook render resolves a
+    single total via the shared `resolve_variety_total` helper, which
+    prefers the canonical `total` key — see its docstring for the
+    fallback chain). Dispatch-marked events (TOP-LEVEL `scope` equal to
+    VARIETY_ASSESSED_DISPATCH_SCOPE) are excluded: a per-dispatch mirror
+    must never supply the feature's variety, whichever position it lands
+    in. An event with no `scope` field remains feature-level by
+    construction.
     """
-    variety_events = sorted(
-        [
-            e
-            for e in events
-            if e.get("type") == "variety_assessed"
-            and e.get("scope") != VARIETY_ASSESSED_DISPATCH_SCOPE
-        ],
-        key=lambda e: e.get("ts", ""),
-    )
-    for v in variety_events:
-        variety = v.get("variety")
+    feature_event = _latest_feature_level_variety_event(events)
+    if feature_event is not None:
+        variety = feature_event.get("variety")
         if variety is not None:
             return variety
     return None

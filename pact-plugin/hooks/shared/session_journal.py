@@ -1285,6 +1285,7 @@ def _read_events_at(
 def read_last_event(
     event_type: str,
     since: str | None = None,
+    exclude_scope: str | None = None,
 ) -> dict[str, Any] | None:
     """
     Read the most recent event of a given type from the current session's journal.
@@ -1295,6 +1296,9 @@ def read_last_event(
 
     Args:
         event_type: Event type to search for.
+        since: Optional arc-scope lower bound (inclusive).
+        exclude_scope: Optional TOP-LEVEL `scope` value to skip (see
+            `_scan_lines_for_event` for the consumer rationale).
 
     Returns:
         The last matching event dict, or None if not found.
@@ -1313,7 +1317,7 @@ def read_last_event(
                     file=sys.stderr,
                 )
             return None
-        return _read_last_event_at(journal, event_type, since)
+        return _read_last_event_at(journal, event_type, since, exclude_scope)
     except Exception:
         return None
 
@@ -1322,6 +1326,7 @@ def read_last_event_from(
     session_dir: str,
     event_type: str,
     since: str | None = None,
+    exclude_scope: str | None = None,
 ) -> dict[str, Any] | None:
     """
     Read the most recent event of a given type from a specific session's journal.
@@ -1332,6 +1337,9 @@ def read_last_event_from(
     Args:
         session_dir: Absolute path to the session directory.
         event_type: Event type to search for.
+        since: Optional arc-scope lower bound (inclusive).
+        exclude_scope: Optional TOP-LEVEL `scope` value to skip (see
+            `_scan_lines_for_event` for the consumer rationale).
 
     Returns:
         The last matching event dict, or None if not found.
@@ -1349,13 +1357,14 @@ def read_last_event_from(
         )
         return None
     journal = _journal_path_from(session_dir)
-    return _read_last_event_at(journal, event_type, since)
+    return _read_last_event_at(journal, event_type, since, exclude_scope)
 
 
 def _scan_lines_for_event(
     lines: list[str],
     event_type: str,
     since: str | None = None,
+    exclude_scope: str | None = None,
 ) -> dict[str, Any] | None:
     """Reverse-iterate decoded lines, returning the first matching event.
 
@@ -1373,6 +1382,15 @@ def _scan_lines_for_event(
     `since`: when set, an event matching `event_type` whose `ts` is < `since`
     (parsed via `_ts_ge`) is skipped — the reverse scan then returns the
     most recent matching event at/after `since`, or None.
+
+    `exclude_scope`: when set, an event whose TOP-LEVEL `scope` field equals
+    this value is skipped regardless of position. Consumers:
+    `variety_assessed` recovery reads (orchestrate's post-compaction
+    state-recovery step) exclude `"dispatch"` so the reverse scan does not
+    surface a per-dispatch mirror — which lands later in the journal than
+    the feature-level assessment — as the feature's assessment. Absent or
+    differing `scope` values are unaffected, so no other event type's
+    read-last changes behavior.
     """
     for line in reversed(lines):
         line = line.strip()
@@ -1385,6 +1403,11 @@ def _scan_lines_for_event(
             if event.get("type") == event_type and _ts_ge(
                 event.get("ts"), since
             ):
+                if (
+                    exclude_scope is not None
+                    and event.get("scope") == exclude_scope
+                ):
+                    continue
                 return event
         except (json.JSONDecodeError, ValueError):
             continue
@@ -1395,8 +1418,13 @@ def _read_last_event_at(
     journal: Path,
     event_type: str,
     since: str | None = None,
+    exclude_scope: str | None = None,
 ) -> dict[str, Any] | None:
     """Shared reverse-scan implementation for both implicit and explicit APIs.
+
+    `exclude_scope` threads to `_scan_lines_for_event` on BOTH scan paths
+    (tail window and full slurp), so an excluded event found in the tail
+    cannot be resurrected by the fallback and vice versa.
 
     Performance: reads the trailing `_TAIL_WINDOW_BYTES` first and scans
     that window in reverse; only falls back to a full-file slurp when the
@@ -1436,6 +1464,7 @@ def _read_last_event_at(
                 ).splitlines(),
                 event_type,
                 since,
+                exclude_scope,
             )
 
         # Large journal: tail-window-first, full-slurp fallback.
@@ -1452,7 +1481,9 @@ def _read_last_event_at(
         if tail_lines:
             tail_lines = tail_lines[1:]
 
-        match = _scan_lines_for_event(tail_lines, event_type, since)
+        match = _scan_lines_for_event(
+            tail_lines, event_type, since, exclude_scope
+        )
         if match is not None:
             return match
 
@@ -1467,6 +1498,7 @@ def _read_last_event_at(
             ).splitlines(),
             event_type,
             since,
+            exclude_scope,
         )
 
     except Exception:
@@ -1780,6 +1812,11 @@ def _build_cli():
     last_p.add_argument("--since", default=None,
                         help="Arc-scope lower bound (inclusive): only consider "
                              "events with ts >= this ISO-8601 UTC timestamp.")
+    last_p.add_argument("--exclude-scope", default=None, dest="exclude_scope",
+                        help="Skip events whose TOP-LEVEL scope field equals "
+                             "this value (e.g. --exclude-scope dispatch keeps "
+                             "a variety_assessed read-last on the feature-"
+                             "level assessment, skipping per-dispatch mirrors).")
     return parser
 
 
@@ -1874,7 +1911,10 @@ def main() -> int:
         if rc != 0:
             return rc
         event = read_last_event_from(
-            args.session_dir, args.event_type, since=args.since
+            args.session_dir,
+            args.event_type,
+            since=args.since,
+            exclude_scope=args.exclude_scope,
         )
         if event is None:
             print("null")

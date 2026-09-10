@@ -1153,19 +1153,73 @@ class TestDeriveFeatureFromJournal:
         feature_id, _ = _derive_feature_from_journal(events)
         assert feature_id == "7"
 
-    def test_legacy_field_absent_first_event_still_feature_level(self):
-        """Legacy polarity: with no scope field anywhere, the first event
-        is the feature exactly as before the discriminator existed."""
+    def test_two_arc_journal_derives_the_current_arc_feature(self):
+        """Bugbot T2: a comPACT-then-orchestrate journal holds one
+        feature-level event per arc; the derived feature must be the
+        CURRENT (latest-ts) arc's, not the first arc's — compaction and
+        briefing renders bind to whatever this selects. Counter-test:
+        reverting to first-event selection returns "3" and fails here."""
         events = [
             make_event("variety_assessed", task_id="3",
                        variety={"total": 8},
-                       ts="2026-04-14T00:00:01Z"),
-            make_event("variety_assessed", task_id="4",
-                       variety={"total": 9},
+                       ts="2026-04-14T00:00:01Z"),  # arc 1 feature
+            make_event("variety_assessed", task_id="9", scope="dispatch",
+                       variety={"total": 5},
                        ts="2026-04-14T00:00:02Z"),
+            make_event("variety_assessed", task_id="6",
+                       variety={"total": 11},
+                       ts="2026-04-14T00:00:03Z"),  # arc 2 feature (current)
+            make_event("variety_assessed", task_id="12", scope="dispatch",
+                       variety={"total": 6},
+                       ts="2026-04-14T00:00:04Z"),
+        ]
+        feature_id, _ = _derive_feature_from_journal(events)
+        assert feature_id == "6"
+
+    def test_latest_selection_compares_parsed_instants_not_strings(self):
+        """Latest-ts selection must survive MIXED ts formats: the later
+        instant is expressed in +00:00 form and the earlier in Z form.
+        The hour difference makes the parsed-instant winner unambiguous
+        ('3'), while the formats exercise the _parse_ts normalization; a
+        first-event implementation returns '6'."""
+        events = [
+            make_event("variety_assessed", task_id="3",
+                       variety={"total": 8},
+                       ts="2026-04-14T13:00:00+00:00"),  # later instant
+            make_event("variety_assessed", task_id="6",
+                       variety={"total": 9},
+                       ts="2026-04-14T12:00:00Z"),  # earlier instant
         ]
         feature_id, _ = _derive_feature_from_journal(events)
         assert feature_id == "3"
+
+    def test_equal_instant_tie_keeps_the_first_seen(self):
+        """Equal instants across ts formats resolve first-seen-in-list,
+        the boundary-selection direction resolve_arc_start uses."""
+        events = [
+            make_event("variety_assessed", task_id="3",
+                       variety={"total": 8},
+                       ts="2026-04-14T12:00:00Z"),
+            make_event("variety_assessed", task_id="6",
+                       variety={"total": 9},
+                       ts="2026-04-14T12:00:00+00:00"),
+        ]
+        feature_id, _ = _derive_feature_from_journal(events)
+        assert feature_id == "3"
+
+    def test_unparseable_ts_events_are_skipped_fail_open(self):
+        """An event whose ts cannot parse cannot be ordered and is
+        skipped; when nothing parseable remains, the variety source
+        yields no feature and the agent_dispatch fallback runs."""
+        events = [
+            make_event("variety_assessed", task_id="4",
+                       variety={"total": 8}, ts="garbage"),
+            make_event("agent_dispatch", agent="coder", task_id="D1",
+                       phase="CODE", ts="2026-04-14T00:00:02Z"),
+        ]
+        assert _derive_variety_from_journal(events) is None
+        feature_id, _ = _derive_feature_from_journal(events)
+        assert feature_id == "D1"
 
 
 class TestDeriveVarietyFromJournal:
@@ -1174,8 +1228,11 @@ class TestDeriveVarietyFromJournal:
     def test_no_variety_events_returns_none(self):
         assert _derive_variety_from_journal([]) is None
 
-    def test_first_variety_event_wins(self):
-        """The first (chronologically-earliest) variety_assessed wins."""
+    def test_latest_variety_event_wins(self):
+        """The LATEST (current-arc) feature-level event's variety wins —
+        the same selection _derive_feature_from_journal applies, so a
+        resumed session cannot render one arc's feature id under another
+        arc's variety."""
         events = [
             make_event("variety_assessed", task_id="1",
                        variety={"first": True},
@@ -1184,12 +1241,12 @@ class TestDeriveVarietyFromJournal:
                        variety={"second": True},
                        ts="2026-04-14T00:00:02Z"),
         ]
-        assert _derive_variety_from_journal(events) == {"first": True}
+        assert _derive_variety_from_journal(events) == {"second": True}
 
     def test_dispatch_marked_events_are_excluded(self):
-        """Dispatch-marked mirrors never supply the feature variety: the
-        first FEATURE-LEVEL event wins even when a dispatch-marked event
-        is chronologically first."""
+        """Dispatch-marked mirrors never supply the feature variety — a
+        LATER dispatch-marked event must not shadow an earlier
+        feature-level one, and an earlier one must not preempt it."""
         events = [
             make_event("variety_assessed", task_id="12", scope="dispatch",
                        variety={"dispatch": True},
@@ -1197,6 +1254,9 @@ class TestDeriveVarietyFromJournal:
             make_event("variety_assessed", task_id="5",
                        variety={"feature": True},
                        ts="2026-04-14T00:00:02Z"),
+            make_event("variety_assessed", task_id="13", scope="dispatch",
+                       variety={"dispatch2": True},
+                       ts="2026-04-14T00:00:03Z"),
         ]
         assert _derive_variety_from_journal(events) == {"feature": True}
 
