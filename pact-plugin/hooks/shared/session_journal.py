@@ -106,19 +106,22 @@ _REQUIRED_FIELDS_BY_TYPE: dict[str, dict[str, type]] = {
     # variety (written once for the feature task) — distinct from the
     # per-dispatch dispatch_variety below.
     "variety_assessed": {"task_id": str, "variety": dict},
-    # hooks/task_lifecycle_gate.py emits dispatch_variety on the TaskCreate of a
-    # Task-B carrying metadata.variety (one per dispatch). The GC-immune mirror
-    # of the per-dispatch variety stamp (#955) — the task store that holds
-    # metadata.variety is reaped by the teams/tasks reaper, so wrap-up Q5 read
-    # false-empty after GC; this journal event is the durable source.
+    # hooks/task_lifecycle_gate.py (hook-side emit, ~:1653) writes
+    # dispatch_variety on the TaskCreate of a Task-B carrying metadata.variety
+    # (one per dispatch). The GC-immune mirror of the per-dispatch variety
+    # stamp (#955): the task store that holds metadata.variety is reaped by
+    # the teams/tasks reaper, so a task-store read goes false-empty after GC.
     # task_id is the Task-B id; variety is the 5-key dict (4 dims + total).
     # The emitter PROJECTS metadata.variety to exactly these 5 keys
     # (DISPATCH_VARIETY_KEYS) before append — the *_rationale strings are NOT
-    # mirrored (pact-variety.md §5.1). Read by wrap-up Q5 as the GC-immune
-    # source for compute_variety_divergence's dispatch_varieties list, which
-    # consumes only .total. (variety is typed `dict`, so the schema check
-    # enforces only the top-level task_id+variety keys — the projection lives
-    # at the emit site, not here.)
+    # mirrored (pact-variety.md §5.1). WRITE-ONLY today: no consumer reads
+    # this type. wrap-up Q5 does not — its dispatch-side population is the
+    # `dispatch_site` stream, and its as-dispatched fallbacks are the
+    # `dispatch_site` event's own variety and the dispatch-marked
+    # `variety_assessed` events (the third stream of
+    # extract_final_dispatch_coverage). (variety is typed `dict`, so the
+    # schema check enforces only the top-level task_id+variety keys — the
+    # projection lives at the emit site, not here.)
     "dispatch_variety": {"task_id": str, "variety": dict},
     # hooks/task_lifecycle_gate.py emits dispatch_site at the owner-BEARING
     # TaskUpdate (any write naming a pact-specialist owner on a

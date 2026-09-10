@@ -890,16 +890,19 @@ def resolve_arc_start(
     the caller omits `--since` → whole-journal read (fail-open; single-arc
     behavior unchanged).
 
-    Scope boundary (comPACT-led arcs): only the orchestrate
-    variety-assessment step emits `variety_assessed`, so this returns None
-    for a comPACT feature id. That is BENIGN and never mis-scopes the
+    Scope boundary (comPACT/rePACT-led arcs): feature-level
+    `variety_assessed` events are written by three commands — the
+    orchestrate feature assessment, the comPACT feature task, and the
+    rePACT sub-feature task — so this RETURNS the event ts for a
+    comPACT/rePACT feature id (returning None there held only while
+    orchestrate was the sole writer). That never mis-scopes the
     retrospective: the wrap-up Q5/Q6 retrospective runs only against an
     orchestrate feature assessment (a comPACT workflow does not invoke the
-    retrospective, and wrap-up skips trivial single-comPACT sessions). In a
+    retrospective, and wrap-up skips trivial single-comPACT sessions), so
+    no retro-path caller passes a comPACT/rePACT feature id. In a
     resumed comPACT-then-orchestrate session the wrap-up's feature id is the
     orchestrate feature, whose `variety_assessed` anchors `--since` and
-    excludes the prior comPACT arc's events by ts. So None-for-comPACT never
-    occurs on the retro path that consumes this helper.
+    excludes the prior comPACT arc's events by ts.
 
     Timestamps are PARSED for the max, never lexically compared: `make_event`
     stamps `ts` as `...Z` while `canonical_since()` emits `...+00:00`, and a
@@ -919,11 +922,13 @@ def resolve_arc_start(
     task_id)`) so a future bare-int `variety_assessed` emit still matches a
     str feature_task_id.
 
-    arc_start relies on `variety_assessed` being emitted exactly once per arc
-    (sole writer: the orchestrate variety-assessment step). If a future
-    change ever re-emits it mid-arc for the same feature_task_id, switch from
-    latest-ts to earliest-after-prior-arc-boundary — latest-ts would
-    otherwise push arc_start forward and drop early-arc dispatches.
+    arc_start relies on `variety_assessed` being emitted exactly once per
+    arc per feature (writers: the orchestrate feature assessment, the
+    comPACT feature task, the rePACT sub-feature task — each stamps its
+    feature-level event once, immediately after the metadata stamp). If a
+    future change ever re-emits it mid-arc for the same feature_task_id,
+    switch from latest-ts to earliest-after-prior-arc-boundary — latest-ts
+    would otherwise push arc_start forward and drop early-arc dispatches.
 
     Dispatch-marked events are excluded by the TOP-LEVEL `scope` field
     (VARIETY_ASSESSED_DISPATCH_SCOPE): per-dispatch mirrors carry the

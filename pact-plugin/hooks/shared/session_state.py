@@ -275,10 +275,18 @@ def _derive_feature_from_journal(
     Return (feature_id, feature_subject) derived from the session
     journal.
 
-    Primary source: the `task_id` of the first variety_assessed event.
-    The orchestrator tags the feature task with variety exactly once
-    per session, so this is the unambiguous feature marker whenever
-    present. Dispatch-marked events (TOP-LEVEL `scope` equal to
+    Primary source: the `task_id` of the first feature-level
+    variety_assessed event. Feature-level events are written by the
+    orchestrate feature assessment, the comPACT feature task, and the
+    rePACT sub-feature task — each once per arc — so this is the
+    unambiguous feature marker whenever present, and in a comPACT/rePACT
+    session the primary source now resolves where the agent_dispatch
+    fallback below used to (the derived feature shifts to the
+    comPACT/rePACT feature task itself — a closer marker, intended;
+    legacy journals carry no such events and render identically). The
+    FIRST event by ts wins, so a resumed multi-arc session derives its
+    earliest arc's feature — the pre-existing multi-feature semantics,
+    unchanged. Dispatch-marked events (TOP-LEVEL `scope` equal to
     VARIETY_ASSESSED_DISPATCH_SCOPE — the per-dispatch mirrors the
     dispatch command prose writes at the Task-B stamp site) are excluded
     BEFORE the first-event selection: they can land before any

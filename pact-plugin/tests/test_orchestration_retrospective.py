@@ -10,6 +10,7 @@ Tests cover:
 6. Q5/Q6 extractions are total (no direct-indexing comprehension)
 7. Q5's recovery path depends on the dimension-sum resolver candidate
 """
+import json
 import re
 import sys
 from pathlib import Path
@@ -152,11 +153,14 @@ def _exec_documented_chain(expressions, namespace):
     return namespace
 
 
-def _q5_namespace(events, snapshot_events, dispatch_assessed):
+def _q5_namespace(events, snapshot_events, dispatch_assessed,
+                  read_output=None):
     return {
         "events": events,
         "snapshot_events": snapshot_events,
         "dispatch_assessed": dispatch_assessed,
+        "output": read_output,
+        "json": json,
         "resolve_variety_total": resolve_variety_total,
         "extract_dispatch_coverage": extract_dispatch_coverage,
         "extract_final_dispatch_coverage": extract_final_dispatch_coverage,
@@ -164,7 +168,7 @@ def _q5_namespace(events, snapshot_events, dispatch_assessed):
 
 
 def _run_q5_extraction(expressions, events, snapshot_events,
-                       dispatch_assessed=()):
+                       dispatch_assessed=(), read_output=None):
     """Run the Q5 chain on the JOINED path. `snapshot_events` is REQUIRED.
 
     THE EMPTY LIST IS REFUSED, and the refusal is the mechanism. An empty
@@ -175,6 +179,12 @@ def _run_q5_extraction(expressions, events, snapshot_events,
 
     `dispatch_assessed` (the arm-2b source) defaults EMPTY: an empty third
     stream is not a path selection — see the runner-divide comment above.
+
+    `read_output` seeds the namespace's `output` (the stdout a journal read
+    prints) for arms that execute the documented `va_events` binding. Default
+    None: an expression that reaches for `output` without a seeded read fails
+    LOUDLY (json.loads(None) raises), staying unreachable rather than
+    quietly empty.
     """
     if not snapshot_events:
         raise ValueError(
@@ -184,7 +194,8 @@ def _run_q5_extraction(expressions, events, snapshot_events,
             "you mean, so the call site states which path it tests."
         )
     return _exec_documented_chain(
-        expressions, _q5_namespace(events, snapshot_events, dispatch_assessed)
+        expressions, _q5_namespace(events, snapshot_events, dispatch_assessed,
+                                   read_output)
     )
 
 
@@ -784,6 +795,89 @@ class TestQ5DocumentedChainReadsTheSnapshotStream:
         namespace = _run_q5_extraction(q5_expression, self._events(), snapshots)
         assert namespace["sites"] == 1
         assert namespace["variety_totals"] == [self.SNAPSHOT_TOTAL]
+
+
+class TestQ5DocumentedChainProducesTheThirdStream:
+    """THE THIRD STREAM MUST BE PRODUCED BY THE DOCUMENTED CHAIN ITSELF, and
+    nothing else in this file executes its binding or filter.
+
+    The substring pins on wrap-up.md (test_dispatch_emission_prose.py) pin
+    the Q5 third-argument wiring as TEXT: they never execute it. The runners
+    seed `dispatch_assessed` in the namespace themselves, so a prose edit
+    that drops the `va_events` binding, reorders it behind the filter, or
+    drops the filter span keeps every other arm green. THE ARM BELOW IS THE
+    ONLY ONE IN THIS FILE THAT LIFTS THE BINDING AND THE FILTER from the
+    documented text and runs them ahead of the join, so the third argument
+    reaches the join BY THE PROSE'S OWN HAND, not the harness's.
+
+    It fails on three prose regressions the other pins miss together: an
+    unbound `va_events` (the lift or the exec raises), a dropped filter
+    span (the join reads the runner's empty seed and the un-snapshotted
+    member stays unresolved), and a dropped third argument (same unresolved
+    member through a different break).
+    """
+
+    FEATURE_TOTAL = 9
+    ASSESSED_TOTAL = 8
+    SNAPSHOT_TOTAL = 10
+
+    @pytest.fixture
+    def third_stream_chain(self, q5):
+        """The documented chain, IN ORDER: the scoped-read binding, the
+        scope filter, the helper call, then the unpack."""
+        return [
+            _backticked_expression(q5, "va_events = "),
+            _backticked_expression(q5, "dispatch_assessed = "),
+            _backticked_expression(q5, "coverage = "),
+            _backticked_expression(q5, "variety_totals, "),
+        ]
+
+    def _read_output(self):
+        """The scoped `variety_assessed` read's stdout, as `read` prints it:
+        the arc's feature-level event (stream content the filter must
+        exclude) and one dispatch-marked mirror for the un-snapshotted
+        member."""
+        return json.dumps(
+            [
+                {
+                    "type": "variety_assessed",
+                    "task_id": "1",
+                    "variety": {"total": self.FEATURE_TOTAL},
+                    "ts": "2026-06-15T12:00:01Z",
+                },
+                {
+                    "type": "variety_assessed",
+                    "task_id": "2",
+                    "scope": "dispatch",
+                    "variety": {"total": self.ASSESSED_TOTAL},
+                    "ts": "2026-06-15T12:00:02Z",
+                },
+            ]
+        )
+
+    def test_the_documented_binding_and_filter_feed_the_join(
+        self, third_stream_chain
+    ):
+        """Member 1 resolves from its snapshot (arm 1); member 2 has no
+        snapshot and no site stamp, so it resolves ONLY through the third
+        stream the documented chain produced (arm 2b)."""
+        events = [{"task_id": "1"}, {"task_id": "2"}]
+        snapshots = [
+            {
+                "task_id": "1",
+                "ts": "2026-06-15T12:00:03Z",
+                "metadata": {"variety": {"total": self.SNAPSHOT_TOTAL}},
+            },
+        ]
+        namespace = _run_q5_extraction(
+            third_stream_chain, events, snapshots,
+            read_output=self._read_output(),
+        )
+        assert namespace["variety_totals"] == [
+            self.SNAPSHOT_TOTAL, self.ASSESSED_TOTAL
+        ]
+        assert namespace["coverage"]["fallback_used"] == 1
+        assert namespace["coverage"]["total_unresolved"] == 0
 
 
 class TestTheRunnerDivideIsEnforcedAtRunTime:
