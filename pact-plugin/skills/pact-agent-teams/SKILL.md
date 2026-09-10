@@ -486,7 +486,7 @@ still cannot poll while idle; this rule fires ON wake, whatever woke you.
 
 | Field | Required | Accepted values |
 |-------|----------|-----------------|
-| `reason` | yes | Non-empty string. Prefer `KNOWN_REASONS` from `shared.intentional_wait`: `awaiting_teachback_approved`, `awaiting_lead_commit`, `awaiting_amendment_review`, `awaiting_post_handoff_decision`, `awaiting_peer_response`, `awaiting_user_decision`, `awaiting_blocker_resolution`. Free-form permitted. |
+| `reason` | yes | Non-empty string. Prefer `KNOWN_REASONS` from `shared.intentional_wait`: `awaiting_teachback_approved`, `awaiting_lead_commit`, `awaiting_amendment_review`, `awaiting_post_handoff_decision`, `awaiting_peer_response`, `awaiting_user_decision`, `awaiting_blocker_resolution`, `awaiting_lead_takeover`. Free-form permitted. |
 | `expected_resolver` | yes | Non-empty string. Prefer `KNOWN_RESOLVERS`: `lead`, `peer`, `user`, `external`. Free-form permitted. |
 | `since` | yes | tz-aware ISO-8601 UTC timestamp, seconds precision. |
 
