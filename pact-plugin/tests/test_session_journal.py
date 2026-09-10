@@ -3903,6 +3903,64 @@ class TestValidateOptionalFieldTypes:
 
         assert _OPTIONAL_FIELDS_BY_TYPE.get("session_start") == {"source": str}
 
+    def test_variety_assessed_scope_declared_optional(self):
+        """variety_assessed has `scope: str` in _OPTIONAL_FIELDS_BY_TYPE.
+
+        The per-dispatch discriminator: ABSENT means feature-level (every
+        legacy event and the orchestrate feature block), `"dispatch"` marks
+        a per-dispatch mirror. The position-based consumers (session_state
+        feature derivation, variety_divergence arc_start) filter on this
+        value, so the type contract lives at the journal boundary.
+        """
+        from shared.session_journal import _OPTIONAL_FIELDS_BY_TYPE
+
+        assert _OPTIONAL_FIELDS_BY_TYPE.get("variety_assessed") == {
+            "scope": str
+        }
+
+    def test_variety_assessed_scope_present_str_passes(self):
+        """A dispatch-marked variety_assessed event validates.
+
+        Required fields intact (task_id str, variety dict) plus the
+        top-level scope discriminator — the shape every dispatch command
+        file's journal-event block writes at the Task-B stamp site.
+        """
+        from shared.session_journal import _validate_event_schema, make_event
+
+        event = make_event(
+            "variety_assessed",
+            task_id="12",
+            scope="dispatch",
+            variety={"novelty": 2, "scope": 2, "uncertainty": 2,
+                     "risk": 2, "total": 8},
+        )
+        ok, reason = _validate_event_schema(event)
+        assert ok is True
+        assert reason == "ok"
+
+    def test_variety_assessed_scope_wrong_type_rejected(self):
+        """A non-str scope is rejected with the optional-field reason.
+
+        The discriminator is compared as a string by every consumer; a
+        non-str value would compare unequal to "dispatch" everywhere and
+        silently read as feature-level — the schema check is what keeps
+        that off disk.
+        """
+        from shared.session_journal import _validate_event_schema, make_event
+
+        event = make_event(
+            "variety_assessed",
+            task_id="12",
+            scope=42,
+            variety={"total": 8},
+        )
+        ok, reason = _validate_event_schema(event)
+        assert ok is False
+        assert reason == (
+            "optional field 'scope' for type 'variety_assessed' must "
+            "be str, got int"
+        )
+
     def test_pin_pruned_requires_a_memory_id(self):
         """`memory_id` is what makes the success claim CHECKABLE.
 

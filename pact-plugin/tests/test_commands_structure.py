@@ -928,15 +928,20 @@ class TestPerLoopDispatchSites:
     def _site_block(text: str, lead_in_line: int) -> str:
         """Return the block of lines following the lead-in.
 
-        Reads up to 40 lines after the lead-in (1-based). The canonical
+        Reads up to 55 lines after the lead-in (1-based). The canonical
         Teachback-Gated Dispatch sequence fits comfortably within that
         window across all observed sites; oversized windows that span into
         adjacent sections produce false positives, undersized windows miss
-        steps. 40 lines is empirically sufficient.
+        steps. 55 covers the widest site (comPACT's concurrent-dispatch
+        loop, whose per-dispatch journal-events step — the variety_assessed
+        mirror plus agent_dispatch — sits between the wiring writes and
+        the spawn) with margin; the next content past the spawn block
+        carries no TaskCreate/TaskUpdate/Agent( tokens, so the wider
+        window cannot inflate the counts.
         """
         lines = text.splitlines()
         start = lead_in_line  # 0-based index for the line AFTER the lead-in (lead_in_line is 1-based).
-        end = min(len(lines), start + 40)
+        end = min(len(lines), start + 55)
         return "\n".join(lines[start:end])
 
     def test_sites_accounts_for_every_dispatch_lead_in_in_the_tree(self):

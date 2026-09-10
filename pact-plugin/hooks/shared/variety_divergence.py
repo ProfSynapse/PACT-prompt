@@ -17,14 +17,18 @@ Functions:
   total_pact_dispatch_count=None, threshold=2) -> dict
 - extract_dispatch_coverage(dispatch_site_events) -> (variety_totals,
   total, malformed) — BOTH Q5 terms from ONE pass over ONE input list.
-- extract_final_dispatch_coverage(dispatch_site_events, snapshot_events)
-  -> dict of TEN keys. The Q5 join: MEMBERSHIP comes from the
-  `dispatch_site` stream, and the VALUE comes from the latest
-  `task_metadata_snapshot` of the same task, so the distribution holds the
-  FINAL total rather than the as-dispatched one. Four of the ten keys
-  report what the join OBSERVED about the as-dispatched side, so a value
-  taken from a snapshot cannot silently absorb a stamping gap, a producer
-  defect, or a revision that left the total where it was.
+- extract_final_dispatch_coverage(dispatch_site_events, snapshot_events,
+  dispatch_assessed_events=None) -> dict of TEN keys. The Q5 join:
+  MEMBERSHIP comes from the `dispatch_site` stream, and the VALUE comes
+  from the latest `task_metadata_snapshot` of the same task, so the
+  distribution holds the FINAL total rather than the as-dispatched one.
+  Four of the ten keys report what the join OBSERVED about the
+  as-dispatched side, so a value taken from a snapshot cannot silently
+  absorb a stamping gap, a producer defect, or a revision that left the
+  total where it was. The optional third argument adds the
+  dispatch-marked `variety_assessed` events as a fallback-path
+  as-dispatched source (arm 2b); omitted, the join is the legacy
+  two-source shape.
 
 Return shape (stable keys):
 - `coverage`:  float — fraction of pact-* dispatches with variety stamped;
@@ -86,6 +90,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
+from .constants import VARIETY_ASSESSED_DISPATCH_SCOPE
 from .teachback_schema import (
     MAX_DIMENSION,
     MIN_DIMENSION,
@@ -453,9 +458,62 @@ def _dimension_vector(variety: object) -> tuple[int, ...] | None:
     return tuple(values)
 
 
+def _latest_dispatch_assessed_by_task(
+    dispatch_assessed_events: list[dict] | None,
+) -> dict[str, dict]:
+    """Index dispatch-marked `variety_assessed` events by task id, LATEST wins.
+
+    Only events whose TOP-LEVEL `scope` equals
+    VARIETY_ASSESSED_DISPATCH_SCOPE are eligible — the per-dispatch mirrors
+    written by the dispatch command prose at the Task-B stamp site. A
+    feature-level event (no `scope` field) never enters this index, so the
+    two populations cannot cross-contaminate however they interleave.
+
+    LATEST means the greatest PARSED instant, last-wins on an equal instant
+    (the `_latest_snapshot_by_task` direction, not the `resolve_arc_start`
+    direction): this index supplies a VALUE, and the later line in journal
+    order is the authoritative one for a value. An event that is not a dict,
+    carries no `task_id`, or carries a missing/unparseable/un-comparable
+    `ts` is skipped, with the compare INSIDE the try so the naive-against-
+    aware TypeError fails open. The caller passes the list arc-scoped and in
+    journal order, because the platform reuses task ids across arcs and the
+    tie-break is positional. A `None` argument yields {} — the two-argument
+    legacy call shape of extract_final_dispatch_coverage never builds an
+    index at all.
+
+    Pure function, and it does not raise.
+    """
+    latest: dict[str, tuple[datetime, dict]] = {}
+    if not isinstance(dispatch_assessed_events, list):
+        return {}
+    for event in dispatch_assessed_events:
+        if not isinstance(event, dict):
+            continue
+        if event.get("scope") != VARIETY_ASSESSED_DISPATCH_SCOPE:
+            continue
+        task_id = event.get("task_id")
+        if task_id is None:
+            continue
+        ts = event.get("ts")
+        if not ts:
+            continue
+        key = str(task_id)
+        try:
+            parsed = _parse_ts(ts)
+            current = latest.get(key)
+            # `>=` is last-wins on an equal instant, matching the snapshot
+            # index's value-semantics (see _latest_snapshot_by_task).
+            if current is None or parsed >= current[0]:
+                latest[key] = (parsed, event)
+        except (ValueError, TypeError):
+            continue
+    return {key: value[1] for key, value in latest.items()}
+
+
 def extract_final_dispatch_coverage(
     dispatch_site_events: list[dict],
     snapshot_events: list[dict],
+    dispatch_assessed_events: list[dict] | None = None,
 ) -> dict:
     """Q5 coverage terms, carrying the FINAL variety total of each member.
 
@@ -463,6 +521,16 @@ def extract_final_dispatch_coverage(
     VALUE comes from the latest `task_metadata_snapshot` of the same task.
     So the distribution holds the total as it stands at read time, rather
     than the total as it stood at dispatch.
+
+    The optional third argument adds a SECOND as-dispatched source: the
+    dispatch-marked `variety_assessed` events (TOP-LEVEL
+    `scope == "dispatch"`), written by the dispatch command prose at the
+    Task-B stamp site. It is consulted ONLY on the fallback path, after
+    neither the snapshot nor the `dispatch_site` event's own variety
+    resolved a total — so a member that resolved before still resolves
+    identically, and the new source only rescues members that would
+    otherwise land in arm 3. A `None` (or omitted) third argument is the
+    legacy two-source shape and behaves byte-identically to it.
 
     **THE NON-MEMBER EXCLUSION IS STRUCTURAL.** The loop iterates
     `dispatch_site_events`, so a snapshot for a task that no member names is
@@ -593,7 +661,11 @@ def extract_final_dispatch_coverage(
     1. The latest snapshot value resolves. Use it. It is the FINAL value.
     2. It does not resolve, and the `dispatch_site` value resolves. Use the
        `dispatch_site` value and add one to `fallback_used`.
-    3. Neither resolves. The member contributes no value, and add one to
+    2b. Neither resolves, and the task's dispatch-marked `variety_assessed`
+       event resolves (third argument only). Use that value; the member
+       still adds one to `fallback_used` — the value is as-dispatched, not
+       the snapshot's final.
+    3. None resolves. The member contributes no value, and add one to
        `fallback_used`.
 
     `fallback_used` counts arms 2 AND 3 together. Arm 2 alone answers a
@@ -613,7 +685,9 @@ def extract_final_dispatch_coverage(
         `fallback_used`  CONTAINS  `total_unresolved`  CONTAINS  `malformed`
 
     - `fallback_used` minus `total_unresolved` is the ARM-2 count, the
-      members that fell back to a usable `dispatch_site` value.
+      members that fell back to a usable as-dispatched value — the
+      `dispatch_site` event's own variety, or (third argument only) the
+      task's dispatch-marked `variety_assessed` event.
     - `total_unresolved` minus `len(malformed)` is the arm-3 members that
       carry NO `variety` key, which is the honest un-stamped dispatch on the
       fallback path.
@@ -624,17 +698,22 @@ def extract_final_dispatch_coverage(
 
     **MALFORMED IS CLASSIFIED BY THE VALUE THE JOIN FINALLY USES.** After
     arm 3, a member is malformed if and only if `variety` is present on its
-    `dispatch_site` event. ONE CELL READS DIFFERENTLY FROM A CAREFUL HUMAN:
-    a member with NO `variety` on its `dispatch_site` event, and a
-    present-but-unresolvable one on its latest snapshot, reports an absent
-    stamp rather than a data-quality defect. Revisit that cell if it fills,
-    rather than pre-solve it with a third rule.
+    `dispatch_site` event. With the third argument, a member whose
+    `dispatch_site` variety is present-but-junk but whose dispatch-marked
+    `variety_assessed` event resolves a total LEAVES the malformed list —
+    the join resolved a value, so it no longer reports a data-quality
+    finding on the stream it did not use. ONE CELL READS DIFFERENTLY FROM A
+    CAREFUL HUMAN: a member with NO `variety` on its `dispatch_site` event,
+    and a present-but-unresolvable one on its latest snapshot, reports an
+    absent stamp rather than a data-quality defect. Revisit that cell if it
+    fills, rather than pre-solve it with a third rule.
 
     **TWO PRECONDITIONS THIS FUNCTION CANNOT CHECK, so the caller owns
-    them.** The two lists must be scoped to the SAME arc with the SAME
-    `--since` value, because the platform reuses task ids across arcs. And
-    `snapshot_events` must arrive in journal order, because the tie-break is
-    positional.
+    them.** The lists must be scoped to the SAME arc with the SAME
+    `--since` value, because the platform reuses task ids across arcs (the
+    third list included — an unscoped per-dispatch event for a task id a
+    prior arc used would join to this arc's member). And `snapshot_events`
+    must arrive in journal order, because the tie-break is positional.
 
     **A STATED LIMIT: THE VALUE IS THE LATEST USABLE SNAPSHOT, NOT THE LATEST
     SNAPSHOT.** `_latest_snapshot_by_task` skips a snapshot on THREE causes: a
@@ -688,6 +767,9 @@ def extract_final_dispatch_coverage(
         }
 
     latest_snapshots = _latest_snapshot_by_task(snapshot_events)
+    latest_dispatch_assessed = _latest_dispatch_assessed_by_task(
+        dispatch_assessed_events
+    )
 
     variety_totals: list[int] = []
     malformed: list[dict] = []
@@ -702,6 +784,7 @@ def extract_final_dispatch_coverage(
     for event in dispatch_site_events:
         site_value = None
         snapshot_value = None
+        assessed_value = None
         has_variety = False
         site_vector = None
         snapshot_vector = None
@@ -727,6 +810,11 @@ def extract_final_dispatch_coverage(
                         snapshot_variety, metadata
                     )
                     snapshot_vector = _dimension_vector(snapshot_variety)
+                assessed = latest_dispatch_assessed.get(str(task_id))
+                if assessed is not None:
+                    assessed_value = resolve_variety_total(
+                        assessed.get("variety")
+                    )
 
         # Arm 1: the snapshot carries the FINAL value. The six cells below
         # are the partition the docstring argues; each member reaches one.
@@ -752,12 +840,19 @@ def extract_final_dispatch_coverage(
                 superseded_dimensions_only += 1
             continue
 
-        # Arms 2 and 3: the final value did NOT come from a snapshot.
+        # Arms 2, 2b and 3: the final value did NOT come from a snapshot.
         fallback_used += 1
         if site_value is not None:
             variety_totals.append(site_value)
+        elif assessed_value is not None:
+            # ARM 2b (third argument only). The dispatch-marked
+            # `variety_assessed` event resolved a total where the
+            # `dispatch_site` event's own variety did not. The member still
+            # counts as fallback: the value is as-dispatched, not the
+            # snapshot's final one.
+            variety_totals.append(assessed_value)
         else:
-            # ARM 3. No total resolved on EITHER stream. `fallback_used`
+            # ARM 3. No total resolved on ANY stream. `fallback_used`
             # keeps the arms-2-and-3 union, and this names the arm-3 half
             # separately, so it is CONTAINED IN that union and never added
             # to it. `malformed` is the subset of these that carries a
@@ -830,11 +925,21 @@ def resolve_arc_start(
     latest-ts to earliest-after-prior-arc-boundary — latest-ts would
     otherwise push arc_start forward and drop early-arc dispatches.
 
+    Dispatch-marked events are excluded by the TOP-LEVEL `scope` field
+    (VARIETY_ASSESSED_DISPATCH_SCOPE): per-dispatch mirrors carry the
+    DISPATCH task's id, which never equals the feature task id within a
+    session, so the id filter below already excludes them — the scope
+    check is belt-and-braces that keeps the exactly-once invariant
+    structural rather than incidental on task-id distinctness. A legacy
+    event with no `scope` field remains feature-level by construction.
+
     Pure function — no disk reads, no mutation.
     """
     latest_ts: str | None = None
     latest_dt: datetime | None = None
     for event in variety_assessed_events:
+        if event.get("scope") == VARIETY_ASSESSED_DISPATCH_SCOPE:
+            continue
         if str(event.get("task_id")) != str(feature_task_id):
             continue
         ts = event.get("ts")

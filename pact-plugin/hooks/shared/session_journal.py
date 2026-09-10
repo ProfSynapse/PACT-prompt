@@ -489,6 +489,23 @@ _OPTIONAL_FIELDS_BY_TYPE: dict[str, dict[str, type]] = {
     "dispatch_site": {
         "variety": dict,
     },
+    # commands/{comPACT,orchestrate,peer-review,plan-mode,rePACT}.md write
+    # variety_assessed at the Task-B stamp sites with an optional TOP-LEVEL
+    # `scope` — the per-dispatch discriminator (see VARIETY_ASSESSED_DISPATCH_
+    # SCOPE in shared/constants.py). The FEATURE-level emission (orchestrate's
+    # canonical block, and every event written before the discriminator
+    # existed) carries NO `scope` field, and absence stays the feature-level
+    # meaning: the position-based consumers (session_state feature
+    # derivation, variety_divergence arc_start) filter on this value
+    # positively, so legacy journals need no migration. NOTE the name
+    # adjacency, one level apart and never interacting: the nested `variety`
+    # DICT carries a dimension also named "scope". The required-fields
+    # registration above ("variety_assessed": {...}) is what ACTIVATES this
+    # optional check — _validate_event_schema short-circuits on unknown
+    # event types (same activation pattern as dispatch_site).
+    "variety_assessed": {
+        "scope": str,
+    },
     # journal_emit_skipped names the task when the skipped write had one.
     # Optional because two of the recorded causes have no task_id to give:
     # a missing task_id is itself a cause, and a non-task emit (e.g.

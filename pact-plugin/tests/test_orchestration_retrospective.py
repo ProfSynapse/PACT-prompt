@@ -113,6 +113,17 @@ def _backticked_expression(line, prefix):
 # claim here would repeat the defect. A file in which EVERY Q5 arm calls the
 # fallback runner STAYS blind to each snapshot-side mutant. No signature
 # can prevent that. A mutation sweep detects it, and a signature does not.
+#
+# THE THIRD STREAM, AND WHY IT IS NOT A PATH SELECTOR. The documented Q5
+# expression names `dispatch_assessed` (the arc-scoped dispatch-marked
+# variety_assessed events, the join's arm-2b source), so both Q5 runners
+# put that name in the namespace. An EMPTY default for it does NOT select
+# a path the caller did not choose — unlike an empty `snapshot_events`,
+# which sends every member to the fallback — because arm 2b only rescues
+# members no other stream resolved; with it empty, arm-1 and arm-2
+# outcomes are byte-identical. An arm that tests arm 2b through the
+# documented expression passes the stream explicitly, so the call site
+# states what it exercises, same discipline as the runner names.
 # ---------------------------------------------------------------------------
 def _exec_documented_chain(expressions, namespace):
     """Execute the documented extraction chain and return the namespace.
@@ -141,17 +152,19 @@ def _exec_documented_chain(expressions, namespace):
     return namespace
 
 
-def _q5_namespace(events, snapshot_events):
+def _q5_namespace(events, snapshot_events, dispatch_assessed):
     return {
         "events": events,
         "snapshot_events": snapshot_events,
+        "dispatch_assessed": dispatch_assessed,
         "resolve_variety_total": resolve_variety_total,
         "extract_dispatch_coverage": extract_dispatch_coverage,
         "extract_final_dispatch_coverage": extract_final_dispatch_coverage,
     }
 
 
-def _run_q5_extraction(expressions, events, snapshot_events):
+def _run_q5_extraction(expressions, events, snapshot_events,
+                       dispatch_assessed=()):
     """Run the Q5 chain on the JOINED path. `snapshot_events` is REQUIRED.
 
     THE EMPTY LIST IS REFUSED, and the refusal is the mechanism. An empty
@@ -159,6 +172,9 @@ def _run_q5_extraction(expressions, events, snapshot_events):
     one would name this runner and receive the other path. That is the exact
     silent substitution the split exists to prevent, and it fails loudly here
     instead. A caller that MEANS the fallback calls the fallback runner.
+
+    `dispatch_assessed` (the arm-2b source) defaults EMPTY: an empty third
+    stream is not a path selection — see the runner-divide comment above.
     """
     if not snapshot_events:
         raise ValueError(
@@ -168,19 +184,26 @@ def _run_q5_extraction(expressions, events, snapshot_events):
             "you mean, so the call site states which path it tests."
         )
     return _exec_documented_chain(
-        expressions, _q5_namespace(events, snapshot_events)
+        expressions, _q5_namespace(events, snapshot_events, dispatch_assessed)
     )
 
 
-def _run_q5_extraction_on_the_fallback_path(expressions, events):
+def _run_q5_extraction_on_the_fallback_path(expressions, events,
+                                            dispatch_assessed=()):
     """Run the Q5 chain where NO member has a snapshot.
 
     EACH MEMBER TAKES THE FALLBACK and keeps its `dispatch_site` value. The
     snapshot side of the join is not read. An arm that calls this runner
     cannot detect a defect on the snapshot side, and the NAME says so at the
     call site rather than in a comment a reader can miss.
+
+    `dispatch_assessed` (the arm-2b source) defaults EMPTY, so the fallback
+    arms here keep their pre-arm-2b numbers; an arm that tests the rescue
+    through the documented expression passes the stream explicitly.
     """
-    return _exec_documented_chain(expressions, _q5_namespace(events, []))
+    return _exec_documented_chain(
+        expressions, _q5_namespace(events, [], dispatch_assessed)
+    )
 
 
 def _run_q6_extraction(expression, events):

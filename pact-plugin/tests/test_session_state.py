@@ -1121,6 +1121,52 @@ class TestDeriveFeatureFromJournal:
         )
         assert subject == "Real feature work"
 
+    def test_dispatch_marked_event_landing_first_is_excluded(self):
+        """A per-dispatch mirror (TOP-LEVEL scope="dispatch") that lands
+        BEFORE any feature-level event must not mis-identify the dispatch
+        task as the feature. This helper breaks on EVENT ORDERING, not on
+        task-id collision — the likeliest ordering is a plan-mode
+        consultation in a fresh session. Counter-test: removing the scope
+        filter makes this fail with feature_id == "12"."""
+        events = [
+            make_event("variety_assessed", task_id="12", scope="dispatch",
+                       variety={"total": 6},
+                       ts="2026-04-14T00:00:01Z"),
+            make_event("variety_assessed", task_id="5",
+                       variety={"total": 9},
+                       ts="2026-04-14T00:00:02Z"),
+        ]
+        feature_id, _ = _derive_feature_from_journal(events)
+        assert feature_id == "5"
+
+    def test_only_dispatch_marked_events_falls_back_to_dispatch_stream(self):
+        """When EVERY variety_assessed event is dispatch-marked, the
+        variety source yields no feature and the agent_dispatch fallback
+        runs — the same behavior as a journal with no variety events."""
+        events = [
+            make_event("variety_assessed", task_id="12", scope="dispatch",
+                       variety={"total": 6},
+                       ts="2026-04-14T00:00:01Z"),
+            make_event("agent_dispatch", agent="coder", task_id="7",
+                       phase="CODE", ts="2026-04-14T00:00:02Z"),
+        ]
+        feature_id, _ = _derive_feature_from_journal(events)
+        assert feature_id == "7"
+
+    def test_legacy_field_absent_first_event_still_feature_level(self):
+        """Legacy polarity: with no scope field anywhere, the first event
+        is the feature exactly as before the discriminator existed."""
+        events = [
+            make_event("variety_assessed", task_id="3",
+                       variety={"total": 8},
+                       ts="2026-04-14T00:00:01Z"),
+            make_event("variety_assessed", task_id="4",
+                       variety={"total": 9},
+                       ts="2026-04-14T00:00:02Z"),
+        ]
+        feature_id, _ = _derive_feature_from_journal(events)
+        assert feature_id == "3"
+
 
 class TestDeriveVarietyFromJournal:
     """Direct tests for _derive_variety_from_journal."""
@@ -1139,6 +1185,28 @@ class TestDeriveVarietyFromJournal:
                        ts="2026-04-14T00:00:02Z"),
         ]
         assert _derive_variety_from_journal(events) == {"first": True}
+
+    def test_dispatch_marked_events_are_excluded(self):
+        """Dispatch-marked mirrors never supply the feature variety: the
+        first FEATURE-LEVEL event wins even when a dispatch-marked event
+        is chronologically first."""
+        events = [
+            make_event("variety_assessed", task_id="12", scope="dispatch",
+                       variety={"dispatch": True},
+                       ts="2026-04-14T00:00:01Z"),
+            make_event("variety_assessed", task_id="5",
+                       variety={"feature": True},
+                       ts="2026-04-14T00:00:02Z"),
+        ]
+        assert _derive_variety_from_journal(events) == {"feature": True}
+
+    def test_only_dispatch_marked_events_returns_none(self):
+        events = [
+            make_event("variety_assessed", task_id="12", scope="dispatch",
+                       variety={"dispatch": True},
+                       ts="2026-04-14T00:00:01Z"),
+        ]
+        assert _derive_variety_from_journal(events) is None
 
 
 # ---------------------------------------------------------------------------

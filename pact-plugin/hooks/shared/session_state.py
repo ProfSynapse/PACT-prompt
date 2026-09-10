@@ -35,7 +35,10 @@ from pathlib import Path
 from typing import Any
 
 from shared import pact_context
-from shared.constants import SYSTEM_TASK_PREFIXES
+from shared.constants import (
+    SYSTEM_TASK_PREFIXES,
+    VARIETY_ASSESSED_DISPATCH_SCOPE,
+)
 from shared.paths import get_claude_config_dir
 from shared.session_journal import read_events_from
 
@@ -275,7 +278,16 @@ def _derive_feature_from_journal(
     Primary source: the `task_id` of the first variety_assessed event.
     The orchestrator tags the feature task with variety exactly once
     per session, so this is the unambiguous feature marker whenever
-    present.
+    present. Dispatch-marked events (TOP-LEVEL `scope` equal to
+    VARIETY_ASSESSED_DISPATCH_SCOPE — the per-dispatch mirrors the
+    dispatch command prose writes at the Task-B stamp site) are excluded
+    BEFORE the first-event selection: they can land before any
+    feature-level event (a plan-mode consultation in a fresh session is
+    the likeliest ordering), and this helper breaks on EVENT ORDERING,
+    not on task-id collision — an un-excluded per-dispatch event would
+    mis-identify the dispatch task as the feature for compaction renders
+    and briefings. An event with no `scope` field remains feature-level
+    by construction, so legacy journals render identically.
 
     Fallback (no variety_assessed yet): the chronologically-first
     `agent_dispatch.task_id` that does NOT resolve to a system task
@@ -301,7 +313,12 @@ def _derive_feature_from_journal(
     yet declared".
     """
     variety_events = sorted(
-        [e for e in events if e.get("type") == "variety_assessed"],
+        [
+            e
+            for e in events
+            if e.get("type") == "variety_assessed"
+            and e.get("scope") != VARIETY_ASSESSED_DISPATCH_SCOPE
+        ],
         key=lambda e: e.get("ts", ""),
     )
     feature_id: str | None = None
@@ -378,9 +395,19 @@ def _derive_variety_from_journal(
     that want them; the compaction-hook render resolves a single total
     via the shared `resolve_variety_total` helper, which prefers the
     canonical `total` key — see its docstring for the fallback chain).
+    Dispatch-marked events (TOP-LEVEL `scope` equal to
+    VARIETY_ASSESSED_DISPATCH_SCOPE) are excluded for the same reason
+    `_derive_feature_from_journal` excludes them: the FIRST event must
+    mean feature-level, and a per-dispatch mirror can land first. An
+    event with no `scope` field remains feature-level by construction.
     """
     variety_events = sorted(
-        [e for e in events if e.get("type") == "variety_assessed"],
+        [
+            e
+            for e in events
+            if e.get("type") == "variety_assessed"
+            and e.get("scope") != VARIETY_ASSESSED_DISPATCH_SCOPE
+        ],
         key=lambda e: e.get("ts", ""),
     )
     for v in variety_events:

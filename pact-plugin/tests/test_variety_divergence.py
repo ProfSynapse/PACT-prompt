@@ -334,6 +334,36 @@ class TestResolveArcStart:
         ]
         assert resolve_arc_start(events, "100") == "2026-06-14T12:00:00Z"
 
+    def test_dispatch_marked_event_for_same_id_does_not_move_arc_start(self):
+        """A per-dispatch mirror (TOP-LEVEL scope="dispatch") for the SAME
+        task id, landing AFTER the feature-level event, must NOT push
+        arc_start forward — the scope filter excludes it before the
+        latest-ts selection. This is the belt-and-braces half: the id
+        filter already keeps per-dispatch events out (they carry the
+        dispatch task's id), and this test pins the structural guarantee
+        for the world where an emission mistakenly keys the feature id."""
+        feature = self._va("100", "2026-06-14T12:00:00Z")
+        marked = make_event(
+            "variety_assessed",
+            task_id="100",
+            scope="dispatch",
+            variety={"total": 4},
+            ts="2026-06-15T12:00:00Z",
+        )
+        assert resolve_arc_start([feature, marked], "100") == (
+            "2026-06-14T12:00:00Z"
+        )
+
+    def test_field_absent_event_remains_feature_level(self):
+        """Legacy polarity: an event with NO scope field is feature-level.
+        The latest field-absent match still wins, so a legacy journal
+        renders identically to the pre-discriminator behavior."""
+        events = [
+            self._va("100", "2026-06-13T12:00:00Z"),
+            self._va("100", "2026-06-14T12:00:00Z"),
+        ]
+        assert resolve_arc_start(events, "100") == "2026-06-14T12:00:00Z"
+
     def test_cross_format_compared_by_instant_returns_original_string(self):
         """Cross-format (prior arc in +00:00, current in Z) is compared by
         PARSED instant; the RETURN is the original ts STRING of the max (passed
@@ -1551,3 +1581,196 @@ class TestTheThirdSkipCauseOfTheSnapshotPicker:
             )
             == "second-aware-LATER"
         )
+
+
+class TestExtractFinalDispatchCoverageDispatchAssessed:
+    """The third argument: dispatch-marked `variety_assessed` events as a
+    fallback-path as-dispatched source (arm 2b).
+
+    The stream-level contract: per-dispatch mirrors carry the DISPATCH
+    task's id and a TOP-LEVEL scope="dispatch" discriminator; feature-level
+    events carry no scope field. Arm 2b fires ONLY when neither the latest
+    snapshot (arm 1) nor the dispatch_site event's own variety (arm 2)
+    resolved a total — so every pre-existing member outcome is unchanged,
+    and the new source only rescues members that would otherwise land in
+    arm 3.
+
+    Non-vacuity: arm 2b is observable through four values a broken
+    implementation cannot reproduce by accident — the rescued total in
+    `variety_totals`, `fallback_used` still counting the member,
+    `total_unresolved` NOT counting it, and `malformed` losing it.
+    """
+
+    _TS = "2026-06-15T12:00:00Z"
+
+    def _site(self, task_id, variety=None):
+        """A `dispatch_site` event. `variety=None` means the key is ABSENT."""
+        fields = {"task_id": task_id}
+        if variety is not None:
+            fields["variety"] = variety
+        return make_event("dispatch_site", **fields)
+
+    def _va(self, task_id, ts, scope="dispatch", total=8):
+        return make_event(
+            "variety_assessed",
+            task_id=task_id,
+            scope=scope,
+            variety={
+                "novelty": 2,
+                "scope": 2,
+                "uncertainty": 2,
+                "risk": 2,
+                "total": total,
+            },
+            ts=ts,
+        )
+
+    # -- The rescue ----------------------------------------------------------
+
+    def test_arm_2b_rescues_a_member_no_other_stream_resolved(self):
+        """No snapshot, no variety on the dispatch_site event, and the
+        dispatch-marked event resolves the total: the member contributes
+        its total, counts ONCE in fallback_used, and leaves both
+        total_unresolved and malformed at zero."""
+        sites = [self._site("1")]  # un-stamped site
+        assessed = [self._va("1", "2026-06-15T12:00:01Z", total=8)]
+        result = extract_final_dispatch_coverage(sites, [], assessed)
+        assert result["variety_totals"] == [8]
+        assert result["fallback_used"] == 1
+        assert result["total_unresolved"] == 0
+        assert result["malformed"] == []
+
+    def test_junk_site_variety_with_resolving_assessed_leaves_malformed(self):
+        """A PRESENT-but-unresolvable dispatch_site variety that arm 2b
+        rescues is no longer arm-3, so it leaves the malformed list: the
+        join resolved a value and stops reporting a data-quality finding
+        on the stream it did not use."""
+        sites = [self._site("1", {"total": "junk"})]
+        assessed = [self._va("1", "2026-06-15T12:00:01Z", total=8)]
+        result = extract_final_dispatch_coverage(sites, [], assessed)
+        assert result["variety_totals"] == [8]
+        assert result["total_unresolved"] == 0
+        assert result["malformed"] == []
+
+    def test_site_value_still_wins_over_the_assessed_event(self):
+        """Arm 2 order is pinned: the dispatch_site event's own variety
+        resolves FIRST; the assessed event is the second as-dispatched
+        source. Both resolve with distinct totals; the site's wins."""
+        sites = [self._site("1", {"total": 9})]
+        assessed = [self._va("1", "2026-06-15T12:00:01Z", total=8)]
+        result = extract_final_dispatch_coverage(sites, [], assessed)
+        assert result["variety_totals"] == [9]
+
+    def test_snapshot_still_wins_over_everything(self):
+        """Arm 1 is untouched by the third argument: a resolving snapshot
+        supplies the FINAL value and the member does not count in
+        fallback_used at all."""
+        sites = [self._site("1")]
+        snapshots = [
+            make_event(
+                "task_metadata_snapshot",
+                task_id="1",
+                metadata={"variety": {"total": 10}},
+                ts=self._TS,
+            )
+        ]
+        assessed = [self._va("1", "2026-06-15T12:00:01Z", total=8)]
+        result = extract_final_dispatch_coverage(sites, snapshots, assessed)
+        assert result["variety_totals"] == [10]
+        assert result["fallback_used"] == 0
+        assert result["late_stamped"] == 1
+
+    # -- The stream boundary -------------------------------------------------
+
+    def test_feature_level_events_never_join(self):
+        """A feature-level variety_assessed event (no scope field) for the
+        same task id does NOT resolve the member — the index admits
+        dispatch-marked events only, so the two populations cannot
+        cross-contaminate however they interleave."""
+        sites = [self._site("1")]
+        feature_level = [
+            make_event(
+                "variety_assessed",
+                task_id="1",
+                variety={"total": 8},
+                ts="2026-06-15T12:00:01Z",
+            )
+        ]
+        result = extract_final_dispatch_coverage(sites, [], feature_level)
+        assert result["variety_totals"] == []
+        assert result["total_unresolved"] == 1
+
+    def test_latest_assessed_event_for_a_task_wins(self):
+        """Two dispatch-marked events for one task (a re-emission): the
+        LATEST by parsed instant supplies the value — the snapshot-index
+        direction, not the arc-start direction."""
+        sites = [self._site("1")]
+        assessed = [
+            self._va("1", "2026-06-15T12:00:01Z", total=6),
+            self._va("1", "2026-06-15T13:00:00Z", total=7),
+        ]
+        result = extract_final_dispatch_coverage(sites, [], assessed)
+        assert result["variety_totals"] == [7]
+
+    def test_assessed_event_for_another_task_never_joins(self):
+        """The index is keyed on the member's task id; a dispatch-marked
+        event for a different task is unreachable."""
+        sites = [self._site("1")]
+        assessed = [self._va("2", "2026-06-15T12:00:01Z", total=8)]
+        result = extract_final_dispatch_coverage(sites, [], assessed)
+        assert result["variety_totals"] == []
+        assert result["total_unresolved"] == 1
+
+    # -- The legacy call shape ------------------------------------------------
+
+    def test_two_argument_call_is_unchanged(self):
+        """The legacy two-source shape: no third argument, the member stays
+        arm-3 exactly as before the stream existed."""
+        result = extract_final_dispatch_coverage([self._site("1")], [])
+        assert result["variety_totals"] == []
+        assert result["fallback_used"] == 1
+        assert result["total_unresolved"] == 1
+
+    def test_none_and_non_list_third_arguments_behave_as_omitted(self):
+        """None (the default) and a non-list both yield an empty index —
+        fail-open on hostile input, mirroring the other two inputs."""
+        sites = [self._site("1")]
+        for bad in (None, "notalist", 42):
+            result = extract_final_dispatch_coverage(sites, [], bad)
+            assert result["total_unresolved"] == 1
+
+    # -- The acceptance shape --------------------------------------------------
+
+    def test_fresh_simulated_arc_resolves_every_site_without_fallback(self):
+        """The mission's acceptance shape on one journal: a feature-level
+        event anchoring the arc, a dispatch-marked event per dispatch, a
+        dispatch_site member per dispatch, and a snapshot per task. Every
+        site resolves from its snapshot, so fallback_used is 0 and the
+        as-dispatched mirrors are all consumable."""
+        sites = [self._site(str(i)) for i in (1, 2, 3)]
+        snapshots = [
+            make_event(
+                "task_metadata_snapshot",
+                task_id=str(i),
+                metadata={
+                    "variety": {
+                        "novelty": 2,
+                        "scope": 2,
+                        "uncertainty": 2,
+                        "risk": 2,
+                        "total": 8,
+                    }
+                },
+                ts=self._TS,
+            )
+            for i in (1, 2, 3)
+        ]
+        assessed = [
+            self._va(str(i), f"2026-06-15T12:00:0{i}Z", total=8)
+            for i in (1, 2, 3)
+        ]
+        result = extract_final_dispatch_coverage(sites, snapshots, assessed)
+        assert result["sites"] == 3
+        assert result["variety_totals"] == [8, 8, 8]
+        assert result["fallback_used"] == 0
+        assert result["total_unresolved"] == 0

@@ -232,7 +232,17 @@ Agent(
 
 Spawn all reviewers in parallel (multiple `Agent` calls in one response).
 
-**Journal event**: After dispatching all reviewers, write a `review_dispatch` event:
+**Journal events** (in this order). First, one `variety_assessed` event per dispatched reviewer Task B — mirroring that task's `metadata.variety` stamp, the four dimension scores and the total, `*_rationale` strings omitted, with the top-level `"scope": "dispatch"` discriminator present (the feature-level assessment event carries no `scope` field; journal readers key on that difference):
+```bash
+set -e
+trap 'rc=$?; echo "[JOURNAL WRITE FAILED] peer-review.md (bash line $LINENO): \"${BASH_COMMAND%%$'\''\n'\''*}\" exit=$rc" >&2; exit $rc' ERR
+python3 "{plugin_root}/hooks/shared/session_journal.py" write \
+  --type variety_assessed --session-dir '{session_dir}' --stdin <<'JSON'
+{"task_id": "{taskId}", "scope": "dispatch", "variety": {"novelty": N, "scope": N, "uncertainty": N, "risk": N, "total": N}}
+JSON
+```
+
+After dispatching all reviewers, write a `review_dispatch` event:
 ```bash
 set -e
 trap 'rc=$?; echo "[JOURNAL WRITE FAILED] peer-review.md (bash line $LINENO): \"${BASH_COMMAND%%$'\''\n'\''*}\" exit=$rc" >&2; exit $rc' ERR
