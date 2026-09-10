@@ -24,15 +24,18 @@ advisory branch that once emitted `handoff_missing` / `handoff_schema_invalid`
 there was permanently dormant under the bare-owner convention and has been
 retired.) This SubagentStop prose check does NOT fire for a separate-process
 (e.g. tmux/iTerm2) teammate — such a teammate fires its OWN Stop/SessionEnd,
-never a SubagentStop in the lead's process — so the prose nudge is simply
+never a SubagentStop in the lead's process — so the prose refusal is simply
 absent there. That absence is intentional and acceptable: the lead-side
 presence handling above already covers both modes. Do NOT "restore" this prose
 check onto a teammate end-of-life surface believing validation was lost — it
 was not.
 
 Input: JSON from stdin with `last_assistant_message` (preferred, SDK v2.1.47+),
-       `transcript` (fallback), and `agent_type` (the role-class gate field, #812)
-Output: JSON with `systemMessage` if handoff format is incomplete
+       `transcript` (fallback), `agent_type` (the role-class gate field, #812),
+       and `stop_hook_active` (loop guard, see main())
+Output: JSON `{"decision": "block", "reason": ...}` refusing the stop when the
+        handoff is missing/low-quality; `systemMessage` warning instead when
+        `stop_hook_active` is set; `{"suppressOutput": true}` otherwise
 """
 
 from __future__ import annotations
@@ -168,10 +171,10 @@ def validate_handoff(transcript: str) -> tuple:
         transcript: The agent's complete output/transcript
 
     Returns:
-        Tuple of (is_valid, missing_elements, lossless_warnings)
+        Tuple of (is_valid, missing_elements, lossless_missing)
         - is_valid: True if handoff passes validation
         - missing_elements: list of missing element descriptions
-        - lossless_warnings: list of missing lossless field names (structured path only)
+        - lossless_missing: list of missing lossless field names (structured path only)
     """
     missing = []
 
@@ -238,7 +241,9 @@ def main():
 
     Reads agent/teammate transcript from stdin and validates handoff format
     (prose) for PACT agents. Fires for both background Task agents and
-    Agent Teams teammates. Outputs warning messages if validation fails.
+    Agent Teams teammates. Refuses the stop (decision: block) when the
+    handoff is missing or low-quality; the reason is fed back to the agent
+    so it completes the HANDOFF before stopping.
     """
     try:
         # Read input from stdin
@@ -257,8 +262,8 @@ def main():
         # teammates — this hook fires on SubagentStop (teammate-only) and the
         # teammate's agent_type (e.g. "pact-preparer") matches the pact- prefix.
         # The lead's "PACT:"-prefixed agent_type never reaches this hook
-        # (SubagentStop is teammate-only). Fail-safe: advisory systemMessage, no
-        # DENY — re-enabling it can only ADD a missing-HANDOFF warning.
+        # (SubagentStop is teammate-only). The refusal below only fires for
+        # PACT agents; every other agent_type exits clean.
         agent_type = input_data.get("agent_type", "")
 
         # Only validate PACT agents
@@ -266,32 +271,41 @@ def main():
             print(_SUPPRESS_OUTPUT)
             sys.exit(0)
 
-        warnings = []
+        refusals = []
 
         # Skip transcript validation if very short (likely an error case)
         if len(transcript) >= 100:
             is_valid, missing, lossless_missing = validate_handoff(transcript)
 
             if not is_valid and missing:
-                warnings.append(
-                    f"PACT Handoff Warning: Agent '{agent_type}' completed without "
+                refusals.append(
+                    f"PACT Handoff Refusal: Agent '{agent_type}' completed without "
                     f"proper handoff. Missing: {', '.join(missing)}. "
-                    "Consider including: what was produced, key decisions, and next steps."
+                    "Include in your closing response: what was produced, key "
+                    "decisions, and next steps."
                 )
 
             if lossless_missing:
-                warnings.append(
-                    f"PACT Lossless Field Warning: Agent '{agent_type}' HANDOFF "
+                refusals.append(
+                    f"PACT Lossless Field Refusal: Agent '{agent_type}' HANDOFF "
                     f"section is missing: {', '.join(lossless_missing)}. "
-                    "These fields preserve information that would otherwise be lost."
+                    "Add these subsections to the HANDOFF — they preserve "
+                    "information that would otherwise be lost."
                 )
 
-        # Output warnings if any
-        if warnings:
-            output = {
-                "systemMessage": " | ".join(warnings)
-            }
-            print(json.dumps(output))
+        if refusals:
+            detail = " | ".join(refusals)
+            if input_data.get("stop_hook_active"):
+                # Loop guard: the agent is already continuing from a stop-hook
+                # block. Refusing again can loop an agent that cannot satisfy
+                # the check forever, so degrade to a warning and let the stop
+                # land.
+                print(json.dumps({"systemMessage": detail}))
+            else:
+                # Platform-recognized SubagentStop refusal shape: top-level
+                # decision/reason on stdout with exit 0; reason is fed back to
+                # the subagent so it completes the HANDOFF before stopping.
+                print(json.dumps({"decision": "block", "reason": detail}))
         else:
             print(_SUPPRESS_OUTPUT)
 
