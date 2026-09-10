@@ -29,6 +29,16 @@ Create a nested Task hierarchy as a child of the current context:
 6. On completion: Parent task unblocked
 ```
 
+**Sub-feature journal event** (after step 1's stamp): write a feature-level `variety_assessed` event keyed on the sub-feature task id (no `scope` field — feature-level is the discriminator's absent value):
+```bash
+set -e
+trap 'rc=$?; echo "[JOURNAL WRITE FAILED] rePACT.md (bash line $LINENO): \"${BASH_COMMAND%%$'\''\n'\''*}\" exit=$rc" >&2; exit $rc' ERR
+python3 "{plugin_root}/hooks/shared/session_journal.py" write \
+  --type variety_assessed --session-dir '{session_dir}' --stdin <<'JSON'
+{"task_id": "{sub_feature_task_id}", "variety": {"total": N}}
+JSON
+```
+
 **Example structure (standard):**
 ```
 [Feature] "Implement user auth" (parent, blockedBy: sub-feature)
@@ -269,7 +279,16 @@ For each specialist needed, follow the steps for [Teachback-Gated Dispatch](#tea
    - Task B's `description` carries the implementation mission: "[full CONTEXT/MISSION/INSTRUCTIONS/GUIDELINES]"
 3. `TaskUpdate(A_id, owner="{scope-prefixed-name}", addBlocks=[B_id])`
 4. `TaskUpdate(B_id, owner="{scope-prefixed-name}", addBlockedBy=[A_id])`
-5. Spawn the specialist with the canonical dispatch form. The `prompt` MUST lead with the `YOUR PACT ROLE: teammate ({scope-prefixed-name})` marker on its own line (team protocol + teachback content arrive via spawn-time skills frontmatter; the dispatch prompt additionally carries the registration first-action directive):
+5. **Journal event**: write one `variety_assessed` event per dispatched Task B before spawning, mirroring that task's `metadata.variety` stamp — the four dimension scores and the total, `*_rationale` strings omitted, and the top-level `"scope": "dispatch"` discriminator present (the feature-level assessment event carries no `scope` field; journal readers key on that difference):
+   ```bash
+   set -e
+   trap 'rc=$?; echo "[JOURNAL WRITE FAILED] rePACT.md (bash line $LINENO): \"${BASH_COMMAND%%$'\''\n'\''*}\" exit=$rc" >&2; exit $rc' ERR
+   python3 "{plugin_root}/hooks/shared/session_journal.py" write \
+     --type variety_assessed --session-dir '{session_dir}' --stdin <<'JSON'
+   {"task_id": "{taskId}", "scope": "dispatch", "variety": {"novelty": N, "scope": N, "uncertainty": N, "risk": N, "total": N}}
+JSON
+   ```
+6. Spawn the specialist with the canonical dispatch form. The `prompt` MUST lead with the `YOUR PACT ROLE: teammate ({scope-prefixed-name})` marker on its own line (team protocol + teachback content arrive via spawn-time skills frontmatter; the dispatch prompt additionally carries the registration first-action directive):
 
 ```
 Agent(

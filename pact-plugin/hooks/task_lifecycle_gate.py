@@ -1625,10 +1625,11 @@ def evaluate_lifecycle(input_data: dict) -> list[tuple[str, str]]:
             if isinstance(create_variety, dict) and create_variety:
                 new_task_id = _created_task_id(tool_response, tool_input)
                 if new_task_id:
-                    # §5.1-fidelity projection: mirror ONLY the 4 dimensions +
-                    # total, dropping the *_rationale strings — the journal is
-                    # the GC-immune CALIBRATION source (wrap-up Q5 reads only
-                    # .total), not a rationale archive. Keys come from the
+                    # §Per-Dispatch Variety Stamping-fidelity projection:
+                    # mirror ONLY the 4 dimensions + total, dropping the
+                    # *_rationale strings — the journal mirror is GC-immune
+                    # numeric backup, not a rationale archive (write-only
+                    # today: no consumer reads it). Keys come from the
                     # canonical DISPATCH_VARIETY_KEYS (derived from
                     # _VARIETY_DIMENSIONS) so a dimension rename never drifts.
                     # `if k in` keeps it tolerant of a partial stamp.

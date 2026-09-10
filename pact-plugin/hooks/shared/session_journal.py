@@ -106,19 +106,23 @@ _REQUIRED_FIELDS_BY_TYPE: dict[str, dict[str, type]] = {
     # variety (written once for the feature task) — distinct from the
     # per-dispatch dispatch_variety below.
     "variety_assessed": {"task_id": str, "variety": dict},
-    # hooks/task_lifecycle_gate.py emits dispatch_variety on the TaskCreate of a
-    # Task-B carrying metadata.variety (one per dispatch). The GC-immune mirror
-    # of the per-dispatch variety stamp (#955) — the task store that holds
-    # metadata.variety is reaped by the teams/tasks reaper, so wrap-up Q5 read
-    # false-empty after GC; this journal event is the durable source.
+    # hooks/task_lifecycle_gate.py (hook-side emit, ~:1653) writes
+    # dispatch_variety on the TaskCreate of a Task-B carrying metadata.variety
+    # (one per dispatch). The GC-immune mirror of the per-dispatch variety
+    # stamp (#955): the task store that holds metadata.variety is reaped by
+    # the teams/tasks reaper, so a task-store read goes false-empty after GC.
     # task_id is the Task-B id; variety is the 5-key dict (4 dims + total).
     # The emitter PROJECTS metadata.variety to exactly these 5 keys
     # (DISPATCH_VARIETY_KEYS) before append — the *_rationale strings are NOT
-    # mirrored (pact-variety.md §5.1). Read by wrap-up Q5 as the GC-immune
-    # source for compute_variety_divergence's dispatch_varieties list, which
-    # consumes only .total. (variety is typed `dict`, so the schema check
-    # enforces only the top-level task_id+variety keys — the projection lives
-    # at the emit site, not here.)
+    # mirrored (pact-variety.md §Per-Dispatch Variety Stamping). WRITE-ONLY
+    # today: no consumer reads
+    # this type. wrap-up Q5 does not — its dispatch-side population is the
+    # `dispatch_site` stream, and its as-dispatched fallbacks are the
+    # `dispatch_site` event's own variety and the dispatch-marked
+    # `variety_assessed` events (the third stream of
+    # extract_final_dispatch_coverage). (variety is typed `dict`, so the
+    # schema check enforces only the top-level task_id+variety keys — the
+    # projection lives at the emit site, not here.)
     "dispatch_variety": {"task_id": str, "variety": dict},
     # hooks/task_lifecycle_gate.py emits dispatch_site at the owner-BEARING
     # TaskUpdate (any write naming a pact-specialist owner on a
@@ -488,6 +492,23 @@ _OPTIONAL_FIELDS_BY_TYPE: dict[str, dict[str, type]] = {
     # this optional check (same activation pattern as teachback_ack).
     "dispatch_site": {
         "variety": dict,
+    },
+    # commands/{comPACT,orchestrate,peer-review,plan-mode,rePACT}.md write
+    # variety_assessed at the Task-B stamp sites with an optional TOP-LEVEL
+    # `scope` — the per-dispatch discriminator (see VARIETY_ASSESSED_DISPATCH_
+    # SCOPE in shared/constants.py). The FEATURE-level emission (orchestrate's
+    # canonical block, and every event written before the discriminator
+    # existed) carries NO `scope` field, and absence stays the feature-level
+    # meaning: the position-based consumers (session_state feature
+    # derivation, variety_divergence arc_start) filter on this value
+    # positively, so legacy journals need no migration. NOTE the name
+    # adjacency, one level apart and never interacting: the nested `variety`
+    # DICT carries a dimension also named "scope". The required-fields
+    # registration above ("variety_assessed": {...}) is what ACTIVATES this
+    # optional check — _validate_event_schema short-circuits on unknown
+    # event types (same activation pattern as dispatch_site).
+    "variety_assessed": {
+        "scope": str,
     },
     # journal_emit_skipped names the task when the skipped write had one.
     # Optional because two of the recorded causes have no task_id to give:
@@ -1264,6 +1285,7 @@ def _read_events_at(
 def read_last_event(
     event_type: str,
     since: str | None = None,
+    exclude_scope: str | None = None,
 ) -> dict[str, Any] | None:
     """
     Read the most recent event of a given type from the current session's journal.
@@ -1274,6 +1296,9 @@ def read_last_event(
 
     Args:
         event_type: Event type to search for.
+        since: Optional arc-scope lower bound (inclusive).
+        exclude_scope: Optional TOP-LEVEL `scope` value to skip (see
+            `_scan_lines_for_event` for the consumer rationale).
 
     Returns:
         The last matching event dict, or None if not found.
@@ -1292,7 +1317,7 @@ def read_last_event(
                     file=sys.stderr,
                 )
             return None
-        return _read_last_event_at(journal, event_type, since)
+        return _read_last_event_at(journal, event_type, since, exclude_scope)
     except Exception:
         return None
 
@@ -1301,6 +1326,7 @@ def read_last_event_from(
     session_dir: str,
     event_type: str,
     since: str | None = None,
+    exclude_scope: str | None = None,
 ) -> dict[str, Any] | None:
     """
     Read the most recent event of a given type from a specific session's journal.
@@ -1311,6 +1337,9 @@ def read_last_event_from(
     Args:
         session_dir: Absolute path to the session directory.
         event_type: Event type to search for.
+        since: Optional arc-scope lower bound (inclusive).
+        exclude_scope: Optional TOP-LEVEL `scope` value to skip (see
+            `_scan_lines_for_event` for the consumer rationale).
 
     Returns:
         The last matching event dict, or None if not found.
@@ -1328,13 +1357,14 @@ def read_last_event_from(
         )
         return None
     journal = _journal_path_from(session_dir)
-    return _read_last_event_at(journal, event_type, since)
+    return _read_last_event_at(journal, event_type, since, exclude_scope)
 
 
 def _scan_lines_for_event(
     lines: list[str],
     event_type: str,
     since: str | None = None,
+    exclude_scope: str | None = None,
 ) -> dict[str, Any] | None:
     """Reverse-iterate decoded lines, returning the first matching event.
 
@@ -1352,6 +1382,15 @@ def _scan_lines_for_event(
     `since`: when set, an event matching `event_type` whose `ts` is < `since`
     (parsed via `_ts_ge`) is skipped — the reverse scan then returns the
     most recent matching event at/after `since`, or None.
+
+    `exclude_scope`: when set, an event whose TOP-LEVEL `scope` field equals
+    this value is skipped regardless of position. Consumers:
+    `variety_assessed` recovery reads (orchestrate's post-compaction
+    state-recovery step) exclude `"dispatch"` so the reverse scan does not
+    surface a per-dispatch mirror — which lands later in the journal than
+    the feature-level assessment — as the feature's assessment. Absent or
+    differing `scope` values are unaffected, so no other event type's
+    read-last changes behavior.
     """
     for line in reversed(lines):
         line = line.strip()
@@ -1364,6 +1403,11 @@ def _scan_lines_for_event(
             if event.get("type") == event_type and _ts_ge(
                 event.get("ts"), since
             ):
+                if (
+                    exclude_scope is not None
+                    and event.get("scope") == exclude_scope
+                ):
+                    continue
                 return event
         except (json.JSONDecodeError, ValueError):
             continue
@@ -1374,8 +1418,13 @@ def _read_last_event_at(
     journal: Path,
     event_type: str,
     since: str | None = None,
+    exclude_scope: str | None = None,
 ) -> dict[str, Any] | None:
     """Shared reverse-scan implementation for both implicit and explicit APIs.
+
+    `exclude_scope` threads to `_scan_lines_for_event` on BOTH scan paths
+    (tail window and full slurp), so an excluded event found in the tail
+    cannot be resurrected by the fallback and vice versa.
 
     Performance: reads the trailing `_TAIL_WINDOW_BYTES` first and scans
     that window in reverse; only falls back to a full-file slurp when the
@@ -1415,6 +1464,7 @@ def _read_last_event_at(
                 ).splitlines(),
                 event_type,
                 since,
+                exclude_scope,
             )
 
         # Large journal: tail-window-first, full-slurp fallback.
@@ -1431,7 +1481,9 @@ def _read_last_event_at(
         if tail_lines:
             tail_lines = tail_lines[1:]
 
-        match = _scan_lines_for_event(tail_lines, event_type, since)
+        match = _scan_lines_for_event(
+            tail_lines, event_type, since, exclude_scope
+        )
         if match is not None:
             return match
 
@@ -1446,6 +1498,7 @@ def _read_last_event_at(
             ).splitlines(),
             event_type,
             since,
+            exclude_scope,
         )
 
     except Exception:
@@ -1759,6 +1812,11 @@ def _build_cli():
     last_p.add_argument("--since", default=None,
                         help="Arc-scope lower bound (inclusive): only consider "
                              "events with ts >= this ISO-8601 UTC timestamp.")
+    last_p.add_argument("--exclude-scope", default=None, dest="exclude_scope",
+                        help="Skip events whose TOP-LEVEL scope field equals "
+                             "this value (e.g. --exclude-scope dispatch keeps "
+                             "a variety_assessed read-last on the feature-"
+                             "level assessment, skipping per-dispatch mirrors).")
     return parser
 
 
@@ -1853,7 +1911,10 @@ def main() -> int:
         if rc != 0:
             return rc
         event = read_last_event_from(
-            args.session_dir, args.event_type, since=args.since
+            args.session_dir,
+            args.event_type,
+            since=args.since,
+            exclude_scope=args.exclude_scope,
         )
         if event is None:
             print("null")

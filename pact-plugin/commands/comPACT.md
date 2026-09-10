@@ -34,6 +34,16 @@ Create a simpler Task hierarchy than full orchestrate:
 > `TaskCreate(subject="{verb} {feature}", metadata={"variety": {"total": N}})`  # N = feature-level total, 4-16
 > ```
 > Advisory, not enforced — the feature task has no teachback-gated sibling, so the dispatch-boundary gate cannot apply. The `.total` field is the load-bearing input `compute_variety_divergence` reads (the full 4-rationale block is fine too, but `.total` is the minimum). Mirrors what `orchestrate.md` already persists for its feature task.
+>
+> **Journal event**: after the feature `TaskCreate` carries its `metadata.variety` stamp, write a feature-level `variety_assessed` event keyed on the feature task id (no `scope` field — feature-level is the discriminator's absent value):
+> ```bash
+> set -e
+> trap 'rc=$?; echo "[JOURNAL WRITE FAILED] comPACT.md (bash line $LINENO): \"${BASH_COMMAND%%$'\''\n'\''*}\" exit=$rc" >&2; exit $rc' ERR
+> python3 "{plugin_root}/hooks/shared/session_journal.py" write \
+>   --type variety_assessed --session-dir '{session_dir}' --stdin <<'JSON'
+> {"task_id": "{feature_task_id}", "variety": {"total": N}}
+> JSON
+> ```
 
 **Example structure:**
 ```
@@ -261,7 +271,16 @@ When the task contains multiple independent items, invoke multiple specialists t
      ```
 3. `TaskUpdate(A_id, owner="{specialist-name}", addBlocks=[B_id])`
 4. `TaskUpdate(B_id, owner="{specialist-name}", addBlockedBy=[A_id])`
-5. **Journal event**: Write `agent_dispatch` before spawning each specialist:
+5. **Journal events** (both before spawning each specialist). First, one `variety_assessed` event per dispatched Task B, mirroring that task's `metadata.variety` stamp — the four dimension scores and the total, `*_rationale` strings omitted, and the top-level `"scope": "dispatch"` discriminator present (the feature-level assessment event carries no `scope` field; journal readers key on that difference):
+   ```bash
+   set -e
+   trap 'rc=$?; echo "[JOURNAL WRITE FAILED] comPACT.md (bash line $LINENO): \"${BASH_COMMAND%%$'\''\n'\''*}\" exit=$rc" >&2; exit $rc' ERR
+   python3 "{plugin_root}/hooks/shared/session_journal.py" write \
+     --type variety_assessed --session-dir '{session_dir}' --stdin <<'JSON'
+   {"task_id": "{taskId}", "scope": "dispatch", "variety": {"novelty": N, "scope": N, "uncertainty": N, "risk": N, "total": N}}
+JSON
+   ```
+   Then `agent_dispatch`:
    ```bash
    set -e
    trap 'rc=$?; echo "[JOURNAL WRITE FAILED] comPACT.md (bash line $LINENO): \"${BASH_COMMAND%%$'\''\n'\''*}\" exit=$rc" >&2; exit $rc' ERR
@@ -323,7 +342,16 @@ Use a single specialist agent only when:
      ```
 3. `TaskUpdate(A_id, owner="{specialist-name}", addBlocks=[B_id])`
 4. `TaskUpdate(B_id, owner="{specialist-name}", addBlockedBy=[A_id])`
-5. **Journal event**: Write `agent_dispatch` before spawning:
+5. **Journal events** (both before spawning). First, one `variety_assessed` event per dispatched Task B, mirroring that task's `metadata.variety` stamp — the four dimension scores and the total, `*_rationale` strings omitted, and the top-level `"scope": "dispatch"` discriminator present (the feature-level assessment event carries no `scope` field; journal readers key on that difference):
+   ```bash
+   set -e
+   trap 'rc=$?; echo "[JOURNAL WRITE FAILED] comPACT.md (bash line $LINENO): \"${BASH_COMMAND%%$'\''\n'\''*}\" exit=$rc" >&2; exit $rc' ERR
+   python3 "{plugin_root}/hooks/shared/session_journal.py" write \
+     --type variety_assessed --session-dir '{session_dir}' --stdin <<'JSON'
+   {"task_id": "{taskId}", "scope": "dispatch", "variety": {"novelty": N, "scope": N, "uncertainty": N, "risk": N, "total": N}}
+JSON
+   ```
+   Then `agent_dispatch`:
    ```bash
    set -e
    trap 'rc=$?; echo "[JOURNAL WRITE FAILED] comPACT.md (bash line $LINENO): \"${BASH_COMMAND%%$'\''\n'\''*}\" exit=$rc" >&2; exit $rc' ERR

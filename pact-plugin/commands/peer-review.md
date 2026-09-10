@@ -218,7 +218,17 @@ The `Agent()` `prompt` does NOT change shape — the Teachback-Gated Dispatch is
 5. <!-- ANCHOR-STABLE: REVIEWER-MEMORY-CHANNEL -->
    Before dispatching, compare each reviewer's `subagent_type` against the builder's. Persistent agent-memory is keyed by agent TYPE, so a reviewer of the same type loads at spawn the same store the builder has been writing to — its index arrives in context whether or not the reviewer opens a file, and it is pulled on creation rather than pushed mid-session, which is why no ordering avoids it and the harvest hold below does not reach it. Where the types match, state that limitation in the reviewer's `metadata.handoff` instead of claiming independence. Where a cross-check must be decisive, dispatch it to a DIFFERENT type, and leave the secretary query out of that dispatch — pact-memory is shared per project, so a type swap alone does not close it.
 
-6. Spawn the reviewer with the canonical dispatch form. The `prompt` MUST lead with the `YOUR PACT ROLE: teammate ({reviewer-name})` marker on its own line so routing detects the teammate spawn (team protocol + teachback content arrive via spawn-time skills frontmatter; the registration first-action is the sole per-prompt directive — it must explicitly invoke its skill because skill bodies are not preloaded):
+6. **Journal event**: write one `variety_assessed` event per dispatched reviewer Task B before spawning, mirroring that task's `metadata.variety` stamp — the four dimension scores and the total, `*_rationale` strings omitted, with the top-level `"scope": "dispatch"` discriminator present (the feature-level assessment event carries no `scope` field; journal readers key on that difference):
+```bash
+set -e
+trap 'rc=$?; echo "[JOURNAL WRITE FAILED] peer-review.md (bash line $LINENO): \"${BASH_COMMAND%%$'\''\n'\''*}\" exit=$rc" >&2; exit $rc' ERR
+python3 "{plugin_root}/hooks/shared/session_journal.py" write \
+  --type variety_assessed --session-dir '{session_dir}' --stdin <<'JSON'
+{"task_id": "{taskId}", "scope": "dispatch", "variety": {"novelty": N, "scope": N, "uncertainty": N, "risk": N, "total": N}}
+JSON
+```
+
+7. Spawn the reviewer with the canonical dispatch form. The `prompt` MUST lead with the `YOUR PACT ROLE: teammate ({reviewer-name})` marker on its own line so routing detects the teammate spawn (team protocol + teachback content arrive via spawn-time skills frontmatter; the registration first-action is the sole per-prompt directive — it must explicitly invoke its skill because skill bodies are not preloaded):
 
 ```
 Agent(
@@ -232,7 +242,7 @@ Agent(
 
 Spawn all reviewers in parallel (multiple `Agent` calls in one response).
 
-**Journal event**: After dispatching all reviewers, write a `review_dispatch` event:
+After dispatching all reviewers, write a `review_dispatch` event:
 ```bash
 set -e
 trap 'rc=$?; echo "[JOURNAL WRITE FAILED] peer-review.md (bash line $LINENO): \"${BASH_COMMAND%%$'\''\n'\''*}\" exit=$rc" >&2; exit $rc' ERR

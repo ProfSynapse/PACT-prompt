@@ -364,7 +364,7 @@ Wire variety dimension scores (already computed in the Task Variety Assessment a
 
 **If any hard gate fires** → Phase runs. No further analysis needed for this phase.
 
-**Missing variety data**: If variety scores are not available, hard gates cannot be evaluated — the default-run posture applies. After compaction, read the journal's `variety_assessed` event first (`python3 "$SJ" read-last --session-dir '{session_dir}' --type variety_assessed`); fall back to the feature task file's `metadata.variety` if journal is unavailable (`TaskGet` does NOT surface metadata). See [pact-state-recovery.md](../protocols/pact-state-recovery.md) for the full recovery hierarchy.
+**Missing variety data**: If variety scores are not available, hard gates cannot be evaluated — the default-run posture applies. After compaction, read the journal's `variety_assessed` event first (`python3 "$SJ" read-last --session-dir '{session_dir}' --type variety_assessed --exclude-scope dispatch` — per-dispatch mirrors carry `"scope": "dispatch"` and land later in the journal, so without the exclusion the read returns a dispatch total as the feature assessment); fall back to the feature task file's `metadata.variety` if journal is unavailable (`TaskGet` does NOT surface metadata). See [pact-state-recovery.md](../protocols/pact-state-recovery.md) for the full recovery hierarchy.
 
 ### Layer 3: Structured Analysis Gate
 
@@ -479,7 +479,16 @@ When a phase is skipped but a coder encounters a decision that would have been h
      - GUIDELINES: "Reference the approved plan at `docs/plans/{slug}-plan.md` for full context."
 3. `TaskUpdate(A_id, owner="preparer", addBlocks=[B_id])`
 4. `TaskUpdate(B_id, owner="preparer", addBlockedBy=[A_id])`
-5. **Journal event**: Write `agent_dispatch` before spawning:
+5. **Journal events** (both before spawning). First, one `variety_assessed` event per dispatched Task B, mirroring that task's `metadata.variety` stamp — the four dimension scores and the total, `*_rationale` strings omitted, and the top-level `"scope": "dispatch"` discriminator present (the feature-level assessment event carries no `scope` field; journal readers key on that difference):
+   ```bash
+   set -e
+   trap 'rc=$?; echo "[JOURNAL WRITE FAILED] orchestrate.md (bash line $LINENO): \"${BASH_COMMAND%%$'\''\n'\''*}\" exit=$rc" >&2; exit $rc' ERR
+   python3 "{plugin_root}/hooks/shared/session_journal.py" write \
+     --type variety_assessed --session-dir '{session_dir}' --stdin <<'JSON'
+   {"task_id": "{taskId}", "scope": "dispatch", "variety": {"novelty": N, "scope": N, "uncertainty": N, "risk": N, "total": N}}
+JSON
+   ```
+   Then `agent_dispatch`:
    ```bash
    set -e
    trap 'rc=$?; echo "[JOURNAL WRITE FAILED] orchestrate.md (bash line $LINENO): \"${BASH_COMMAND%%$'\''\n'\''*}\" exit=$rc" >&2; exit $rc' ERR
@@ -587,7 +596,16 @@ When detection fires (score >= threshold), follow the evaluation response protoc
      - GUIDELINES: Do not read phase output files yourself or paste their content into the task description. If PREPARE was skipped: pass the plan's Preparation Phase section instead.
 3. `TaskUpdate(A_id, owner="architect", addBlocks=[B_id])`
 4. `TaskUpdate(B_id, owner="architect", addBlockedBy=[A_id])`
-5. **Journal event**: Write `agent_dispatch` before spawning:
+5. **Journal events** (both before spawning). First, one `variety_assessed` event per dispatched Task B, mirroring that task's `metadata.variety` stamp — the four dimension scores and the total, `*_rationale` strings omitted, and the top-level `"scope": "dispatch"` discriminator present (the feature-level assessment event carries no `scope` field; journal readers key on that difference):
+   ```bash
+   set -e
+   trap 'rc=$?; echo "[JOURNAL WRITE FAILED] orchestrate.md (bash line $LINENO): \"${BASH_COMMAND%%$'\''\n'\''*}\" exit=$rc" >&2; exit $rc' ERR
+   python3 "{plugin_root}/hooks/shared/session_journal.py" write \
+     --type variety_assessed --session-dir '{session_dir}' --stdin <<'JSON'
+   {"task_id": "{taskId}", "scope": "dispatch", "variety": {"novelty": N, "scope": N, "uncertainty": N, "risk": N, "total": N}}
+JSON
+   ```
+   Then `agent_dispatch`:
    ```bash
    set -e
    trap 'rc=$?; echo "[JOURNAL WRITE FAILED] orchestrate.md (bash line $LINENO): \"${BASH_COMMAND%%$'\''\n'\''*}\" exit=$rc" >&2; exit $rc' ERR
@@ -726,7 +744,16 @@ JSON
        - "Smoke Testing: Run the test suite before completing. If your changes break existing tests, fix them. Import hygiene: if you modified any .py files, run `bash {plugin_root}/skills/pact-coding-standards/scripts/lint-check.sh --files '<absolute-path-to-a-file-you-modified>.py' '<absolute-path-to-another>.py'` (one separately quoted absolute path per file, never one quoted list — a filename is untrusted shell input) before the suite; record its final IMPORT-HYGIENE verdict line verbatim in your HANDOFF produced field; fix findings in files you modified (a deliberate side-effect import or re-export keeps a reasoned `# noqa: F401`); if the script is missing or errors, say so in your HANDOFF — never skip silently. Your tests are verification tests—enough to confirm your implementation works. Comprehensive coverage (edge cases, integration, E2E, adversarial) is TEST phase work."
 3. `TaskUpdate(A_id, owner="{coder-name}", addBlocks=[B_id])`
 4. `TaskUpdate(B_id, owner="{coder-name}", addBlockedBy=[A_id])`
-5. **Journal event**: Write `agent_dispatch` before spawning each coder:
+5. **Journal events** (both before spawning each coder). First, one `variety_assessed` event per dispatched Task B, mirroring that task's `metadata.variety` stamp — the four dimension scores and the total, `*_rationale` strings omitted, and the top-level `"scope": "dispatch"` discriminator present (the feature-level assessment event carries no `scope` field; journal readers key on that difference):
+   ```bash
+   set -e
+   trap 'rc=$?; echo "[JOURNAL WRITE FAILED] orchestrate.md (bash line $LINENO): \"${BASH_COMMAND%%$'\''\n'\''*}\" exit=$rc" >&2; exit $rc' ERR
+   python3 "{plugin_root}/hooks/shared/session_journal.py" write \
+     --type variety_assessed --session-dir '{session_dir}' --stdin <<'JSON'
+   {"task_id": "{taskId}", "scope": "dispatch", "variety": {"novelty": N, "scope": N, "uncertainty": N, "risk": N, "total": N}}
+JSON
+   ```
+   Then `agent_dispatch`:
    ```bash
    set -e
    trap 'rc=$?; echo "[JOURNAL WRITE FAILED] orchestrate.md (bash line $LINENO): \"${BASH_COMMAND%%$'\''\n'\''*}\" exit=$rc" >&2; exit $rc' ERR
@@ -875,7 +902,16 @@ Execute the [CONSOLIDATE Phase protocol](../protocols/pact-scope-phases.md#conso
      - GUIDELINES: "You own ALL substantive testing: unit tests, integration, E2E, edge cases."
 3. `TaskUpdate(A_id, owner="test-engineer", addBlocks=[B_id])`
 4. `TaskUpdate(B_id, owner="test-engineer", addBlockedBy=[A_id])`
-5. **Journal event**: Write `agent_dispatch` before spawning:
+5. **Journal events** (both before spawning). First, one `variety_assessed` event per dispatched Task B, mirroring that task's `metadata.variety` stamp — the four dimension scores and the total, `*_rationale` strings omitted, and the top-level `"scope": "dispatch"` discriminator present (the feature-level assessment event carries no `scope` field; journal readers key on that difference):
+   ```bash
+   set -e
+   trap 'rc=$?; echo "[JOURNAL WRITE FAILED] orchestrate.md (bash line $LINENO): \"${BASH_COMMAND%%$'\''\n'\''*}\" exit=$rc" >&2; exit $rc' ERR
+   python3 "{plugin_root}/hooks/shared/session_journal.py" write \
+     --type variety_assessed --session-dir '{session_dir}' --stdin <<'JSON'
+   {"task_id": "{taskId}", "scope": "dispatch", "variety": {"novelty": N, "scope": N, "uncertainty": N, "risk": N, "total": N}}
+JSON
+   ```
+   Then `agent_dispatch`:
    ```bash
    set -e
    trap 'rc=$?; echo "[JOURNAL WRITE FAILED] orchestrate.md (bash line $LINENO): \"${BASH_COMMAND%%$'\''\n'\''*}\" exit=$rc" >&2; exit $rc' ERR

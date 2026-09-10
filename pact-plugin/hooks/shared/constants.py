@@ -105,6 +105,19 @@ COMPACT_SUMMARY_ORPHAN_NAME = "compact-summary.orphan.txt"
 SYSTEM_TASK_PREFIXES = ("Phase:", "BLOCKER:", "ALERT:", "HALT:")
 
 
+# Top-level event-field value marking a `variety_assessed` journal event as a
+# PER-DISPATCH mirror (written by the dispatcher's command prose at the Task-B
+# stamp site) rather than a feature-level assessment. ABSENT means
+# feature-level, so every legacy event is feature-level by construction and
+# the position-based consumers (session_state._derive_feature_from_journal /
+# _derive_variety_from_journal latest-ts feature-level selection, and
+# variety_divergence.resolve_arc_start) exclude this value without any
+# migration. Readers compare the TOP-LEVEL event field; the variety DICT
+# nested one level down carries a dimension also named "scope" (one of the
+# four variety dimensions), and the two never interact.
+VARIETY_ASSESSED_DISPATCH_SCOPE = "dispatch"
+
+
 # Marker file name written when the stale-pins-pending state is detected.
 # Placed in session_dir so that it is per-session scoped. It clears on a new
 # session, and it cannot persist across /clear, because session_dir is rebuilt

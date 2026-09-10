@@ -175,8 +175,8 @@ _VARIETY_DIMENSIONS: tuple[str, ...] = (
 )
 
 # Canonical key set for a per-dispatch variety stamp PROJECTED to the journal
-# (pact-variety.md §5.1: the 4 dimensions + their total — the rationale strings
-# are NOT mirrored). Derived from _VARIETY_DIMENSIONS so the dimension names are
+# (pact-variety.md §Per-Dispatch Variety Stamping: the 4 dimensions + their
+# total — the rationale strings are NOT mirrored). Derived from _VARIETY_DIMENSIONS so the dimension names are
 # never duplicated: a future dimension rename/add edits ONE list and both the
 # resolve-fallback above and the dispatch_variety projection in
 # task_lifecycle_gate follow. Read by the #955 dispatch_variety emit.

@@ -54,7 +54,7 @@ Events are JSONL entries with common fields `v` (schema version), `type`, and `t
 | `session_refreshed` | refresh command | `consolidation_completed`, `halt_active`; optional: `halt_task_ids`, `feature_task_id`, `feature_subject`, `team_name`, `next_phase`, `worktrees`, `pr_number` | Resume mid-workstream after context refresh |
 | `session_refresh_consumed` | bootstrap command | `refresh_ts` | Retire a consumed refresh prompt (fire-once) |
 | `session_consolidated` | wrap-up, pause commands | `pass`, `task_count`, `memories_saved` (all optional int) | Signal that Pass 2 memory consolidation ran this session — consumed by `check_unpaused_pr` so SessionEnd does not warn on consolidated sessions regardless of PR state |
-| `variety_assessed` | orchestrate command | `task_id`, `variety` | Restore variety context |
+| `variety_assessed` | orchestrate, comPACT, rePACT commands (feature level); any dispatch path (per-dispatch mirror) | `task_id`, `variety`; optional: `scope` (= `dispatch` on per-dispatch mirrors) | Restore variety context |
 | `phase_transition` | orchestrate, comPACT | `phase`, `status` (`started`/`completed`) | Determine current phase |
 | `checkpoint` | orchestrate command | `phase` (+ workflow-specific snapshot) | Fast recovery point |
 | `agent_dispatch` | orchestrate, comPACT | `agent`, `task_id`, `phase` | Track active agents |
