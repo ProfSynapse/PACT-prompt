@@ -25,6 +25,12 @@ from shared.paths import get_claude_config_dir
 # "there was nothing to scrub", which absence alone cannot distinguish.
 _AMBIENT_SESSION_ID = os.environ.get("CLAUDE_CODE_SESSION_ID")
 
+# Same import-time capture discipline for the CLAUDE_PROJECT_DIR scrub pin
+# below: on a machine whose shell exports the var (a Claude Code hook process
+# or a developer shell that sourced one) the ambient-removal cell
+# discriminates; on CI it skips by the same logic as the session-id cell.
+_AMBIENT_PROJECT_DIR = os.environ.get("CLAUDE_PROJECT_DIR")
+
 
 class TestAutouseConfigRootIsolationPinned:
     """Pin the autouse ``_isolate_config_root_to_tmp`` fixture's closure.
@@ -122,3 +128,62 @@ class TestAutouseConfigRootIsolationPinned:
             "did not fire, and a test resolving the developer's live session id "
             "can compute and write paths that belong to it."
         )
+
+
+class TestAutouseProjectDirScrubPinned:
+    """Pin the autouse ``_scrub_claude_project_dir_env`` fixture's scrub.
+
+    ``CLAUDE_PROJECT_DIR`` is a live production input, not just test plumbing:
+    ``pact_context.init()`` derives the session context path from it and
+    ``backlog.project_root()`` anchors project resolution on it (NOT the
+    process cwd). An ambient value leaking into the suite flips
+    environment-sensitive tests from deterministic to machine-dependent — the
+    measured shape was three dev-machine-red / CI-green failures
+    (test_backlog's "refusal: no root" exit-code arm; both
+    test_bootstrap_prompt_gate no-session tests, where init() re-derives a
+    path the test's ``_context_path = None`` patch cannot prevent). This
+    class is the delete-the-fix counter-test for the scrub: restore the old
+    snapshot/restore-only posture (or remove the setup POP) under an
+    exporting shell and the cells below go red.
+    """
+
+    def test_scrub_removes_an_ambient_project_dir(self):
+        """Same skip-unless-ambient discipline as the session-id cell: absence
+        alone cannot tell "the scrub fired" from "there was nothing to
+        scrub", so skip (visible in the header) when the ambient was clean.
+        """
+        if _AMBIENT_PROJECT_DIR is None:
+            pytest.skip(
+                "no ambient CLAUDE_PROJECT_DIR was present at collection, so "
+                "this cell cannot discriminate a working scrub from an absent "
+                "input — it is meaningful only when the suite runs under a "
+                "shell that exports one"
+            )
+
+        assert "CLAUDE_PROJECT_DIR" not in os.environ, (
+            "CLAUDE_PROJECT_DIR survived into the test body although the "
+            "ambient environment carried one at collection — the autouse scrub "
+            "did not fire, and env-keyed resolvers (pact_context.init, "
+            "backlog.project_root) are resolving against the developer's live "
+            "project instead of the test's inputs."
+        )
+
+    def test_init_cannot_derive_a_context_path_from_ambient_env(self):
+        """Mechanism pin for the measured failure mode: with the var scrubbed,
+        ``pact_context.init()`` must leave ``_context_path`` None for an input
+        carrying only a session_id — the exact precondition the
+        bootstrap no-session tests rely on (no session dir -> no-op gate).
+        """
+        import shared.pact_context as ctx
+
+        ctx.reset_for_tests()
+        try:
+            ctx.init({"session_id": "probe-no-project-dir"})
+            assert ctx._context_path is None, (
+                f"init() derived a context path ({ctx._context_path!r}) from "
+                "an input with no project-dir axis — an ambient "
+                "CLAUDE_PROJECT_DIR leaked through the autouse scrub and "
+                "re-anchored session resolution onto the live machine state."
+            )
+        finally:
+            ctx.reset_for_tests()
