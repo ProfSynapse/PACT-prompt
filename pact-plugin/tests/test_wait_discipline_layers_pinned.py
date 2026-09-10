@@ -17,7 +17,7 @@ sequence L1 -> L2 -> L3 within the section.
 
 PRESENCE pins, not counts — same convention as test_wake_ordering_pinned.py
 (see that module's docstring for the lockstep-cost rationale). Matching
-reuses its _phrase/_normalized/_lines_outside_finders helpers via sibling
+reuses its _phrase/_normalized/_lines_outside_fences helpers via sibling
 import: backtick-and-whitespace-normalized phrase matching (tool language is
 inline-code formatted in the shipped markdown), line-anchored exact heading
 pins outside fenced code blocks.

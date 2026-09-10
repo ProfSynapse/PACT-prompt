@@ -21,8 +21,15 @@ this runbook plus the ledger is the durable, re-runnable artifact.
    `intentional_wait{reason=probe_background_wake, expected_resolver=harness-task-notification, since=<utc>}`
    and ends its turn with no further calls.
 3. Wake = the teammate sends `PROBE: woke at <utc>` unprompted after
-   completion. No reply within completion + 3 min = negative; the lead clears
-   the flag and records the trial.
+   completion. No reply within completion + 3 min scores the push question
+   negative (a push channel delivers promptly); the lead clears the flag and
+   records the trial. The observation window itself stays open to
+   completion + 10 min regardless: it must exceed both the 3-min negative
+   threshold and the +6..8 min silent-window observations of §2 — the queued
+   drains there landed 8m20s–9m31s after completion, so a window ending at
+   either bound would misread §3's late-drain shape as no wake at all. Any
+   wake arriving inside the window is recorded with its timestamp, trigger,
+   and clock source, and discriminated per §3.
 
 **Record per trial:** agent type, sleep duration, task ID, wake y/n, latency
 if woken, clock source.
