@@ -962,3 +962,62 @@ class TestTheRunnerDivideIsEnforcedAtRunTime:
         # above is an absent NAME and not a broken runner.
         namespace = _run_q6_extraction("probe = len(events)", self.EVENTS)
         assert namespace["probe"] == 1
+
+
+class TestComPACTDoesNotInvokeTheRetrospective:
+    """Scope pin for a load-bearing docstring claim with no test: variety_
+    divergence.py's `resolve_arc_start` argues its None-for-comPACT history
+    is safe because "a comPACT workflow does not invoke the retrospective".
+    The claim's basis is STRUCTURAL, and this pins it as it exists today.
+
+    The line between reference and invocation, derived from what the
+    retrospective actually keys on: comPACT.md NAMES the wrap-up
+    Orchestration Retrospective as the downstream consumer of its feature
+    stamp (the Feature-task variety stamp step) — a naming — but carries
+    NONE of the retrospective's EXECUTION tokens, the arc-scoped reads and
+    join helpers wrap-up's Q5/Q6 questions are built from. If a future
+    comPACT flow grows a real retrospective invocation, this pin fails and
+    the docstring claim (with the never-mis-scopes argument resting on it)
+    must be revisited in the same change.
+
+    `compute_variety_divergence` is deliberately NOT in the token set: it
+    appears in comPACT.md TODAY as a consumer naming ("the load-bearing
+    input `compute_variety_divergence` reads"), the same reference class as
+    the wrap-up mention, and the retrospective cannot run from a naming
+    alone — its execution signature is the reads plus the coverage join.
+    """
+
+    COMPACT_PATH = (
+        Path(__file__).parent.parent / "commands" / "comPACT.md"
+    )
+
+    RETROSPECTIVE_EXECUTION_TOKENS = (
+        "arc_start",                      # the arc-scope derivation
+        "resolve_arc_start",
+        "--type dispatch_site",           # the Q5 population read
+        "--type task_metadata_snapshot",  # the Q5 final-value read
+        "--type journal_emit_skipped",    # the Q5 sample-loss read
+        "extract_final_dispatch_coverage",
+        "--type teachback_ack",           # the Q6 signal read
+    )
+
+    def test_compact_names_the_consumer_but_carries_no_invocation(self):
+        compact = self.COMPACT_PATH.read_text(encoding="utf-8")
+        # The reference half, anchored so the pin cannot pass vacuously:
+        # comPACT points at the retrospective as the consumer of its stamp.
+        assert "wrap-up Orchestration Retrospective" in compact, (
+            "comPACT.md no longer names the wrap-up Orchestration "
+            "Retrospective as its stamp's consumer — the reference half of "
+            "this pin moved; re-anchor it to the current wording."
+        )
+        present = [
+            token
+            for token in self.RETROSPECTIVE_EXECUTION_TOKENS
+            if token in compact
+        ]
+        assert not present, (
+            f"comPACT.md carries retrospective execution tokens {present}; "
+            "the resolve_arc_start docstring's 'comPACT does not invoke the "
+            "retrospective' claim no longer holds structurally — revisit "
+            "that docstring in the same change."
+        )

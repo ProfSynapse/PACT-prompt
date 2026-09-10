@@ -374,6 +374,33 @@ class TestResolveArcStart:
         ]
         assert resolve_arc_start(events, "100") == "2026-06-14T12:00:00Z"
 
+    def test_equal_instant_tie_keeps_the_first_seen_event(self):
+        """Two feature-level events for the SAME feature id at the IDENTICAL
+        parsed instant (a realistic tie: journal ts stamps at second
+        granularity) resolve to the FIRST-SEEN event's original ts string,
+        in either list order — the assertion over BOTH orders is what proves
+        first-seen rather than any string-form preference.
+
+        This pin documents CURRENT behavior, not a designed requirement:
+        the strict `>` keeps the first of two equal instants, the
+        boundary-selection direction (an arc boundary is the earliest edge
+        of a tied cluster), matching the session_state feature selector and
+        the OPPOSITE of the value-selection ties, which take the later
+        element (see `test_equal_instant_tie_break_takes_the_later_element`
+        for the snapshot index; `_latest_dispatch_assessed_by_task` shares
+        that direction). wrap-up Q5 consumes this helper for `arc_start`,
+        so an equal-ts feature pair is deterministic there rather than
+        undefined.
+        """
+        z_form = self._va("100", "2026-06-14T12:00:00Z")
+        offset_form = self._va("100", "2026-06-14T12:00:00+00:00")
+        assert resolve_arc_start([z_form, offset_form], "100") == (
+            "2026-06-14T12:00:00Z"
+        )
+        assert resolve_arc_start([offset_form, z_form], "100") == (
+            "2026-06-14T12:00:00+00:00"
+        )
+
     def test_returns_none_when_no_matching_feature(self):
         events = [self._va("200", "2026-06-14T12:00:00Z")]
         assert resolve_arc_start(events, "100") is None

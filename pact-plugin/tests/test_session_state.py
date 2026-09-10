@@ -1268,6 +1268,35 @@ class TestDeriveVarietyFromJournal:
         ]
         assert _derive_variety_from_journal(events) is None
 
+    def test_tied_ts_feature_level_events_first_seen_wins(self):
+        """Determinism pin for the equal-ts tie: two feature-level events
+        at the IDENTICAL instant, and the FIRST-SEEN one supplies the
+        feature variety — asserting over BOTH list orders is what proves
+        first-seen rather than any payload preference.
+
+        This pin documents CURRENT behavior, not a designed requirement:
+        `_latest_feature_level_variety_event` keeps the first of two equal
+        instants via its strict `>` (the boundary-selection direction
+        shared with `resolve_arc_start`), the OPPOSITE of the
+        value-selection ties, which take the later element
+        (`_latest_snapshot_by_task`, `_latest_dispatch_assessed_by_task`).
+        In the wild the tie is negligible — one feature-level event per
+        arc — so this pin exists to keep the behavior deterministic if a
+        re-emission ever makes the tie reachable.
+        """
+        first = make_event("variety_assessed", task_id="5",
+                           variety={"first": True},
+                           ts="2026-04-14T00:00:01Z")
+        second = make_event("variety_assessed", task_id="5",
+                            variety={"second": True},
+                            ts="2026-04-14T00:00:01Z")
+        assert _derive_variety_from_journal([first, second]) == {
+            "first": True
+        }
+        assert _derive_variety_from_journal([second, first]) == {
+            "second": True
+        }
+
 
 # ---------------------------------------------------------------------------
 # Full behavior: feature_subject disk fallback
