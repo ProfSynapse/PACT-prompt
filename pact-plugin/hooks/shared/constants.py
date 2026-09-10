@@ -110,7 +110,7 @@ SYSTEM_TASK_PREFIXES = ("Phase:", "BLOCKER:", "ALERT:", "HALT:")
 # stamp site) rather than a feature-level assessment. ABSENT means
 # feature-level, so every legacy event is feature-level by construction and
 # the position-based consumers (session_state._derive_feature_from_journal /
-# _derive_variety_from_journal first-event selection, and
+# _derive_variety_from_journal latest-ts feature-level selection, and
 # variety_divergence.resolve_arc_start) exclude this value without any
 # migration. Readers compare the TOP-LEVEL event field; the variety DICT
 # nested one level down carries a dimension also named "scope" (one of the

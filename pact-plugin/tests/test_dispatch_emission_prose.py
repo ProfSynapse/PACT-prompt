@@ -4,8 +4,8 @@ Every dispatch path that stamps `metadata.variety` on a Task B also writes a
 `variety_assessed` journal event keyed on that task's id, carrying the four
 dimension scores and the total, with the TOP-LEVEL `"scope": "dispatch"`
 discriminator present. The FEATURE-level assessment event carries NO `scope`
-field, and journal readers key on that difference (session_state first-event
-feature derivation and variety_divergence arc_start exclude dispatch-marked
+field, and journal readers key on that difference (session_state latest-ts
+feature-level derivation and variety_divergence arc_start exclude dispatch-marked
 events; the wrap-up Q5 join consumes them as an as-dispatched fallback
 source). A hand-written emission that omits the field degrades to
 feature-level — the legacy behavior — so the discriminator's presence on
