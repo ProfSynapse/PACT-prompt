@@ -202,8 +202,8 @@ def load_records(
 def _read_text_shared(path: Path) -> str:
     """Read text under a shared flock when available.
 
-    Writers take LOCK_EX then truncate-in-place. An unlocked reader can see
-    the empty or partial file and fail-open to no outstanding work.
+    Writers take LOCK_EX, truncate-in-place, and flush before unlock so a
+    LOCK_SH reader cannot observe the empty or partial mid-write file.
     """
     if HAS_FLOCK:
         with open(path, "r", encoding="utf-8") as f:
@@ -215,15 +215,21 @@ def _read_text_shared(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
+def _rewrite_locked(f, text: str) -> None:
+    """Truncate-in-place and flush while the caller still holds LOCK_EX."""
+    f.seek(0)
+    f.truncate()
+    f.write(text)
+    f.flush()
+
+
 def _write_text(path: Path, text: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     if HAS_FLOCK:
         with open(path, "a+", encoding="utf-8") as f:
             fcntl.flock(f, fcntl.LOCK_EX)
             try:
-                f.seek(0)
-                f.truncate()
-                f.write(text)
+                _rewrite_locked(f, text)
             finally:
                 fcntl.flock(f, fcntl.LOCK_UN)
     else:
@@ -262,9 +268,7 @@ def _atomic_update_records(
                     f.seek(0)
                     new_text, changed = _apply(f.read())
                     if changed:
-                        f.seek(0)
-                        f.truncate()
-                        f.write(new_text)
+                        _rewrite_locked(f, new_text)
                 finally:
                     fcntl.flock(f, fcntl.LOCK_UN)
             return True
@@ -419,12 +423,14 @@ def update_unflagged_idle_counts(mutator, team_name: str | None = None) -> dict:
         return {}
     path.parent.mkdir(parents=True, exist_ok=True)
 
-    def _apply(text: str) -> tuple[str, dict]:
+    def _apply(text: str) -> tuple[str, dict, bool]:
         counts = _parse_idle_counts_text(text)
+        before = json.dumps(counts)
         updated = mutator(counts)
         if not isinstance(updated, dict):
             updated = {}
-        return json.dumps(updated), updated
+        new_text = json.dumps(updated)
+        return new_text, updated, new_text != before
 
     try:
         if HAS_FLOCK:
@@ -432,10 +438,9 @@ def update_unflagged_idle_counts(mutator, team_name: str | None = None) -> dict:
                 fcntl.flock(f, fcntl.LOCK_EX)
                 try:
                     f.seek(0)
-                    new_text, updated = _apply(f.read())
-                    f.seek(0)
-                    f.truncate()
-                    f.write(new_text)
+                    new_text, updated, changed = _apply(f.read())
+                    if changed:
+                        _rewrite_locked(f, new_text)
                 finally:
                     fcntl.flock(f, fcntl.LOCK_UN)
             return updated
@@ -443,8 +448,9 @@ def update_unflagged_idle_counts(mutator, team_name: str | None = None) -> dict:
             text = path.read_text(encoding="utf-8")
         except FileNotFoundError:
             text = ""
-        new_text, updated = _apply(text)
-        path.write_text(new_text, encoding="utf-8")
+        new_text, updated, changed = _apply(text)
+        if changed:
+            path.write_text(new_text, encoding="utf-8")
         return updated
     except OSError:
         return {}

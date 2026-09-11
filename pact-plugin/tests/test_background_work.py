@@ -190,3 +190,94 @@ class TestRegistryIO:
         assert bw.idled_at_stale(fresh, now=FIXED_NOW) is False
         assert bw.idled_at_stale(stale, now=FIXED_NOW) is True
         assert bw.idled_at_stale(missing, now=FIXED_NOW) is False
+
+
+class TestLockedRewriteFlush:
+    def test_rewrite_locked_flushes_before_returning(self):
+        order = []
+
+        class _Handle:
+            def seek(self, _pos):
+                return 0
+
+            def truncate(self):
+                order.append("truncate")
+
+            def write(self, text):
+                order.append(f"write:{text}")
+                return len(text)
+
+            def flush(self):
+                order.append("flush")
+
+        bw._rewrite_locked(_Handle(), '{"records":[]}')
+        assert order == ["truncate", "write:{\"records\":[]}", "flush"]
+
+    def test_write_text_flushes_before_unlock(self, team_home, monkeypatch):
+        if not bw.HAS_FLOCK:
+            pytest.skip("fcntl.flock is required for this contract")
+        order = []
+        real_flock = bw.fcntl.flock
+        real_rewrite = bw._rewrite_locked
+
+        def spy_rewrite(f, text):
+            order.append("rewrite")
+            real_rewrite(f, text)
+
+        def spy_flock(fd, op):
+            if op == bw.fcntl.LOCK_UN:
+                order.append("unlock")
+            return real_flock(fd, op)
+
+        monkeypatch.setattr(bw, "_rewrite_locked", spy_rewrite)
+        monkeypatch.setattr(bw.fcntl, "flock", spy_flock)
+        assert bw.save_records([_record()], TEAM) is True
+        assert "rewrite" in order
+        assert "unlock" in order
+        assert order.index("rewrite") < order.index("unlock")
+
+    def test_idle_rmw_skips_rewrite_when_mutator_is_noop(self, team_home, monkeypatch):
+        if not bw.HAS_FLOCK:
+            pytest.skip("fcntl.flock is required for this contract")
+        bw.save_unflagged_idle_counts(
+            {"architect": {"count": 3, "task_id": "7"}}, TEAM
+        )
+        rewrites = {"n": 0}
+        real_rewrite = bw._rewrite_locked
+
+        def spy_rewrite(f, text):
+            rewrites["n"] += 1
+            return real_rewrite(f, text)
+
+        monkeypatch.setattr(bw, "_rewrite_locked", spy_rewrite)
+
+        def identity(counts):
+            return counts
+
+        out = bw.update_unflagged_idle_counts(identity, TEAM)
+        assert out["architect"]["count"] == 3
+        assert rewrites["n"] == 0
+
+    def test_idle_rmw_rewrites_when_mutator_changes(self, team_home, monkeypatch):
+        if not bw.HAS_FLOCK:
+            pytest.skip("fcntl.flock is required for this contract")
+        bw.save_unflagged_idle_counts(
+            {"architect": {"count": 2, "task_id": "7"}}, TEAM
+        )
+        rewrites = {"n": 0}
+        real_rewrite = bw._rewrite_locked
+
+        def spy_rewrite(f, text):
+            rewrites["n"] += 1
+            return real_rewrite(f, text)
+
+        monkeypatch.setattr(bw, "_rewrite_locked", spy_rewrite)
+
+        def bump(counts):
+            counts["architect"] = {"count": 3, "task_id": "7"}
+            return counts
+
+        out = bw.update_unflagged_idle_counts(bump, TEAM)
+        assert out["architect"]["count"] == 3
+        assert rewrites["n"] == 1
+        assert bw.load_unflagged_idle_counts(TEAM)["architect"]["count"] == 3
