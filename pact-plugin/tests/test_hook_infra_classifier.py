@@ -303,6 +303,8 @@ COVERED_L2 = {
     # exit(2) (fail-LOUD), so they are L2-only / never-L3 (no live-probe).
     "merge_guard_pre": "test_merge_guard_seam_integration.py",
     "merge_guard_post": "test_merge_guard_seam_integration.py",
+    "background_work_tracker": "test_unflagged_background_scan_integration.py",
+    "unflagged_background_scan": "test_unflagged_background_scan_integration.py",
 }
 
 # Documented forward-only BACKLOG: seam hooks whose non-mocked L2 test is a named

@@ -152,6 +152,7 @@ SECTION_PHRASE_PINS = [
     (INTENTIONAL_WAITING, "the session journal, branch state, and filesystem mtimes"),
     (INTENTIONAL_WAITING, "a last-change time, not a liveness signal"),
     (INTENTIONAL_WAITING, "missed_wake_scan is the existing fallback machinery"),
+    (INTENTIONAL_WAITING, "unflagged_background_scan is a separate lead consumer from missed_wake_scan"),
     # --- §12: nudge-first + probe-versus-noise boundary ---
     (INTENTIONAL_WAITING, "a SendMessage nudge is the first move"),
     (INTENTIONAL_WAITING, "asks a question whose answer changes your next action is a probe"),

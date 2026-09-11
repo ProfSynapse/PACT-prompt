@@ -47,6 +47,8 @@ MUST_BE_SYNC = {
     "agent_handoff_emitter.py",  # Writes agent_handoff journal event on TaskCompleted
     "git_commit_check.py",  # Checks git commit conventions
     "wait_filler_gate.py",  # Denies bare true/sleep filler commands
+    "background_work_tracker.py",  # Records teammate Bash run_in_background
+    "unflagged_background_scan.py",  # Lead unflagged-background surfacer
     "track_files.py",     # Tracks file edits (PostToolUse, non-async)
     "precompact_state_reminder.py",  # Emits state snapshot before compaction
     "postcompact_archive.py",  # Archives compact_summary to disk for session_init + secretary
@@ -513,33 +515,27 @@ class TestSessionStartCardinality:
     sole entry.
 
     The #903 deferred missed-wake alarm then ADDED missed_wake_scan.py as a
-    SessionStart recovery backstop (it scans for cross-session stale
-    awaiting_lead_completion waits at session start). SessionStart now has
-    exactly TWO entries, in order: session_init.py then missed_wake_scan.py.
-    The original cardinality concerns are satisfied because missed_wake_scan.py
-    is journal-only:
-    - Ordering / stdin: Claude Code runs SessionStart hooks sequentially, but
-      each is a SEPARATE process with its own stdin copy — no starvation
-      between session_init and missed_wake_scan. session_init runs first.
-    - Marker / additionalContext races: missed_wake_scan emits NO
-      additionalContext (it returns suppressOutput and writes only a journal
-      event), so it does not touch session_init's bootstrap_marker /
-      additionalContext single-source-of-truth on source=compact.
-    - Context budget: missed_wake_scan contributes no additionalContext, so the
-      budget invariant is preserved.
-    Pin the exact set + order so any FURTHER hook addition is a conscious
-    decision, not a silent merge.
+    SessionStart recovery backstop. The #1625 unflagged-background alarm
+    ADDED unflagged_background_scan.py as a third entry. SessionStart now
+    has exactly THREE entries, in order: session_init.py, missed_wake_scan.py,
+    unflagged_background_scan.py.
+    Sequential-process / no-starvation: Claude Code runs SessionStart hooks
+    sequentially, but each is a SEPARATE process with its own stdin copy —
+    no starvation between the three. session_init runs first (state-reset).
+    Both later hooks may emit additionalContext when their condition holds
+    (current missed_wake_scan already does on SessionStart — comments that
+    described it as journal-only are stale). Pin the exact set + order so
+    any FURTHER hook addition is a conscious decision, not a silent merge.
     """
 
     def test_session_start_registration(self, hooks_config):
-        """SessionStart must have exactly two entries, in order:
-        session_init.py (state-reset) then missed_wake_scan.py
-        (the #903 missed-wake recovery backstop).
+        """SessionStart must have exactly three entries, in order:
+        session_init.py, missed_wake_scan.py, unflagged_background_scan.py.
         """
         session_start = hooks_config["hooks"].get("SessionStart", [])
-        assert len(session_start) == 2, (
-            "SessionStart must have exactly two entries: session_init.py and "
-            "missed_wake_scan.py (the #903 missed-wake recovery backstop). A "
+        assert len(session_start) == 3, (
+            "SessionStart must have exactly three entries: session_init.py, "
+            "missed_wake_scan.py, and unflagged_background_scan.py. A "
             "different count indicates accidental restoration or a new hook "
             "addition that may interact with session_init's state-reset logic."
         )
@@ -549,11 +545,15 @@ class TestSessionStartCardinality:
             )
         assert "session_init.py" in session_start[0]["hooks"][0]["command"], (
             "SessionStart's first hook must be session_init.py "
-            "(runs before the #903 backstop)."
+            "(runs before the recovery scans)."
         )
         assert "missed_wake_scan.py" in session_start[1]["hooks"][0]["command"], (
             "SessionStart's second hook must be missed_wake_scan.py "
             "(the #903 missed-wake recovery backstop)."
+        )
+        assert "unflagged_background_scan.py" in session_start[2]["hooks"][0]["command"], (
+            "SessionStart's third hook must be unflagged_background_scan.py "
+            "(the #1625 unflagged-background lead scan)."
         )
 
 
@@ -591,6 +591,45 @@ class TestMissedWakeSurfacerRegistration:
             "Stop must NOT be registered — the #903 record-only Stop carrier was "
             "dropped in the B1 surfacing remediation; UserPromptSubmit + "
             "SessionStart now carry the surfacer."
+        )
+
+
+class TestUnflaggedBackgroundRegistration:
+    """#1625: tracker on PostToolUse Bash; lead scan on UserPromptSubmit +
+    SessionStart. Stop stays unregistered (pinned above)."""
+
+    def test_tracker_on_post_tool_use_bash(self, hooks_config):
+        found = False
+        for entry in hooks_config["hooks"].get("PostToolUse", []):
+            if entry.get("matcher") == "Bash":
+                commands = [h.get("command", "") for h in entry.get("hooks", [])]
+                if any("background_work_tracker.py" in c for c in commands):
+                    found = True
+        assert found, (
+            "background_work_tracker.py must be registered under PostToolUse "
+            "with matcher Bash"
+        )
+
+    def test_scan_on_user_prompt_submit(self, hooks_config):
+        commands = [
+            c["command"]
+            for entry in hooks_config["hooks"].get("UserPromptSubmit", [])
+            for c in entry["hooks"]
+        ]
+        assert any("unflagged_background_scan.py" in c for c in commands), (
+            "unflagged_background_scan.py must be registered under "
+            "UserPromptSubmit (the #1625 lead-turn surfacer)."
+        )
+
+    def test_scan_on_session_start(self, hooks_config):
+        commands = [
+            c["command"]
+            for entry in hooks_config["hooks"].get("SessionStart", [])
+            for c in entry["hooks"]
+        ]
+        assert any("unflagged_background_scan.py" in c for c in commands), (
+            "unflagged_background_scan.py must be registered under SessionStart "
+            "(the #1625 cross-session recovery backstop)."
         )
 
 

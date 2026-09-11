@@ -77,6 +77,12 @@ LAYER_3_PINS = [
     "Either split the work into timeout-sized chunks run in-turn, or transfer the watch explicitly",
     "flag the wait with expected_resolver=lead",
 ]
+FLOOR_PINS = [
+    "background_work_tracker",
+    "TeammateIdle emits a Layer 2/3 advisory",
+    "unflagged_background_scan",
+    "these hooks are the floor under it",
+]
 SILENCE_PINS = [
     "Silence is uninformative in both directions, and narrating a wait is noise in both",
     "manufactures the next turn without producing new information",
@@ -154,6 +160,7 @@ def _pin_cases():
         ("layer-1", LAYER_1_PINS),
         ("layer-2", LAYER_2_PINS),
         ("layer-3", LAYER_3_PINS),
+        ("floor", FLOOR_PINS),
         ("silence", SILENCE_PINS),
     ):
         cases.extend((f"{name}::{pin[:44]}", pin) for pin in pins)

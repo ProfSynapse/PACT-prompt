@@ -3600,6 +3600,11 @@ class TestValidateEventSchemaPerType:
             "task_id": "1",
             "since": "2026-01-01T00:00:00+00:00",
         },
+        "unflagged_background_wait": {
+            "agent": "architect",
+            "task_id": "7",
+            "registered_at": "2026-09-11T12:00:00+00:00",
+        },
         "s2_state_seeded": {
             "worktree": "/tmp/wt",
             "agents": ["c1", "c2"],

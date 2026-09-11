@@ -614,3 +614,106 @@ class TestMainEdgeCases:
         # first, so the weaker one could never be the sole failure. Removed
         # rather than kept as a line that cannot fail.
         assert 'TaskStop("coder-a")' in msg
+
+
+class TestUnflaggedBackgroundAdvisory:
+    """#1625 TeammateIdle Layer 2/3 advisory — separate counter file."""
+
+    def _seed_registry(self, tmp_path, team, owner="coder-a", task_id="1"):
+        from shared import background_work as bw
+
+        rec = {
+            "agent_name": owner,
+            "session_id": "sid-coder",
+            "task_id": task_id,
+            "registered_at": "2026-09-11T11:00:00+00:00",
+            "command": "pytest -q",
+        }
+        assert bw.append_record(rec, team)
+
+    def test_third_idle_emits_advisory(self, tmp_path, monkeypatch, pact_context):
+        from teammate_idle import check_unflagged_background
+
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
+        pact_context(team_name="pact-test", session_id="sid-lead")
+        self._seed_registry(tmp_path, "pact-test")
+        tasks = [make_task(status="in_progress", owner="coder-a")]
+        assert check_unflagged_background(tasks, "coder-a", "pact-test") is None
+        assert check_unflagged_background(tasks, "coder-a", "pact-test") is None
+        msg = check_unflagged_background(tasks, "coder-a", "pact-test")
+        assert msg is not None
+        assert "intentional_wait" in msg
+        assert "awaiting_lead_completion" in msg
+        assert check_unflagged_background(tasks, "coder-a", "pact-test") is None
+
+    def test_no_registry_stays_silent(self, tmp_path, monkeypatch, pact_context):
+        from teammate_idle import check_unflagged_background
+
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
+        pact_context(team_name="pact-test", session_id="sid-lead")
+        tasks = [make_task(status="in_progress", owner="coder-a")]
+        for _ in range(3):
+            assert check_unflagged_background(tasks, "coder-a", "pact-test") is None
+
+    def test_valid_wait_no_advisory(self, tmp_path, monkeypatch, pact_context):
+        from teammate_idle import check_unflagged_background
+
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
+        pact_context(team_name="pact-test", session_id="sid-lead")
+        self._seed_registry(tmp_path, "pact-test")
+        tasks = [make_task(
+            status="in_progress",
+            owner="coder-a",
+            metadata={
+                "intentional_wait": {
+                    "reason": "awaiting_lead_takeover",
+                    "expected_resolver": "lead",
+                    "since": "2026-09-11T11:50:00+00:00",
+                }
+            },
+        )]
+        for _ in range(3):
+            assert check_unflagged_background(tasks, "coder-a", "pact-test") is None
+
+    def test_idle_counts_pop_does_not_reset_unflagged_counter(
+        self, tmp_path, monkeypatch, pact_context
+    ):
+        from teammate_idle import check_idle_cleanup, check_unflagged_background
+
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
+        pact_context(team_name="pact-test", session_id="sid-lead")
+        self._seed_registry(tmp_path, "pact-test")
+        tasks = [make_task(status="in_progress", owner="coder-a")]
+        idle_path = str(tmp_path / ".claude" / "teams" / "pact-test" / "idle_counts.json")
+        assert check_unflagged_background(tasks, "coder-a", "pact-test") is None
+        check_idle_cleanup(tasks, "coder-a", idle_path)
+        assert check_unflagged_background(tasks, "coder-a", "pact-test") is None
+        check_idle_cleanup(tasks, "coder-a", idle_path)
+        msg = check_unflagged_background(tasks, "coder-a", "pact-test")
+        assert msg is not None
+
+    def test_main_emits_without_idle_preamble(
+        self, capsys, tmp_path, monkeypatch, pact_context
+    ):
+        import io
+        from teammate_idle import IDLE_PREAMBLE, main
+
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
+        pact_context(team_name="pact-test", session_id="sid-lead")
+        self._seed_registry(tmp_path, "pact-test")
+        from shared import background_work as bw
+        bw.save_unflagged_idle_counts(
+            {"coder-a": {"count": 2, "task_id": "1"}}, "pact-test"
+        )
+        tasks = [make_task(status="in_progress", owner="coder-a")]
+        with patch("teammate_idle.get_team_name", return_value="pact-test"), \
+             patch("sys.stdin", io.StringIO(json.dumps({"teammate_name": "coder-a"}))), \
+             patch("teammate_idle.get_task_list", return_value=tasks):
+            with pytest.raises(SystemExit) as exc:
+                main()
+        assert exc.value.code == 0
+        output = json.loads(capsys.readouterr().out)
+        msg = output.get("systemMessage", "")
+        assert "Unflagged background work" in msg
+        assert not msg.startswith(IDLE_PREAMBLE)
+        assert "no response needed" not in msg
