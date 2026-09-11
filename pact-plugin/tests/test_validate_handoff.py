@@ -888,11 +888,18 @@ class TestStopHookActiveLoopGuard:
             "stop_hook_active=true must NOT re-block — that loops an agent "
             "that cannot satisfy the check"
         )
+        # The degrade path is user-facing: the framing names the degrade, and
+        # the shared detail (with its refusal-class label) rides inside it.
+        assert "refusal degraded by stop_hook_active loop guard" in output["systemMessage"]
         assert "Handoff Refusal" in output["systemMessage"]
 
-    def test_stop_hook_active_true_degrades_lossless_refusal(self, capsys):
+    def test_stop_hook_active_true_degrades_lossless_refusal(self, capsys, monkeypatch):
         """Lossless-field refusal + stop_hook_active=true → warning, not block."""
+        import validate_handoff
         from validate_handoff import main
+
+        events = []
+        monkeypatch.setattr(validate_handoff, "append_event", events.append)
 
         transcript = HANDOFF_MISSING_PRODUCED + " " * max(0, 100 - len(HANDOFF_MISSING_PRODUCED))
         input_data = json.dumps({
@@ -909,11 +916,71 @@ class TestStopHookActiveLoopGuard:
         captured = capsys.readouterr()
         output = json.loads(captured.out.strip())
         assert "decision" not in output
+        assert "refusal degraded by stop_hook_active loop guard" in output["systemMessage"]
         assert "Lossless Field Refusal" in output["systemMessage"]
+        assert events[0]["classes"] == ["lossless_fields"]
 
-    def test_stop_hook_active_false_still_blocks(self, capsys):
-        """stop_hook_active=false is the same as absent → the refusal fires."""
+    def test_degrade_emits_handoff_refusal_degraded_event(self, monkeypatch):
+        """Degrade path appends one handoff_refusal_degraded journal event
+        carrying agent_type, the refusal detail, and the fired class."""
+        import validate_handoff
         from validate_handoff import main
+
+        events = []
+        monkeypatch.setattr(validate_handoff, "append_event", events.append)
+
+        input_data = json.dumps({
+            "agent_type": "pact-backend-coder",
+            "last_assistant_message": "x" * 100 + " " + MISSING_HANDOFF,
+            "stop_hook_active": True,
+        })
+
+        with patch("sys.stdin", io.StringIO(input_data)):
+            with pytest.raises(SystemExit) as exc_info:
+                main()
+
+        assert exc_info.value.code == 0
+        assert len(events) == 1
+        event = events[0]
+        assert event["type"] == "handoff_refusal_degraded"
+        assert event["agent_type"] == "pact-backend-coder"
+        assert "Handoff Refusal" in event["detail"]
+        assert event["classes"] == ["missing_handoff"]
+
+    def test_degrade_journal_failure_still_exits_zero(self, capsys, monkeypatch):
+        """A journal-write failure on the degrade path is swallowed: the
+        systemMessage still lands and the hook still exits 0 — telemetry is
+        fail-open and never breaks the exit-0 contract."""
+        import validate_handoff
+        from validate_handoff import main
+
+        def _raise(_event):
+            raise RuntimeError("journal write exploded")
+
+        monkeypatch.setattr(validate_handoff, "append_event", _raise)
+
+        input_data = json.dumps({
+            "agent_type": "pact-backend-coder",
+            "last_assistant_message": "x" * 100 + " " + MISSING_HANDOFF,
+            "stop_hook_active": True,
+        })
+
+        with patch("sys.stdin", io.StringIO(input_data)):
+            with pytest.raises(SystemExit) as exc_info:
+                main()
+
+        assert exc_info.value.code == 0
+        output = json.loads(capsys.readouterr().out.strip())
+        assert "decision" not in output
+        assert "refusal degraded by stop_hook_active loop guard" in output["systemMessage"]
+
+    def test_stop_hook_active_false_still_blocks(self, capsys, monkeypatch):
+        """stop_hook_active=false is the same as absent → the refusal fires."""
+        import validate_handoff
+        from validate_handoff import main
+
+        events = []
+        monkeypatch.setattr(validate_handoff, "append_event", events.append)
 
         input_data = json.dumps({
             "agent_type": "pact-backend-coder",
@@ -930,3 +997,4 @@ class TestStopHookActiveLoopGuard:
         output = json.loads(captured.out.strip())
         assert output["decision"] == "block"
         assert "Handoff Refusal" in output["reason"]
+        assert events == []  # telemetry fires only on the degrade path

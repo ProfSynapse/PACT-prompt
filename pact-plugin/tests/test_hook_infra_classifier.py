@@ -312,7 +312,8 @@ COVERED_L2 = {
 #     documented follow-up. Its L2 seam test is fast-follow.
 #   - bootstrap_gate / bootstrap_marker_writer: iter_team_task_jsons readers.
 #   - file_tracker / peer_inject: L2-only (held), watch-list per the classifier.
-#   - validate_handoff: stdin-only contract (no disk/task/journal seam).
+#   - validate_handoff: stdout/exit contract is seam-independent (the degrade
+#     path's journal append is fail-open telemetry).
 BACKLOG_L2 = frozenset({
     "task_lifecycle_gate", "bootstrap_gate", "bootstrap_marker_writer",
     "file_tracker", "peer_inject", "validate_handoff",

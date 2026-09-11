@@ -32,7 +32,8 @@ was not.
 
 Input: JSON from stdin with `last_assistant_message` (preferred, SDK v2.1.47+),
        `transcript` (fallback), `agent_type` (the role-class gate field, #812),
-       and `stop_hook_active` (loop guard, see main())
+       `stop_hook_active` (loop guard, see main()), and `session_id` (telemetry
+       journal resolution, see main())
 Output: JSON `{"decision": "block", "reason": ...}` refusing the stop when the
         handoff is missing/low-quality; `systemMessage` warning instead when
         `stop_hook_active` is set; `{"suppressOutput": true}` on every
@@ -46,7 +47,9 @@ import json
 import sys
 import re
 
+import shared.pact_context as pact_context
 from shared.error_output import hook_error_json
+from shared.session_journal import append_event, make_event
 
 # Suppress false "hook error" display in Claude Code UI on bare exit paths
 _SUPPRESS_OUTPUT = json.dumps({"suppressOutput": True})
@@ -248,7 +251,9 @@ def main():
     so it completes the HANDOFF before stopping. When `stop_hook_active` is
     set — the agent is already continuing from a stop-hook block — the
     refusal degrades to a `systemMessage` warning so an agent that cannot
-    satisfy the check is not looped forever.
+    satisfy the check is not looped forever. The degrade also appends a
+    `handoff_refusal_degraded` event to the session journal (fail-open
+    telemetry — a journal failure never blocks the stop).
     """
     try:
         # Read input from stdin
@@ -277,12 +282,14 @@ def main():
             sys.exit(0)
 
         refusals = []
+        refusal_classes = []
 
         # Skip transcript validation if very short (likely an error case)
         if len(transcript) >= 100:
             is_valid, missing, lossless_missing = validate_handoff(transcript)
 
             if not is_valid and missing:
+                refusal_classes.append("missing_handoff")
                 refusals.append(
                     f"PACT Handoff Refusal: Agent '{agent_type}' completed without "
                     f"proper handoff. Missing: {', '.join(missing)}. "
@@ -291,6 +298,7 @@ def main():
                 )
 
             if lossless_missing:
+                refusal_classes.append("lossless_fields")
                 refusals.append(
                     f"PACT Lossless Field Refusal: Agent '{agent_type}' HANDOFF "
                     f"section is missing: {', '.join(lossless_missing)}. "
@@ -304,8 +312,30 @@ def main():
                 # Loop guard: the agent is already continuing from a stop-hook
                 # block. Refusing again can loop an agent that cannot satisfy
                 # the check forever, so degrade to a warning and let the stop
-                # land.
-                print(json.dumps({"systemMessage": detail}))
+                # land. The stop LANDS on this path — systemMessage is shown
+                # to the user, not fed back to the agent — so the framing
+                # names the degrade rather than reusing the agent-directed
+                # refusal label.
+                print(json.dumps({"systemMessage": (
+                    "PACT Handoff (refusal degraded by stop_hook_active loop "
+                    f"guard — stop allowed): {detail}"
+                )}))
+                # Telemetry: with refusal as the default, degrade events are
+                # the escape hatch and must be observable. Fail-open by
+                # construction: pact_context.init no-ops when session_id is
+                # absent, append_event returns False on any error, and the
+                # try/except covers anything past those guards — telemetry
+                # never breaks the exit-0 contract.
+                try:
+                    pact_context.init(input_data)
+                    append_event(make_event(
+                        "handoff_refusal_degraded",
+                        agent_type=agent_type,
+                        detail=detail,
+                        classes=refusal_classes,
+                    ))
+                except Exception:
+                    pass
             else:
                 # Platform-recognized SubagentStop refusal shape: top-level
                 # decision/reason on stdout with exit 0; reason is fed back to
