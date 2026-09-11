@@ -454,6 +454,24 @@ def main():
         # too and the gate below drops every tool that is not Edit or Write.
         clear_pin_staleness_marker_if_resolved(tool_name, tool_input)
 
+        # THIRD JOB: record a teammate's run_in_background Bash launch. All of
+        # the logic lives in shared.background_work; this host holds only the
+        # gate and the call. Its own try/except, so a fault there cannot take
+        # down the two jobs above — file tracking is this hook's contract and
+        # must survive anything that happens in the registry write.
+        #
+        # The `Bash` test gates the IMPORT as well as the call. This hook runs
+        # on every Edit, Write and Bash in every consumer session, so an
+        # unconditional import would charge every one of them for a module
+        # only a background launch uses.
+        if tool_name == "Bash":
+            try:
+                from shared.background_work import record_background_launch
+
+                record_background_launch(input_data)
+            except Exception:
+                pass
+
         # Only track Edit and Write tools
         if tool_name not in ("Edit", "Write"):
             print(_SUPPRESS_OUTPUT)

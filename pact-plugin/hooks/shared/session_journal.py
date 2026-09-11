@@ -209,6 +209,20 @@ _REQUIRED_FIELDS_BY_TYPE: dict[str, dict[str, type]] = {
         "agent": str,
         "since": str,
     },
+    # hooks/missed_wake_scan.py ALSO writes unflagged_background_wait — a
+    # SEPARATE alarm with a separate vocabulary, sharing only the process.
+    # It records a teammate holding outstanding background work with no
+    # flagged wait: which agent, when the launch was registered (also the
+    # dedup discriminator), and every task the record covers.
+    # `task_ids` is a LIST, not a scalar `task_id`. A teammate may hold more
+    # than one in_progress task — the pact-teachback skill permits it — and a
+    # launch is recorded against all of them, so the dedup key is
+    # (agent, registered_at) rather than (task_id, since).
+    "unflagged_background_wait": {
+        "agent": str,
+        "registered_at": str,
+        "task_ids": list,
+    },
     # commands/orchestrate.md writes s2_state_seeded with worktree (quoted
     # string), agents (JSON list), and boundaries (JSON object → dict).
     # No hook-based writer; CLI-only event.
@@ -482,6 +496,15 @@ _OPTIONAL_FIELDS_BY_TYPE: dict[str, dict[str, type]] = {
     "missed_wake": {
         "task_subject": str,
         "reason": str,
+    },
+    # hooks/missed_wake_scan.py writes unflagged_background_wait with an
+    # optional command (the launch's command text, truncated at write) and
+    # wait_class (missing / null / malformed — WHY no valid wait was found).
+    # The required-fields registration above is what ACTIVATES this optional
+    # check, per the same pattern as missed_wake.
+    "unflagged_background_wait": {
+        "command": str,
+        "wait_class": str,
     },
     # hooks/task_lifecycle_gate.py writes teachback_ack with an optional concern
     # string — the teammate's variety_acknowledgment.concern, present only when

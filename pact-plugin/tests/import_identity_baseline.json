@@ -103,6 +103,31 @@
       "pathlib.Path": null,
       "task_lifecycle_gate": "hooks/task_lifecycle_gate.py"
     },
+    "tests/test_background_work.py": {
+      "__future__.annotations": null,
+      "datetime.datetime": null,
+      "datetime.timedelta": null,
+      "datetime.timezone": null,
+      "shared.background_work": "hooks/shared/background_work.py",
+      "shared.background_work.LEAD_STALE_MINUTES": null,
+      "shared.background_work.LEAD_UNIDLED_STALE_MINUTES": null,
+      "shared.background_work._known_agent_types": null,
+      "shared.background_work._sanitize_record": null,
+      "shared.background_work.agent_type_names_a_member": null,
+      "shared.background_work.append_record": null,
+      "shared.background_work.bind_launcher_identity": null,
+      "shared.background_work.classify_wait": null,
+      "shared.background_work.discharge_acknowledged": null,
+      "shared.background_work.effective_since": null,
+      "shared.background_work.is_durable_command": null,
+      "shared.background_work.lead_stale": null,
+      "shared.background_work.load_records_for_discharge": null,
+      "shared.background_work.matching_outstanding": null,
+      "shared.background_work.outstanding_unflagged": null,
+      "shared.background_work.record_task_ids": null,
+      "shared.background_work.unflagged_fire": null,
+      "shared.background_work.wait_covers_record": null
+    },
     "tests/test_backlog.py": {
       "datetime.datetime": null,
       "datetime.timedelta": null,
@@ -3129,6 +3154,12 @@
       "unittest.mock.MagicMock": null,
       "unittest.mock.patch": null
     },
+    "tests/test_track_files_background_integration.py": {
+      "__future__.annotations": null,
+      "pathlib.Path": null,
+      "shared.pact_context": "hooks/shared/pact_context.py",
+      "shared.pact_context.project_slug": null
+    },
     "tests/test_validate_handoff.py": {
       "unittest.mock.patch": null,
       "validate_handoff": "hooks/validate_handoff.py",
@@ -3393,9 +3424,9 @@
     }
   },
   "path_drift_since_sessionstart": [
-    "/Users/mj/Sites/collab/PACT-prompt/.worktrees/chore/test-import-restructure/pact-plugin/hooks/shared",
-    "/Users/mj/Sites/collab/PACT-prompt/.worktrees/chore/test-import-restructure/pact-plugin/tests/fixtures",
-    "/Users/mj/Sites/collab/PACT-prompt/.worktrees/chore/test-import-restructure/pact-plugin/skills/pact-handoff-harvest",
-    "/Users/mj/Sites/collab/PACT-prompt/.worktrees/chore/test-import-restructure/pact-plugin/skills/pact-agent-teams"
+    "/Users/mj/Sites/collab/PACT-prompt/.worktrees/feat/background-wait-enforcement/pact-plugin/hooks/shared",
+    "/Users/mj/Sites/collab/PACT-prompt/.worktrees/feat/background-wait-enforcement/pact-plugin/tests/fixtures",
+    "/Users/mj/Sites/collab/PACT-prompt/.worktrees/feat/background-wait-enforcement/pact-plugin/skills/pact-handoff-harvest",
+    "/Users/mj/Sites/collab/PACT-prompt/.worktrees/feat/background-wait-enforcement/pact-plugin/skills/pact-agent-teams"
   ]
 }

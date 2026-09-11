@@ -66,7 +66,12 @@ SEAM_DEPENDENT_HOOKS: frozenset[str] = frozenset({
     # (fail-LOUD) -> L2-only, never L3 (no mode-divergent signal -> no both-modes
     # matrix). KD-10.
     "merge_guard_pre", "merge_guard_post",
-})  # 14
+    # track_files JOINS with Layer 1 of the background-work registry: it now
+    # reads the team task store and writes
+    # ~/.claude/teams/<team>/background_work.json — task-dir resolution AND
+    # team config, so it meets the criterion above outright.
+    "track_files",
+})  # 15
 
 # Hooks confirmed to FAIL SILENTLY on a broken seam (a consequential effect that
 # should fire simply does not, with no error) -> they additionally require an L3
@@ -134,13 +139,23 @@ L3_CANDIDATE_HOOKS: frozenset[str] = frozenset({
 # derivation).
 _SEAM_HOOK_HELPER_CLOSURE: dict[str, frozenset[str]] = {
     "missed_wake_scan": frozenset({
-        "constants", "intentional_wait", "pact_context", "paths",
+        "background_work", "constants", "intentional_wait", "pact_context",
+        "paths",
         "session_journal", "session_registry", "session_state", "task_utils",
     }),
     "teammate_idle": frozenset({
-        "constants", "error_output", "pact_context", "paths", "session_journal",
+        "background_work", "constants", "error_output", "intentional_wait",
+        "pact_context", "paths", "session_journal",
         "session_registry", "session_state", "task_utils",
     }),
+    "track_files": frozenset({
+        "background_work", "claude_md_manager", "constants", "error_output",
+        "failure_cause", "intentional_wait", "pact_context", "paths",
+        "pin_caps", "session_journal", "session_registry", "session_state",
+        "staleness", "task_utils",
+    }),  # regenerated from the live derivation, not hand-listed: the Layer 1
+         # fold adds background_work + intentional_wait, and the rest were
+         # already reached through the pin-staleness clear this hook carries.
     "agent_handoff_emitter": frozenset({
         "agent_handoff_marker", "canonical_json", "constants",
         "pact_context", "paths",

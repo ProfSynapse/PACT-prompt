@@ -268,11 +268,25 @@ class TestClosureOracleIsNonVacuous:
         # pact_context -> .session_registry is a RELATIVE edge; the full-transitive
         # oracle DOES follow it, so a relative-only-blind derivation differs.
         # This pins that relative edges are part of the canonical closure.
+        #
+        # BOTH edges must be dropped, and the reason is a real graph change
+        # rather than test bookkeeping. missed_wake_scan reaches
+        # session_registry by TWO routes now: the pact_context edge this arm
+        # is named for, and background_work -> session_registry, which the
+        # Layer 3 fold introduced (background_work's Layer 1 half resolves a
+        # launcher identity, and a static closure follows that import even
+        # though Layer 3 never calls it). Dropping only the first leaves the
+        # module reachable and the ablation stops discriminating — MEASURED:
+        # one edge -> still present, both edges -> absent. Naming one edge
+        # would leave an arm that passes without measuring anything.
         idx = _module_index()
         full = derive_closure("missed_wake_scan", idx)
         perturbed = derive_closure(
             "missed_wake_scan", idx,
-            drop_edges=frozenset({("pact_context", "session_registry")}),
+            drop_edges=frozenset({
+                ("pact_context", "session_registry"),
+                ("background_work", "session_registry"),
+            }),
         )
         assert "session_registry" in full, (
             "the canonical (full-transitive) closure follows the relative "
@@ -306,6 +320,12 @@ COVERED_L2 = {
     # loss), so the journal seam gets a real composition test: real init ->
     # session-dir resolution -> real append -> read_events over a tmp root.
     "validate_handoff": "test_validate_handoff_integration.py",
+    # track_files joined SEAM_DEPENDENT_HOOKS with Layer 1 of the
+    # background-work registry (task-dir resolution + team config). It goes in
+    # COVERED, not BACKLOG: parking a brand-new seam dependency in the backlog
+    # would ship an untested seam, which is the inert-feature shape this
+    # classifier exists to prevent.
+    "track_files": "test_track_files_background_integration.py",
 }
 
 # Documented forward-only BACKLOG: seam hooks whose non-mocked L2 test is a named

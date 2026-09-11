@@ -264,6 +264,102 @@ def build_surface(stale: list, now: "datetime | None" = None) -> "str | None":
     )
 
 
+_UNFLAGGED_EVENT = "unflagged_background_wait"
+
+
+def _unflagged_emitted_keys() -> set:
+    """(agent, registered_at) pairs already recorded THIS session.
+
+    A DISTINCT dedup key from missed_wake's (task_id, since): a record covers
+    a LIST of tasks, so a per-task key would emit once per held task for one
+    launch. `registered_at` is a timestamp on a per-agent record, so the pair
+    is unique per launch.
+    """
+    keys = set()
+    for ev in read_events(_UNFLAGGED_EVENT):
+        if not isinstance(ev, dict):
+            continue
+        agent, registered = ev.get("agent"), ev.get("registered_at")
+        if agent and registered:
+            keys.add((agent, registered))
+    return keys
+
+
+def find_stale_unflagged_background(team_name: str) -> list:
+    """Records past their own staleness window. Never raises.
+
+    SHARES A PROCESS WITH THE MISSED-WAKE ALARM, NOT A VOCABULARY. This keeps
+    a separate journal event, a separate dedup key and separate surface text;
+    it reuses only the subprocess and the lead-frame guard. It must never
+    reuse `missed_wake` or the `awaiting_lead_completion` reason.
+
+    GATES ARE NOT OPTIONAL ON THIS PATH. It reads through
+    `outstanding_unflagged`, which applies the task-status and flagged-wait
+    gates, and NOT through `load_records`, which applies neither. An earlier
+    version of this function called `load_records` directly and surfaced
+    records for completed tasks and for correctly-flagged waits — the
+    lead-facing text claims "no flagged wait" and nothing evaluated it.
+    """
+    try:
+        from shared.background_work import lead_stale, outstanding_unflagged
+
+        tasks = get_task_list()
+        return [r for r in outstanding_unflagged(tasks, team_name) if lead_stale(r)]
+    except Exception:
+        return []
+
+
+def emit_unflagged_forensic(stale: list) -> None:
+    """Once-per-(agent, registered_at) forensic event. Best-effort, never raises."""
+    try:
+        if not stale or not get_journal_path():
+            return
+        emitted = _unflagged_emitted_keys()
+        for record in stale:
+            agent = record.get("agent_name")
+            registered = record.get("registered_at")
+            task_ids = record.get("task_ids")
+            if not agent or not registered or not isinstance(task_ids, list):
+                continue
+            if (agent, registered) in emitted:
+                continue
+            payload = {
+                "agent": _sanitize_member_name(str(agent)),
+                "registered_at": str(registered),
+                "task_ids": [str(t) for t in task_ids],
+            }
+            command = record.get("command")
+            if isinstance(command, str) and command:
+                payload["command"] = _sanitize_member_name(command)
+            append_event(make_event(_UNFLAGGED_EVENT, **payload))
+            emitted.add((agent, registered))
+    except Exception:
+        return
+
+
+def build_unflagged_surface(stale: list) -> "str | None":
+    """Lead-facing text naming each teammate with unflagged background work."""
+    if not stale:
+        return None
+    lines = []
+    for record in stale:
+        agent = _sanitize_member_name(str(record.get("agent_name") or ""))
+        tasks = ", ".join(str(t) for t in record.get("task_ids") or [])
+        if not agent:
+            continue
+        lines.append(f"{agent} (task(s) {tasks})" if tasks else agent)
+    if not lines:
+        return None
+    return (
+        "UNFLAGGED BACKGROUND WORK — these teammates have outstanding "
+        "background launches and no flagged wait: "
+        + "; ".join(lines)
+        + ". SendMessage each one to collect its result or SET "
+        "metadata.intentional_wait. This is NOT a missed wake — nobody is "
+        "waiting on you; they failed to flag their own wait."
+    )
+
+
 def run_surface(input_data: dict) -> "str | None":
     """Lead-side missed-wake surface + forensic emit. is_lead-gated; teammate /
     plain frames no-op (the structural fail-safe default).
@@ -275,14 +371,37 @@ def run_surface(input_data: dict) -> "str | None":
     """
     if not is_lead(input_data):
         return None
+
+    # TWO INDEPENDENT ALARMS SHARING ONE SUBPROCESS. Each is computed and
+    # emitted separately, and NEITHER early-returns on the other's absence —
+    # an empty missed-wake scan must not suppress the background surface, and
+    # vice versa. They share only this process and the lead-frame guard above.
+    parts = []
+
     tasks = get_task_list()
-    if not tasks:
-        return None
-    stale = find_stale_missed_wakes(tasks)
-    if not stale:
-        return None
-    emit_forensic(stale)
-    return build_surface(stale)
+    if tasks:
+        stale = find_stale_missed_wakes(tasks)
+        if stale:
+            emit_forensic(stale)
+            surface = build_surface(stale)
+            if surface:
+                parts.append(surface)
+
+    try:
+        from shared.pact_context import get_team_name
+
+        team_name = get_team_name()
+        if team_name:
+            unflagged = find_stale_unflagged_background(team_name)
+            if unflagged:
+                emit_unflagged_forensic(unflagged)
+                surface = build_unflagged_surface(unflagged)
+                if surface:
+                    parts.append(surface)
+    except Exception:
+        pass
+
+    return "\n\n".join(parts) if parts else None
 
 
 def main() -> None:

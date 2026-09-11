@@ -563,3 +563,80 @@ class TestForensicJournalSanitizationGuard:
             "a later valid owner for the same (task, since) still records -- the skip "
             "must NOT mark the key emitted"
         )
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# Layer 3 — the unflagged-background surface MUST read through the gated
+# selector, not through the raw record loader.
+# ══════════════════════════════════════════════════════════════════════════
+
+
+class TestUnflaggedBackgroundSurfaceIsGated:
+    """Pins that `find_stale_unflagged_background` APPLIES the gates.
+
+    WHY THIS EXISTS SEPARATELY FROM THE SELECTOR'S OWN TESTS, and it is the
+    whole point of the class: `outstanding_unflagged` was already covered by
+    unit tests on both gates, and reverting THIS function to the ungated
+    `load_records` read still passed every one of them. MEASURED — that
+    mutation survived 113 tests. Testing the gate implementation does not
+    test that the caller uses it, and the defect was in the caller.
+
+    The original defect: this surface read `load_records` directly, which
+    applies the 24h TTL and nothing else, so it named teammates whose task
+    was COMPLETED and teammates who had FLAGGED correctly — while the
+    lead-facing text asserts "outstanding launches and no flagged wait".
+    """
+
+    # 40 minutes old: PAST the 30-minute registered_at window so it is stale,
+    # but well INSIDE the 24h TTL so `load_records` still returns it. A fixed
+    # calendar date fails the positive control for the wrong reason — the TTL
+    # drops the record before any gate is reached, and every arm then passes
+    # vacuously. Measured: that is exactly how the first draft of this class
+    # failed.
+    OLD = (
+        datetime.now(timezone.utc) - timedelta(minutes=40)
+    ).isoformat()
+
+    def _seed(self, tmp_path, monkeypatch, task):
+        import json
+
+        monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path))
+        team = "t3-team"
+        (tmp_path / "teams" / team).mkdir(parents=True)
+        (tmp_path / "teams" / team / "background_work.json").write_text(
+            json.dumps({"records": [{
+                "agent_name": "victim", "session_id": "s",
+                "task_ids": ["5"], "registered_at": self.OLD,
+            }]})
+        )
+        monkeypatch.setattr(mw, "get_task_list", lambda: [task])
+        return team
+
+    def _task(self, status="in_progress", wait=None):
+        task = {"id": "5", "status": status, "owner": "victim"}
+        if wait:
+            task["metadata"] = {"intentional_wait": wait}
+        return task
+
+    def test_positive_control(self, tmp_path, monkeypatch):
+        team = self._seed(tmp_path, monkeypatch, self._task())
+        assert len(mw.find_stale_unflagged_background(team)) == 1
+
+    def test_a_COMPLETED_task_is_not_surfaced(self, tmp_path, monkeypatch):
+        team = self._seed(tmp_path, monkeypatch, self._task(status="completed"))
+        assert mw.find_stale_unflagged_background(team) == []
+
+    def test_a_FLAGGED_task_is_not_surfaced(self, tmp_path, monkeypatch):
+        """The clause the lead-facing text asserts and the old path never read."""
+        wait = {"reason": "awaiting_background_job",
+                "expected_resolver": "external", "since": self.OLD}
+        team = self._seed(tmp_path, monkeypatch, self._task(wait=wait))
+        assert mw.find_stale_unflagged_background(team) == []
+
+    def test_the_surface_text_is_not_built_for_a_gated_out_record(
+        self, tmp_path, monkeypatch
+    ):
+        team = self._seed(tmp_path, monkeypatch, self._task(status="completed"))
+        assert mw.build_unflagged_surface(
+            mw.find_stale_unflagged_background(team)
+        ) is None
