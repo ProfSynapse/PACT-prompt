@@ -120,3 +120,41 @@ def test_diff_maps_rename_still_flags_origin_change():
 def test_diff_maps_flags_missing_file():
     b = {"t.py": {"x": "hooks/x.py"}}
     assert diff_maps(b, {}) != []
+
+
+def _fresh_state(monkeypatch):
+    import import_identity_map as iim
+
+    monkeypatch.setattr(
+        iim, "_state", {"sessionstart_path": None, "collected_files": set()}
+    )
+    return iim
+
+
+def test_hook_emits_map_when_outermost(tmp_path, monkeypatch):
+    iim = _fresh_state(monkeypatch)
+    out = tmp_path / "map.json"
+    monkeypatch.setenv("PACT_IDENTITY_MAP_OUT", str(out))
+    monkeypatch.delenv("PACT_IDENTITY_MAP_ACTIVE", raising=False)
+    iim.pytest_sessionstart(None)
+    iim.pytest_sessionfinish(None, 0)
+    assert out.exists()
+    assert "map" in json.loads(out.read_text())
+
+
+def test_hook_skips_emission_when_nested(tmp_path, monkeypatch):
+    iim = _fresh_state(monkeypatch)
+    out = tmp_path / "map.json"
+    monkeypatch.setenv("PACT_IDENTITY_MAP_OUT", str(out))
+    monkeypatch.setenv("PACT_IDENTITY_MAP_ACTIVE", "1")  # inherited mark
+    iim.pytest_sessionstart(None)
+    iim.pytest_sessionfinish(None, 0)
+    assert not out.exists()
+
+
+def test_hook_silent_without_out_env(monkeypatch):
+    iim = _fresh_state(monkeypatch)
+    monkeypatch.delenv("PACT_IDENTITY_MAP_OUT", raising=False)
+    monkeypatch.delenv("PACT_IDENTITY_MAP_ACTIVE", raising=False)
+    iim.pytest_sessionstart(None)
+    iim.pytest_sessionfinish(None, 0)  # no exception, no file

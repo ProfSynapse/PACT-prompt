@@ -146,10 +146,23 @@ def _unrename(renames, key):
 
 _state = {"sessionstart_path": None, "collected_files": set()}
 
+# Nested-pytest guard: several suite tests spawn subprocess pytest runs, and
+# env propagates to children — without this, a nested session inherits
+# PACT_IDENTITY_MAP_OUT and overwrites the map at ITS sessionfinish while the
+# outer gate is still running (measured: a nested write landed ~90s into an
+# 18-minute gate). The outermost process marks the env at sessionstart;
+# nested sessions see the mark and skip emission. Process-local: the shell's
+# env is never mutated, so sequential runs are unaffected.
+_GUARD_ENV = "PACT_IDENTITY_MAP_ACTIVE"
+
 
 def pytest_sessionstart(session):
     # Fires BEFORE tests/conftest.py loads (measured) — this snapshot is the
     # pre-conftest baseline the drift canary compares against, nothing more.
+    if os.environ.get(_GUARD_ENV):
+        _state["nested"] = True
+    else:
+        os.environ[_GUARD_ENV] = "1"
     _state["sessionstart_path"] = list(sys.path)
 
 
@@ -163,7 +176,7 @@ def pytest_collection_modifyitems(session, config, items):
 
 def pytest_sessionfinish(session, exitstatus):
     out = os.environ.get("PACT_IDENTITY_MAP_OUT")
-    if not out:
+    if not out or _state.get("nested"):
         return
     drift = [p for p in sys.path if p not in (_state["sessionstart_path"] or [])]
     payload = {
