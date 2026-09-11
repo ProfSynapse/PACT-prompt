@@ -13,7 +13,7 @@ import sys
 from unittest.mock import patch
 
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'skills', 'pact-memory'))
+sys.path.insert(0, os.path.normpath(os.path.join(os.path.dirname(__file__), '..', 'skills', 'pact-memory')))
 
 
 # ---------------------------------------------------------------------------

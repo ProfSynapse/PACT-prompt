@@ -21,7 +21,7 @@ import pytest
 
 from helpers import create_test_schema
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'skills', 'pact-memory'))
+sys.path.insert(0, os.path.normpath(os.path.join(os.path.dirname(__file__), '..', 'skills', 'pact-memory')))
 
 # Use the same sqlite3 module that database.py uses (pysqlite3 if available)
 try:

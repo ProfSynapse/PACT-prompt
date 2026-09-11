@@ -32,7 +32,7 @@ from unittest.mock import patch, MagicMock
 import pytest
 
 # scripts/ is a package; add skills/pact-memory so `scripts.*` imports resolve.
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "skills", "pact-memory"))
+sys.path.insert(0, os.path.normpath(os.path.join(os.path.dirname(__file__), '..', 'skills', 'pact-memory')))
 
 from scripts.working_memory import (
     _project_root_of,

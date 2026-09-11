@@ -27,7 +27,7 @@ import pytest
 
 # Add paths for imports — scripts/ is a package with __init__.py,
 # so we add its parent to sys.path for proper relative imports.
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'skills', 'pact-memory'))
+sys.path.insert(0, os.path.normpath(os.path.join(os.path.dirname(__file__), '..', 'skills', 'pact-memory')))
 
 
 # =============================================================================

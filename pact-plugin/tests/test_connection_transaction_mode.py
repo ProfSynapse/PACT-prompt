@@ -40,7 +40,7 @@ import sys
 
 import pytest
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'skills', 'pact-memory'))
+sys.path.insert(0, os.path.normpath(os.path.join(os.path.dirname(__file__), '..', 'skills', 'pact-memory')))
 
 from scripts.database import get_connection  # noqa: E402
 # THE MODULE THE FACTORY BOUND, NOT THE ONE THIS TEST CAN IMPORT. The factory

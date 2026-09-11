@@ -25,7 +25,7 @@ from pathlib import Path
 
 import pytest
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "skills", "pact-memory"))
+sys.path.insert(0, os.path.normpath(os.path.join(os.path.dirname(__file__), '..', 'skills', 'pact-memory')))
 
 import scripts.working_memory as wm  # noqa: E402
 from scripts.working_memory import (  # noqa: E402

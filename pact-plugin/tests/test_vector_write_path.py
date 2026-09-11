@@ -47,7 +47,7 @@ import pytest
 
 from helpers import create_test_schema
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'skills', 'pact-memory'))
+sys.path.insert(0, os.path.normpath(os.path.join(os.path.dirname(__file__), '..', 'skills', 'pact-memory')))
 
 try:
     import pysqlite3 as sqlite3

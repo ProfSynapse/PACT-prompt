@@ -26,8 +26,10 @@ sys.path.insert(0, str(Path(__file__).parent))
 # Add hooks directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
-# Add pact-memory scripts to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'skills', 'pact-memory'))
+# Add pact-memory scripts to path (normalized: package-route imports build
+# module __file__ from this entry, and instruments that string-compare
+# __file__/co_filename against a resolved path break on a literal '..')
+sys.path.insert(0, str(Path(__file__).parent.parent / "skills" / "pact-memory"))
 
 # Add the pact-memory scripts dir itself to path (bare-module imports)
 sys.path.insert(0, str(Path(__file__).parent.parent / "skills" / "pact-memory" / "scripts"))

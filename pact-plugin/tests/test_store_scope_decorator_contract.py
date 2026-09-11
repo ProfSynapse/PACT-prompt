@@ -41,7 +41,7 @@ import os
 import pathlib
 import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'skills', 'pact-memory'))
+sys.path.insert(0, os.path.normpath(os.path.join(os.path.dirname(__file__), '..', 'skills', 'pact-memory')))
 
 from scripts.memory_api import PACTMemory  # noqa: E402
 
