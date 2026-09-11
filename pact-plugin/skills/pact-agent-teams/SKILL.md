@@ -390,6 +390,12 @@ Set a free-form `reason` that names the transferred watch (e.g.
 the HANDOFF/teachback acceptance wait, and a transferred watch must read as
 the different wait it is on task-file inspection.
 
+Mechanical floor: `background_work_tracker` records teammate Bash
+`run_in_background` launches; TeammateIdle emits a Layer 2/3 advisory at
+three consecutive unflagged idles; `unflagged_background_scan` tells the
+lead to `SendMessage` the teammate on the next lead turn after the idle
+window. Teaching stays the contract; these hooks are the floor under it.
+
 Silence is uninformative in both directions, and narrating a wait is noise in
 both. Do not emit "still running" or "waiting on the gate" turns while your own
 work runs, and do not reply to a turn that carries no actionable content. That
