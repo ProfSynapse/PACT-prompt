@@ -15,13 +15,52 @@ field-presence**:
 | Role | `agent_type` value |
 |------|--------------------|
 | team-lead | `PACT:pact-orchestrator` **or** `pact-orchestrator` (both spellings the harness can stamp) |
-| teammate | the specialist value, e.g. `pact-architect`, `pact-backend-coder` |
+| teammate (tmux) | the specialist value, e.g. `pact-architect`, `pact-backend-coder` |
+| teammate (in-process) | **the teammate's own `name`**, e.g. `background-work-coder` — NOT the configured `agentType`. See the mode split below. |
 | plain / non-PACT primary | **field absent** |
 
 `pact_context.is_lead()` / `classify_session_role()` are the single resolvers;
 both test exact membership of `agent_type` in `LEAD_AGENT_TYPES`. A
 `startswith("pact-")` test is WRONG — it misclassifies the unqualified lead
 spelling `pact-orchestrator` as a teammate.
+
+#### 🔴 `agent_type` IS NOT ALWAYS A TYPE — the in-process/tmux split
+
+**An earlier version of this table said the teammate value is "the specialist
+value" with no mode split. MEASURED FALSE 2026-09-11.** On a live in-process
+Agent-Teams teammate `PostToolUse` `Bash` frame, `agent_type` carried the
+teammate's **own name** (`background-work-coder`), while that member's
+`agentType` in the team config was `pact-backend-coder`. **The frame's
+`agent_type` and the config's `agentType` are different values.**
+
+Fixture: `tests/fixtures/role_frames.py` ::
+`captured_posttooluse_teammate_inprocess_bash_background` (real key set,
+synthetic values).
+
+Consequences, because code in this repo reasons on the old premise:
+
+- **Role classification is unaffected.** Both resolvers test membership in
+  `LEAD_AGENT_TYPES`, and neither a name nor a type is in that set, so a
+  teammate still classifies as a teammate either way.
+- **Any code treating this field AS A TYPE is on a false premise** — including
+  `resolve_agent_name`'s Step 4, which strips a `pact-` prefix and returns the
+  remainder as a name. In-process there is no prefix to strip, so Step 4
+  returns the name verbatim and *happens* to be right. That is a coincidence
+  of the value, not a property of the step.
+- **An argument that excludes a Step-4 type-strip by observing distinct names
+  across same-`agentType` members is INVALID.** Step 4 strips the FRAME's
+  field, which already differs per member in-process.
+- A caller needing identity from this field must VALIDATE it — membership in
+  the team config's `members[]` `name` list — rather than trust its shape. See
+  `shared/background_work.py` :: `agent_type_names_a_member`, including its
+  stated residual.
+
+**tmux is UNTESTED for this field on a `Bash` `PostToolUse` frame.** The tmux
+row above rests on a captured `PreToolUse` frame. No tmux team was available
+on the machine where this was measured, so the Bash path went unexercised —
+**that bounds the verification, not the behaviour.** The tmux row is
+therefore the LEAST certain row in this table, and a reader who needs it
+should re-measure rather than cite it.
 
 ### Do NOT key a role decision on these
 
