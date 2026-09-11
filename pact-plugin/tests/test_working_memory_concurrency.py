@@ -56,6 +56,8 @@ _MP = mp.get_context("spawn")
 _SCRIPTS_DIR = str(
     Path(__file__).parent.parent / "skills" / "pact-memory" / "scripts"
 )
+if _SCRIPTS_DIR not in sys.path:
+    sys.path.insert(0, _SCRIPTS_DIR)
 
 
 # ---------------------------------------------------------------------------
