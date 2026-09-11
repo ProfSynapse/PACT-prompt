@@ -61,6 +61,48 @@ _ENV_ASSIGNMENT = re.compile(r"\A[A-Za-z_][A-Za-z0-9_]*=\S*\s+")
 _WRAPPER_PREFIX = re.compile(r"\A(?:command|builtin)\s+")
 _TRAILING_COMMENT = re.compile(r"\s+#.*\Z")
 
+# --- Background-launch advisory (a SECOND, INDEPENDENT concern) -------------
+# Fired at the moment a background launch is committed, which is where the
+# association actually fails: an agent frames the moment as "the tool will
+# wake me" and ends the turn without flagging. A later idle-time reminder
+# reaches that agent only after they have already stalled.
+#
+# IT IS ACTOR-BLIND BY CONSTRUCTION: it reads `run_in_background` and nothing
+# else — no identity, no team config, no task store. It therefore works on
+# frames where identity cannot be resolved at all.
+#
+# IT IS NOT A TERM IN THE DENY VERDICT AND MUST NEVER BECOME ONE. It rides
+# the ALLOW branch only. `_is_filler_command` and its inputs are untouched by
+# this feature. A denied command never runs, so there is no background work
+# to advise about on that branch — which is why the advisory is attached to
+# the allow output rather than the deny one, and not because the verdict
+# feeds it.
+#
+# CHANNEL CAVEAT, INHERITED AND NOT RESOLVED HERE: whether PreToolUse
+# `additionalContext` reliably reaches the model is an open question in this
+# repo — see the same caveat in `task_claim_gate.py`. This advisory carries
+# that uncertainty. It is a prompt-time nudge, not a mechanical guarantee,
+# and nothing downstream may assume it was seen.
+_BACKGROUND_ADVISORY = (
+    "This Bash call runs in the background. NOTHING WILL WAKE YOU when it "
+    "finishes — the result waits for you to collect it. Before you end this "
+    "turn, either collect the result or SET metadata.intentional_wait on "
+    "every task the wait covers, naming what you are waiting for. "
+    "validate_wait accepts a free-form reason, so a reason describing the "
+    "background job is valid even though KNOWN_REASONS does not enumerate one."
+)
+
+
+def _truthy_background(value) -> bool:
+    return value is True or value == "true" or value == 1
+
+
+def is_background_launch(tool_input) -> bool:
+    """True iff this Bash frame commits a background launch. Actor-blind."""
+    if not isinstance(tool_input, dict):
+        return False
+    return _truthy_background(tool_input.get("run_in_background"))
+
 
 def _is_filler_command(command: str) -> bool:
     """True iff the command is nothing but a bare `true`/`sleep <N>`.
@@ -102,6 +144,16 @@ def main() -> None:
         tool_input = input_data.get("tool_input")
         command = tool_input.get("command") if isinstance(tool_input, dict) else None
         if not isinstance(command, str) or not _is_filler_command(command):
+            # ALLOW. The background advisory rides this branch and only this
+            # branch; it did not participate in reaching it.
+            if is_background_launch(tool_input):
+                print(json.dumps({
+                    "hookSpecificOutput": {
+                        "hookEventName": "PreToolUse",
+                        "additionalContext": _BACKGROUND_ADVISORY,
+                    }
+                }))
+                sys.exit(0)
             print(_ALLOW_OUTPUT)
             sys.exit(0)
 
