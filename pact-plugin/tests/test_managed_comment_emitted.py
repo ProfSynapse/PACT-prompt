@@ -76,7 +76,7 @@ from shared.claude_md_manager import (  # noqa: E402
 )
 from shared.session_resume import update_session_info  # noqa: E402
 
-import working_memory as _ssot  # noqa: E402
+from scripts import working_memory as _ssot  # noqa: E402
 
 # THE SSOT, READ AS VALUES RATHER THAN RE-SPELLED. Every assertion below
 # compares emitted text against these two names, so an emitter that drifts to

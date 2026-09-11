@@ -85,7 +85,7 @@ def _wm_worker(args):
     lock. Each writer commits one uniquely-marked Working Memory entry."""
     home, writer_id, barrier = args
     _bootstrap(home)
-    import working_memory as wm
+    from scripts import working_memory as wm
 
     barrier.wait()  # rendezvous: everyone reads the same base before any write
     wm.sync_to_claude_md(
@@ -100,7 +100,7 @@ def _retrieved_worker(args):
     writer commits one uniquely-marked Retrieved Context entry."""
     home, writer_id, barrier = args
     _bootstrap(home)
-    import working_memory as wm
+    from scripts import working_memory as wm
 
     barrier.wait()
     wm.sync_retrieved_to_claude_md(
@@ -117,7 +117,7 @@ def _cross_site_worker(args):
     the SAME file/sidecar; each must land its entry in its own section."""
     home, site, barrier = args
     _bootstrap(home)
-    import working_memory as wm
+    from scripts import working_memory as wm
 
     barrier.wait()
     if site == "wm":
@@ -212,7 +212,7 @@ class TestNWriterLostUpdate:
         """
         from importlib import import_module
         sys.path.insert(0, _SCRIPTS_DIR)
-        wm = import_module("working_memory")
+        wm = import_module("scripts.working_memory")
         max_wm = wm.MAX_WORKING_MEMORIES
 
         claude_md = _seed_claude_md(tmp_path)
@@ -347,7 +347,7 @@ class TestSyncSemanticsUnchangedUnderLock:
     def _import_wm(self):
         sys.path.insert(0, _SCRIPTS_DIR)
         from importlib import import_module
-        return import_module("working_memory")
+        return import_module("scripts.working_memory")
 
     def test_working_memory_rolling_window_trims_to_max(self, tmp_path, monkeypatch):
         """Syncing more than MAX_WORKING_MEMORIES entries keeps only the most
@@ -474,7 +474,7 @@ class TestDriftTestIsNotVacuous:
         self._ensure_scripts_on_path()
         import inspect
         from shared.claude_md_manager import file_lock as canonical
-        from working_memory import file_lock as twin
+        from scripts.working_memory import file_lock as twin
         from test_staleness import TestFileLockTwinCopyDrift
 
         extract = TestFileLockTwinCopyDrift._extract_body
@@ -503,7 +503,7 @@ class TestDriftTestIsNotVacuous:
         when one side changes — confirm a simulated mismatch would be caught."""
         self._ensure_scripts_on_path()
         import shared.claude_md_manager as cmm
-        import working_memory as wm
+        from scripts import working_memory as wm
 
         # Live values match (mirrors the real constant-equality drift test).
         assert cmm._LOCK_TIMEOUT_SECONDS == wm._LOCK_TIMEOUT_SECONDS

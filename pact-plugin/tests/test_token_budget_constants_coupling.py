@@ -75,13 +75,13 @@ def _exempt_lines(entry):
     `TestTheExemptSetIsTheHeaderAndThePointer`, which is what turns a widened
     exemption into a red rather than into a quietly different number.
     """
-    from working_memory import _apply_entry_token_ceiling
+    from scripts.working_memory import _apply_entry_token_ceiling
 
     return _apply_entry_token_ceiling(entry, EXEMPT_DERIVATION_CEILING)
 
 
 def _worst_case_memory():
-    from working_memory import _REFRESH_FIELD_TRUNCATION_LIMIT
+    from scripts.working_memory import _REFRESH_FIELD_TRUNCATION_LIMIT
 
     dense = _densest(_REFRESH_FIELD_TRUNCATION_LIMIT)
     return {
@@ -115,7 +115,7 @@ class TestTheExemptSetIsTheHeaderAndThePointer:
     """
 
     def _entry(self):
-        from working_memory import (
+        from scripts.working_memory import (
             _format_retrieved_entry,
             _REFRESH_IDENTIFIER_TRUNCATION_LIMIT,
         )
@@ -126,7 +126,7 @@ class TestTheExemptSetIsTheHeaderAndThePointer:
         )
 
     def test_the_derived_exempt_set_is_the_header_and_the_pointer(self):
-        from working_memory import _MEMORY_ID_LABEL
+        from scripts.working_memory import _MEMORY_ID_LABEL
 
         entry = self._entry()
         entry_lines = entry.split("\n")
@@ -203,7 +203,7 @@ class TestCompressedEntryCeilingCoupling:
         AND `COMPRESSED_ENTRY_TOKEN_CEILING` DOES NOT FOLLOW. That coupling
         is stated in a comment at the constant and enforced by nothing else.
         """
-        from working_memory import (
+        from scripts.working_memory import (
             _compress_memory_entry,
             _estimate_tokens,
             _format_memory_entry,
@@ -268,7 +268,7 @@ class TestCompressedEntryCeilingCoupling:
         the FIELD VALUE, as below, does not: the slice still happens in
         production.
         """
-        from working_memory import (
+        from scripts.working_memory import (
             _compress_memory_entry,
             _estimate_tokens,
             _format_memory_entry,
@@ -328,7 +328,7 @@ class TestCompressedEntryCeilingCoupling:
         stops holding, the worst case is no longer the dense shape and the
         arms above measure the wrong end of the axis.
         """
-        from working_memory import (
+        from scripts.working_memory import (
             _compress_memory_entry,
             _estimate_tokens,
             _format_memory_entry,
@@ -359,7 +359,7 @@ class TestWorkingMemorySectionBudget:
         identity is true by construction and cannot fail. The measured total
         can, and it is what a reader of the constants cares about.
         """
-        from working_memory import (
+        from scripts.working_memory import (
             _apply_token_budget,
             _estimate_tokens,
             _format_memory_entry,
@@ -398,7 +398,7 @@ class TestWorkingMemorySectionBudget:
         THE COMPANION ARM IN THE PRIMARY FILE DRIVES THE LOOP AT A
         NON-PRODUCTION BUDGET. The two cover different mechanisms.
         """
-        from working_memory import (
+        from scripts.working_memory import (
             _apply_token_budget,
             _format_memory_entry,
             MAX_WORKING_MEMORIES,
@@ -444,7 +444,7 @@ class TestRetrievedContextThinMargin:
         remaining half, which is that the cost measured here must be the
         cost of a PROPER slice.
         """
-        from working_memory import (
+        from scripts.working_memory import (
             _estimate_tokens,
             _format_retrieved_entry,
             MAX_RETRIEVED_MEMORIES,
@@ -496,7 +496,7 @@ class TestRetrievedContextThinMargin:
         that accurate at the worst input, so the claim is armed here rather
         than left to a reader of the comment.
         """
-        from working_memory import (
+        from scripts.working_memory import (
             _apply_entry_token_ceiling,
             _estimate_tokens,
             _format_retrieved_entry,
@@ -572,7 +572,7 @@ class TestDegenerateEdgeAtTheLiveCeilings:
         return found
 
     def _live_ceilings(self):
-        from working_memory import (
+        from scripts.working_memory import (
             COMPRESSED_ENTRY_TOKEN_CEILING,
             MAX_RETRIEVED_MEMORIES,
             MAX_WORKING_MEMORIES,
@@ -596,7 +596,7 @@ class TestDegenerateEdgeAtTheLiveCeilings:
         The cut drops whole lines, so it cannot put a value at the START of a
         line, which is the shape the sanitize exists to prevent.
         """
-        from working_memory import _apply_entry_token_ceiling, _format_memory_entry
+        from scripts.working_memory import _apply_entry_token_ceiling, _format_memory_entry
 
         entry = _format_memory_entry(
             memory, memory_id=("0123456789abcdef" * 2) if with_id else None
@@ -637,7 +637,7 @@ class TestDegenerateEdgeAtTheLiveCeilings:
         there to show the ceilings do NOT touch an ordinary entry. So the
         requirement sits at the level where the population makes it true.
         """
-        from working_memory import _apply_entry_token_ceiling, _format_memory_entry
+        from scripts.working_memory import _apply_entry_token_ceiling, _format_memory_entry
 
         ceilings = self._live_ceilings()
         cells = 0
@@ -691,7 +691,7 @@ class TestDegenerateEdgeAtTheLiveCeilings:
         unrelated cause. This asserts the positive fact: the entry is the
         exempt lines and nothing else.
         """
-        from working_memory import _apply_entry_token_ceiling, _format_memory_entry
+        from scripts.working_memory import _apply_entry_token_ceiling, _format_memory_entry
 
         entry = _format_memory_entry(
             {"context": "A save that carries one context field and no more."},
@@ -770,12 +770,12 @@ class TestAfterSectionSurvivesTheSync:
 
     def _sync_working(self, tmp_path, doc):
         from unittest.mock import patch
-        from working_memory import sync_to_claude_md
+        from scripts.working_memory import sync_to_claude_md
 
         target = tmp_path / "CLAUDE.md"
         target.write_text(doc, encoding="utf-8")
         with patch(
-            "working_memory._resolve_display_claude_md_with_base",
+            "scripts.working_memory._resolve_display_claude_md_with_base",
             return_value=(target, target.parent),
         ):
             sync_to_claude_md({"context": "new one", "goal": "g"}, memory_id="abc123")
@@ -783,12 +783,12 @@ class TestAfterSectionSurvivesTheSync:
 
     def _sync_retrieved(self, tmp_path, doc):
         from unittest.mock import patch
-        from working_memory import sync_retrieved_to_claude_md
+        from scripts.working_memory import sync_retrieved_to_claude_md
 
         target = tmp_path / "CLAUDE.md"
         target.write_text(doc, encoding="utf-8")
         with patch(
-            "working_memory._resolve_display_claude_md_with_base",
+            "scripts.working_memory._resolve_display_claude_md_with_base",
             return_value=(target, target.parent),
         ):
             sync_retrieved_to_claude_md(
@@ -797,7 +797,7 @@ class TestAfterSectionSurvivesTheSync:
         return target.read_text(encoding="utf-8")
 
     def test_working_memory_sync_keeps_the_after_section(self, tmp_path):
-        from working_memory import WORKING_MEMORY_COMMENT
+        from scripts.working_memory import WORKING_MEMORY_COMMENT
 
         doc = self._doc("## Working Memory", WORKING_MEMORY_COMMENT, with_tail=True)
         assert self.MARKER in doc  # NON-VACUITY: the marker is present before.
@@ -809,7 +809,7 @@ class TestAfterSectionSurvivesTheSync:
         )
 
     def test_retrieved_sync_keeps_the_after_section(self, tmp_path):
-        from working_memory import RETRIEVED_CONTEXT_COMMENT
+        from scripts.working_memory import RETRIEVED_CONTEXT_COMMENT
 
         doc = self._doc("## Retrieved Context", RETRIEVED_CONTEXT_COMMENT, with_tail=True)
         assert self.MARKER in doc
@@ -827,7 +827,7 @@ class TestAfterSectionSurvivesTheSync:
         memory before. That branch keeps `content[insert_pos:]`, which is the
         Working Memory section AND everything below it.
         """
-        from working_memory import WORKING_MEMORY_COMMENT
+        from scripts.working_memory import WORKING_MEMORY_COMMENT
 
         return (
             "# Project\n\n"
@@ -866,7 +866,7 @@ class TestAfterSectionSurvivesTheSync:
     # a shape added for one arm is a shape the completeness arm also counts.
     # Two lists would let the two drift, which is the defect this class had.
     def _drivers(self):
-        from working_memory import RETRIEVED_CONTEXT_COMMENT, WORKING_MEMORY_COMMENT
+        from scripts.working_memory import RETRIEVED_CONTEXT_COMMENT, WORKING_MEMORY_COMMENT
 
         return [
             ("working_sync_with_tail", self._sync_working,
@@ -1098,7 +1098,7 @@ class TestAfterSectionSurvivesTheSync:
         to the parser makes a newline-leading after-section reachable, this
         goes red and the exclusion above stops being safe.
         """
-        from working_memory import (
+        from scripts.working_memory import (
             RETRIEVED_CONTEXT_COMMENT,
             _MANAGED_END_MARKER,
             _MANAGED_START_MARKER,
@@ -1165,7 +1165,7 @@ class TestAfterSectionSurvivesTheSync:
         such as a probe that reads its own input, reports a survivor that the
         sync did not produce.
         """
-        from working_memory import WORKING_MEMORY_COMMENT
+        from scripts.working_memory import WORKING_MEMORY_COMMENT
 
         doc = self._doc("## Working Memory", WORKING_MEMORY_COMMENT, with_tail=False)
         assert self.MARKER not in doc
@@ -1278,7 +1278,7 @@ class TestFieldNameSurvivesTheCut:
         count to be above zero. Both parametrizations reach the cut in the
         hundreds, so the requirement costs no false red.
         """
-        from working_memory import _apply_entry_token_ceiling, _format_memory_entry
+        from scripts.working_memory import _apply_entry_token_ceiling, _format_memory_entry
 
         cells = 0
         reached = 0
@@ -1330,7 +1330,7 @@ class TestFieldNameSurvivesTheCut:
         change of the rendering makes this arm red and returns the decision
         to a person.
         """
-        from working_memory import _apply_entry_token_ceiling, _format_memory_entry
+        from scripts.working_memory import _apply_entry_token_ceiling, _format_memory_entry
 
         entry = _format_memory_entry({"context": "value words here"})
         hit = None
@@ -1358,7 +1358,7 @@ class TestFieldNameSurvivesTheCut:
         how far the shipped constants sit from the input that produces it,
         so it moves when a constant moves.
         """
-        from working_memory import (
+        from scripts.working_memory import (
             _estimate_tokens,
             _format_retrieved_entry,
             COMPRESSED_ENTRY_TOKEN_CEILING,
@@ -1463,7 +1463,7 @@ class TestMemoryIdLabelSites:
         """
         import ast
 
-        from working_memory import _MEMORY_ID_LABEL
+        from scripts.working_memory import _MEMORY_ID_LABEL
 
         tree = ast.parse(self._module_source())
         target = None
@@ -1536,13 +1536,13 @@ class TestTheFloorWhenEveryLineIsExempt:
     LOW_CEILING = 3
 
     def _exempt_only_entry(self):
-        from working_memory import _format_memory_entry
+        from scripts.working_memory import _format_memory_entry
 
         return _format_memory_entry({}, memory_id="0123456789abcdef" * 2)
 
     def test_an_entry_of_exempt_lines_alone_comes_back_whole(self):
         """No line is droppable, so the ceiling cannot be met. Return it."""
-        from working_memory import (
+        from scripts.working_memory import (
             _MEMORY_ID_LABEL,
             _apply_entry_token_ceiling,
             _estimate_tokens,
@@ -1576,7 +1576,7 @@ class TestTheFloorWhenEveryLineIsExempt:
         Without this, a guard that returned the entry for EVERY input would
         pass the negative arm above and no arm here would see it.
         """
-        from working_memory import (
+        from scripts.working_memory import (
             _MEMORY_ID_LABEL,
             _apply_entry_token_ceiling,
             _format_memory_entry,
@@ -1637,7 +1637,7 @@ class TestCompressedSummaryCapIsReferencedNotSpelled:
         """
         import ast
 
-        from working_memory import COMPRESSED_SUMMARY_CHAR_CAP
+        from scripts.working_memory import COMPRESSED_SUMMARY_CHAR_CAP
 
         tree = ast.parse(self._module_source())
         target = None

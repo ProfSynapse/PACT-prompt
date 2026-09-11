@@ -108,7 +108,7 @@ def _pointer_lines(entry, module):
 
 @pytest.fixture
 def working_memory():
-    import working_memory as module
+    from scripts import working_memory as module
 
     return module
 

@@ -56,7 +56,7 @@ def _emit(writer_name: str) -> str:
     no payload field, so a richer payload changes the body and not the line
     under test.
     """
-    import working_memory as wm
+    from scripts import working_memory as wm
 
     payload = {"context": "context text", "goal": "goal text"}
     if writer_name == "_format_memory_entry":

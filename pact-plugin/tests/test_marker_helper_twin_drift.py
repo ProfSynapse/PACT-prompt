@@ -92,7 +92,7 @@ TWINNED = ("marker_line_span", "_narrow_to_memory_region")
 def _pair(name):
     """Return the (canonical, copy) function objects for `name`."""
     import shared.pin_markers as canonical
-    import working_memory as copy
+    from scripts import working_memory as copy
 
     return getattr(canonical, name), getattr(copy, name)
 

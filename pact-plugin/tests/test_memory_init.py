@@ -33,13 +33,13 @@ class TestEnsureMemoryReady:
 
     def test_returns_dict_with_expected_keys(self):
         """Test that ensure_memory_ready returns expected result structure."""
-        from memory_init import ensure_memory_ready, reset_initialization
+        from scripts.memory_init import ensure_memory_ready, reset_initialization
 
         reset_initialization()
 
-        with patch('memory_init.check_and_install_dependencies') as mock_deps, \
-             patch('memory_init.maybe_migrate_embeddings') as mock_migrate, \
-             patch('memory_init.maybe_embed_pending') as mock_embed:
+        with patch('scripts.memory_init.check_and_install_dependencies') as mock_deps, \
+             patch('scripts.memory_init.maybe_migrate_embeddings') as mock_migrate, \
+             patch('scripts.memory_init.maybe_embed_pending') as mock_embed:
 
             mock_deps.return_value = {'status': 'ok', 'installed': [], 'failed': []}
             mock_migrate.return_value = {'status': 'ok', 'message': None}
@@ -55,13 +55,13 @@ class TestEnsureMemoryReady:
 
     def test_idempotent_only_runs_once(self):
         """Test that ensure_memory_ready only runs initialization once per session."""
-        from memory_init import ensure_memory_ready, reset_initialization
+        from scripts.memory_init import ensure_memory_ready, reset_initialization
 
         reset_initialization()
 
-        with patch('memory_init.check_and_install_dependencies') as mock_deps, \
-             patch('memory_init.maybe_migrate_embeddings') as mock_migrate, \
-             patch('memory_init.maybe_embed_pending') as mock_embed:
+        with patch('scripts.memory_init.check_and_install_dependencies') as mock_deps, \
+             patch('scripts.memory_init.maybe_migrate_embeddings') as mock_migrate, \
+             patch('scripts.memory_init.maybe_embed_pending') as mock_embed:
 
             mock_deps.return_value = {'status': 'ok', 'installed': [], 'failed': []}
             mock_migrate.return_value = {'status': 'ok', 'message': None}
@@ -84,7 +84,7 @@ class TestEnsureMemoryReady:
 
     def test_runs_all_three_steps(self):
         """Test that all three initialization steps are called in order."""
-        from memory_init import ensure_memory_ready, reset_initialization
+        from scripts.memory_init import ensure_memory_ready, reset_initialization
 
         reset_initialization()
 
@@ -102,9 +102,9 @@ class TestEnsureMemoryReady:
             call_order.append('embed')
             return {'status': 'ok', 'message': None}
 
-        with patch('memory_init.check_and_install_dependencies', side_effect=track_deps), \
-             patch('memory_init.maybe_migrate_embeddings', side_effect=track_migrate), \
-             patch('memory_init.maybe_embed_pending', side_effect=track_embed):
+        with patch('scripts.memory_init.check_and_install_dependencies', side_effect=track_deps), \
+             patch('scripts.memory_init.maybe_migrate_embeddings', side_effect=track_migrate), \
+             patch('scripts.memory_init.maybe_embed_pending', side_effect=track_embed):
 
             ensure_memory_ready()
 
@@ -116,13 +116,13 @@ class TestResetInitialization:
 
     def test_reset_allows_reinitialization(self):
         """Test that reset_initialization allows initialization to run again."""
-        from memory_init import ensure_memory_ready, reset_initialization, is_initialized
+        from scripts.memory_init import ensure_memory_ready, reset_initialization, is_initialized
 
         reset_initialization()
 
-        with patch('memory_init.check_and_install_dependencies') as mock_deps, \
-             patch('memory_init.maybe_migrate_embeddings') as mock_migrate, \
-             patch('memory_init.maybe_embed_pending') as mock_embed:
+        with patch('scripts.memory_init.check_and_install_dependencies') as mock_deps, \
+             patch('scripts.memory_init.maybe_migrate_embeddings') as mock_migrate, \
+             patch('scripts.memory_init.maybe_embed_pending') as mock_embed:
 
             mock_deps.return_value = {'status': 'ok', 'installed': [], 'failed': []}
             mock_migrate.return_value = {'status': 'ok', 'message': None}
@@ -150,11 +150,11 @@ class TestResetInitialization:
         reset that unlinks it reaches outside the test process. Resetting the
         in-memory flag is the only behaviour tests need.
         """
-        from memory_init import reset_initialization, _get_embedding_attempted_path
+        from scripts.memory_init import reset_initialization, _get_embedding_attempted_path
 
         test_session_id = f"test-routef-{time.time()}"
 
-        with patch("memory_init.get_session_id_from_context_file", return_value=test_session_id):
+        with patch("scripts.memory_init.get_session_id_from_context_file", return_value=test_session_id):
             marker_path = _get_embedding_attempted_path()
             marker_path.touch()
             try:
@@ -171,11 +171,11 @@ class TestResetInitialization:
 
     def test_clear_embedding_marker_removes_it(self):
         """The deletion still exists, but only under its own name."""
-        from memory_init import clear_embedding_marker, _get_embedding_attempted_path
+        from scripts.memory_init import clear_embedding_marker, _get_embedding_attempted_path
 
         test_session_id = f"test-clearmarker-{time.time()}"
 
-        with patch("memory_init.get_session_id_from_context_file", return_value=test_session_id):
+        with patch("scripts.memory_init.get_session_id_from_context_file", return_value=test_session_id):
             marker_path = _get_embedding_attempted_path()
             marker_path.touch()
             try:
@@ -193,20 +193,20 @@ class TestIsInitialized:
 
     def test_returns_false_before_initialization(self):
         """Test is_initialized returns False before ensure_memory_ready is called."""
-        from memory_init import reset_initialization, is_initialized
+        from scripts.memory_init import reset_initialization, is_initialized
 
         reset_initialization()
         assert is_initialized() is False
 
     def test_returns_true_after_initialization(self):
         """Test is_initialized returns True after ensure_memory_ready completes."""
-        from memory_init import ensure_memory_ready, reset_initialization, is_initialized
+        from scripts.memory_init import ensure_memory_ready, reset_initialization, is_initialized
 
         reset_initialization()
 
-        with patch('memory_init.check_and_install_dependencies') as mock_deps, \
-             patch('memory_init.maybe_migrate_embeddings') as mock_migrate, \
-             patch('memory_init.maybe_embed_pending') as mock_embed:
+        with patch('scripts.memory_init.check_and_install_dependencies') as mock_deps, \
+             patch('scripts.memory_init.maybe_migrate_embeddings') as mock_migrate, \
+             patch('scripts.memory_init.maybe_embed_pending') as mock_embed:
 
             mock_deps.return_value = {'status': 'ok', 'installed': [], 'failed': []}
             mock_migrate.return_value = {'status': 'ok', 'message': None}
@@ -221,7 +221,7 @@ class TestThreadSafety:
 
     def test_concurrent_calls_only_initialize_once(self):
         """Test that multiple concurrent calls only run initialization once."""
-        from memory_init import ensure_memory_ready, reset_initialization
+        from scripts.memory_init import ensure_memory_ready, reset_initialization
 
         reset_initialization()
 
@@ -235,9 +235,9 @@ class TestThreadSafety:
             time.sleep(0.05)
             return {'status': 'ok', 'installed': [], 'failed': []}
 
-        with patch('memory_init.check_and_install_dependencies', side_effect=counting_deps), \
-             patch('memory_init.maybe_migrate_embeddings') as mock_migrate, \
-             patch('memory_init.maybe_embed_pending') as mock_embed:
+        with patch('scripts.memory_init.check_and_install_dependencies', side_effect=counting_deps), \
+             patch('scripts.memory_init.maybe_migrate_embeddings') as mock_migrate, \
+             patch('scripts.memory_init.maybe_embed_pending') as mock_embed:
 
             mock_migrate.return_value = {'status': 'ok', 'message': None}
             mock_embed.return_value = {'status': 'ok', 'message': None}
@@ -259,7 +259,7 @@ class TestThreadSafety:
 
     def test_double_check_locking_pattern(self):
         """Test that double-check locking prevents race conditions."""
-        from memory_init import ensure_memory_ready, reset_initialization
+        from scripts.memory_init import ensure_memory_ready, reset_initialization
 
         reset_initialization()
 
@@ -275,10 +275,10 @@ class TestThreadSafety:
             def __exit__(self, *args):
                 return original_lock.__exit__(*args)
 
-        with patch('memory_init.check_and_install_dependencies') as mock_deps, \
-             patch('memory_init.maybe_migrate_embeddings') as mock_migrate, \
-             patch('memory_init.maybe_embed_pending') as mock_embed, \
-             patch('memory_init._init_lock', TrackingLock()):
+        with patch('scripts.memory_init.check_and_install_dependencies') as mock_deps, \
+             patch('scripts.memory_init.maybe_migrate_embeddings') as mock_migrate, \
+             patch('scripts.memory_init.maybe_embed_pending') as mock_embed, \
+             patch('scripts.memory_init._init_lock', TrackingLock()):
 
             mock_deps.return_value = {'status': 'ok', 'installed': [], 'failed': []}
             mock_migrate.return_value = {'status': 'ok', 'message': None}
@@ -300,7 +300,7 @@ class TestCheckAndInstallDependencies:
 
     def test_all_dependencies_present_returns_ok(self):
         """Test when all dependencies are already installed - returns ok status."""
-        from memory_init import check_and_install_dependencies
+        from scripts.memory_init import check_and_install_dependencies
 
         # When deps are already importable, function returns ok with empty lists
         # The actual function checks via __import__, and if successful, returns ok
@@ -316,7 +316,7 @@ class TestCheckAndInstallDependencies:
     def test_subprocess_called_for_missing_deps(self, monkeypatch):
         """Test that subprocess.run is called when deps are missing."""
         import builtins
-        from memory_init import check_and_install_dependencies
+        from scripts.memory_init import check_and_install_dependencies
 
         monkeypatch.delenv("CI", raising=False)   # pins the installer, so the gate must be OPEN
         original_import = builtins.__import__
@@ -328,7 +328,7 @@ class TestCheckAndInstallDependencies:
             return original_import(name, *args, **kwargs)
 
         with patch.object(builtins, '__import__', mock_import), \
-             patch('memory_init.subprocess.run') as mock_run:
+             patch('scripts.memory_init.subprocess.run') as mock_run:
 
             mock_run.return_value = MagicMock(returncode=0)
 
@@ -340,7 +340,7 @@ class TestCheckAndInstallDependencies:
     def test_installation_failure_recorded(self, monkeypatch):
         """Test that installation failures are recorded in result."""
         import builtins
-        from memory_init import check_and_install_dependencies
+        from scripts.memory_init import check_and_install_dependencies
 
         monkeypatch.delenv("CI", raising=False)   # pins the installer, so the gate must be OPEN
         original_import = builtins.__import__
@@ -352,7 +352,7 @@ class TestCheckAndInstallDependencies:
             return original_import(name, *args, **kwargs)
 
         with patch.object(builtins, '__import__', mock_import), \
-             patch('memory_init.subprocess.run') as mock_run:
+             patch('scripts.memory_init.subprocess.run') as mock_run:
 
             mock_run.return_value = MagicMock(returncode=1)  # All installations fail
 
@@ -365,7 +365,7 @@ class TestCheckAndInstallDependencies:
         """Test that installation timeout is handled gracefully."""
         import builtins
         import subprocess
-        from memory_init import check_and_install_dependencies
+        from scripts.memory_init import check_and_install_dependencies
 
         monkeypatch.delenv("CI", raising=False)   # pins the installer, so the gate must be OPEN
         original_import = builtins.__import__
@@ -376,7 +376,7 @@ class TestCheckAndInstallDependencies:
             return original_import(name, *args, **kwargs)
 
         with patch.object(builtins, '__import__', mock_import), \
-             patch('memory_init.subprocess.run') as mock_run:
+             patch('scripts.memory_init.subprocess.run') as mock_run:
 
             mock_run.side_effect = subprocess.TimeoutExpired(cmd='pip', timeout=60)
 
@@ -388,7 +388,7 @@ class TestCheckAndInstallDependencies:
     def test_install_path_inert_when_ci_set(self, monkeypatch):
         """The gate FIRES: under CI the install path returns before subprocess."""
         import builtins
-        from memory_init import check_and_install_dependencies
+        from scripts.memory_init import check_and_install_dependencies
 
         monkeypatch.setenv("CI", "true")
         original_import = builtins.__import__
@@ -399,7 +399,7 @@ class TestCheckAndInstallDependencies:
             return original_import(name, *args, **kwargs)
 
         with patch.object(builtins, '__import__', mock_import), \
-             patch('memory_init.subprocess.run') as mock_run:
+             patch('scripts.memory_init.subprocess.run') as mock_run:
 
             result = check_and_install_dependencies()
 
@@ -465,10 +465,10 @@ class TestDependencyDriftIsDetectable:
         docstring. It also does not prove the reverse direction: CI may install
         packages this module does not know about, which is harmless.
         """
-        from memory_init import check_and_install_dependencies  # noqa: F401
+        from scripts.memory_init import check_and_install_dependencies  # noqa: F401
         import inspect
 
-        import memory_init
+        from scripts import memory_init
 
         source = inspect.getsource(memory_init.check_and_install_dependencies)
         declared = re.findall(r"\(\s*'([^']+)'\s*,\s*'[^']+'\s*\)", source)
@@ -591,7 +591,7 @@ class TestDependencyDriftIsDetectable:
         import warnings
         from contextlib import redirect_stderr
 
-        from memory_init import check_and_install_dependencies
+        from scripts.memory_init import check_and_install_dependencies
 
         original_import = builtins.__import__
 
@@ -603,7 +603,7 @@ class TestDependencyDriftIsDetectable:
         buf = io.StringIO()
         with patch.dict(os.environ, {"CI": "true"}), \
                 patch.object(builtins, '__import__', mock_import), \
-                patch('memory_init.subprocess.run') as mock_run, \
+                patch('scripts.memory_init.subprocess.run') as mock_run, \
                 warnings.catch_warnings(record=True) as caught, \
                 redirect_stderr(buf):
             warnings.simplefilter("always")
@@ -634,12 +634,12 @@ class TestMaybeEmbedPending:
 
     def test_session_scoped_only_runs_once(self, tmp_path):
         """Test that maybe_embed_pending only runs once per session via marker file."""
-        from memory_init import maybe_embed_pending, _get_embedding_attempted_path
+        from scripts.memory_init import maybe_embed_pending, _get_embedding_attempted_path
 
         # Use a unique session ID for this test
         test_session_id = f"test-once-{time.time()}"
 
-        with patch("memory_init.get_session_id_from_context_file", return_value=test_session_id):
+        with patch("scripts.memory_init.get_session_id_from_context_file", return_value=test_session_id):
             marker_path = _get_embedding_attempted_path()
 
             # Clean up any existing marker
@@ -668,11 +668,11 @@ class TestMaybeEmbedPending:
 
     def test_marker_file_created_on_first_call(self, tmp_path):
         """Test that the marker file is created on first call."""
-        from memory_init import maybe_embed_pending, _get_embedding_attempted_path
+        from scripts.memory_init import maybe_embed_pending, _get_embedding_attempted_path
 
         test_session_id = f"test-marker-{time.time()}"
 
-        with patch("memory_init.get_session_id_from_context_file", return_value=test_session_id):
+        with patch("scripts.memory_init.get_session_id_from_context_file", return_value=test_session_id):
             marker_path = _get_embedding_attempted_path()
 
             # Ensure marker doesn't exist
@@ -693,11 +693,11 @@ class TestMaybeEmbedPending:
 
     def test_skips_when_marker_exists(self, tmp_path):
         """Test that function skips immediately when marker exists."""
-        from memory_init import maybe_embed_pending, _get_embedding_attempted_path
+        from scripts.memory_init import maybe_embed_pending, _get_embedding_attempted_path
 
         test_session_id = f"test-skip-{time.time()}"
 
-        with patch("memory_init.get_session_id_from_context_file", return_value=test_session_id):
+        with patch("scripts.memory_init.get_session_id_from_context_file", return_value=test_session_id):
             marker_path = _get_embedding_attempted_path()
 
             # Pre-create the marker
@@ -722,14 +722,14 @@ class TestMemoryAPIIntegration:
 
     def test_ensure_ready_helper_calls_ensure_memory_ready(self):
         """Test that _ensure_ready() calls ensure_memory_ready()."""
-        from memory_init import reset_initialization, is_initialized, ensure_memory_ready
+        from scripts.memory_init import reset_initialization, is_initialized, ensure_memory_ready
 
         reset_initialization()
         assert is_initialized() is False
 
-        with patch('memory_init.check_and_install_dependencies') as mock_deps, \
-             patch('memory_init.maybe_migrate_embeddings') as mock_migrate, \
-             patch('memory_init.maybe_embed_pending') as mock_embed:
+        with patch('scripts.memory_init.check_and_install_dependencies') as mock_deps, \
+             patch('scripts.memory_init.maybe_migrate_embeddings') as mock_migrate, \
+             patch('scripts.memory_init.maybe_embed_pending') as mock_embed:
 
             mock_deps.return_value = {'status': 'ok', 'installed': [], 'failed': []}
             mock_migrate.return_value = {'status': 'ok', 'message': None}
@@ -743,13 +743,13 @@ class TestMemoryAPIIntegration:
 
     def test_repeated_ensure_ready_calls_are_idempotent(self):
         """Test that calling ensure_memory_ready multiple times only initializes once."""
-        from memory_init import reset_initialization, ensure_memory_ready
+        from scripts.memory_init import reset_initialization, ensure_memory_ready
 
         reset_initialization()
 
-        with patch('memory_init.check_and_install_dependencies') as mock_deps, \
-             patch('memory_init.maybe_migrate_embeddings') as mock_migrate, \
-             patch('memory_init.maybe_embed_pending') as mock_embed:
+        with patch('scripts.memory_init.check_and_install_dependencies') as mock_deps, \
+             patch('scripts.memory_init.maybe_migrate_embeddings') as mock_migrate, \
+             patch('scripts.memory_init.maybe_embed_pending') as mock_embed:
 
             mock_deps.return_value = {'status': 'ok', 'installed': [], 'failed': []}
             mock_migrate.return_value = {'status': 'ok', 'message': None}
@@ -767,13 +767,13 @@ class TestMemoryAPIIntegration:
 
     def test_fast_path_returns_immediately(self):
         """Test that fast path (already_initialized=True) returns without work."""
-        from memory_init import reset_initialization, ensure_memory_ready
+        from scripts.memory_init import reset_initialization, ensure_memory_ready
 
         reset_initialization()
 
-        with patch('memory_init.check_and_install_dependencies') as mock_deps, \
-             patch('memory_init.maybe_migrate_embeddings') as mock_migrate, \
-             patch('memory_init.maybe_embed_pending') as mock_embed:
+        with patch('scripts.memory_init.check_and_install_dependencies') as mock_deps, \
+             patch('scripts.memory_init.maybe_migrate_embeddings') as mock_migrate, \
+             patch('scripts.memory_init.maybe_embed_pending') as mock_embed:
 
             mock_deps.return_value = {'status': 'ok', 'installed': [], 'failed': []}
             mock_migrate.return_value = {'status': 'ok', 'message': None}
@@ -797,7 +797,7 @@ class TestMemoryAPIIntegration:
 
     def test_api_pattern_simulation(self):
         """Simulate how memory_api uses _ensure_ready pattern."""
-        from memory_init import reset_initialization, ensure_memory_ready, is_initialized
+        from scripts.memory_init import reset_initialization, ensure_memory_ready, is_initialized
 
         reset_initialization()
 
@@ -807,9 +807,9 @@ class TestMemoryAPIIntegration:
             ensure_memory_ready()  # This is what _ensure_ready() does
             return "operation completed"
 
-        with patch('memory_init.check_and_install_dependencies') as mock_deps, \
-             patch('memory_init.maybe_migrate_embeddings') as mock_migrate, \
-             patch('memory_init.maybe_embed_pending') as mock_embed:
+        with patch('scripts.memory_init.check_and_install_dependencies') as mock_deps, \
+             patch('scripts.memory_init.maybe_migrate_embeddings') as mock_migrate, \
+             patch('scripts.memory_init.maybe_embed_pending') as mock_embed:
 
             mock_deps.return_value = {'status': 'ok', 'installed': [], 'failed': []}
             mock_migrate.return_value = {'status': 'ok', 'message': None}
@@ -835,13 +835,13 @@ class TestGracefulDegradation:
 
     def test_continues_after_dep_failure(self):
         """Test that initialization continues even if dependency installation fails."""
-        from memory_init import ensure_memory_ready, reset_initialization
+        from scripts.memory_init import ensure_memory_ready, reset_initialization
 
         reset_initialization()
 
-        with patch('memory_init.check_and_install_dependencies') as mock_deps, \
-             patch('memory_init.maybe_migrate_embeddings') as mock_migrate, \
-             patch('memory_init.maybe_embed_pending') as mock_embed:
+        with patch('scripts.memory_init.check_and_install_dependencies') as mock_deps, \
+             patch('scripts.memory_init.maybe_migrate_embeddings') as mock_migrate, \
+             patch('scripts.memory_init.maybe_embed_pending') as mock_embed:
 
             mock_deps.return_value = {'status': 'failed', 'installed': [], 'failed': ['pysqlite3']}
             mock_migrate.return_value = {'status': 'ok', 'message': None}
@@ -856,13 +856,13 @@ class TestGracefulDegradation:
 
     def test_continues_after_migration_error(self):
         """Test that initialization continues even if migration fails."""
-        from memory_init import ensure_memory_ready, reset_initialization
+        from scripts.memory_init import ensure_memory_ready, reset_initialization
 
         reset_initialization()
 
-        with patch('memory_init.check_and_install_dependencies') as mock_deps, \
-             patch('memory_init.maybe_migrate_embeddings') as mock_migrate, \
-             patch('memory_init.maybe_embed_pending') as mock_embed:
+        with patch('scripts.memory_init.check_and_install_dependencies') as mock_deps, \
+             patch('scripts.memory_init.maybe_migrate_embeddings') as mock_migrate, \
+             patch('scripts.memory_init.maybe_embed_pending') as mock_embed:
 
             mock_deps.return_value = {'status': 'ok', 'installed': [], 'failed': []}
             mock_migrate.return_value = {'status': 'error', 'message': 'Migration failed'}
@@ -876,13 +876,13 @@ class TestGracefulDegradation:
 
     def test_continues_after_embedding_error(self):
         """Test that initialization completes even if embedding fails."""
-        from memory_init import ensure_memory_ready, reset_initialization, is_initialized
+        from scripts.memory_init import ensure_memory_ready, reset_initialization, is_initialized
 
         reset_initialization()
 
-        with patch('memory_init.check_and_install_dependencies') as mock_deps, \
-             patch('memory_init.maybe_migrate_embeddings') as mock_migrate, \
-             patch('memory_init.maybe_embed_pending') as mock_embed:
+        with patch('scripts.memory_init.check_and_install_dependencies') as mock_deps, \
+             patch('scripts.memory_init.maybe_migrate_embeddings') as mock_migrate, \
+             patch('scripts.memory_init.maybe_embed_pending') as mock_embed:
 
             mock_deps.return_value = {'status': 'ok', 'installed': [], 'failed': []}
             mock_migrate.return_value = {'status': 'ok', 'message': None}
@@ -896,13 +896,13 @@ class TestGracefulDegradation:
 
     def test_all_steps_fail_still_marks_initialized(self):
         """Test that even if all steps fail, system is marked initialized."""
-        from memory_init import ensure_memory_ready, reset_initialization, is_initialized
+        from scripts.memory_init import ensure_memory_ready, reset_initialization, is_initialized
 
         reset_initialization()
 
-        with patch('memory_init.check_and_install_dependencies') as mock_deps, \
-             patch('memory_init.maybe_migrate_embeddings') as mock_migrate, \
-             patch('memory_init.maybe_embed_pending') as mock_embed:
+        with patch('scripts.memory_init.check_and_install_dependencies') as mock_deps, \
+             patch('scripts.memory_init.maybe_migrate_embeddings') as mock_migrate, \
+             patch('scripts.memory_init.maybe_embed_pending') as mock_embed:
 
             mock_deps.return_value = {'status': 'failed', 'installed': [], 'failed': ['all']}
             mock_migrate.return_value = {'status': 'error', 'message': 'Failed'}
@@ -920,13 +920,13 @@ class TestEdgeCases:
 
     def test_empty_deps_result(self):
         """Test handling of empty dependency check result."""
-        from memory_init import ensure_memory_ready, reset_initialization
+        from scripts.memory_init import ensure_memory_ready, reset_initialization
 
         reset_initialization()
 
-        with patch('memory_init.check_and_install_dependencies') as mock_deps, \
-             patch('memory_init.maybe_migrate_embeddings') as mock_migrate, \
-             patch('memory_init.maybe_embed_pending') as mock_embed:
+        with patch('scripts.memory_init.check_and_install_dependencies') as mock_deps, \
+             patch('scripts.memory_init.maybe_migrate_embeddings') as mock_migrate, \
+             patch('scripts.memory_init.maybe_embed_pending') as mock_embed:
 
             mock_deps.return_value = {}  # Empty dict
             mock_migrate.return_value = {'status': 'ok', 'message': None}
@@ -938,13 +938,13 @@ class TestEdgeCases:
 
     def test_none_values_in_results(self):
         """Test handling of None values in step results."""
-        from memory_init import ensure_memory_ready, reset_initialization
+        from scripts.memory_init import ensure_memory_ready, reset_initialization
 
         reset_initialization()
 
-        with patch('memory_init.check_and_install_dependencies') as mock_deps, \
-             patch('memory_init.maybe_migrate_embeddings') as mock_migrate, \
-             patch('memory_init.maybe_embed_pending') as mock_embed:
+        with patch('scripts.memory_init.check_and_install_dependencies') as mock_deps, \
+             patch('scripts.memory_init.maybe_migrate_embeddings') as mock_migrate, \
+             patch('scripts.memory_init.maybe_embed_pending') as mock_embed:
 
             mock_deps.return_value = {'status': 'ok', 'installed': None, 'failed': None}
             mock_migrate.return_value = {'status': 'ok', 'message': None}
@@ -956,7 +956,7 @@ class TestEdgeCases:
 
     def test_reset_during_initialization(self):
         """Test that reset during initialization is handled safely."""
-        from memory_init import ensure_memory_ready, reset_initialization
+        from scripts.memory_init import ensure_memory_ready, reset_initialization
 
         reset_initialization()
 
@@ -964,9 +964,9 @@ class TestEdgeCases:
             time.sleep(0.1)
             return {'status': 'ok', 'installed': [], 'failed': []}
 
-        with patch('memory_init.check_and_install_dependencies', side_effect=slow_deps), \
-             patch('memory_init.maybe_migrate_embeddings') as mock_migrate, \
-             patch('memory_init.maybe_embed_pending') as mock_embed:
+        with patch('scripts.memory_init.check_and_install_dependencies', side_effect=slow_deps), \
+             patch('scripts.memory_init.maybe_migrate_embeddings') as mock_migrate, \
+             patch('scripts.memory_init.maybe_embed_pending') as mock_embed:
 
             mock_migrate.return_value = {'status': 'ok', 'message': None}
             mock_embed.return_value = {'status': 'ok', 'message': None}
@@ -1507,11 +1507,19 @@ class TestMaybeMigrateEmbeddings:
         """Test: actual maybe_migrate_embeddings returns skipped_deps when deps unavailable.
 
         This tests the real function to ensure it gracefully handles
-        the ImportError when pysqlite3/sqlite_vec aren't available in test env.
+        the ImportError from an unavailable dependency. The unavailability
+        is FORCED: all three deps (pysqlite3, sqlite_vec, model2vec) are
+        importable in a dev environment, so a None entry in sys.modules
+        makes the import system raise ImportError deterministically,
+        independent of what the runner has installed. (This arm previously
+        passed on bare-imported memory_init's broken relative lazy leg
+        manufacturing that ImportError; the package-style conversion
+        repaired the leg, so the condition is now forced explicitly.)
         """
-        from memory_init import maybe_migrate_embeddings
+        from scripts.memory_init import maybe_migrate_embeddings
 
-        result = maybe_migrate_embeddings()
+        with patch.dict(sys.modules, {"pysqlite3": None}):
+            result = maybe_migrate_embeddings()
 
         # Without proper deps installed, function returns skipped_deps (graceful degradation)
         assert result['status'] == 'skipped_deps'
@@ -1524,13 +1532,13 @@ class TestLogging:
     def test_logs_installed_dependencies(self, caplog):
         """Test that installed dependencies are logged."""
         import logging
-        from memory_init import ensure_memory_ready, reset_initialization
+        from scripts.memory_init import ensure_memory_ready, reset_initialization
 
         reset_initialization()
 
-        with patch('memory_init.check_and_install_dependencies') as mock_deps, \
-             patch('memory_init.maybe_migrate_embeddings') as mock_migrate, \
-             patch('memory_init.maybe_embed_pending') as mock_embed:
+        with patch('scripts.memory_init.check_and_install_dependencies') as mock_deps, \
+             patch('scripts.memory_init.maybe_migrate_embeddings') as mock_migrate, \
+             patch('scripts.memory_init.maybe_embed_pending') as mock_embed:
 
             mock_deps.return_value = {'status': 'ok', 'installed': ['sqlite-vec'], 'failed': []}
             mock_migrate.return_value = {'status': 'ok', 'message': None}
@@ -1544,13 +1552,13 @@ class TestLogging:
     def test_logs_failed_installations(self, caplog):
         """Test that failed installations are logged as warnings."""
         import logging
-        from memory_init import ensure_memory_ready, reset_initialization
+        from scripts.memory_init import ensure_memory_ready, reset_initialization
 
         reset_initialization()
 
-        with patch('memory_init.check_and_install_dependencies') as mock_deps, \
-             patch('memory_init.maybe_migrate_embeddings') as mock_migrate, \
-             patch('memory_init.maybe_embed_pending') as mock_embed:
+        with patch('scripts.memory_init.check_and_install_dependencies') as mock_deps, \
+             patch('scripts.memory_init.maybe_migrate_embeddings') as mock_migrate, \
+             patch('scripts.memory_init.maybe_embed_pending') as mock_embed:
 
             mock_deps.return_value = {'status': 'partial', 'installed': [], 'failed': ['pysqlite3']}
             mock_migrate.return_value = {'status': 'ok', 'message': None}
@@ -1574,7 +1582,7 @@ class TestMemoryAPIRealIntegration:
 
     def test_pact_memory_save_triggers_ensure_ready(self):
         """Test that PACTMemory.save() triggers ensure_memory_ready()."""
-        from memory_init import reset_initialization
+        from scripts.memory_init import reset_initialization
 
         reset_initialization()
 
@@ -1584,16 +1592,16 @@ class TestMemoryAPIRealIntegration:
 
         # We need to mock ensure_memory_ready at the memory_api module level
         # because memory_api imports it with: from .memory_init import ensure_memory_ready
-        with patch('memory_init.check_and_install_dependencies') as mock_deps, \
-             patch('memory_init.maybe_migrate_embeddings') as mock_migrate, \
-             patch('memory_init.maybe_embed_pending') as mock_embed:
+        with patch('scripts.memory_init.check_and_install_dependencies') as mock_deps, \
+             patch('scripts.memory_init.maybe_migrate_embeddings') as mock_migrate, \
+             patch('scripts.memory_init.maybe_embed_pending') as mock_embed:
 
             mock_deps.return_value = {'status': 'ok', 'installed': [], 'failed': []}
             mock_migrate.return_value = {'status': 'ok', 'message': None}
             mock_embed.return_value = {'status': 'ok', 'message': None}
 
             # Import the ensure_memory_ready we're testing
-            from memory_init import ensure_memory_ready, is_initialized
+            from scripts.memory_init import ensure_memory_ready, is_initialized
 
             # Verify not initialized yet
             assert is_initialized() is False
@@ -1619,7 +1627,7 @@ class TestMemoryAPIRealIntegration:
         2. Importing PACTMemory (which imports ensure_memory_ready)
         3. Verifying that calling an API method would trigger initialization
         """
-        from memory_init import reset_initialization, is_initialized
+        from scripts.memory_init import reset_initialization, is_initialized
 
         reset_initialization()
 
@@ -1630,15 +1638,15 @@ class TestMemoryAPIRealIntegration:
         # So if we verify that ensure_memory_ready is called when we
         # simulate what _ensure_ready does, the integration is verified.
 
-        with patch('memory_init.check_and_install_dependencies') as mock_deps, \
-             patch('memory_init.maybe_migrate_embeddings') as mock_migrate, \
-             patch('memory_init.maybe_embed_pending') as mock_embed:
+        with patch('scripts.memory_init.check_and_install_dependencies') as mock_deps, \
+             patch('scripts.memory_init.maybe_migrate_embeddings') as mock_migrate, \
+             patch('scripts.memory_init.maybe_embed_pending') as mock_embed:
 
             mock_deps.return_value = {'status': 'ok', 'installed': [], 'failed': []}
             mock_migrate.return_value = {'status': 'ok', 'message': None}
             mock_embed.return_value = {'status': 'ok', 'message': None}
 
-            from memory_init import ensure_memory_ready
+            from scripts.memory_init import ensure_memory_ready
 
             # Before any call
             assert is_initialized() is False
@@ -1714,7 +1722,7 @@ class TestMemoryAPIRealIntegration:
 @pytest.fixture(autouse=True)
 def reset_init_state():
     """Reset initialization state before and after each test."""
-    from memory_init import reset_initialization
+    from scripts.memory_init import reset_initialization
     reset_initialization()
     yield
     reset_initialization()

@@ -72,7 +72,7 @@ def _write_and_sync(tmp_path, document, sync):
     target = tmp_path / "CLAUDE.md"
     target.write_text(document, encoding="utf-8")
     with patch(
-        "working_memory._resolve_display_claude_md_with_base",
+        "scripts.working_memory._resolve_display_claude_md_with_base",
         return_value=(target, target.parent),
     ):
         sync()
@@ -103,7 +103,7 @@ class TestWorkingMemorySpliceWindow:
     HEADING = "## Working Memory"
 
     def _sync(self, tmp_path, document):
-        from working_memory import sync_to_claude_md
+        from scripts.working_memory import sync_to_claude_md
 
         return _write_and_sync(
             tmp_path,
@@ -169,7 +169,7 @@ class TestRetrievedContextSpliceWindow:
     HEADING = "## Retrieved Context"
 
     def _sync(self, tmp_path, document):
-        from working_memory import sync_retrieved_to_claude_md
+        from scripts.working_memory import sync_retrieved_to_claude_md
 
         return _write_and_sync(
             tmp_path,
@@ -248,7 +248,7 @@ class TestMissingPairKeepsTodayBehaviour:
     def test_a_document_with_no_memory_pair_is_written_without_raising(
         self, tmp_path
     ):
-        from working_memory import sync_to_claude_md
+        from scripts.working_memory import sync_to_claude_md
 
         document = build_claude_md(managed=False)
         # PRECONDITION: this class covers a document with NO memory pair.

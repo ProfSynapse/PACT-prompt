@@ -150,7 +150,7 @@ def _write_and_sync(tmp_path, document, call):
     target = tmp_path / "CLAUDE.md"
     target.write_text(document, encoding="utf-8")
     with patch(
-        "working_memory._resolve_display_claude_md_with_base",
+        "scripts.working_memory._resolve_display_claude_md_with_base",
         return_value=(target, target.parent),
     ):
         call()
@@ -198,7 +198,7 @@ class TestWorkingMemorySectionStopsAtTheSessionEnd:
     def test_the_marker_survives_a_forged_heading_in_the_session_block(
         self, tmp_path
     ):
-        from working_memory import sync_to_claude_md
+        from scripts.working_memory import sync_to_claude_md
 
         document = _build(self.HEADING)
         count_in = _assert_the_document_is_the_measured_shape(document, self.HEADING)
@@ -227,7 +227,7 @@ class TestRetrievedContextSectionStopsAtTheSessionEnd:
     def test_the_marker_survives_a_forged_heading_in_the_session_block(
         self, tmp_path
     ):
-        from working_memory import sync_retrieved_to_claude_md
+        from scripts.working_memory import sync_retrieved_to_claude_md
 
         document = _build(self.HEADING)
         count_in = _assert_the_document_is_the_measured_shape(document, self.HEADING)

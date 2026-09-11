@@ -194,7 +194,7 @@ class TestMarkerLiterals:
         monkeypatch.syspath_prepend(
             str(Path(__file__).parent.parent / "skills" / "pact-memory" / "scripts")
         )
-        from working_memory import _PACT_BOUNDARY_ALT, _SESSION_BOUNDARY_ALT
+        from scripts.working_memory import _PACT_BOUNDARY_ALT, _SESSION_BOUNDARY_ALT
 
         hooks_alt = "|".join(PACT_BOUNDARY_PREFIXES)
         skills_alt = f"{_PACT_BOUNDARY_ALT}|{_SESSION_BOUNDARY_ALT}"
@@ -623,7 +623,7 @@ class TestAdjacencySurvivesBothMachineWriters:
         return _is_already_marked(region[0], heading.start())
 
     def test_the_above_heading_writer_cannot_break_adjacency(self, tmp_path, monkeypatch):
-        import working_memory as wm
+        from scripts import working_memory as wm
         target = self._project(tmp_path, monkeypatch)
         before = target.read_text(encoding="utf-8")
 
@@ -646,7 +646,7 @@ class TestAdjacencySurvivesBothMachineWriters:
         assert self._adjacent(after) is True
 
     def test_the_below_heading_writer_cannot_break_adjacency(self, tmp_path, monkeypatch):
-        import working_memory as wm
+        from scripts import working_memory as wm
         target = self._project(tmp_path, monkeypatch)
         before = target.read_text(encoding="utf-8")
 
@@ -680,7 +680,7 @@ class TestAdjacencySurvivesBothMachineWriters:
         silently ACCEPT a fused line, reporting marked while the marker is not
         where the writer puts it.)
         """
-        import working_memory as wm
+        from scripts import working_memory as wm
         from shared.claude_md_manager import extract_managed_region
         from shared.pin_markers import _PINNED_HEADING
         target = self._project(tmp_path, monkeypatch)
@@ -703,7 +703,7 @@ class TestAdjacencySurvivesBothMachineWriters:
         it, a carrier could occupy the adjacent line and adjacency would
         degrade SILENTLY with no other failing test.
         """
-        import working_memory as wm
+        from scripts import working_memory as wm
         from shared.claude_md_manager import extract_managed_region
         from shared.pin_markers import _PINNED_HEADING
         target = self._project(tmp_path, monkeypatch)

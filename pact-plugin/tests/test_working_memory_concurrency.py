@@ -74,7 +74,7 @@ def _sync_worker(args):
     # _get_claude_md_path checks CLAUDE_PROJECT_DIR first, so all writers
     # resolve the same tmp .claude/CLAUDE.md (and thus the same sidecar).
     os.environ["CLAUDE_PROJECT_DIR"] = home
-    import working_memory as wm
+    from scripts import working_memory as wm
 
     # Rendezvous: both writers read the same base before either writes.
     barrier.wait()
@@ -140,7 +140,7 @@ class TestCrossWriterSerialization:
         working_memory.file_lock(target) time out on the SAME target, proving
         the two copies serialize on one sidecar (not two independent locks)."""
         from shared.claude_md_manager import file_lock as canonical
-        import working_memory as wm
+        from scripts import working_memory as wm
 
         target = tmp_path / ".claude" / "CLAUDE.md"
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -160,7 +160,7 @@ class TestCrossWriterSerialization:
         """Both copies derive the sidecar as .{name}.lock beside the target —
         the identity that makes the inode shared across processes."""
         from shared import claude_md_manager as cmm
-        import working_memory as wm
+        from scripts import working_memory as wm
 
         target = tmp_path / "CLAUDE.md"
         target.write_text("# x\n", encoding="utf-8")
@@ -186,7 +186,7 @@ class TestFailOpenOnTimeout:
         two no longer differ on this axis and both assert the REASON rather
         than mere falsiness.
         """
-        import working_memory as wm
+        from scripts import working_memory as wm
 
         claude_md = _seed_claude_md(tmp_path)
         monkeypatch.setenv("CLAUDE_PROJECT_DIR", str(tmp_path))
@@ -215,7 +215,7 @@ class TestFailOpenOnTimeout:
         self, tmp_path, monkeypatch
     ):
         """Same fail-open contract for the retrieved-context sync site."""
-        import working_memory as wm
+        from scripts import working_memory as wm
 
         claude_md = _seed_claude_md(tmp_path)
         monkeypatch.setenv("CLAUDE_PROJECT_DIR", str(tmp_path))

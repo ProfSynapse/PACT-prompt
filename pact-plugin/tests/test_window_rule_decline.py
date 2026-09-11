@@ -47,7 +47,7 @@ def _family():
     twin literal in a test goes stale without a gate, which is the shape this
     branch keeps removing.
     """
-    from working_memory import (
+    from scripts.working_memory import (
         MEMORY_END_MARKER,
         MEMORY_START_MARKER,
         _MANAGED_END_MARKER,
@@ -100,7 +100,7 @@ class TestTheWindowFamilySelectsThreeDifferentSteps:
         row three mean something: a family that answered the same way at each
         row would separate no states at all.
         """
-        from working_memory import (
+        from scripts.working_memory import (
             MEMORY_START_MARKER,
             _SESSION_END_MARKER,
             _resolve_write_window,
@@ -191,7 +191,7 @@ class TestTheSyncMappingsCarryTheNewReason:
         call site alone leaves the sibling arm green, which is what makes the
         two arms different rather than one arm written twice.
         """
-        from working_memory import SyncResult, sync_to_claude_md
+        from scripts.working_memory import SyncResult, sync_to_claude_md
 
         root = _declining_project(tmp_path, monkeypatch)
         result = sync_to_claude_md(
@@ -228,7 +228,7 @@ class TestTheSyncMappingsCarryTheNewReason:
         reason reaches no status field and no log line. An arm at the function
         is the only thing that holds the mapping in place.
         """
-        from working_memory import SyncResult, sync_retrieved_to_claude_md
+        from scripts.working_memory import SyncResult, sync_retrieved_to_claude_md
 
         root = _declining_project(tmp_path, monkeypatch)
         result = sync_retrieved_to_claude_md(

@@ -151,7 +151,7 @@ def _load_twin(which: str):
     if which == "canonical":
         import shared.claude_md_manager as mod
         return mod
-    import working_memory as mod
+    from scripts import working_memory as mod
     return mod
 
 

@@ -80,7 +80,7 @@ def resolver_staleness(tmp: Path, monkeypatch) -> str:
 
 def resolver_working_memory(tmp: Path, monkeypatch) -> str:
     """Mirror of staleness; same env-var-driven resolution strategy."""
-    from working_memory import _get_claude_md_path
+    from scripts.working_memory import _get_claude_md_path
 
     monkeypatch.setenv("CLAUDE_PROJECT_DIR", str(tmp))
     return _classify_path(_get_claude_md_path(), tmp)
@@ -313,7 +313,7 @@ class TestDisplayResolverParityInvariant:
     def test_non_worktree_checkout_resolvers_coincide(self, tmp_path, monkeypatch):
         """In a plain (non-worktree) checkout the two resolvers return the SAME
         existing path -- the equivalence the docstring promises."""
-        from working_memory import (
+        from scripts.working_memory import (
             _get_claude_md_path,
             _resolve_display_claude_md_path,
         )
@@ -341,7 +341,7 @@ class TestDisplayResolverParityInvariant:
         CLAUDE.md resolves the display path to its OWN file (branch 2) while the
         main-repo resolver still points at the main file -- so the coincidence
         above is a real property of the non-worktree case, not a constant."""
-        from working_memory import (
+        from scripts.working_memory import (
             _get_claude_md_path,
             _resolve_display_claude_md_path,
         )
@@ -386,7 +386,7 @@ class TestDisplayResolverParityInvariant:
         test_working_memory_worktree_sync.py; this asserts only that the two
         resolvers converge, which is the invariant this parity file exists for.
         """
-        from working_memory import (
+        from scripts.working_memory import (
             _get_claude_md_path,
             _resolve_display_claude_md_path,
         )
