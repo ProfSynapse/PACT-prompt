@@ -37,12 +37,8 @@ GC-immune: every fixture is a synthetic journal event built via
 session_journal.make_event — zero dependence on the GC-reaped task store.
 """
 
-import sys
-from pathlib import Path
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 from shared.session_journal import make_event  # noqa: E402
 from shared.variety_divergence import (  # noqa: E402

@@ -28,12 +28,8 @@ Summary: STANDING mint-parity regression suite (permanent, not a one-arc cert) â
          Destructive verbs are assembled at runtime so this file stays inert to the
          live guard.
 """
-import sys
-from pathlib import Path
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 import merge_guard_pre  # noqa: E402
 from merge_guard_post import _mint_context_from_bundle, _target_value  # noqa: E402

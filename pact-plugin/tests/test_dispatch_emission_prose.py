@@ -186,11 +186,7 @@ class TestRecoveryReadLastUsesTheFilteredForm:
         """Prose/CLI spelling agreement: the flag the prose names is the
         flag the parser registers, so a rename on one side reddens here
         rather than silently stranding the other."""
-        import sys
 
-        hooks = str(PLUGIN_ROOT / "hooks")
-        if hooks not in sys.path:
-            sys.path.insert(0, hooks)
         from shared import session_journal as sj
 
         parser = sj._build_cli()
@@ -216,11 +212,7 @@ class TestDiscriminatorConstant:
     prevent — so the two spellings are pinned against each other."""
 
     def test_constant_value_matches_the_prose_literal(self):
-        import sys
 
-        hooks = str(PLUGIN_ROOT / "hooks")
-        if hooks not in sys.path:
-            sys.path.insert(0, hooks)
         from shared.constants import VARIETY_ASSESSED_DISPATCH_SCOPE
 
         assert VARIETY_ASSESSED_DISPATCH_SCOPE == "dispatch"

@@ -11,11 +11,7 @@ Also pins defensive shapes (non-dict input, non-dict field values, empty
 fields, missing fields).
 """
 
-import sys
-from pathlib import Path
 
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 from shared.tool_response import extract_tool_response  # noqa: E402
 

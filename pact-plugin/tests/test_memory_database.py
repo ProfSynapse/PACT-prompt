@@ -13,15 +13,12 @@ Tests cover:
 """
 import json
 import os
-import sys
 from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 
 from helpers import create_test_schema
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'skills', 'pact-memory'))
 
 # Use the same sqlite3 module that database.py uses (pysqlite3 if available)
 try:
@@ -523,10 +520,6 @@ class TestPACTMemoryDeleteVecTableHandling:
 
     def test_delete_silently_handles_missing_vec_memories_table(self, tmp_path):
         """Real-DB path: schema has no vec_memories table; delete must succeed."""
-        sys.path.insert(
-            0,
-            os.path.join(os.path.dirname(__file__), '..', 'skills', 'pact-memory'),
-        )
         from scripts.memory_api import PACTMemory
 
         db_path = tmp_path / "vec_absent.db"
@@ -561,10 +554,6 @@ class TestPACTMemoryDeleteVecTableHandling:
         propagating it surfaces real problems (lock contention, disk I/O,
         etc.) instead of silently leaving stale vector entries.
         """
-        sys.path.insert(
-            0,
-            os.path.join(os.path.dirname(__file__), '..', 'skills', 'pact-memory'),
-        )
         from scripts.memory_api import PACTMemory
         import scripts.memory_api as memory_api_mod
 
@@ -2094,10 +2083,6 @@ class TestBug1EmbeddingSkipOnIdempotentUpdate:
         self, tmp_path,
     ):
         """Second identical update must NOT call _store_embedding."""
-        sys.path.insert(
-            0,
-            os.path.join(os.path.dirname(__file__), '..', 'skills', 'pact-memory'),
-        )
         from scripts.memory_api import PACTMemory
 
         db_path = tmp_path / "embed_skip_test.db"

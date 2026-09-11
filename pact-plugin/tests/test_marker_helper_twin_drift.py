@@ -62,15 +62,9 @@ here and it does not need to be.
 from __future__ import annotations
 
 import inspect
-import sys
 import textwrap
-from pathlib import Path
 
 import pytest
-
-sys.path.insert(
-    0, str(Path(__file__).parent.parent / "skills" / "pact-memory" / "scripts")
-)
 
 # THE EXTRACTOR COMES FROM ITS SINGLE DEFINITION AND IS NOT COPIED HERE.
 # A second copy of an extractor is the same defect this file guards, one
@@ -92,7 +86,7 @@ TWINNED = ("marker_line_span", "_narrow_to_memory_region")
 def _pair(name):
     """Return the (canonical, copy) function objects for `name`."""
     import shared.pin_markers as canonical
-    import working_memory as copy
+    from scripts import working_memory as copy
 
     return getattr(canonical, name), getattr(copy, name)
 

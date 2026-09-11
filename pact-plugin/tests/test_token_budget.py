@@ -11,13 +11,8 @@ Tests cover:
 
 import os
 import re
-import sys
-from pathlib import Path
 from unittest.mock import patch, MagicMock
 
-
-# Add paths for imports
-sys.path.insert(0, str(Path(__file__).parent.parent / "skills" / "pact-memory" / "scripts"))
 
 
 class TestEstimateTokens:
@@ -25,29 +20,29 @@ class TestEstimateTokens:
 
     def test_empty_string_returns_zero(self):
         """Empty string should return 0 tokens."""
-        from working_memory import _estimate_tokens
+        from scripts.working_memory import _estimate_tokens
         assert _estimate_tokens("") == 0
 
     def test_single_word(self):
         """Single word should return int(1 * 1.3) = 1."""
-        from working_memory import _estimate_tokens
+        from scripts.working_memory import _estimate_tokens
         assert _estimate_tokens("hello") == 1
 
     def test_ten_words(self):
         """Ten words should return int(10 * 1.3) = 13."""
-        from working_memory import _estimate_tokens
+        from scripts.working_memory import _estimate_tokens
         text = "one two three four five six seven eight nine ten"
         assert _estimate_tokens(text) == 13
 
     def test_returns_integer(self):
         """Should always return an integer, not a float."""
-        from working_memory import _estimate_tokens
+        from scripts.working_memory import _estimate_tokens
         result = _estimate_tokens("some words here")
         assert isinstance(result, int)
 
     def test_longer_text_scales_proportionally(self):
         """Longer text should produce proportionally larger estimates."""
-        from working_memory import _estimate_tokens
+        from scripts.working_memory import _estimate_tokens
         short = _estimate_tokens("a b c")
         long_val = _estimate_tokens("a b c d e f g h i j k l m n o")
         assert long_val > short
@@ -58,7 +53,7 @@ class TestCompressMemoryEntry:
 
     def test_extracts_context_first_sentence(self):
         """Should extract first sentence from Context field."""
-        from working_memory import _compress_memory_entry
+        from scripts.working_memory import _compress_memory_entry
 
         entry = (
             "### 2026-01-15 10:30\n"
@@ -82,7 +77,7 @@ class TestCompressMemoryEntry:
 
     def test_truncates_long_context_without_period(self):
         """Should truncate to 120 chars with ellipsis when no period found early."""
-        from working_memory import _compress_memory_entry
+        from scripts.working_memory import _compress_memory_entry
 
         long_context = "A" * 200
         entry = f"### 2026-01-15 10:30\n**Context**: {long_context}"
@@ -95,7 +90,7 @@ class TestCompressMemoryEntry:
 
     def test_handles_context_with_early_period(self):
         """Should take first sentence if period appears before 120 chars."""
-        from working_memory import _compress_memory_entry
+        from scripts.working_memory import _compress_memory_entry
 
         entry = (
             "### 2026-02-01 08:00\n"
@@ -106,7 +101,7 @@ class TestCompressMemoryEntry:
 
     def test_preserves_date_header(self):
         """Date header line should always be preserved."""
-        from working_memory import _compress_memory_entry
+        from scripts.working_memory import _compress_memory_entry
 
         entry = "### 2026-03-15 14:22\n**Context**: Some context"
         result = _compress_memory_entry(entry)
@@ -114,7 +109,7 @@ class TestCompressMemoryEntry:
 
     def test_falls_back_to_first_field_when_no_context(self):
         """Should use first bold field if no Context field present."""
-        from working_memory import _compress_memory_entry
+        from scripts.working_memory import _compress_memory_entry
 
         entry = (
             "### 2026-01-20 12:00\n"
@@ -127,12 +122,12 @@ class TestCompressMemoryEntry:
 
     def test_empty_entry_returns_entry(self):
         """Empty entry should return itself."""
-        from working_memory import _compress_memory_entry
+        from scripts.working_memory import _compress_memory_entry
         assert _compress_memory_entry("") == ""
 
     def test_header_only_entry(self):
         """Entry with only date header should return just the header."""
-        from working_memory import _compress_memory_entry
+        from scripts.working_memory import _compress_memory_entry
         result = _compress_memory_entry("### 2026-01-01 00:00")
         assert result == "### 2026-01-01 00:00"
 
@@ -142,12 +137,12 @@ class TestApplyTokenBudget:
 
     def test_empty_entries_returns_empty(self):
         """Empty list should return empty list."""
-        from working_memory import _apply_token_budget
+        from scripts.working_memory import _apply_token_budget
         assert _apply_token_budget([], 800) == []
 
     def test_under_budget_no_change(self):
         """Entries under budget should be returned unchanged."""
-        from working_memory import _apply_token_budget
+        from scripts.working_memory import _apply_token_budget
 
         entries = [
             "### 2026-01-15 10:00\n**Context**: Short entry",
@@ -158,7 +153,7 @@ class TestApplyTokenBudget:
 
     def test_over_budget_compresses_older_entries(self):
         """When over budget, older entries should be compressed (newest stays full)."""
-        from working_memory import _apply_token_budget
+        from scripts.working_memory import _apply_token_budget
 
         long_text = "word " * 100  # ~130 tokens per entry
         entries = [
@@ -190,7 +185,7 @@ class TestApplyTokenBudget:
         put its input out of reach of the mechanism it names. A fixture
         computed from the constants moves WITH them.
         """
-        from working_memory import (
+        from scripts.working_memory import (
             _apply_token_budget,
             _estimate_tokens,
             COMPRESSED_ENTRY_TOKEN_CEILING,
@@ -260,7 +255,7 @@ class TestApplyTokenBudget:
         and none for a neighbour, so the loop must run at any value of the
         constants.
         """
-        from working_memory import (
+        from scripts.working_memory import (
             _apply_token_budget,
             COMPRESSED_ENTRY_TOKEN_CEILING,
             MAX_WORKING_MEMORIES,
@@ -294,7 +289,7 @@ class TestApplyTokenBudget:
 
     def test_single_entry_always_kept(self):
         """A single entry should never be dropped, even if over budget."""
-        from working_memory import _apply_token_budget
+        from scripts.working_memory import _apply_token_budget
 
         huge_text = "word " * 1000
         entries = [f"### 2026-01-15 10:00\n**Context**: {huge_text}"]
@@ -303,7 +298,7 @@ class TestApplyTokenBudget:
 
     def test_budget_of_zero_keeps_first_entry(self):
         """Budget of zero should still keep at least the first entry."""
-        from working_memory import _apply_token_budget
+        from scripts.working_memory import _apply_token_budget
 
         entries = ["### 2026-01-15\n**Context**: Some text"]
         result = _apply_token_budget(entries, 0)
@@ -320,7 +315,7 @@ class TestSyncToClaudeMdBudgetEnforcement:
 
     def test_large_entries_compressed_during_sync(self, tmp_path):
         """sync_to_claude_md should compress older entries to stay within budget."""
-        from working_memory import sync_to_claude_md
+        from scripts.working_memory import sync_to_claude_md
 
         long_text = "word " * 200
         existing_content = (
@@ -333,7 +328,7 @@ class TestSyncToClaudeMdBudgetEnforcement:
         )
         claude_md = self._create_claude_md(tmp_path, existing_content)
 
-        with patch("working_memory._resolve_display_claude_md_with_base", return_value=(claude_md, claude_md.parent)):
+        with patch("scripts.working_memory._resolve_display_claude_md_with_base", return_value=(claude_md, claude_md.parent)):
             result = sync_to_claude_md(
                 {"context": "New context entry", "goal": "New goal"},
                 memory_id="test123"
@@ -350,7 +345,7 @@ class TestSyncToClaudeMdBudgetEnforcement:
 
     def test_sync_with_budget_produces_valid_markdown(self, tmp_path):
         """Output should be valid markdown with proper section structure."""
-        from working_memory import sync_to_claude_md
+        from scripts.working_memory import sync_to_claude_md
 
         content = (
             "# Project\n\n"
@@ -361,7 +356,7 @@ class TestSyncToClaudeMdBudgetEnforcement:
         )
         claude_md = self._create_claude_md(tmp_path, content)
 
-        with patch("working_memory._resolve_display_claude_md_with_base", return_value=(claude_md, claude_md.parent)):
+        with patch("scripts.working_memory._resolve_display_claude_md_with_base", return_value=(claude_md, claude_md.parent)):
             result = sync_to_claude_md({"context": "Test"}, memory_id="id1")
 
         new_content = claude_md.read_text(encoding="utf-8")
@@ -381,7 +376,7 @@ class TestSyncToClaudeMdBudgetEnforcement:
 
     def test_entry_count_trimmed_to_max_working_memories(self, tmp_path):
         """sync_to_claude_md should trim entries to MAX_WORKING_MEMORIES (3)."""
-        from working_memory import sync_to_claude_md, MAX_WORKING_MEMORIES
+        from scripts.working_memory import sync_to_claude_md, MAX_WORKING_MEMORIES
 
         existing_content = (
             "# Project\n\n"
@@ -397,7 +392,7 @@ class TestSyncToClaudeMdBudgetEnforcement:
         )
         claude_md = self._create_claude_md(tmp_path, existing_content)
 
-        with patch("working_memory._resolve_display_claude_md_with_base", return_value=(claude_md, claude_md.parent)):
+        with patch("scripts.working_memory._resolve_display_claude_md_with_base", return_value=(claude_md, claude_md.parent)):
             result = sync_to_claude_md(
                 {"context": "Brand new entry"},
                 memory_id="new123"
@@ -443,7 +438,7 @@ class TestSyncRetrievedBudgetEnforcement:
 
     def test_retrieved_entries_reduced_when_over_budget(self, tmp_path):
         """Should drop old retrieved entries when over budget."""
-        from working_memory import sync_retrieved_to_claude_md
+        from scripts.working_memory import sync_retrieved_to_claude_md
 
         long_text = "word " * 200
         existing_content = (
@@ -458,7 +453,7 @@ class TestSyncRetrievedBudgetEnforcement:
         )
         claude_md = self._create_claude_md(tmp_path, existing_content)
 
-        with patch("working_memory._resolve_display_claude_md_with_base", return_value=(claude_md, claude_md.parent)):
+        with patch("scripts.working_memory._resolve_display_claude_md_with_base", return_value=(claude_md, claude_md.parent)):
             result = sync_retrieved_to_claude_md(
                 [{"context": "New retrieved", "goal": "test"}],
                 query="test search",
@@ -479,7 +474,7 @@ class TestSyncRetrievedBudgetEnforcement:
 
     def test_no_memories_returns_false(self):
         """sync_retrieved_to_claude_md with an empty list reports `empty`."""
-        from working_memory import sync_retrieved_to_claude_md, SyncResult
+        from scripts.working_memory import sync_retrieved_to_claude_md, SyncResult
         result = sync_retrieved_to_claude_md([], query="test")
         # `empty` is the subject, not mere falsiness. This test NAMES its cause
         # in its own name: there was nothing to write. `unresolved` or `failed`
@@ -492,7 +487,7 @@ class TestFormatMemoryEntry:
 
     def test_basic_fields(self):
         """Should format context, goal, and memory_id into markdown."""
-        from working_memory import _format_memory_entry
+        from scripts.working_memory import _format_memory_entry
 
         memory = {"context": "Working on auth", "goal": "Add JWT support"}
         result = _format_memory_entry(memory, memory_id="abc123")
@@ -504,7 +499,7 @@ class TestFormatMemoryEntry:
 
     def test_decisions_as_list_of_strings(self):
         """Decisions provided as a list of strings should be joined with commas."""
-        from working_memory import _format_memory_entry
+        from scripts.working_memory import _format_memory_entry
 
         memory = {"context": "Test", "decisions": ["Use Redis", "Add caching"]}
         result = _format_memory_entry(memory)
@@ -513,7 +508,7 @@ class TestFormatMemoryEntry:
 
     def test_decisions_as_list_of_dicts(self):
         """Decisions provided as list of dicts should extract 'decision' key."""
-        from working_memory import _format_memory_entry
+        from scripts.working_memory import _format_memory_entry
 
         memory = {"context": "Test", "decisions": [
             {"decision": "Use Redis"},
@@ -525,7 +520,7 @@ class TestFormatMemoryEntry:
 
     def test_decisions_as_string(self):
         """Decisions provided as a plain string should be used directly."""
-        from working_memory import _format_memory_entry
+        from scripts.working_memory import _format_memory_entry
 
         memory = {"context": "Test", "decisions": "Use Redis for storage"}
         result = _format_memory_entry(memory)
@@ -534,7 +529,7 @@ class TestFormatMemoryEntry:
 
     def test_lessons_as_list(self):
         """Lessons provided as a list should be joined with commas."""
-        from working_memory import _format_memory_entry
+        from scripts.working_memory import _format_memory_entry
 
         memory = {"context": "Test", "lessons_learned": ["Cache invalidation is hard", "Use TTL"]}
         result = _format_memory_entry(memory)
@@ -543,7 +538,7 @@ class TestFormatMemoryEntry:
 
     def test_lessons_as_string(self):
         """Lessons provided as a string should be used directly."""
-        from working_memory import _format_memory_entry
+        from scripts.working_memory import _format_memory_entry
 
         memory = {"context": "Test", "lessons_learned": "Always use TTL for caches"}
         result = _format_memory_entry(memory)
@@ -552,7 +547,7 @@ class TestFormatMemoryEntry:
 
     def test_missing_optional_fields(self):
         """Missing optional fields should be omitted from output."""
-        from working_memory import _format_memory_entry
+        from scripts.working_memory import _format_memory_entry
 
         memory = {"context": "Just context, nothing else"}
         result = _format_memory_entry(memory)
@@ -566,7 +561,7 @@ class TestFormatMemoryEntry:
 
     def test_files_list(self):
         """Files list should be formatted as comma-separated values."""
-        from working_memory import _format_memory_entry
+        from scripts.working_memory import _format_memory_entry
 
         memory = {"context": "Test"}
         result = _format_memory_entry(memory, files=["src/auth.py", "tests/test_auth.py"])
@@ -575,7 +570,7 @@ class TestFormatMemoryEntry:
 
     def test_empty_memory_dict(self):
         """Empty memory dict should produce only the date header line."""
-        from working_memory import _format_memory_entry
+        from scripts.working_memory import _format_memory_entry
 
         result = _format_memory_entry({})
         lines = result.strip().split("\n")
@@ -588,7 +583,7 @@ class TestFormatRetrievedEntry:
 
     def test_basic_formatting(self):
         """Should format query, context, and goal into markdown."""
-        from working_memory import _format_retrieved_entry
+        from scripts.working_memory import _format_retrieved_entry
 
         memory = {"context": "Auth implementation", "goal": "Add JWT"}
         result = _format_retrieved_entry(memory, query="authentication", memory_id="mem1")
@@ -601,7 +596,7 @@ class TestFormatRetrievedEntry:
 
     def test_context_truncation_at_200_chars(self):
         """Context longer than 200 chars should be truncated with ellipsis."""
-        from working_memory import _format_retrieved_entry
+        from scripts.working_memory import _format_retrieved_entry
 
         long_context = "A" * 250
         memory = {"context": long_context}
@@ -614,7 +609,7 @@ class TestFormatRetrievedEntry:
 
     def test_score_formatting(self):
         """Score should be formatted to 2 decimal places."""
-        from working_memory import _format_retrieved_entry
+        from scripts.working_memory import _format_retrieved_entry
 
         memory = {"context": "Test"}
         result = _format_retrieved_entry(memory, query="test", score=0.87654)
@@ -623,7 +618,7 @@ class TestFormatRetrievedEntry:
 
     def test_no_score_omits_relevance(self):
         """When score is None, Relevance line should be omitted."""
-        from working_memory import _format_retrieved_entry
+        from scripts.working_memory import _format_retrieved_entry
 
         memory = {"context": "Test"}
         result = _format_retrieved_entry(memory, query="test")
@@ -632,7 +627,7 @@ class TestFormatRetrievedEntry:
 
     def test_missing_optional_fields(self):
         """Missing context and goal should be omitted."""
-        from working_memory import _format_retrieved_entry
+        from scripts.working_memory import _format_retrieved_entry
 
         result = _format_retrieved_entry({}, query="test")
 
@@ -646,7 +641,7 @@ class TestParseWorkingMemorySection:
 
     def test_section_not_found(self):
         """When no Working Memory section exists, should return empty entries."""
-        from working_memory import _parse_working_memory_section
+        from scripts.working_memory import _parse_working_memory_section
 
         content = "# Project\n\n## Some Other Section\nContent here\n"
         before, header, after, entries = _parse_working_memory_section(content)
@@ -658,7 +653,7 @@ class TestParseWorkingMemorySection:
 
     def test_no_next_section(self):
         """Working Memory at end of file (no next section) should capture to EOF."""
-        from working_memory import _parse_working_memory_section
+        from scripts.working_memory import _parse_working_memory_section
 
         content = (
             "# Project\n\n"
@@ -675,7 +670,7 @@ class TestParseWorkingMemorySection:
 
     def test_entries_without_proper_date_headers(self):
         """Entries without ### YYYY-MM-DD pattern should not be parsed as entries."""
-        from working_memory import _parse_working_memory_section
+        from scripts.working_memory import _parse_working_memory_section
 
         content = (
             "## Working Memory\n"
@@ -692,7 +687,7 @@ class TestParseWorkingMemorySection:
 
     def test_empty_section(self):
         """Section with header but no entries should return empty list."""
-        from working_memory import _parse_working_memory_section
+        from scripts.working_memory import _parse_working_memory_section
 
         content = (
             "## Working Memory\n"
@@ -707,7 +702,7 @@ class TestParseWorkingMemorySection:
 
     def test_multiple_entries_parsed_correctly(self):
         """Multiple entries should be parsed as separate items."""
-        from working_memory import _parse_working_memory_section
+        from scripts.working_memory import _parse_working_memory_section
 
         content = (
             "## Working Memory\n"
@@ -731,7 +726,7 @@ class TestParseRetrievedContextSection:
 
     def test_section_not_found(self):
         """When no Retrieved Context section exists, should return empty entries."""
-        from working_memory import _parse_retrieved_context_section
+        from scripts.working_memory import _parse_retrieved_context_section
 
         content = "# Project\n\n## Working Memory\nContent here\n"
         before, header, after, entries = _parse_retrieved_context_section(content)
@@ -743,7 +738,7 @@ class TestParseRetrievedContextSection:
 
     def test_no_next_section(self):
         """Retrieved Context at end of file should capture to EOF."""
-        from working_memory import _parse_retrieved_context_section
+        from scripts.working_memory import _parse_retrieved_context_section
 
         content = (
             "# Project\n\n"
@@ -761,7 +756,7 @@ class TestParseRetrievedContextSection:
 
     def test_empty_section(self):
         """Section with header but no entries should return empty list."""
-        from working_memory import _parse_retrieved_context_section
+        from scripts.working_memory import _parse_retrieved_context_section
 
         content = (
             "## Retrieved Context\n"
@@ -775,7 +770,7 @@ class TestParseRetrievedContextSection:
 
     def test_entries_without_date_headers_ignored(self):
         """Non-date ### headings should not be parsed as entries."""
-        from working_memory import _parse_retrieved_context_section
+        from scripts.working_memory import _parse_retrieved_context_section
 
         content = (
             "## Retrieved Context\n"
@@ -790,7 +785,7 @@ class TestParseRetrievedContextSection:
 
     def test_preserves_before_and_after_content(self):
         """Should correctly split content around the Retrieved Context section."""
-        from working_memory import _parse_retrieved_context_section
+        from scripts.working_memory import _parse_retrieved_context_section
 
         content = (
             "# Project\n\n"
@@ -817,14 +812,14 @@ class TestFindExistingClaudeMd:
 
     def test_returns_none_when_neither_exists(self, tmp_path):
         """Empty directory -> None."""
-        from working_memory import _find_existing_claude_md
+        from scripts.working_memory import _find_existing_claude_md
 
         result = _find_existing_claude_md(tmp_path)
         assert result is None
 
     def test_finds_legacy_claude_md(self, tmp_path):
         """Legacy ./CLAUDE.md at base -> returns it."""
-        from working_memory import _find_existing_claude_md
+        from scripts.working_memory import _find_existing_claude_md
 
         legacy = tmp_path / "CLAUDE.md"
         legacy.write_text("# legacy\n")
@@ -834,7 +829,7 @@ class TestFindExistingClaudeMd:
 
     def test_finds_new_default_claude_md(self, tmp_path):
         """New default .claude/CLAUDE.md at base -> returns it."""
-        from working_memory import _find_existing_claude_md
+        from scripts.working_memory import _find_existing_claude_md
 
         (tmp_path / ".claude").mkdir()
         new_default = tmp_path / ".claude" / "CLAUDE.md"
@@ -845,7 +840,7 @@ class TestFindExistingClaudeMd:
 
     def test_prefers_new_default_when_both_exist(self, tmp_path):
         """When both locations exist, .claude/CLAUDE.md wins."""
-        from working_memory import _find_existing_claude_md
+        from scripts.working_memory import _find_existing_claude_md
 
         (tmp_path / ".claude").mkdir()
         new_default = tmp_path / ".claude" / "CLAUDE.md"
@@ -868,7 +863,7 @@ class TestGetClaudeMdPathDualLocation:
 
     def test_env_var_finds_legacy_claude_md(self, tmp_path):
         """Env var strategy finds legacy ./CLAUDE.md."""
-        from working_memory import _get_claude_md_path
+        from scripts.working_memory import _get_claude_md_path
 
         legacy = tmp_path / "CLAUDE.md"
         legacy.write_text("# legacy\n")
@@ -879,7 +874,7 @@ class TestGetClaudeMdPathDualLocation:
 
     def test_env_var_finds_new_default_claude_md(self, tmp_path):
         """Env var strategy finds .claude/CLAUDE.md (new default)."""
-        from working_memory import _get_claude_md_path
+        from scripts.working_memory import _get_claude_md_path
 
         (tmp_path / ".claude").mkdir()
         new_default = tmp_path / ".claude" / "CLAUDE.md"
@@ -891,7 +886,7 @@ class TestGetClaudeMdPathDualLocation:
 
     def test_env_var_prefers_new_default_over_legacy(self, tmp_path):
         """Env var strategy: .claude/CLAUDE.md wins over ./CLAUDE.md."""
-        from working_memory import _get_claude_md_path
+        from scripts.working_memory import _get_claude_md_path
 
         (tmp_path / ".claude").mkdir()
         new_default = tmp_path / ".claude" / "CLAUDE.md"
@@ -907,7 +902,7 @@ class TestGetClaudeMdPathDualLocation:
         """Env var set but no CLAUDE.md at either location -> fall through to
         next strategy (which will either find git root or fall back to cwd).
         """
-        from working_memory import _get_claude_md_path
+        from scripts.working_memory import _get_claude_md_path
 
         # Neither location exists under tmp_path -> env var strategy returns None
         # -> falls through to git/cwd strategies.
@@ -922,7 +917,7 @@ class TestGetClaudeMdPathDualLocation:
 
     def test_git_root_finds_new_default_claude_md(self, tmp_path):
         """Git root strategy finds .claude/CLAUDE.md (new default)."""
-        from working_memory import _get_claude_md_path
+        from scripts.working_memory import _get_claude_md_path
 
         repo_root = tmp_path / "myrepo"
         (repo_root / ".claude").mkdir(parents=True)
@@ -943,7 +938,7 @@ class TestGetClaudeMdPathDualLocation:
 
     def test_git_root_finds_legacy_claude_md(self, tmp_path):
         """Git root strategy finds legacy ./CLAUDE.md."""
-        from working_memory import _get_claude_md_path
+        from scripts.working_memory import _get_claude_md_path
 
         repo_root = tmp_path / "myrepo"
         repo_root.mkdir()
@@ -964,7 +959,7 @@ class TestGetClaudeMdPathDualLocation:
 
     def test_git_root_prefers_new_default_over_legacy(self, tmp_path):
         """Git root strategy: .claude/CLAUDE.md wins over ./CLAUDE.md."""
-        from working_memory import _get_claude_md_path
+        from scripts.working_memory import _get_claude_md_path
 
         repo_root = tmp_path / "myrepo"
         (repo_root / ".claude").mkdir(parents=True)
@@ -989,7 +984,7 @@ class TestGetClaudeMdPathDualLocation:
 
     def test_cwd_finds_legacy_claude_md(self, tmp_path):
         """CWD strategy finds legacy ./CLAUDE.md."""
-        from working_memory import _get_claude_md_path
+        from scripts.working_memory import _get_claude_md_path
 
         legacy = tmp_path / "CLAUDE.md"
         legacy.write_text("# legacy\n")
@@ -1003,7 +998,7 @@ class TestGetClaudeMdPathDualLocation:
 
     def test_cwd_finds_new_default_claude_md(self, tmp_path):
         """CWD strategy finds .claude/CLAUDE.md (new default)."""
-        from working_memory import _get_claude_md_path
+        from scripts.working_memory import _get_claude_md_path
 
         (tmp_path / ".claude").mkdir()
         new_default = tmp_path / ".claude" / "CLAUDE.md"
@@ -1018,7 +1013,7 @@ class TestGetClaudeMdPathDualLocation:
 
     def test_cwd_prefers_new_default_over_legacy(self, tmp_path):
         """CWD strategy: .claude/CLAUDE.md wins over ./CLAUDE.md."""
-        from working_memory import _get_claude_md_path
+        from scripts.working_memory import _get_claude_md_path
 
         (tmp_path / ".claude").mkdir()
         new_default = tmp_path / ".claude" / "CLAUDE.md"
@@ -1035,7 +1030,7 @@ class TestGetClaudeMdPathDualLocation:
 
     def test_cwd_returns_none_when_nothing_found(self, tmp_path):
         """All strategies fail -> returns None."""
-        from working_memory import _get_claude_md_path
+        from scripts.working_memory import _get_claude_md_path
 
         # tmp_path is empty -- no CLAUDE.md at either location
         env = {k: v for k, v in os.environ.items() if k != "CLAUDE_PROJECT_DIR"}

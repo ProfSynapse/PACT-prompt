@@ -5,12 +5,9 @@ Tests cover:
 1. CalibrationRecord schema: required fields, types
 2. Schema consistency between architecture doc and pact-variety.md protocol
 """
-import sys
 from pathlib import Path
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 from shared.variety_scorer import (
     MAX_SCORE,

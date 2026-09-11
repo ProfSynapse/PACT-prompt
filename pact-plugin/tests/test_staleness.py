@@ -17,7 +17,6 @@ import ast
 import inspect
 import os
 import re
-import sys
 import tempfile
 import textwrap
 from datetime import datetime, timedelta
@@ -25,11 +24,6 @@ from pathlib import Path
 from unittest.mock import patch, MagicMock
 
 import pytest
-
-# Add hooks directory to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
-# Add working_memory scripts directory to path for twin-copy equivalence test
-sys.path.insert(0, str(Path(__file__).parent.parent / "skills" / "pact-memory" / "scripts"))
 
 # THE ONE SPELLING OF THE WARNING MARKER, imported rather than repeated. Every
 # assertion and fixture below is built from this, so a rename in the source
@@ -1506,7 +1500,7 @@ class TestEstimateTokensEquivalence:
         the executable lines (the actual logic) are compared.
         """
         from staleness import estimate_tokens as staleness_fn
-        from working_memory import _estimate_tokens as working_memory_fn
+        from scripts.working_memory import _estimate_tokens as working_memory_fn
 
         staleness_source = inspect.getsource(staleness_fn)
         working_memory_source = inspect.getsource(working_memory_fn)
@@ -1523,7 +1517,7 @@ class TestEstimateTokensEquivalence:
     def test_both_use_word_count_times_1_3(self):
         """Both copies must use the word_count * 1.3 formula."""
         from staleness import estimate_tokens as staleness_fn
-        from working_memory import _estimate_tokens as working_memory_fn
+        from scripts.working_memory import _estimate_tokens as working_memory_fn
 
         staleness_source = inspect.getsource(staleness_fn)
         working_memory_source = inspect.getsource(working_memory_fn)
@@ -1540,7 +1534,7 @@ class TestEstimateTokensEquivalence:
     def test_both_return_zero_for_empty(self):
         """Both copies must return 0 for empty/falsy input."""
         from staleness import estimate_tokens as staleness_fn
-        from working_memory import _estimate_tokens as working_memory_fn
+        from scripts.working_memory import _estimate_tokens as working_memory_fn
 
         assert staleness_fn("") == 0
         assert working_memory_fn("") == 0
@@ -1549,7 +1543,7 @@ class TestEstimateTokensEquivalence:
     def test_both_produce_same_result(self):
         """Both copies must produce identical results for the same input."""
         from staleness import estimate_tokens as staleness_fn
-        from working_memory import _estimate_tokens as working_memory_fn
+        from scripts.working_memory import _estimate_tokens as working_memory_fn
 
         test_inputs = [
             "",
@@ -1979,7 +1973,7 @@ class TestPinCapsTwinCopyDrift:
 
     def test_pin_count_cap_twins_match(self):
         import pin_caps
-        import working_memory
+        from scripts import working_memory
 
         assert pin_caps.PIN_COUNT_CAP == working_memory.PIN_COUNT_CAP, (
             "PIN_COUNT_CAP drift between hooks/pin_caps.py and "
@@ -1989,7 +1983,7 @@ class TestPinCapsTwinCopyDrift:
 
     def test_pin_size_cap_twins_match(self):
         import pin_caps
-        import working_memory
+        from scripts import working_memory
 
         assert pin_caps.PIN_SIZE_CAP == working_memory.PIN_SIZE_CAP, (
             "PIN_SIZE_CAP drift between hooks/pin_caps.py and "
@@ -1999,7 +1993,7 @@ class TestPinCapsTwinCopyDrift:
 
     def test_pin_stale_block_threshold_twins_match(self):
         import pin_caps
-        import working_memory
+        from scripts import working_memory
 
         assert pin_caps.PIN_STALE_BLOCK_THRESHOLD == working_memory.PIN_STALE_BLOCK_THRESHOLD, (
             "PIN_STALE_BLOCK_THRESHOLD drift between hooks/pin_caps.py and "
@@ -2009,7 +2003,7 @@ class TestPinCapsTwinCopyDrift:
 
     def test_override_rationale_max_twins_match(self):
         import pin_caps
-        import working_memory
+        from scripts import working_memory
 
         assert pin_caps.OVERRIDE_RATIONALE_MAX == working_memory.OVERRIDE_RATIONALE_MAX, (
             "OVERRIDE_RATIONALE_MAX drift between hooks/pin_caps.py and "
@@ -2260,7 +2254,7 @@ class TestFileLockTwinCopyDrift:
         are allowed to differ.
         """
         from shared.claude_md_manager import file_lock as canonical
-        from working_memory import file_lock as twin
+        from scripts.working_memory import file_lock as twin
 
         canonical_body = self._extract_body(inspect.getsource(canonical))
         twin_body = self._extract_body(inspect.getsource(twin))
@@ -2276,7 +2270,7 @@ class TestFileLockTwinCopyDrift:
     def test_lock_timeout_constants_match(self):
         """The two lock-tuning constants are part of the twin and must match."""
         import shared.claude_md_manager as cmm
-        import working_memory as wm
+        from scripts import working_memory as wm
 
         assert cmm._LOCK_TIMEOUT_SECONDS == wm._LOCK_TIMEOUT_SECONDS, (
             "_LOCK_TIMEOUT_SECONDS drift between claude_md_manager.py and "
@@ -2386,7 +2380,7 @@ class TestSanitizePromptFieldTwinCopyDrift:
         and the guard would hold on only one of the two writers.
         """
         from shared.session_resume import _sanitize_prompt_field as canonical
-        from working_memory import _sanitize_prompt_field as twin
+        from scripts.working_memory import _sanitize_prompt_field as twin
 
         canonical_body = self._extract_body(canonical)
         twin_body = self._extract_body(twin)
@@ -2423,7 +2417,7 @@ class TestSanitizePromptFieldTwinCopyDrift:
         and neither one covers the other.
         """
         from shared.session_resume import _sanitize_prompt_field as canonical
-        from working_memory import _sanitize_prompt_field as twin
+        from scripts.working_memory import _sanitize_prompt_field as twin
 
         canonical_signature = self._extract_signature(canonical)
         twin_signature = self._extract_signature(twin)
@@ -2463,7 +2457,7 @@ class TestSanitizePromptFieldTwinCopyDrift:
         the widest default.
         """
         import shared.session_resume as sr
-        import working_memory as wm
+        from scripts import working_memory as wm
 
         assert sr._REFRESH_FIELD_TRUNCATION_LIMIT == wm._REFRESH_FIELD_TRUNCATION_LIMIT, (
             "_REFRESH_FIELD_TRUNCATION_LIMIT drift between session_resume.py "
@@ -2665,7 +2659,7 @@ class TestAtomicWriteTwinCopyDrift:
         test_containment_certification.py, which drives both independently.
         """
         from shared.claude_md_manager import _atomic_write_text as canonical
-        from working_memory import _atomic_write_text as twin
+        from scripts.working_memory import _atomic_write_text as twin
 
         canonical_body = self._extract_body(inspect.getsource(canonical))
         twin_body = self._extract_body(inspect.getsource(twin))
@@ -2729,7 +2723,7 @@ class TestLineEndingHelperTwinCopyDrift:
     def test_line_ending_helper_bodies_are_identical(self, helper):
         """Each helper's body MUST be byte-identical across the twins."""
         import shared.claude_md_manager as canonical_mod
-        import working_memory as twin_mod
+        from scripts import working_memory as twin_mod
 
         canonical_body = self._extract_body(
             inspect.getsource(getattr(canonical_mod, helper))
@@ -2755,7 +2749,7 @@ class TestLineEndingHelperTwinCopyDrift:
         LOUDEST in the state this gate exists to catch: two copies that share
         nothing. Prove the extractor separates two functions that genuinely
         differ before trusting it to report that two agree."""
-        import working_memory as twin_mod
+        from scripts import working_memory as twin_mod
 
         detect = self._extract_body(
             inspect.getsource(twin_mod._detect_line_ending)
@@ -2924,7 +2918,7 @@ class TestRestoreNormalisesBeforeItApplies:
 
     # THE TWO TWINS, as import targets. Parametrized rather than looped so a
     # failure names WHICH copy broke.
-    _TWINS = ("shared.claude_md_manager", "working_memory")
+    _TWINS = ("shared.claude_md_manager", "scripts.working_memory")
 
     @staticmethod
     def _restore(module_name):
@@ -3010,7 +3004,7 @@ class TestContainmentErrorTwinCopyDrift:
 
     def test_containment_error_shapes_are_identical(self):
         from shared.claude_md_manager import ContainmentError as canonical
-        from working_memory import ContainmentError as twin
+        from scripts.working_memory import ContainmentError as twin
 
         assert self._executable_shape(canonical) == self._executable_shape(twin), (
             "ContainmentError twin drift between "
@@ -3023,8 +3017,8 @@ class TestContainmentErrorTwinCopyDrift:
     def test_the_gate_can_tell_the_shapes_apart(self):
         """NON-VACUITY. An AST comparison that returns equal for everything
         would pass the assertion above forever."""
-        from working_memory import ContainmentError as twin
-        from working_memory import _project_root_of as unrelated
+        from scripts.working_memory import ContainmentError as twin
+        from scripts.working_memory import _project_root_of as unrelated
 
         assert self._executable_shape(twin) != self._executable_shape(unrelated), (
             "the shape extractor cannot distinguish two different definitions, "
@@ -3057,7 +3051,7 @@ class TestProjectRootLayoutKnowledgeDrift:
             _LEGACY_RELATIVE,
             resolve_project_claude_md_path,
         )
-        from working_memory import _project_root_of
+        from scripts.working_memory import _project_root_of
 
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)

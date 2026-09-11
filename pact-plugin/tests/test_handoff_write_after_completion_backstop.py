@@ -24,12 +24,9 @@ resolves the completed-task post-state; key is_canonical_journal_frame on the fr
 teammateMode AND the in-process teammate frame, and excludes the tmux teammate.
 """
 import json
-import sys
 from pathlib import Path
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 import task_lifecycle_gate as tlg  # noqa: E402
 

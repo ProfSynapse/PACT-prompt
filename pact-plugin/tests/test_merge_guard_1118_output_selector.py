@@ -24,10 +24,6 @@ Dangerous substrings are constructed at runtime (M / MS / GR) so this file carri
 `gh pr merge` / `git/refs` literal — mirrors the architect probe-harness convention and
 keeps the file inert to any literal-scanning tool.
 """
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 import pytest  # noqa: E402
 

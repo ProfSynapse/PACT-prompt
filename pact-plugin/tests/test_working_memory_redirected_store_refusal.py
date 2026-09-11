@@ -39,8 +39,6 @@ from pathlib import Path
 
 import pytest
 
-# skills/pact-memory is the package root, so `scripts.*` imports resolve.
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "skills", "pact-memory"))
 
 from scripts.config import STORE_ORIGIN_ENV, STORE_ORIGIN_HOME  # noqa: E402
 from scripts.working_memory import (  # noqa: E402

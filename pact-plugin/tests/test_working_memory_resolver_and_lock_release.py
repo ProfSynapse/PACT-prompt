@@ -30,15 +30,7 @@ Used by: pytest (the working_memory edge-path gate).
 """
 
 import os
-import sys
 from pathlib import Path
-
-_SCRIPTS_DIR = str(
-    Path(__file__).parent.parent / "skills" / "pact-memory" / "scripts"
-)
-if _SCRIPTS_DIR not in sys.path:
-    sys.path.insert(0, _SCRIPTS_DIR)
-
 
 def _seed_claude_md(home: Path) -> Path:
     """Create a minimal project CLAUDE.md with an empty Working Memory section
@@ -85,7 +77,7 @@ class TestLockReleaseOnException:
         release by re-acquiring with a SHRUNK timeout: success means the lock
         is free; a TimeoutError would mean it leaked.
         """
-        import working_memory as wm
+        from scripts import working_memory as wm
 
         claude_md = _seed_claude_md(tmp_path)
         monkeypatch.setenv("CLAUDE_PROJECT_DIR", str(tmp_path))
@@ -130,7 +122,7 @@ class TestLockReleaseOnException:
         FAIL — which is exactly why this assertion is coupled to the
         atomic-replace rollback and not vacuous.)
         """
-        import working_memory as wm
+        from scripts import working_memory as wm
 
         claude_md = _seed_claude_md(tmp_path)
         before = claude_md.read_text(encoding="utf-8")
@@ -185,7 +177,7 @@ class TestReadOnlyDirectoryFailSafe:
         the pre-created sidecar the PermissionError comes from file_lock; with it,
         from mkstemp.
         """
-        import working_memory as wm
+        from scripts import working_memory as wm
 
         claude_md = _seed_claude_md(tmp_path)
         before = claude_md.read_text(encoding="utf-8")
@@ -282,7 +274,7 @@ class TestProjectDirDivergenceResidual:
         DIFFERENT sidecar. This is the unprotected residual: two processes in
         this state would lock different inodes and not serialize.
         """
-        import working_memory as wm
+        from scripts import working_memory as wm
 
         root_a = tmp_path / "proj_a"
         root_b = tmp_path / "proj_b"

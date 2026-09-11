@@ -20,15 +20,11 @@ Tests cover:
 16. get_file_context: tracked, untracked
 17. get_graph_stats: empty, populated, project filter
 """
-import os
-import sys
 from unittest.mock import patch
 
 import pytest
 
 from helpers import create_test_schema
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'skills', 'pact-memory'))
 
 # graph.py imports standard `import sqlite3` (not pysqlite3), so its
 # `except sqlite3.IntegrityError` catches the standard library exception.

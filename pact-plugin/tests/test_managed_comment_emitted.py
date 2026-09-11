@@ -61,14 +61,11 @@ from __future__ import annotations
 
 import os
 import re
-import sys
 from pathlib import Path
 
 import pytest
 
 _PLUGIN_ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(_PLUGIN_ROOT / "hooks"))
-sys.path.insert(0, str(_PLUGIN_ROOT / "skills" / "pact-memory" / "scripts"))
 
 from shared.claude_md_manager import (  # noqa: E402
     _build_migrated_content,
@@ -76,7 +73,7 @@ from shared.claude_md_manager import (  # noqa: E402
 )
 from shared.session_resume import update_session_info  # noqa: E402
 
-import working_memory as _ssot  # noqa: E402
+from scripts import working_memory as _ssot  # noqa: E402
 
 # THE SSOT, READ AS VALUES RATHER THAN RE-SPELLED. Every assertion below
 # compares emitted text against these two names, so an emitter that drifts to

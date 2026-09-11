@@ -11,13 +11,10 @@ Tests cover:
 
 import asyncio
 import sys
-from pathlib import Path
 from types import ModuleType
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # Mock the mcp module tree before importing server.py (mcp may not be installed)
 if "mcp" not in sys.modules:

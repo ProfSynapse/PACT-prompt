@@ -30,13 +30,8 @@ the losing file's tests.
 """
 
 import itertools
-import sys
-from pathlib import Path
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
-sys.path.insert(0, str(Path(__file__).parent))
 
 from helpers import make_claude_md_with_pins  # noqa: E402
 

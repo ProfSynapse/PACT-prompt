@@ -29,14 +29,9 @@ something it promised not to do.
 Used with: hooks/pin_caps.py.
 """
 
-import sys
 import time
-from pathlib import Path
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
-sys.path.insert(0, str(Path(__file__).parent))
 
 
 STALE_MARKER = "<!-- STALE: Last relevant 2026-01-01 -->"

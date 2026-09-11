@@ -25,10 +25,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-# Add paths for imports
 _scripts_path = str(Path(__file__).parent.parent / "skills" / "pact-memory" / "scripts")
-if _scripts_path not in sys.path:
-    sys.path.insert(0, _scripts_path)
 
 
 def _make_mock_database():
@@ -61,8 +58,8 @@ def _load_embedding_catchup():
     mock_db = _make_mock_database()
 
     # The real embeddings module - import it to get the actual constant
-    sys.modules.pop("embeddings", None)
-    from embeddings import MIN_CATCHUP_RAM_MB, generate_embedding, generate_embedding_text
+    sys.modules.pop("scripts.embeddings", None)
+    from scripts.embeddings import MIN_CATCHUP_RAM_MB, generate_embedding, generate_embedding_text
     mock_emb_mod = ModuleType(f"{pkg_name}.embeddings")
     mock_emb_mod.generate_embedding = generate_embedding
     mock_emb_mod.generate_embedding_text = generate_embedding_text
@@ -104,17 +101,17 @@ class TestMinCatchupRamMbConstant:
 
     def test_constant_value_is_75(self):
         """The constant should be 75.0 MB - guards against unintended changes."""
-        from embeddings import MIN_CATCHUP_RAM_MB
+        from scripts.embeddings import MIN_CATCHUP_RAM_MB
         assert MIN_CATCHUP_RAM_MB == 75.0
 
     def test_constant_is_positive(self):
         """MIN_CATCHUP_RAM_MB must be positive to be a meaningful threshold."""
-        from embeddings import MIN_CATCHUP_RAM_MB
+        from scripts.embeddings import MIN_CATCHUP_RAM_MB
         assert MIN_CATCHUP_RAM_MB > 0
 
     def test_embed_pending_memories_default_uses_constant(self, ec_module):
         """Default min_ram_mb parameter should equal MIN_CATCHUP_RAM_MB."""
-        from embeddings import MIN_CATCHUP_RAM_MB
+        from scripts.embeddings import MIN_CATCHUP_RAM_MB
         sig = inspect.signature(ec_module.embed_pending_memories)
         default = sig.parameters["min_ram_mb"].default
         assert default == MIN_CATCHUP_RAM_MB
@@ -361,7 +358,7 @@ class TestEmbedPendingMemories:
 
     def test_default_min_ram_mb_uses_constant(self, ec_module):
         """Default min_ram_mb parameter should equal MIN_CATCHUP_RAM_MB."""
-        from embeddings import MIN_CATCHUP_RAM_MB
+        from scripts.embeddings import MIN_CATCHUP_RAM_MB
         sig = inspect.signature(ec_module.embed_pending_memories)
         default = sig.parameters["min_ram_mb"].default
         assert default == MIN_CATCHUP_RAM_MB

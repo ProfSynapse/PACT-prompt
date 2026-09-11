@@ -41,13 +41,11 @@ spellings and each broken by the next probe.
 """
 
 import ast
-import sys
 from pathlib import Path
 
 import pytest
 
 _HOOKS_DIR = Path(__file__).resolve().parents[1] / "hooks"
-sys.path.insert(0, str(_HOOKS_DIR))
 
 # The two agent_handoff emit paths. Named rather than derived: this is a
 # claim ABOUT these two files, so discovering them from the property this file

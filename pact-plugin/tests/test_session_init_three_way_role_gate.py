@@ -39,15 +39,12 @@ means the branch declined rather than that the run died.
 """
 import io
 import json
-import sys
 from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 
 _HOOKS = Path(__file__).parent.parent / "hooks"
-if str(_HOOKS) not in sys.path:
-    sys.path.insert(0, str(_HOOKS))
 
 import session_init  # noqa: E402
 from session_init import _build_safety_net_context, _UNKNOWN_ROLE_NOTICE  # noqa: E402

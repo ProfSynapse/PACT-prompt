@@ -52,7 +52,6 @@ asserting the cut line would have PINNED AN OPEN DEFECT. The source now defers
 that id to the acceptor, so the arms assert the REFUSAL rather than the cut.
 """
 import ast
-import sys
 from pathlib import Path
 
 import pytest
@@ -60,10 +59,6 @@ import pytest
 _SOURCE_PATH = (
     Path(__file__).parent.parent
     / "skills" / "pact-memory" / "scripts" / "working_memory.py"
-)
-
-sys.path.insert(
-    0, str(Path(__file__).parent.parent / "skills" / "pact-memory" / "scripts")
 )
 
 _ORDINARY_ID = "a1b2c3d4-e5f6"
@@ -108,7 +103,7 @@ def _pointer_lines(entry, module):
 
 @pytest.fixture
 def working_memory():
-    import working_memory as module
+    from scripts import working_memory as module
 
     return module
 

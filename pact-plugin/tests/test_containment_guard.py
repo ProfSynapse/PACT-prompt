@@ -30,15 +30,11 @@ Real-production-entry topology (traced against merged code, not assumed):
 """
 
 import os
-import sys
 from pathlib import Path
 
 import pytest
 
 # hooks/shared on path (mirrors the other hook test files).
-_HOOKS = str(Path(__file__).resolve().parent.parent / "hooks")
-if _HOOKS not in sys.path:
-    sys.path.insert(0, _HOOKS)
 
 
 # ---------------------------------------------------------------------------
@@ -248,8 +244,6 @@ class TestSites89DisplayOverBlockAnchorIdentity:
         return main, worktree
 
     def test_external_worktree_allows_on_own_base(self, tmp_path, monkeypatch):
-        sys.path.insert(0, str(Path(__file__).resolve().parent.parent
-                               / "skills" / "pact-memory"))
         import scripts.working_memory as wm
 
         main, worktree = self._external_worktree(tmp_path)
@@ -277,8 +271,6 @@ class TestSites89DisplayOverBlockAnchorIdentity:
         is REFUSED. This is what proves the anchor is load-bearing rather than
         vacuous — anchoring on --git-common-dir (main root) over-blocks an
         external worktree's own legitimate write."""
-        sys.path.insert(0, str(Path(__file__).resolve().parent.parent
-                               / "skills" / "pact-memory"))
         import scripts.working_memory as wm
 
         main, worktree = self._external_worktree(tmp_path)

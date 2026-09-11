@@ -40,13 +40,10 @@ imports NO captured-frame fixture promotion — it stands alone.
 import inspect
 import io
 import json
-import sys
 from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 import agent_handoff_emitter as b1  # noqa: E402
 import task_lifecycle_gate as tlg  # noqa: E402

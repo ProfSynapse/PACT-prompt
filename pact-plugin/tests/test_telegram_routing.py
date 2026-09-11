@@ -14,14 +14,11 @@ Tests cover:
 import fcntl
 import json
 import os
-import sys
 import time
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from telegram.config import get_or_create_session_id
 from telegram.routing import (

@@ -45,15 +45,11 @@ than papered over with an arm that would test its own fixture.
 from __future__ import annotations
 
 import json
-import os
-import sys
 from unittest.mock import patch
 
 import pytest
 
 from helpers import create_test_schema
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'skills', 'pact-memory'))
 
 try:
     import pysqlite3 as sqlite3

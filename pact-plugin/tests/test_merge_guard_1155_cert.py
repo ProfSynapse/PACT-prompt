@@ -32,13 +32,8 @@ Summary: BIDIRECTIONAL certification for the cross-auth recognition fix (detect 
          Destructive verbs are assembled at runtime so this file stays inert to the
          live guard.
 """
-import sys
-from pathlib import Path
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
-sys.path.insert(0, str(Path(__file__).parent))
 
 import shared.merge_guard_common as mgc  # noqa: E402
 import merge_guard_pre  # noqa: E402

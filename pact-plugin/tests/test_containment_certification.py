@@ -72,7 +72,6 @@ from __future__ import annotations
 
 import os
 import subprocess
-import sys
 import textwrap
 import unicodedata
 from pathlib import Path
@@ -83,12 +82,6 @@ import pytest
 # files: test_containment_guard.py adds hooks/, test_staleness.py adds the
 # scripts dir and imports the twin as a top-level `working_memory`).
 _TESTS = Path(__file__).resolve().parent
-for _p in (
-    _TESTS.parent / "hooks",
-    _TESTS.parent / "skills" / "pact-memory" / "scripts",
-):
-    if str(_p) not in sys.path:
-        sys.path.insert(0, str(_p))
 
 
 # ---------------------------------------------------------------------------
@@ -151,7 +144,7 @@ def _load_twin(which: str):
     if which == "canonical":
         import shared.claude_md_manager as mod
         return mod
-    import working_memory as mod
+    from scripts import working_memory as mod
     return mod
 
 

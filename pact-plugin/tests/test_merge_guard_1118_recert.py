@@ -30,12 +30,9 @@ Dangerous substrings are assembled at runtime (M / GR / PR_MERGE) so this file c
 `gh pr merge` / `git/refs` literal — mirrors the coder + cert files' probe-harness convention.
 """
 import subprocess
-import sys
 import importlib.util
 from pathlib import Path
 from typing import Any
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 import pytest  # noqa: E402
 

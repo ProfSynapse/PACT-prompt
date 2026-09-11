@@ -10,12 +10,8 @@ gotcha — duplicate test class basenames across files silently drop the
 losing file's tests.
 """
 
-import sys
-from pathlib import Path
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 
 class TestParsePins_ParsingSemantics:

@@ -33,12 +33,9 @@ and O_EXCL marker root, with tlg.append_event spied to capture events — EXCEPT
 the seam-integration class at the bottom, which leaves the journal write real.
 """
 import json
-import sys
 from pathlib import Path
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 import task_lifecycle_gate as tlg  # noqa: E402
 import shared.session_journal as sj  # noqa: E402

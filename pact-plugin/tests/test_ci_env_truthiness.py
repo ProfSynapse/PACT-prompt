@@ -29,18 +29,11 @@ RELATED
                                                the workflow/package parity guard
 """
 import builtins
-import os
-import sys
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-sys.path.insert(
-    0,
-    os.path.join(os.path.dirname(__file__), '..', 'skills', 'pact-memory', 'scripts'),
-)
-
-from memory_init import _ci_is_declared, check_and_install_dependencies  # noqa: E402
+from scripts.memory_init import _ci_is_declared, check_and_install_dependencies  # noqa: E402
 
 # Spellings that a human or a tool writes when it means "NOT CI". Every one of
 # these is a non-empty truthy string except the first, so every one of them was
@@ -94,7 +87,7 @@ class TestPredicateIsWiredToTheBranch:
     def test_ci_true_takes_the_skipped_ci_branch(self, monkeypatch):
         monkeypatch.setenv("CI", "true")
         with patch.object(builtins, '__import__', self._import_blocking_one_package()), \
-             patch('memory_init.subprocess.run') as mock_run:
+             patch('scripts.memory_init.subprocess.run') as mock_run:
             result = check_and_install_dependencies()
 
         assert result['status'] == 'skipped_ci'
@@ -108,7 +101,7 @@ class TestPredicateIsWiredToTheBranch:
         """
         monkeypatch.setenv("CI", "false")
         with patch.object(builtins, '__import__', self._import_blocking_one_package()), \
-             patch('memory_init.subprocess.run') as mock_run:
+             patch('scripts.memory_init.subprocess.run') as mock_run:
             mock_run.return_value = MagicMock(returncode=0)
             result = check_and_install_dependencies()
 

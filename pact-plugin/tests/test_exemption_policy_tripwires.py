@@ -21,12 +21,9 @@ stay non-exempt, which depends on that dispatch carrying no `type`.
 import ast
 import json
 import re
-import sys
 from pathlib import Path
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 from shared import intentional_wait  # noqa: E402
 from shared.intentional_wait import (  # noqa: E402
@@ -35,8 +32,6 @@ from shared.intentional_wait import (  # noqa: E402
     is_self_complete_exempt,
     is_teachback_exempt,
 )
-
-sys.path.insert(0, str(Path(__file__).parent))
 
 from test_harvest_trigger_coherence import _claimed_boundaries  # noqa: E402 — sibling extraction rule
 

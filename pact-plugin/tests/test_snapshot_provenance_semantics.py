@@ -26,12 +26,9 @@ from __future__ import annotations
 
 import copy
 import json
-import sys
 from pathlib import Path
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 from shared.session_journal import read_events  # noqa: E402
 from shared.task_metadata_snapshot import (  # noqa: E402

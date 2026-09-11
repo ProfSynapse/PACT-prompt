@@ -42,7 +42,7 @@ intuitive choice and a later reader will otherwise "harden" them backwards.
    and it is the reverse:
 
      `__module__`            canonical 'shared.claude_md_manager'
-                             skill     'working_memory'          -> DISCRIMINATES
+                             skill     'scripts.working_memory' -> DISCRIMINATES
      `inspect.getsourcefile` canonical contextlib.py
                              skill     contextlib.py             -> DOES NOT
 
@@ -67,18 +67,11 @@ import hashlib
 import inspect
 import os
 import re
-import sys
 from pathlib import Path
 
 import pytest
 
 _TESTS = Path(__file__).resolve().parent
-for _p in (
-    _TESTS.parent / "hooks",
-    _TESTS.parent / "skills" / "pact-memory" / "scripts",
-):
-    if str(_p) not in sys.path:
-        sys.path.insert(0, str(_p))
 
 PLUGIN_ROOT = _TESTS.parent
 CANONICAL_REL = "hooks/shared/claude_md_manager.py"
@@ -96,14 +89,14 @@ T1_LENGTH = 672
 
 # --- module provenance ------------------------------------------------------
 CANONICAL_MODULE = "shared.claude_md_manager"
-TWIN_MODULE = "working_memory"
+TWIN_MODULE = "scripts.working_memory"
 
 
 def _load_twin(which: str):
     if which == "canonical":
         import shared.claude_md_manager as mod
         return mod, CANONICAL_MODULE
-    import working_memory as mod
+    from scripts import working_memory as mod
     return mod, TWIN_MODULE
 
 

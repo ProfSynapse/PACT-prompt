@@ -17,14 +17,9 @@ update this test file to document the new surface.
 import json
 import os
 import sys
-from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
-sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
-sys.path.insert(0, str(Path(__file__).parent))
 
 from helpers import make_claude_md_with_pins, make_pin_entry  # noqa: E402
 

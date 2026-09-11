@@ -39,12 +39,9 @@ empty-SSOT short-circuit returns "" even when a matchable dir IS present (so the
 
 import json
 import os
-import sys
 from pathlib import Path
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 
 # ── Two real-shaped session ids + the divergent dir-naming schemes ────────────

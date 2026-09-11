@@ -35,13 +35,10 @@ Summary: Durable BIDIRECTIONAL companion cert for the F2 over-block closure (com
          source proof that busybox RECURSE membership is load-bearing for the retention.
 """
 import subprocess
-import sys
 import types
 from pathlib import Path
 
 import pytest  # noqa: E402
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 import shared.merge_guard_common as mgc  # noqa: E402
 

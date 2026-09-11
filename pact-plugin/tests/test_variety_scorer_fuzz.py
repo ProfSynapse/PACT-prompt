@@ -9,12 +9,8 @@ Supplements test_variety_scorer.py with:
 Uses hypothesis if available, parametrized fallback if not.
 """
 import itertools
-import sys
-from pathlib import Path
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 from shared.variety_scorer import (
     COMPACT_MAX,

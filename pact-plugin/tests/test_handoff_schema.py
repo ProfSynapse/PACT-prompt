@@ -19,10 +19,6 @@ would fire on most real handoffs, so each of those has an explicit arm here.
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).parent))  # noqa: E402
 
 from fixtures.emitter import VALID_HANDOFF  # noqa: E402
 

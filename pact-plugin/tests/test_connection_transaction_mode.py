@@ -33,14 +33,11 @@ versions before.
 from __future__ import annotations
 
 import ast
-import os
 import pathlib
 import sqlite3 as _stdlib_sqlite3
 import sys
 
 import pytest
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'skills', 'pact-memory'))
 
 from scripts.database import get_connection  # noqa: E402
 # THE MODULE THE FACTORY BOUND, NOT THE ONE THIS TEST CAN IMPORT. The factory

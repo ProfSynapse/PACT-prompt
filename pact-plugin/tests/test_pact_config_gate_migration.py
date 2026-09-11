@@ -29,11 +29,8 @@ Two layers:
 import importlib
 import os
 import sys
-from pathlib import Path
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 import shared.pact_config as pact_config
 

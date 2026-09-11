@@ -33,17 +33,11 @@ mutant, at the same cost. Assert the REFUSAL, not the INTEGRITY OF THE DATA.
 from __future__ import annotations
 
 import json
-import os
-import sys
-from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 
 from helpers import create_test_schema
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'skills', 'pact-memory'))
-sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
 
 try:
     import pysqlite3 as sqlite3

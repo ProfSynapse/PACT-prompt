@@ -28,10 +28,6 @@ Dangerous literals are authored IN-FILE only (never on a Bash command line — t
 installed merge-guard hook false-positives on them). Backslash and single-quote
 are built from char vars so the escaped-quote vectors are unambiguous.
 """
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 import pytest
 

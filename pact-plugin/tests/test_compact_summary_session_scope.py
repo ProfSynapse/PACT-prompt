@@ -15,13 +15,9 @@ test_postcompact_archive, whose frames carry session_id since #1504.
 """
 import io
 import json
-import sys
-from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 
 class TestResolveCompactSummaryPath:

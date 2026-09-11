@@ -60,8 +60,6 @@ from unittest.mock import patch
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
-
 from shared import BOOTSTRAP_MARKER_NAME
 from shared.marker_schema import MARKER_SCHEMA_VERSION
 

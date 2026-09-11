@@ -37,14 +37,10 @@ IS.
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
 from unittest.mock import patch
 
 from shared.claude_md_manager import MEMORY_START_MARKER, MEMORY_END_MARKER
 from tests.test_pin_marker_writer import build_claude_md
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "skills" / "pact-memory" / "scripts"))
 
 
 # The text this suite looks for in the emitted document. It is deliberately
@@ -72,7 +68,7 @@ def _write_and_sync(tmp_path, document, sync):
     target = tmp_path / "CLAUDE.md"
     target.write_text(document, encoding="utf-8")
     with patch(
-        "working_memory._resolve_display_claude_md_with_base",
+        "scripts.working_memory._resolve_display_claude_md_with_base",
         return_value=(target, target.parent),
     ):
         sync()
@@ -103,7 +99,7 @@ class TestWorkingMemorySpliceWindow:
     HEADING = "## Working Memory"
 
     def _sync(self, tmp_path, document):
-        from working_memory import sync_to_claude_md
+        from scripts.working_memory import sync_to_claude_md
 
         return _write_and_sync(
             tmp_path,
@@ -169,7 +165,7 @@ class TestRetrievedContextSpliceWindow:
     HEADING = "## Retrieved Context"
 
     def _sync(self, tmp_path, document):
-        from working_memory import sync_retrieved_to_claude_md
+        from scripts.working_memory import sync_retrieved_to_claude_md
 
         return _write_and_sync(
             tmp_path,
@@ -248,7 +244,7 @@ class TestMissingPairKeepsTodayBehaviour:
     def test_a_document_with_no_memory_pair_is_written_without_raising(
         self, tmp_path
     ):
-        from working_memory import sync_to_claude_md
+        from scripts.working_memory import sync_to_claude_md
 
         document = build_claude_md(managed=False)
         # PRECONDITION: this class covers a document with NO memory pair.

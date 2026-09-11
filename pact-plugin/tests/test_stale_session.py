@@ -21,14 +21,11 @@ detector's contract DIRECTLY:
   - the positive mismatch case (returns the warning naming recorded + actual).
 """
 
-import sys
 from pathlib import Path
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
-
-from shared.stale_session import (  # noqa: E402 — sys.path insert above
+from shared.stale_session import (
     detect_stale_session_block,
     _RESUME_LINE_RE,
 )

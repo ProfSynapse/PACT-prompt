@@ -75,8 +75,6 @@ from unittest.mock import patch
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
-
 from shared import BOOTSTRAP_MARKER_NAME
 
 _SUPPRESS_EXPECTED = {

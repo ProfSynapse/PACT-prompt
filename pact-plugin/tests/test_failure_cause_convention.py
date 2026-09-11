@@ -24,13 +24,10 @@ other.
 import ast
 import errno
 import os
-import sys
 from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 # A path fragment no rendering may carry. Distinctive so a partial leak is
 # still caught by the `/` assertion below.

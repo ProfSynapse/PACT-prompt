@@ -11,7 +11,6 @@ Verifies that:
 
 import os
 import stat
-import sys
 from pathlib import Path
 from unittest.mock import patch
 
@@ -19,7 +18,6 @@ import pytest
 
 # Add the pact-memory scripts to path for direct imports
 SCRIPTS_DIR = Path(__file__).parent.parent / "skills" / "pact-memory" / "scripts"
-sys.path.insert(0, str(SCRIPTS_DIR.parent))
 
 
 # =============================================================================

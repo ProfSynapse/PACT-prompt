@@ -11,11 +11,7 @@ Tests cover:
 6. Edge cases: empty strings, None-like, very long inputs
 """
 
-import sys
-from pathlib import Path
 
-
-sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from telegram.content_filter import (
     TELEGRAM_MAX_MESSAGE_LENGTH,

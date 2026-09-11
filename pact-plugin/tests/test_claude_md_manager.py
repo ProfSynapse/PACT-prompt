@@ -25,13 +25,9 @@ project CLAUDE.md migration to the PACT_MANAGED boundary structure:
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
 import pytest
-
-# Add hooks directory to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 
 # ---------------------------------------------------------------------------

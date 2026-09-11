@@ -46,12 +46,8 @@ the staleness signal was CONSULTED, and asserts the opposite answer for the
 two commands under one fixture: an ordinary command must not reach the
 re-read, and the archive command must reach it.
 """
-import sys
-from pathlib import Path
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 # The archive command shape the deny text tells a user to run. The token the
 # Bash leg tests for is `archive_pin.py`, so this string must carry it.

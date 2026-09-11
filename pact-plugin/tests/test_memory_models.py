@@ -12,13 +12,9 @@ Tests cover:
 7. memory_from_db_row: basic conversion, file injection
 """
 import json
-import os
-import sys
 from datetime import datetime, timezone
 
 import pytest
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'skills', 'pact-memory'))
 
 
 # ---------------------------------------------------------------------------

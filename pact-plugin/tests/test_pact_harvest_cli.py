@@ -52,7 +52,6 @@ from pathlib import Path
 import pytest
 
 _HOOKS_DIR = Path(__file__).parent.parent / "hooks"
-sys.path.insert(0, str(_HOOKS_DIR))
 
 import shared.pact_context as pact_context  # noqa: E402
 from shared.pact_harvest import _resolve_session_dir  # noqa: E402

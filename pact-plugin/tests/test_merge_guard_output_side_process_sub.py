@@ -55,12 +55,8 @@ the new output-side coverage and re-pins the input-side parity that F2 must not
 disturb.
 """
 
-import sys
-from pathlib import Path
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 from merge_guard_pre import (  # noqa: E402
     _has_process_substitution_to_shell,

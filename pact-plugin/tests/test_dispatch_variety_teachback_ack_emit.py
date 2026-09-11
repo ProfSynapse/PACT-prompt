@@ -22,12 +22,8 @@ session_id and seed no leadSessionId team config, so the topology leg cannot
 resolve. These arms do NOT cover the in-process teammate frame, which emits.
 Drives tlg.evaluate_lifecycle with tlg.append_event spied to capture events.
 """
-import sys
-from pathlib import Path
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 import task_lifecycle_gate as tlg  # noqa: E402
 import shared.session_journal as sj  # noqa: E402

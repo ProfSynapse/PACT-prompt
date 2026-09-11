@@ -31,8 +31,6 @@ from unittest.mock import patch
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
-
 
 HOOK_PATH = str(Path(__file__).parent.parent / "hooks" / "postcompact_archive.py")
 

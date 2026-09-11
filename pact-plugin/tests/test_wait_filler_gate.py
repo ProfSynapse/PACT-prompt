@@ -100,7 +100,6 @@ with the trailing-dot admission arm added at the cycle-1 re-review.
 import ast
 import io
 import json
-import sys
 from pathlib import Path
 from unittest.mock import patch
 
@@ -110,8 +109,6 @@ PLUGIN_ROOT = Path(__file__).resolve().parent.parent
 HOOK_PATH = PLUGIN_ROOT / "hooks" / "wait_filler_gate.py"
 HOOKS_JSON = PLUGIN_ROOT / "hooks" / "hooks.json"
 ORCHESTRATOR = PLUGIN_ROOT / "agents" / "pact-orchestrator.md"
-
-sys.path.insert(0, str(PLUGIN_ROOT / "hooks"))
 
 DENY_REASON_ANCHOR = "Passive waiting is the protocol"
 

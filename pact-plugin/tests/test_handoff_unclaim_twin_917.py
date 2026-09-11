@@ -19,12 +19,9 @@ so the retry hits already_emitted()==True and the second-emit assertion FAILS
 (net: the marker-persists assertion + the re-emit assertion flip RED). Restore
 via `git worktree remove --force`.
 """
-import sys
 from pathlib import Path
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 import task_lifecycle_gate as tlg  # noqa: E402
 from shared.agent_handoff_marker import occupant_hash  # noqa: E402

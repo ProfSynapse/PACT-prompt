@@ -34,9 +34,6 @@ from helpers import create_test_schema, make_cli_memory_dict
 # the display resolver treats "no CLAUDE.md here" as "keep looking".
 from test_working_memory_concurrency_comprehensive import _seed_claude_md
 
-# Add pact-memory skill root to path so `from scripts.cli import ...` works
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'skills', 'pact-memory'))
-
 from scripts.cli import build_parser, cmd_save, cmd_search, cmd_list, cmd_get, cmd_status, cmd_setup, cmd_update, cmd_delete, main, _COMMANDS, _refuse_live_db_under_pytest
 from scripts.memory_api import PACTMemory
 

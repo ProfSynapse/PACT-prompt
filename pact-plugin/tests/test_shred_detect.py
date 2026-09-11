@@ -39,12 +39,9 @@ import ast
 import hashlib
 import json
 import sqlite3
-import sys
 from pathlib import Path
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
 
 from memory_repair import shred_detect  # noqa: E402
 

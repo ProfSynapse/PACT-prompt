@@ -28,14 +28,8 @@ SITES THIS FILE DOES NOT DRIVE ARE NAMED WITH THEIR REASON, in
 that names its misses is worth more than a higher count that does not.
 """
 import ast
-import sys
 from collections import Counter
 from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
-sys.path.insert(
-    0, str(Path(__file__).parent.parent / "skills" / "pact-memory" / "scripts")
-)
 
 _MANAGED_START = (
     "<!-- PACT_MANAGED_START: Managed by pact-plugin - do not edit this block -->"

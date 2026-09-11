@@ -15,14 +15,11 @@ class at the end is what shows each rule earns its place IN THE PRESENCE OF
 the other, which a mutation of one rule alone cannot show.
 """
 import re
-import sys
 from pathlib import Path
 
 import pytest
 
 HOOKS = Path(__file__).parent.parent / "hooks"
-if str(HOOKS) not in sys.path:
-    sys.path.insert(0, str(HOOKS))
 
 from shared.claude_md_manager import (  # noqa: E402
     MANAGED_START_MARKER,

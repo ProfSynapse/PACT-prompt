@@ -65,9 +65,6 @@ from pathlib import Path
 
 import pytest
 
-# Add hooks directory to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
-
 import shared.teammate_mode as teammate_mode
 from shared.teammate_mode import (
     VALID_TEAMMATE_MODES,
