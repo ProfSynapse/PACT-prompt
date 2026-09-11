@@ -213,6 +213,8 @@ Idle on `awaiting_lead_completion` until the team-lead's wake-signal arrives. Do
 
 If you have other claimable, unblocked tasks unrelated to this dispatch (a separate Task A from a different mission), you may claim and work them. The wait is per-task, not per-agent.
 
+**If you background work, flag the wait before you end the turn.** A `Bash` call with `run_in_background` leaves work no tool will wake you for — SET `metadata.intentional_wait` naming it, on every task the wait covers.
+
 ## Exception
 
 Consultant questions (a peer asks you something) do not require a teachback. You only teachback on task dispatches.
