@@ -17,7 +17,6 @@ Resolvers under test:
 """
 
 import os
-import sys
 from pathlib import Path
 from typing import Optional
 
@@ -29,8 +28,6 @@ import pytest
 # `from .database import ...` so it MUST be loaded via the `scripts.` package
 # path -- loading it standalone with importlib breaks its relative imports.
 _SCRIPTS_DIR = Path(__file__).parent.parent / "skills" / "pact-memory" / "scripts"
-if str(_SCRIPTS_DIR) not in sys.path:
-    sys.path.insert(0, str(_SCRIPTS_DIR))
 
 
 # Classification vocabulary -- shared across all resolvers

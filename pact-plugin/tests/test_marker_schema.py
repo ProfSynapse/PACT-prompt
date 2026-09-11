@@ -31,10 +31,6 @@ writer needs to verify):
 """
 
 import hashlib
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 from shared.marker_schema import (
     MARKER_MAX_BYTES,

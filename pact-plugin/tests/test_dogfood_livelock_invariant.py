@@ -51,7 +51,6 @@ import ast
 import io
 import json
 import subprocess
-import sys
 from pathlib import Path
 from unittest.mock import patch
 
@@ -90,8 +89,6 @@ _REMOVED_HOOK_BASENAMES = (
 
 # Livelock-safe docstring opt-out marker (plan L127-129).
 _LIVELOCK_SAFE_MARKER = "# livelock-safe:"
-
-sys.path.insert(0, str(_HOOKS_DIR))
 
 
 # ---------------------------------------------------------------------------

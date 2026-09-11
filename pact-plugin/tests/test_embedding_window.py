@@ -31,12 +31,9 @@ property of the model rather than a constant of the library.
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
 SCRIPTS_PARENT = Path(__file__).parent.parent / "skills" / "pact-memory"
-if str(SCRIPTS_PARENT) not in sys.path:
-    sys.path.insert(0, str(SCRIPTS_PARENT))
 
 from scripts.embeddings import (  # noqa: E402
     EMBEDDING_MAX_TOKENS,

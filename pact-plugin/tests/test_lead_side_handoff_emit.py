@@ -19,12 +19,9 @@ the intended discriminator firing, not an unrelated missing precondition.
 is_lead reads input_data["agent_type"] DIRECTLY against
 {"PACT:pact-orchestrator", "pact-orchestrator"} (pact_context.LEAD_AGENT_TYPES).
 """
-import sys
 from pathlib import Path
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 import task_lifecycle_gate as tlg  # noqa: E402
 from fixtures.emitter import VALID_HANDOFF  # noqa: E402

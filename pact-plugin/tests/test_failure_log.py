@@ -25,13 +25,10 @@ read_failures():
 16. Returns [] on outer exception (fail-open)
 """
 import json
-import sys
 import threading
 from pathlib import Path
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 from shared import failure_log
 from shared.failure_log import (

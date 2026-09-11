@@ -36,11 +36,8 @@ import io
 import json
 import os
 import sys
-from pathlib import Path
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 INLINE_ENV = "PACT_DISPATCH_INLINE_MISSION_MODE"
 VARIETY_ENV = "PACT_DISPATCH_VARIETY_MODE"

@@ -43,13 +43,9 @@ claim silently becomes false.
 import json
 import os
 import subprocess
-import sys
 from pathlib import Path
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 import archive_pin  # noqa: E402
 

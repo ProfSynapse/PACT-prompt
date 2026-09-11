@@ -27,16 +27,12 @@ shadow writes, and `total_changes` sees them without knowing their names.
 from __future__ import annotations
 
 import ast
-import os
-import sys
 from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 
 from helpers import create_test_schema
-
-sys.path.insert(0, os.path.normpath(os.path.join(os.path.dirname(__file__), '..', 'skills', 'pact-memory')))
 
 try:
     import pysqlite3 as sqlite3

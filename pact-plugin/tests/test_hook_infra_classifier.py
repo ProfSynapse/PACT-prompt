@@ -37,13 +37,11 @@ top-level-edge perturbation is the explicit non-vacuity anchor.
 from __future__ import annotations
 
 import ast
-import sys
 from pathlib import Path
 
 import pytest
 
 HOOKS = (Path(__file__).parent.parent / "hooks").resolve()
-sys.path.insert(0, str(HOOKS))
 
 from shared.hook_infra_classifier import (  # noqa: E402
     SEAM_DEPENDENT_HOOKS,

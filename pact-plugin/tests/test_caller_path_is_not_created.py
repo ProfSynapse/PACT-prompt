@@ -51,8 +51,6 @@ from pathlib import Path
 import pytest
 
 SCRIPTS_PARENT = Path(__file__).parent.parent / "skills" / "pact-memory"
-if str(SCRIPTS_PARENT) not in sys.path:
-    sys.path.insert(0, str(SCRIPTS_PARENT))
 
 from scripts import cli  # noqa: E402
 from scripts.database import get_connection  # noqa: E402

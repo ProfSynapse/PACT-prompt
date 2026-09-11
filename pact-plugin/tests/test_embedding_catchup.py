@@ -27,8 +27,6 @@ import pytest
 
 # Add paths for imports
 _scripts_path = str(Path(__file__).parent.parent / "skills" / "pact-memory" / "scripts")
-if _scripts_path not in sys.path:
-    sys.path.insert(0, _scripts_path)
 
 
 def _make_mock_database():

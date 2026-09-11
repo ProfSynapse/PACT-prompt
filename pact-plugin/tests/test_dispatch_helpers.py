@@ -28,12 +28,8 @@ definition does not travel to a module with several consumers — the two names
 describe the same predicate, not different ones.
 """
 import json
-import sys
-from pathlib import Path
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 from shared.dispatch_helpers import (  # noqa: E402
     is_owner_bearing_write,

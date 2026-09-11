@@ -11,12 +11,9 @@ Tests cover:
 7. Audit protocol referenced in pact-protocols.md SSOT
 """
 import re
-import sys
 from pathlib import Path
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 PROTOCOLS_DIR = Path(__file__).parent.parent / "protocols"
 COMMANDS_DIR = Path(__file__).parent.parent / "commands"

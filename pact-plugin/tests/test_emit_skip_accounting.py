@@ -21,11 +21,8 @@ successfully RECORDS a skip. An emit lost without leaving a
 closes, and not zero.
 """
 import sys
-from pathlib import Path
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 from shared.session_journal import (  # noqa: E402
     SKIP_CAUSE_RAISED,

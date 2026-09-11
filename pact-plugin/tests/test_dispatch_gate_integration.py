@@ -30,12 +30,9 @@ name -> not a uniqueness DENY) proves the DENY is coupled to the real roster rea
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 import dispatch_gate  # noqa: E402
 

@@ -56,12 +56,9 @@ does not see comments.
 
 import ast
 import importlib
-import sys
 from pathlib import Path
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "hooks"))
 
 import shared.canonical_json as canonical  # noqa: E402
 

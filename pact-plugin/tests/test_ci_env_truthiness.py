@@ -29,16 +29,9 @@ RELATED
                                                the workflow/package parity guard
 """
 import builtins
-import os
-import sys
 from unittest.mock import MagicMock, patch
 
 import pytest
-
-sys.path.insert(
-    0,
-    os.path.join(os.path.dirname(__file__), '..', 'skills', 'pact-memory', 'scripts'),
-)
 
 from scripts.memory_init import _ci_is_declared, check_and_install_dependencies  # noqa: E402
 

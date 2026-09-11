@@ -72,13 +72,10 @@ measured RED cardinality is documented in this module's HANDOFF.
 
 import io
 import json
-import sys
 from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 from shared import BOOTSTRAP_MARKER_NAME  # noqa: E402
 

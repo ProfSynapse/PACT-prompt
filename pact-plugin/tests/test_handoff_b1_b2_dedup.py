@@ -27,12 +27,9 @@ Shared-marker mechanics: both paths resolve the marker dir via Path.home();
 patching Path.home (+ HOME) to one tmp_path and using one team_name/task_id/
 owner/subject makes b1 and b2 contend for the identical marker file.
 """
-import sys
 from pathlib import Path
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 import task_lifecycle_gate as tlg  # noqa: E402
 from fixtures.emitter import VALID_HANDOFF, _run_main  # noqa: E402

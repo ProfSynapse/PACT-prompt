@@ -43,8 +43,6 @@ from pathlib import Path
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
-
 import agent_handoff_emitter as ahe  # noqa: E402
 from shared.session_journal import read_events  # noqa: E402
 
