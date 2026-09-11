@@ -15,7 +15,7 @@ Responsibilities:
 
 NOT responsible for:
 - HANDOFF metadata validation (no blocking, no stderr prompts).
-- memory_saved enforcement (advisory only at validate_handoff.py).
+- memory_saved enforcement (no hook enforces `memory_saved` today).
 - Stall / nag detection (not this hook's responsibility).
 
 Emission invariant: write ONE event for each distinct handoff content, iff

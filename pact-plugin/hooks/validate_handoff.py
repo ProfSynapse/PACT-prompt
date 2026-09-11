@@ -35,7 +35,9 @@ Input: JSON from stdin with `last_assistant_message` (preferred, SDK v2.1.47+),
        and `stop_hook_active` (loop guard, see main())
 Output: JSON `{"decision": "block", "reason": ...}` refusing the stop when the
         handoff is missing/low-quality; `systemMessage` warning instead when
-        `stop_hook_active` is set; `{"suppressOutput": true}` otherwise
+        `stop_hook_active` is set; `{"suppressOutput": true}` on every
+        pass/skip path; an internal error prints `hook_error_json`'s
+        `systemMessage` instead (fail-open, exit 0)
 """
 
 from __future__ import annotations
@@ -120,7 +122,7 @@ def declares_signal_completion(transcript: str) -> bool:
     Only the first SIGNAL_DECLARATION_HEAD_CHARS are searched: a signal
     completion declares itself in its opener, while a mention deeper in the
     body is a quotation of dispatch or protocol text and must not suppress the
-    warning.
+    refusal.
 
     Args:
         transcript: The agent's closing text (`last_assistant_message`)
@@ -243,7 +245,10 @@ def main():
     (prose) for PACT agents. Fires for both background Task agents and
     Agent Teams teammates. Refuses the stop (decision: block) when the
     handoff is missing or low-quality; the reason is fed back to the agent
-    so it completes the HANDOFF before stopping.
+    so it completes the HANDOFF before stopping. When `stop_hook_active` is
+    set — the agent is already continuing from a stop-hook block — the
+    refusal degrades to a `systemMessage` warning so an agent that cannot
+    satisfy the check is not looped forever.
     """
     try:
         # Read input from stdin
