@@ -10,9 +10,9 @@ membership guard keeps the overlap a no-op when both conftests load in one
 run.
 
 Used by: pytest (loaded for every run rooted at or below pact-plugin/).
-Its presence at the plugin root also puts pact-plugin/ itself on sys.path
-(pytest prepends a conftest's basedir), which is what the telegram test
-family's plugin-root inserts rely on.
+The plugin root itself is inserted explicitly below (lead-ruled: deliberate
+source, not reliance on pytest's conftest-basedir mechanics); the telegram
+test family's `from telegram.X import ...` imports resolve through it.
 
 NO-IMPORT CHARTER: this file path-INSERTS only. Never import from a scripts
 dir at conftest scope — a missing optional dependency there becomes a total
@@ -26,3 +26,8 @@ for _scripts_dir in sorted(Path(__file__).parent.glob("skills/*/scripts")):
     _entry = str(_scripts_dir)
     if _entry not in sys.path:
         sys.path.insert(0, _entry)
+
+# The plugin root itself, for the telegram test family's package imports.
+_plugin_root = str(Path(__file__).parent)
+if _plugin_root not in sys.path:
+    sys.path.insert(0, _plugin_root)
