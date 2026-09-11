@@ -16,14 +16,25 @@ and tests/conftest.py). This pin keeps it that way:
    pact-memory's config.py is the silent wrong-module failure this arm
    exists to catch.
 
-Matched mutation forms: sys.path.insert/append/extend calls and
-slice-assignment (sys.path[0:0] = [...]) — append/extend/slice-assign were
-added after a review finding that they dodged all three arms while append in
-particular is a plausible honest-mistake form, not an adversarial
-construction. ACCEPTED UNDER-BLOCK (adversarial-only, documented boundary):
-aliasing sys (`import sys as s`, `from sys import path`), `getattr(sys.path,
-...)`, and slice-assignment with exotic spacing inside codegen strings —
-this pin is an honest-mistake guard, not an adversary-proof one.
+Matched mutation forms: sys.path.insert/append/extend calls, slice-assignment
+(sys.path[0:0] = [...]), and augmented assignment (+=) on sys.path — all but
+insert were added after review findings that they dodged every arm while
+being plausible honest-mistake forms, not adversarial constructions.
+ACCEPTED UNDER-BLOCK (adversarial-only, documented boundary): aliasing sys
+(`import sys as s`, `from sys import path`), `getattr(sys.path, ...)` with a
+verb string, and slice-assign/augmented forms with exotic spacing inside
+codegen strings — this pin is an honest-mistake guard, not an
+adversary-proof one. OUT OF PARTITION (different failure mode): removal
+mutations (remove/pop/clear/del) sabotage conftest setup rather than
+re-introduce per-file path setup; zero occurrences at introduction, and the
+failure would be loud (imports break), unlike a silent added root.
+
+The matcher legs are pinned against silent rot by a committed negative
+fixture (tests/fixtures/pin_negative_path_mutations.py) carrying one
+violation per leg, plus test_negative_fixture_flags_every_matcher_leg
+asserting the matcher flags each fixture line exactly. The fixture is
+exempt from arms 1/2 via _NEGATIVE_FIXTURE — a single exact path, pinned
+by the self-test so the exemption cannot widen silently.
 
 Population: tests/**/*.py plus skills-adjacent test files
 (skills/*/test_*.py). conftest.py files are the mechanism and are exempt.
@@ -43,10 +54,13 @@ PLUGIN_ROOT = Path(__file__).resolve().parent.parent
 
 # Built as concatenations so THIS file's own source never contains a needle
 # as a contiguous literal — the any-form arm scans string constants and must
-# not flag the pin itself. Call-form tokens only; slice-assignment inside a
-# codegen string is accepted under-block (see module docstring).
-_STR_TOKENS = tuple("sys.path" + t for t in (".insert(", ".append(", ".extend("))
-_STR_VERBS = (".insert", ".append", ".extend")
+# not flag the pin itself. Call-form tokens plus augmented assignment in its
+# two common spacings; slice-assignment inside a codegen string is accepted
+# under-block (see module docstring).
+_STR_TOKENS = tuple(
+    "sys.path" + t for t in (".insert(", ".append(", ".extend(", " += ", "+=")
+)
+_STR_VERBS = (".insert", ".append", ".extend", "+=")
 
 _MODULE_ALLOWLIST = {
     "tests/merge_guard_baseline_loader.py",
@@ -128,16 +142,24 @@ def _is_mutation_call(node):
 
 
 def _is_slice_assign(node):
-    """sys.path[0:0] = [...] — an Assign whose target subscripts sys.path.
+    """An Assign whose target subscripts sys.path (sys.path[0:0] = [...]).
     Insert-equivalent precedence, but not a Call, so the call predicate
-    structurally cannot see it."""
+    structurally cannot see it. Any subscript target matches (index
+    replacement included) — all of them rewrite the search path."""
     return isinstance(node, ast.Assign) and any(
         isinstance(t, ast.Subscript) and _is_sys_path(t.value) for t in node.targets
     )
 
 
+def _is_aug_assign(node):
+    """An AugAssign whose target is the sys.path attribute (the += form).
+    Extend-equivalent, and neither a Call nor an Assign, so both other
+    predicates structurally miss it."""
+    return isinstance(node, ast.AugAssign) and _is_sys_path(node.target)
+
+
 def _is_path_mutation(node):
-    return _is_mutation_call(node) or _is_slice_assign(node)
+    return _is_mutation_call(node) or _is_slice_assign(node) or _is_aug_assign(node)
 
 
 def _module_level_mutations(path):
@@ -190,11 +212,18 @@ def _rel(path):
     return str(path.resolve().relative_to(PLUGIN_ROOT))
 
 
+# The committed negative fixture is DELIBERATE violation evidence (pinned by
+# test_negative_fixture_flags_every_matcher_leg), so the population arms skip
+# exactly this one path. The self-test asserts this constant's value — an
+# exemption widening requires editing this line and failing the self-test.
+_NEGATIVE_FIXTURE = "tests/fixtures/pin_negative_path_mutations.py"
+
+
 def test_no_module_level_insert_outside_allowlist():
     violations = []
     for f in _population():
         rel = _rel(f)
-        if rel in _MODULE_ALLOWLIST:
+        if rel in _MODULE_ALLOWLIST or rel == _NEGATIVE_FIXTURE:
             continue
         for ln in _module_level_mutations(f):
             violations.append(f"{rel}:{ln}")
@@ -208,15 +237,31 @@ def test_no_insert_of_any_form_outside_keep_set():
     violations = []
     for f in _population():
         rel = _rel(f)
-        if rel in _KEEP_SET:
+        if rel in _KEEP_SET or rel == _NEGATIVE_FIXTURE:
             continue
         if _any_form_present(f):
             violations.append(rel)
     assert not violations, (
-        "path insert (real or codegen) outside the keep-set — spawn-worker "
+        "path mutation (real or codegen) outside the keep-set — spawn-worker "
         "and subprocess files are a FIXED set; adding one means updating "
         "this pin deliberately: " + ", ".join(violations)
     )
+
+
+def test_negative_fixture_flags_every_matcher_leg():
+    """Pins the pin: the matcher must flag each committed violation line.
+
+    The fixture carries one module-level mutation per leg — insert, append,
+    extend (call leg), slice-assign, augmented assign. Exact line numbers
+    are the assertion: editing the fixture without updating this test fails
+    here, so neither silent matcher rot nor silent fixture drift is
+    possible. Also pins the exemption to exactly the fixture path."""
+    fixture = PLUGIN_ROOT / _NEGATIVE_FIXTURE
+    assert fixture.is_file(), f"negative fixture missing: {_NEGATIVE_FIXTURE}"
+    assert _module_level_mutations(fixture) == [18, 19, 20, 21, 22]
+    assert _any_form_present(fixture)
+    assert _NEGATIVE_FIXTURE not in _MODULE_ALLOWLIST
+    assert _NEGATIVE_FIXTURE not in _KEEP_SET
 
 
 def test_no_basename_collision_across_sanctioned_roots():
