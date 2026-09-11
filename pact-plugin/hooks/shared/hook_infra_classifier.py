@@ -117,7 +117,7 @@ L3_CANDIDATE_HOOKS: frozenset[str] = frozenset({
 # via AST following ABSOLUTE + RELATIVE (`from .X`) + function-level imports
 # (NOT regex — regex silently skips relative edges, e.g. pact_context's
 # `from .session_registry import resolve`, which under-attributes session_registry
-# to its 2 direct importers instead of every pact_context importer). The
+# to its 2 direct importers among the seam hooks instead of every pact_context importer). The
 # meta-test re-derives the same way (AST, relative-following) and asserts
 # equality so this literal cannot drift. An edit to any helper in a hook's
 # closure can change that hook's behavior -> the edit is SECONDARY.
