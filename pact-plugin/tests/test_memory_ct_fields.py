@@ -16,9 +16,6 @@ from pathlib import Path
 
 import pytest
 
-# Add paths for imports — scripts/ is a package with __init__.py,
-# so we add its parent to sys.path for proper relative imports.
-
 from scripts.database import (
     get_connection,
     init_schema,

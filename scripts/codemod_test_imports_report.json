@@ -1,4 +1,5 @@
 {
+  "as_of": "e728c924 — point-in-time classification captured when the codemod landed, BEFORE the deletion batches ran; line refs and bare-import lists are historical, not HEAD state",
   "files": {
     "skills/pact-agent-teams/test_skill_loading_agent_teams.py": {
       "bare_scripts_imports": [],

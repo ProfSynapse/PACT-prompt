@@ -25,7 +25,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-# Add paths for imports
 _scripts_path = str(Path(__file__).parent.parent / "skills" / "pact-memory" / "scripts")
 
 

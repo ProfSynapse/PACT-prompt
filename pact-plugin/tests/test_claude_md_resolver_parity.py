@@ -22,13 +22,6 @@ from typing import Optional
 
 import pytest
 
-# conftest adds `hooks/` and `skills/pact-memory/` to sys.path. We also need
-# `skills/pact-memory/scripts/` on sys.path so `working_memory` imports as a
-# bare module (mirrors test_staleness.py line 31). memory_api.py uses
-# `from .database import ...` so it MUST be loaded via the `scripts.` package
-# path -- loading it standalone with importlib breaks its relative imports.
-_SCRIPTS_DIR = Path(__file__).parent.parent / "skills" / "pact-memory" / "scripts"
-
 
 # Classification vocabulary -- shared across all resolvers
 NOT_FOUND = "not_found"

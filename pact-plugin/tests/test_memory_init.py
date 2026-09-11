@@ -1518,7 +1518,7 @@ class TestMaybeMigrateEmbeddings:
         with patch.dict(sys.modules, {"pysqlite3": None}):
             result = maybe_migrate_embeddings()
 
-        # Without proper deps installed, function returns skipped_deps (graceful degradation)
+        # The forced ImportError (None entry above) -> skipped_deps (graceful degradation)
         assert result['status'] == 'skipped_deps'
         assert result['message'] == 'Dependencies not available'
 
