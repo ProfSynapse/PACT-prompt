@@ -13,12 +13,9 @@ Tests cover:
 """
 import json
 import re
-import sys
 from pathlib import Path
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 from shared.teachback_schema import resolve_variety_total  # noqa: E402
 from shared.variety_divergence import (  # noqa: E402

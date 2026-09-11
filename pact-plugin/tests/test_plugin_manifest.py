@@ -16,12 +16,9 @@ UnicodeDecodeError, newline sanitization, etc.) is TEST phase work.
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 
 def _make_plugin_root(tmp_path: Path, manifest: str | None) -> Path:

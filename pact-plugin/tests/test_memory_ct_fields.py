@@ -11,7 +11,6 @@ database.py, models.py, and working_memory.py.
 """
 
 import json
-import os
 import tempfile
 from pathlib import Path
 
@@ -19,8 +18,6 @@ import pytest
 
 # Add paths for imports — scripts/ is a package with __init__.py,
 # so we add its parent to sys.path for proper relative imports.
-import sys
-sys.path.insert(0, os.path.normpath(os.path.join(os.path.dirname(__file__), '..', 'skills', 'pact-memory')))
 
 from scripts.database import (
     get_connection,

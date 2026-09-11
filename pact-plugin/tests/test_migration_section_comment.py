@@ -29,13 +29,11 @@ traded it away with nothing going red.
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
 import pytest
 
 _PLUGIN_ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(_PLUGIN_ROOT / "hooks"))
 
 from shared.claude_md_manager import (  # noqa: E402
     MANAGED_START_MARKER,

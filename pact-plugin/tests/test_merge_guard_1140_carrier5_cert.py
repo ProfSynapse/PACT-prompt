@@ -58,13 +58,10 @@ Destructive verbs are assembled at runtime (BD/BDR/PF/M5) so this file carries n
 force-delete / force-push / merge literal and stays inert to the live guard.
 """
 import subprocess
-import sys
 import types
 from pathlib import Path
 
 import pytest  # noqa: E402
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 import shared.merge_guard_common as mgc  # noqa: E402
 

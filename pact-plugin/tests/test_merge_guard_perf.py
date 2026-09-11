@@ -59,13 +59,10 @@ targeted case goes RED. Expected cardinality: reverting the shared constants
 cases.
 """
 
-import sys
 import time
 from pathlib import Path
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 from merge_guard_pre import is_dangerous_command  # noqa: E402
 from shared.merge_guard_common import detect_command_operation_type  # noqa: E402

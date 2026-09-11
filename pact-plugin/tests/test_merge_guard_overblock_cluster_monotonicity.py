@@ -75,13 +75,8 @@ Summary: TEST-phase CORPUS-WIDE monotonicity sweep + intended-closure accounting
          Destructive verbs are assembled at runtime so this file carries no raw
          force-delete / force-push / merge literal and stays inert to the live guard.
 """
-import sys
-from pathlib import Path
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
-sys.path.insert(0, str(Path(__file__).parent))
 
 import shared.merge_guard_common as mgc  # noqa: E402
 import merge_guard_pre  # noqa: E402  # R1/F2 e2e launder smoke

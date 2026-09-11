@@ -18,14 +18,9 @@ covered in test_prune_memory_integration.py.
 """
 
 import json
-import sys
 import threading
-from pathlib import Path
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
-sys.path.insert(0, str(Path(__file__).parent))
 
 from helpers import make_claude_md_with_pins, make_pin_entry  # noqa: E402
 

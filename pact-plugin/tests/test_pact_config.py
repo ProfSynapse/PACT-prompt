@@ -20,12 +20,8 @@ Core invariants under test:
 - call-time read: setting an env var AFTER import still changes the result
   (proves no import-time caching).
 """
-import sys
-from pathlib import Path
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 import shared.pact_config as pact_config
 from shared.pact_config import get_bool, get_enum, llm_options

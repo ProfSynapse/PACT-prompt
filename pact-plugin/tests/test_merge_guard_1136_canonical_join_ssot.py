@@ -32,14 +32,11 @@ import io
 import json
 import random
 import subprocess
-import sys
 import types
 from pathlib import Path
 from unittest.mock import patch
 
 import pytest  # noqa: E402
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 import merge_guard_post  # noqa: E402
 import merge_guard_pre  # noqa: E402

@@ -41,7 +41,6 @@ from __future__ import annotations
 
 import ast
 import json
-import sys
 from pathlib import Path
 from unittest.mock import patch
 from uuid import uuid4
@@ -49,8 +48,6 @@ from uuid import uuid4
 import pytest
 
 SCRIPTS_PARENT = Path(__file__).parent.parent / "skills" / "pact-memory"
-if str(SCRIPTS_PARENT) not in sys.path:
-    sys.path.insert(0, str(SCRIPTS_PARENT))
 
 from scripts import cli as cli_module  # noqa: E402
 from scripts import memory_api as memory_api_module  # noqa: E402

@@ -39,11 +39,6 @@ SESSION markers) build their content by f-string and `str.replace`, which have
 no replacement grammar, so no production of this family reaches them. A future
 edit that routes Case 2 through `re.sub` would be outside this file.
 """
-import sys
-from pathlib import Path
-
-# Add hooks directory to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 SESSION_START = "<!-- SESSION_START -->"
 SESSION_END = "<!-- SESSION_END -->"

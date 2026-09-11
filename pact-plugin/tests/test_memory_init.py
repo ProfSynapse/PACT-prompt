@@ -24,9 +24,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-# Add paths for imports
-sys.path.insert(0, str(Path(__file__).parent.parent / "skills" / "pact-memory" / "scripts"))
-
 
 class TestEnsureMemoryReady:
     """Tests for ensure_memory_ready() - the main lazy initialization entry point."""

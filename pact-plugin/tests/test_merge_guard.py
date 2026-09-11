@@ -34,8 +34,6 @@ from unittest.mock import patch
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
-
 
 # =============================================================================
 # merge_guard_post.py tests

@@ -31,10 +31,6 @@ Dangerous substrings are assembled at runtime (M / MS / GR / PR_MERGE) so this f
 no raw `gh pr merge` / `git/refs` literal — mirrors the coder file + architect probe-harness
 convention and keeps the file inert to any literal-scanning tool.
 """
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 import pytest  # noqa: E402
 

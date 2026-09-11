@@ -23,13 +23,8 @@ If any counter-test produces 0 fails, the target test is phantom-green
 and must be rewritten.
 """
 
-import sys
-from pathlib import Path
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
-sys.path.insert(0, str(Path(__file__).parent))
 
 from helpers import make_claude_md_with_pins, make_pin_entry  # noqa: E402
 

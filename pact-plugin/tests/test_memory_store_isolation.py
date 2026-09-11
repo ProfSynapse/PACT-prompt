@@ -32,7 +32,6 @@ from pathlib import Path
 import pytest
 
 SCRIPTS_PARENT = Path(__file__).parent.parent / "skills" / "pact-memory"
-sys.path.insert(0, str(SCRIPTS_PARENT))
 
 from scripts.config import (  # noqa: E402
     MEMORY_DIR_ENV,

@@ -50,13 +50,10 @@ the broken wiring" -> caught by UN-MOCKING the seam, not by revert alone.
 ================================================================================
 """
 import json
-import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 import missed_wake_scan as mw  # noqa: E402
 import teammate_idle  # noqa: E402

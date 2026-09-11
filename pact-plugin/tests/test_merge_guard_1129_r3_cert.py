@@ -78,13 +78,10 @@ so a reader needs no external design doc. Destructive verbs are assembled at run
 inert to the live guard; probe forms are never run as shell.
 """
 import subprocess
-import sys
 import types
 from pathlib import Path
 
 import pytest  # noqa: E402
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 import shared.merge_guard_common as mgc  # noqa: E402
 

@@ -41,13 +41,10 @@ Summary: COMPREHENSIVE BIDIRECTIONAL certification for #1178 — the positional-
          the live guard. Mirrors test_merge_guard_1140_carrier5_cert.py.
 """
 import subprocess
-import sys
 import types
 from pathlib import Path
 
 import pytest  # noqa: E402
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 import shared.merge_guard_common as mgc  # noqa: E402
 

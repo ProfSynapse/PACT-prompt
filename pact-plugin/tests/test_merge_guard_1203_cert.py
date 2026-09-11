@@ -78,14 +78,10 @@ Destructive verbs are assembled at runtime so this file stays inert to the live 
 """
 import io
 import json
-import sys
 from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
-sys.path.insert(0, str(Path(__file__).parent))
 
 import merge_guard_post as mgpost  # noqa: E402
 import merge_guard_pre as mgpre  # noqa: E402

@@ -33,12 +33,8 @@ the real mint path _mint_context_from_bundle / _target_value / _token_matches_co
 
 import contextlib
 import re as _real_re
-import sys
-from pathlib import Path
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 import shared.merge_guard_common as mgc  # noqa: E402  (module handle for counter-mutation)
 from shared.merge_guard_common import (  # noqa: E402

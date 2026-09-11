@@ -33,13 +33,9 @@ append_event (module-global on missed_wake_scan), per devops's confirmed levers.
 """
 import io
 import json
-import sys
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 import missed_wake_scan as mw  # noqa: E402
 from fixtures.role_frames import (  # noqa: E402

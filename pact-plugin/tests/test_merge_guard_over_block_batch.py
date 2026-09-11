@@ -36,13 +36,9 @@ Sibling per-lane suites (do not duplicate):
 
 import io
 import json
-import sys
-from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 from shared.merge_guard_common import (  # noqa: E402
     is_dangerous_command as D,

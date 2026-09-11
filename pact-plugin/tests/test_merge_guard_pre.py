@@ -33,11 +33,7 @@ tests pinning the fixes; the new `test_authorization_mismatch_attack` test
 pins the end-to-end attack shape that the heredoc-side fix prevents.
 """
 
-import sys
-from pathlib import Path
 
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 from merge_guard_pre import _GH_PR_NUMBER_RE  # noqa: E402
 

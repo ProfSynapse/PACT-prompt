@@ -22,10 +22,6 @@ file carries no raw force-delete literal — mirrors the sibling probe-harness c
 and keeps the file inert to any literal-scanning tool.
 """
 import json
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 import pytest  # noqa: E402
 
