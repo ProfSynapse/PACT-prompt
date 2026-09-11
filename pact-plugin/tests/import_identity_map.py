@@ -57,6 +57,11 @@ def imported_names(test_file):
             names.update(a.name for a in node.names)
         elif isinstance(node, ast.ImportFrom) and node.module and node.level == 0:
             names.add(node.module)
+            # `from scripts import working_memory` — the submodule rides the
+            # package's name, so record the full dotted path too, or the
+            # bare->package rename set can't match it. Non-module aliases
+            # (functions/classes) capture as None on both sides: no diff.
+            names.update(f"{node.module}.{a.name}" for a in node.names)
     return names
 
 
