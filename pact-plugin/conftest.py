@@ -43,7 +43,7 @@ if _tests_dir not in sys.path:
     sys.path.insert(0, _tests_dir)
 
 from import_identity_map import (  # noqa: E402
-    pytest_collection_modifyitems,
-    pytest_sessionfinish,
-    pytest_sessionstart,
+    pytest_collection_modifyitems,  # noqa: F401 — hook-registration re-export; pytest's name-based discovery is the consumer, the linter can't see it
+    pytest_sessionfinish,  # noqa: F401 — hook-registration re-export
+    pytest_sessionstart,  # noqa: F401 — hook-registration re-export
 )

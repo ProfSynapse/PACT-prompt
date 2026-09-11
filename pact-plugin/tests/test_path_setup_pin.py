@@ -21,10 +21,10 @@ Matched mutation forms: sys.path.insert/append/extend calls, slice-assignment
 insert were added after review findings that they dodged every arm while
 being plausible honest-mistake forms, not adversarial constructions.
 ACCEPTED UNDER-BLOCK (adversarial-only, documented boundary): aliasing sys
-(`import sys as s`, `from sys import path`), `getattr(sys.path, ...)` with a
-verb string, and slice-assign/augmented forms with exotic spacing inside
-codegen strings — this pin is an honest-mistake guard, not an
-adversary-proof one. OUT OF PARTITION (different failure mode): removal
+(`import sys as s`, `from sys import path`), wholesale rebinding
+(`sys.path = [...]`), `getattr(sys.path, ...)` with a verb string, and
+slice-assign/augmented forms with exotic spacing inside codegen strings —
+this pin is an honest-mistake guard, not an adversary-proof one. OUT OF PARTITION (different failure mode): removal
 mutations (remove/pop/clear/del) sabotage conftest setup rather than
 re-introduce per-file path setup; zero occurrences at introduction, and the
 failure would be loud (imports break), unlike a silent added root.
