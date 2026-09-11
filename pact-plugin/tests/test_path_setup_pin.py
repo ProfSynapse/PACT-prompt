@@ -3,10 +3,10 @@
 The suite's path setup now lives in the two conftests (pact-plugin/conftest.py
 and tests/conftest.py). This pin keeps it that way:
 
-1. MODULE-LEVEL arm — no module-level path insert outside MODULE_ALLOWLIST
+1. MODULE-LEVEL arm — no module-level path mutation outside MODULE_ALLOWLIST
    (the files whose inserts are load-bearing at import time: spawn-parent
    setup and the baseline loader).
-2. ANY-FORM arm — no path insert of ANY kind (module-level, function-level,
+2. ANY-FORM arm — no path mutation of ANY kind (module-level, function-level,
    or embedded in a codegen string) outside KEEP_SET. Spawn workers must
    rebuild sys.path in the child (it does not cross a spawn boundary) and
    subprocess harnesses generate their own path lines; both stay legitimate,
@@ -15,6 +15,15 @@ and tests/conftest.py). This pin keeps it that way:
    Zero collisions today; a future skills/<new>/scripts/config.py shadowing
    pact-memory's config.py is the silent wrong-module failure this arm
    exists to catch.
+
+Matched mutation forms: sys.path.insert/append/extend calls and
+slice-assignment (sys.path[0:0] = [...]) — append/extend/slice-assign were
+added after a review finding that they dodged all three arms while append in
+particular is a plausible honest-mistake form, not an adversarial
+construction. ACCEPTED UNDER-BLOCK (adversarial-only, documented boundary):
+aliasing sys (`import sys as s`, `from sys import path`), `getattr(sys.path,
+...)`, and slice-assignment with exotic spacing inside codegen strings —
+this pin is an honest-mistake guard, not an adversary-proof one.
 
 Population: tests/**/*.py plus skills-adjacent test files
 (skills/*/test_*.py). conftest.py files are the mechanism and are exempt.
@@ -32,10 +41,12 @@ from pathlib import Path
 
 PLUGIN_ROOT = Path(__file__).resolve().parent.parent
 
-# Built as a concatenation so THIS file's own source never contains the
-# needle as a contiguous literal — the any-form arm scans string constants
-# and must not flag the pin itself.
-_NEEDLE = "sys.path" + ".insert("
+# Built as concatenations so THIS file's own source never contains a needle
+# as a contiguous literal — the any-form arm scans string constants and must
+# not flag the pin itself. Call-form tokens only; slice-assignment inside a
+# codegen string is accepted under-block (see module docstring).
+_STR_TOKENS = tuple("sys.path" + t for t in (".insert(", ".append(", ".extend("))
+_STR_VERBS = (".insert", ".append", ".extend")
 
 _MODULE_ALLOWLIST = {
     "tests/merge_guard_baseline_loader.py",
@@ -95,20 +106,42 @@ def _population():
     return [f for f in files if f.name != "conftest.py"]
 
 
-def _is_insert_call(node):
+def _is_sys_path(value):
     return (
-        isinstance(node, ast.Call)
-        and isinstance(node.func, ast.Attribute)
-        and node.func.attr == "insert"
-        and isinstance(node.func.value, ast.Attribute)
-        and node.func.value.attr == "path"
-        and isinstance(node.func.value.value, ast.Name)
-        and node.func.value.value.id == "sys"
+        isinstance(value, ast.Attribute)
+        and value.attr == "path"
+        and isinstance(value.value, ast.Name)
+        and value.value.id == "sys"
     )
 
 
-def _module_level_inserts(path):
-    """Line numbers of path inserts in MODULE scope only (defs/classes
+_MUTATION_VERBS = frozenset({"insert", "append", "extend"})
+
+
+def _is_mutation_call(node):
+    return (
+        isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and node.func.attr in _MUTATION_VERBS
+        and _is_sys_path(node.func.value)
+    )
+
+
+def _is_slice_assign(node):
+    """sys.path[0:0] = [...] — an Assign whose target subscripts sys.path.
+    Insert-equivalent precedence, but not a Call, so the call predicate
+    structurally cannot see it."""
+    return isinstance(node, ast.Assign) and any(
+        isinstance(t, ast.Subscript) and _is_sys_path(t.value) for t in node.targets
+    )
+
+
+def _is_path_mutation(node):
+    return _is_mutation_call(node) or _is_slice_assign(node)
+
+
+def _module_level_mutations(path):
+    """Line numbers of path mutations in MODULE scope only (defs/classes
     excluded — a spawn worker's in-function rebuild is not module setup)."""
     tree = ast.parse(path.read_text(encoding="utf-8"))
     lines = []
@@ -120,7 +153,7 @@ def _module_level_inserts(path):
             ):
                 walk(child, True)
                 continue
-            if _is_insert_call(child) and not in_def:
+            if _is_path_mutation(child) and not in_def:
                 lines.append(child.lineno)
             walk(child, in_def)
 
@@ -129,17 +162,17 @@ def _module_level_inserts(path):
 
 
 def _any_form_present(path):
-    """True if the file contains a path insert at any level OR embeds the
-    needle in a string constant (codegen). Comments are AST-invisible and
-    never match."""
+    """True if the file contains a path mutation at any level OR embeds a
+    mutation token in a string constant (codegen). Comments are
+    AST-invisible and never match."""
     tree = ast.parse(path.read_text(encoding="utf-8"))
     for node in ast.walk(tree):
-        if _is_insert_call(node):
+        if _is_path_mutation(node):
             return True
         if (
             isinstance(node, ast.Constant)
             and isinstance(node.value, str)
-            and _NEEDLE in node.value
+            and any(tok in node.value for tok in _STR_TOKENS)
         ):
             return True
         if isinstance(node, ast.JoinedStr):
@@ -148,7 +181,7 @@ def _any_form_present(path):
                 for c in node.values
                 if isinstance(c, ast.Constant) and isinstance(c.value, str)
             )
-            if "sys.path" in text and ".insert" in text:
+            if "sys.path" in text and any(v in text for v in _STR_VERBS):
                 return True
     return False
 
@@ -163,10 +196,10 @@ def test_no_module_level_insert_outside_allowlist():
         rel = _rel(f)
         if rel in _MODULE_ALLOWLIST:
             continue
-        for ln in _module_level_inserts(f):
+        for ln in _module_level_mutations(f):
             violations.append(f"{rel}:{ln}")
     assert not violations, (
-        "module-level path insert outside the allowlist (path setup is "
+        "module-level path mutation outside the allowlist (path setup is "
         "conftest-owned now): " + ", ".join(violations)
     )
 
