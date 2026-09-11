@@ -31,3 +31,19 @@ for _scripts_dir in sorted(Path(__file__).parent.glob("skills/*/scripts")):
 _plugin_root = str(Path(__file__).parent)
 if _plugin_root not in sys.path:
     sys.path.insert(0, _plugin_root)
+
+# Import-identity harness registration (layer 4 guard). tests/ is inserted so
+# the harness module resolves at conftest load; the insert is a guarded no-op
+# once tests/conftest.py has run. The harness is stdlib-only, so this import
+# cannot trip the no-import charter's optional-dependency failure mode.
+# Name-based hook discovery picks up the re-exported callables session-wide
+# (this conftest's tree spans both tests/ and the skills-adjacent files).
+_tests_dir = str(Path(__file__).parent / "tests")
+if _tests_dir not in sys.path:
+    sys.path.insert(0, _tests_dir)
+
+from import_identity_map import (  # noqa: E402
+    pytest_collection_modifyitems,
+    pytest_sessionfinish,
+    pytest_sessionstart,
+)

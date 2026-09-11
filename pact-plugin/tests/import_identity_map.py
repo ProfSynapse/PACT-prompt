@@ -5,18 +5,24 @@ Per test module, record which FILE each imported plugin module resolves to
 a precedence flip (same module name resolving from a different directory
 still imports); this map is the only proof layer that catches one.
 
-Prototype registration (no conftest edit — the owner integrates later):
+Production registration: the plugin-root conftest re-exports the three hook
+functions below (name-based hook discovery picks up imported callables), so
+every run rooted at or below pact-plugin/ carries the capture. Emission is
+gated on PACT_IDENTITY_MAP_OUT; normal gate runs write nothing.
+
+Regenerate the baseline (pre/post-restructure diff halves alike):
 
     cd pact-plugin
+    PACT_IDENTITY_MAP_OUT=tests/import_identity_baseline.json \\
+        python3 -m pytest -q        # full suite, no path argument
+
+Compare with diff_maps(baseline, current, renames=<codemod's bare->package
+list>). An empty diff after rename normalization = no precedence flip.
+
+Prototype-era fallback, if conftest registration is ever bypassed:
+
     PYTHONPATH=tests PACT_IDENTITY_MAP_OUT=/tmp/map.json \\
         python3 -m pytest -p import_identity_map <files> -q
-
-Baseline-generation procedure (the pre-restructure half of the diff):
-the harness must land BEFORE any deletion batch. Baseline = run the command
-above (full suite, no path argument) at the first commit carrying this file;
-store the emitted JSON. Post-restructure runs emit the same shape; compare
-with diff_maps(baseline, current, renames=<codemod's bare->package list>).
-An empty diff after rename normalization = no precedence flip.
 
 Capture timing (measured on the 5-strata demo): pytest_sessionstart fires
 BEFORE tests/conftest.py loads — conftest's own inserts appear in the
