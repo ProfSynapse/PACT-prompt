@@ -62,7 +62,7 @@ _FORBIDDEN_AUTHORITY_CALLS = ("_registry_resolve", "resolve_agent_name")
 # the POSITIVE 2-file authority no-import test with a NEGATIVE all-files scan: a
 # NEW importer ANYWHERE under hooks/ — an authority file, a gate, a new helper —
 # trips the backstop, even one the _AUTHORITY_FILES tuple does not enumerate.
-# The four sanctioned consumers are all LABELING / coordination / lifecycle uses
+# The sanctioned consumers are all LABELING / coordination / lifecycle uses
 # (the registry value never reaches an authority decision through any of them):
 #   * shared/pact_context.py — resolve_agent_name Step 3.5 (human-readable label)
 #   * session_init.py        — teammate-branch lead-team resolution (peer display)
@@ -78,6 +78,9 @@ _FORBIDDEN_AUTHORITY_CALLS = ("_registry_resolve", "resolve_agent_name")
 #     user already has full TaskUpdate/FS access and the only mutation is a
 #     benign pending→in_progress flip — the gate crosses no privilege boundary.
 #     A miss → advisory, never a typed guess.
+#   * background_work_tracker.py — #1625 owner bind (Step 3.5 under tmux).
+#     LABELING only: the resolved name attaches a registry row to the unique
+#     in_progress task. Role stays on agent_type. Fail-open on miss / collapse.
 # Paths are POSIX-relative to HOOKS_DIR. session_registry.py itself is NOT here:
 # the module does not import itself, so the detector does not flag it.
 _ALLOWED_REGISTRY_IMPORTERS = frozenset({
@@ -85,6 +88,7 @@ _ALLOWED_REGISTRY_IMPORTERS = frozenset({
     "session_init.py",
     "session_end.py",
     "task_claim_gate.py",
+    "background_work_tracker.py",
 })
 
 
@@ -235,7 +239,7 @@ class TestTrustPartitionNoRegistryImport:
 # ===========================================================================
 
 class TestRegistryImporterAllowlist:
-    """Exactly the four sanctioned LABELING/coordination/lifecycle consumers may
+    """Exactly the sanctioned LABELING/coordination/lifecycle consumers may
     import the registry. The no-import test above pins the TWO authority files specifically;
     this backstop scans EVERY hook file so a NEW importer anywhere — including one
     the _AUTHORITY_FILES tuple does not list — trips immediately."""

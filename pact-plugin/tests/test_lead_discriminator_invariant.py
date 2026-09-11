@@ -115,10 +115,15 @@ MIGRATED_HOOKS: tuple[str, ...] = (
 #       the function's OWN definition + its internal agent_id name-resolution
 #       (Step 1-3) — this is the name-resolver itself, not a consumer keying
 #       role off it.
+#   background_work_tracker.py / bind_launcher_identity:
+#       #1625 owner bind (steps 1–3.5 + unique in_progress task). Role is
+#       classify_session_role / is_lead via agent_type; this call is a
+#       label, not a lead proxy.
 _SANCTIONED_RESOLVE_AGENT_NAME_SITES: frozenset[tuple[str, str]] = frozenset({
     ("file_tracker.py", "main"),
     ("file_tracker.py", "get_environment_delta"),
     ("shared/pact_context.py", "resolve_agent_name"),
+    ("background_work_tracker.py", "bind_launcher_identity"),
 })
 
 
@@ -197,8 +202,13 @@ def _find_agent_id_role_uses(
     (``is_pact_agent``), explicitly deferred to the #812 follow-up per the
     plan's scope decision — NOT a lead/teammate discriminator. Listed by file
     so the exemption is auditable.
+
+    background_work_tracker.py is EXEMPT: ``bind_launcher_identity`` reads
+    ``agent_id`` as an identity label (in-process unique name) so two
+    same-``agentType`` siblings do not collapse. Role stays on ``agent_type``
+    via ``classify_session_role``. Not a lead/teammate discriminator.
     """
-    if file_label == "validate_handoff.py":
+    if file_label in ("validate_handoff.py", "background_work_tracker.py"):
         return []
     offending: list[tuple[str, int]] = []
     for node in ast.walk(tree):
