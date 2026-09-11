@@ -303,6 +303,11 @@ COVERED_L2 = {
     # exit(2) (fail-LOUD), so they are L2-only / never-L3 (no live-probe).
     "merge_guard_pre": "test_merge_guard_seam_integration.py",
     "merge_guard_post": "test_merge_guard_seam_integration.py",
+    # validate_handoff's exit-0/stdout contract is seam-independent, but its
+    # degrade-path handoff_refusal_degraded telemetry is fail-open (silent on
+    # loss), so the journal seam gets a real composition test: real init ->
+    # session-dir resolution -> real append -> read_events over a tmp root.
+    "validate_handoff": "test_validate_handoff_integration.py",
 }
 
 # Documented forward-only BACKLOG: seam hooks whose non-mocked L2 test is a named
@@ -312,10 +317,11 @@ COVERED_L2 = {
 #     documented follow-up. Its L2 seam test is fast-follow.
 #   - bootstrap_gate / bootstrap_marker_writer: iter_team_task_jsons readers.
 #   - file_tracker / peer_inject: L2-only (held), watch-list per the classifier.
-#   - validate_handoff: stdin-only contract (no disk/task/journal seam).
+# (validate_handoff promoted to COVERED_L2 when its degrade telemetry gained
+#  the real-seam composition test — the hook was touched, so the gap closed.)
 BACKLOG_L2 = frozenset({
     "task_lifecycle_gate", "bootstrap_gate", "bootstrap_marker_writer",
-    "file_tracker", "peer_inject", "validate_handoff",
+    "file_tracker", "peer_inject",
 })
 
 

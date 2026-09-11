@@ -95,8 +95,10 @@ L3_LIVE_PROBE_HOOKS: frozenset[str] = frozenset({
 #   - peer_inject:     a silent peer-context injection failure is consequential
 #                      but more VISIBLE (the spawned subagent misbehaves), so it
 #                      does not meet the silent-inert bar; watch-candidate.
-#   - validate_handoff: reads ONLY stdin (no disk/task/journal seam) -> cannot
-#                      go inert the inert-ship way; its L2 test is a stdin-contract test.
+#   - validate_handoff: its exit-0/stdout contract never depends on a seam —
+#                      the degrade path's journal append (handoff_refusal_degraded)
+#                      is fail-open telemetry, so it cannot go inert the
+#                      inert-ship way; held at L2.
 L3_CANDIDATE_HOOKS: frozenset[str] = frozenset({
     "file_tracker", "peer_inject", "validate_handoff",
 })  # 3 — assessed, held at L2-only
@@ -115,18 +117,21 @@ L3_CANDIDATE_HOOKS: frozenset[str] = frozenset({
 # via AST following ABSOLUTE + RELATIVE (`from .X`) + function-level imports
 # (NOT regex — regex silently skips relative edges, e.g. pact_context's
 # `from .session_registry import resolve`, which under-attributes session_registry
-# to its 2 direct importers instead of all 11 pact_context importers). The
+# to its 2 direct importers among the seam hooks instead of every pact_context importer). The
 # meta-test re-derives the same way (AST, relative-following) and asserts
 # equality so this literal cannot drift. An edit to any helper in a hook's
 # closure can change that hook's behavior -> the edit is SECONDARY.
 #
 # `paths` (shared/paths.py) is the CLAUDE_CONFIG_DIR / config-dir SSOT resolver
-# added by the config-dir refactor; it is now reached by 11 of the 12 seam hooks
-# (all but validate_handoff) because the path-consuming shared helpers
-# (constants, pact_context, session_state, task_utils, ... via `from .paths
-# import get_claude_config_dir`) sit in nearly every closure. It is a genuine
-# path-seam resolver -> a legitimate SECONDARY helper (the C6-A oracle caught its
-# arrival as designed; this literal was regenerated from the live derivation).
+# added by the config-dir refactor; it is now reached by every hook in
+# SEAM_DEPENDENT_HOOKS (validate_handoff was the last holdout until its
+# degrade-path journal telemetry pulled in pact_context/session_journal)
+# because the path-consuming
+# shared helpers (constants, pact_context, session_state, task_utils, ... via
+# `from .paths import get_claude_config_dir`) sit in every closure. It is a
+# genuine path-seam resolver -> a legitimate SECONDARY helper (the C6-A oracle
+# caught its arrival as designed; this literal was regenerated from the live
+# derivation).
 _SEAM_HOOK_HELPER_CLOSURE: dict[str, frozenset[str]] = {
     "missed_wake_scan": frozenset({
         "constants", "intentional_wait", "pact_context", "paths",
@@ -226,7 +231,10 @@ _SEAM_HOOK_HELPER_CLOSURE: dict[str, frozenset[str]] = {
         "constants", "pact_context", "paths", "peer_context", "plugin_manifest",
         "session_journal", "session_registry", "session_state",
     }),
-    "validate_handoff": frozenset({"error_output"}),
+    "validate_handoff": frozenset({
+        "constants", "error_output", "pact_context", "paths",
+        "session_journal", "session_registry", "session_state",
+    }),
     "merge_guard_pre": frozenset({
         "constants", "merge_guard_common", "pact_context", "paths",
         "session_journal", "session_registry", "session_state",

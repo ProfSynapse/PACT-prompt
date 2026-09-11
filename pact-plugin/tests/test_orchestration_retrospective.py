@@ -9,6 +9,7 @@ Tests cover:
 5. Q5/Q6 journal-read hardening
 6. Q5/Q6 extractions are total (no direct-indexing comprehension)
 7. Q5's recovery path depends on the dimension-sum resolver candidate
+8. Q7 handoff_refusal_degraded question presence pin
 """
 import json
 import re
@@ -69,6 +70,12 @@ class TestOrchestrationRetrospective:
 
     def test_memory_save_convention(self, wrapup_content):
         assert "orchestration_calibration" in wrapup_content
+
+    def test_handoff_refusal_degradation_question(self, wrapup_content):
+        # Presence pin for the Q7 degrade-telemetry consumer: the heading and
+        # the event-type literal it reads are the load-bearing tokens.
+        assert "HANDOFF refusal degradations" in wrapup_content
+        assert "handoff_refusal_degraded" in wrapup_content
 
 
 def _backticked_expression(line, prefix):
