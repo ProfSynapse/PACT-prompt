@@ -40,7 +40,7 @@ This is the deep-clean pass. Pass 1 (workflow-level HANDOFF review) is the prima
 
 Perform a brief self-assessment. Compare your initial variety assessment and orchestration decisions against actual outcomes. This calibrates future judgment.
 
-**Answer these six questions:**
+**Answer these seven questions:**
 
 1. **Variety accuracy**: Was the initial variety score close to actual complexity? Over/under by how much?
 2. **Phase efficiency**: Did any phases need to be re-run (imPACT)? Were any skipped phases needed after all?
