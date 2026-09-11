@@ -1583,10 +1583,6 @@ class TestMemoryAPIRealIntegration:
 
         reset_initialization()
 
-        # Import memory_api module to access PACTMemory
-        scripts_path = Path(__file__).parent.parent / "skills" / "pact-memory" / "scripts"
-        sys.path.insert(0, str(scripts_path.parent.parent.parent))
-
         # We need to mock ensure_memory_ready at the memory_api module level
         # because memory_api imports it with: from .memory_init import ensure_memory_ready
         with patch('scripts.memory_init.check_and_install_dependencies') as mock_deps, \

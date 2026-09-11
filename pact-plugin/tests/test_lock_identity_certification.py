@@ -67,18 +67,11 @@ import hashlib
 import inspect
 import os
 import re
-import sys
 from pathlib import Path
 
 import pytest
 
 _TESTS = Path(__file__).resolve().parent
-for _p in (
-    _TESTS.parent / "hooks",
-    _TESTS.parent / "skills" / "pact-memory" / "scripts",
-):
-    if str(_p) not in sys.path:
-        sys.path.insert(0, str(_p))
 
 PLUGIN_ROOT = _TESTS.parent
 CANONICAL_REL = "hooks/shared/claude_md_manager.py"
