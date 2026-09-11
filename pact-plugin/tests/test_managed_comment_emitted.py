@@ -61,14 +61,11 @@ from __future__ import annotations
 
 import os
 import re
-import sys
 from pathlib import Path
 
 import pytest
 
 _PLUGIN_ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(_PLUGIN_ROOT / "hooks"))
-sys.path.insert(0, str(_PLUGIN_ROOT / "skills" / "pact-memory" / "scripts"))
 
 from shared.claude_md_manager import (  # noqa: E402
     _build_migrated_content,

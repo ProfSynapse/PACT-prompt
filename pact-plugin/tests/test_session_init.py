@@ -44,7 +44,6 @@ from __future__ import annotations
 import io
 import json
 import re
-import sys
 from contextlib import ExitStack
 from datetime import datetime, timezone
 from pathlib import Path
@@ -52,9 +51,6 @@ from typing import Optional
 from unittest.mock import MagicMock, patch
 
 import pytest
-
-# Add hooks directory to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 from shared.constants import COMPACT_SUMMARY_ORPHAN_NAME  # noqa: E402
 

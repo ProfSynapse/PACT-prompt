@@ -8,12 +8,9 @@ Tests cover:
 4. Auditor agent definition structure
 5. Completion lifecycle: signal-type with audit_summary
 """
-import sys
 from pathlib import Path, PurePosixPath
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 PROTOCOLS_DIR = Path(__file__).parent.parent / "protocols"
 COMMANDS_DIR = Path(__file__).parent.parent / "commands"

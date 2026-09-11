@@ -17,7 +17,6 @@ import ast
 import inspect
 import os
 import re
-import sys
 import tempfile
 import textwrap
 from datetime import datetime, timedelta
@@ -25,11 +24,6 @@ from pathlib import Path
 from unittest.mock import patch, MagicMock
 
 import pytest
-
-# Add hooks directory to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
-# Add working_memory scripts directory to path for twin-copy equivalence test
-sys.path.insert(0, str(Path(__file__).parent.parent / "skills" / "pact-memory" / "scripts"))
 
 # THE ONE SPELLING OF THE WARNING MARKER, imported rather than repeated. Every
 # assertion and fixture below is built from this, so a rename in the source
