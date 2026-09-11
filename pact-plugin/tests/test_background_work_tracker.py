@@ -66,6 +66,16 @@ class TestBindLauncherIdentity:
         ), patch("background_work_tracker.registry_resolve", return_value=None):
             assert tracker.bind_launcher_identity(frame, TEAM) is None
 
+    def test_hex_agent_id_does_not_count_as_a_name(self):
+        frame = synthesized_teammate_bash_background()
+        frame.pop("agent_name")
+        frame["agent_id"] = "a41556261a05e62df"
+        with patch(
+            "background_work_tracker.iter_team_task_jsons",
+            return_value=[_task(owner="architect")],
+        ), patch("background_work_tracker.registry_resolve", return_value=None):
+            assert tracker.bind_launcher_identity(frame, TEAM) is None
+
     def test_same_type_siblings_no_write(self):
         frame = synthesized_teammate_bash_background()
         tasks = [

@@ -45,7 +45,12 @@ if str(_hooks_dir) not in sys.path:
     sys.path.insert(0, str(_hooks_dir))
 
 import shared.pact_context as pact_context
-from shared.background_work import idled_at_stale, load_records, unflagged_fire
+from shared.background_work import (
+    idled_at_stale,
+    load_records,
+    parse_iso,
+    unflagged_fire,
+)
 from shared.pact_context import is_lead
 from shared.session_journal import append_event, get_journal_path, make_event, read_events
 from shared.session_state import _sanitize_member_name
@@ -135,13 +140,10 @@ def emit_forensic(stale: list) -> None:
 
 
 def _age_minutes(ts: str, now: datetime) -> int | None:
-    try:
-        parsed = datetime.fromisoformat(ts.replace("Z", "+00:00"))
-        if parsed.tzinfo is None:
-            return None
-        return max(0, int((now - parsed).total_seconds() // 60))
-    except (ValueError, TypeError):
+    parsed = parse_iso(ts)
+    if parsed is None:
         return None
+    return max(0, int((now - parsed).total_seconds() // 60))
 
 
 def build_surface(stale: list, now: datetime | None = None) -> str | None:
@@ -180,11 +182,14 @@ def build_surface(stale: list, now: datetime | None = None) -> str | None:
 def run_surface(input_data: dict, now: datetime | None = None) -> str | None:
     if not is_lead(input_data):
         return None
+    now = now or datetime.now(timezone.utc)
+    records = load_records(now=now)
+    if not any(idled_at_stale(record, now=now) for record in records):
+        return None
     tasks = get_task_list()
     if not tasks:
         return None
-    now = now or datetime.now(timezone.utc)
-    stale = find_unflagged_stale(tasks, now=now)
+    stale = find_unflagged_stale(tasks, records=records, now=now)
     if not stale:
         return None
     emit_forensic(stale)

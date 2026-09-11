@@ -50,9 +50,9 @@ if str(_hooks_dir) not in sys.path:
 from shared.background_work import (
     UNFLAGGED_IDLE_THRESHOLD,
     load_unflagged_idle_counts,
-    save_unflagged_idle_counts,
     stamp_idled_at,
     unflagged_fire,
+    update_unflagged_idle_counts,
 )
 from shared.error_output import hook_error_json
 import shared.pact_context as pact_context
@@ -308,6 +308,17 @@ UNFLAGGED_ADVISORY = (
 )
 
 
+def _clear_unflagged_idle(teammate_name: str, team_name: str) -> None:
+    if teammate_name not in load_unflagged_idle_counts(team_name):
+        return
+
+    def _remove(counts: dict) -> dict:
+        counts.pop(teammate_name, None)
+        return counts
+
+    update_unflagged_idle_counts(_remove, team_name)
+
+
 def check_unflagged_background(
     tasks: list[dict],
     teammate_name: str,
@@ -321,39 +332,41 @@ def check_unflagged_background(
     """
     task = find_teammate_task(tasks, teammate_name)
     if not task or task.get("status") != "in_progress":
-        counts = load_unflagged_idle_counts(team_name)
-        if teammate_name in counts:
-            counts.pop(teammate_name, None)
-            save_unflagged_idle_counts(counts, team_name)
+        _clear_unflagged_idle(teammate_name, team_name)
         return None
 
     fire, _wait_class, record = unflagged_fire(task, team_name=team_name)
     if not fire or record is None:
-        counts = load_unflagged_idle_counts(team_name)
-        if teammate_name in counts:
-            counts.pop(teammate_name, None)
-            save_unflagged_idle_counts(counts, team_name)
+        _clear_unflagged_idle(teammate_name, team_name)
         return None
 
     task_id = str(task.get("id") or "")
     if task_id:
         stamp_idled_at(task_id, team_name=team_name)
 
-    counts = load_unflagged_idle_counts(team_name)
-    entry = counts.get(teammate_name, {})
-    if isinstance(entry, int):
-        entry = {"count": entry, "task_id": ""}
-    if not isinstance(entry, dict):
-        entry = {}
-    last_task_id = entry.get("task_id", "")
-    if last_task_id and last_task_id != task_id:
-        entry = {"count": 0, "task_id": task_id}
-    entry["count"] = int(entry.get("count", 0) or 0) + 1
-    entry["task_id"] = task_id
-    counts[teammate_name] = entry
-    save_unflagged_idle_counts(counts, team_name)
+    result = {"emit": False}
 
-    if entry["count"] == UNFLAGGED_IDLE_THRESHOLD:
+    def _bump(counts: dict) -> dict:
+        entry = counts.get(teammate_name, {})
+        if isinstance(entry, int):
+            entry = {"count": entry, "task_id": ""}
+        if not isinstance(entry, dict):
+            entry = {}
+        last_task_id = entry.get("task_id", "")
+        if last_task_id and last_task_id != task_id:
+            entry = {"count": 0, "task_id": task_id}
+        current = int(entry.get("count", 0) or 0)
+        # Emit once at N==3. Later same-task ticks must not keep writing.
+        if last_task_id == task_id and current >= UNFLAGGED_IDLE_THRESHOLD:
+            return counts
+        entry["count"] = current + 1
+        entry["task_id"] = task_id
+        counts[teammate_name] = entry
+        result["emit"] = entry["count"] == UNFLAGGED_IDLE_THRESHOLD
+        return counts
+
+    update_unflagged_idle_counts(_bump, team_name)
+    if result["emit"]:
         return UNFLAGGED_ADVISORY
     return None
 

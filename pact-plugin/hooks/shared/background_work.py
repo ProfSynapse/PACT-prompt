@@ -25,7 +25,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from .intentional_wait import validate_wait
+from .intentional_wait import canonical_since, validate_wait
 from .pact_context import get_team_name
 from .paths import get_claude_config_dir
 
@@ -46,7 +46,9 @@ WAIT_CLASS_NULL = "null"
 WAIT_CLASS_MALFORMED = "malformed"
 
 _DURABLE_WORD = re.compile(
-    r"(?<![A-Za-z0-9_-])(dev|start|serve|watch)(?![A-Za-z0-9_-])",
+    r"(?<![A-Za-z0-9_./-])("
+    + "|".join(re.escape(tok) for tok in sorted(DURABLE_COMMAND_TOKENS))
+    + r")(?![A-Za-z0-9_-])",
     re.IGNORECASE,
 )
 
@@ -69,7 +71,9 @@ def utc_now() -> datetime:
 
 
 def iso_now(now: datetime | None = None) -> str:
-    return (now or utc_now()).isoformat(timespec="seconds")
+    if now is None:
+        return canonical_since()
+    return now.isoformat(timespec="seconds")
 
 
 def classify_wait(task: Any) -> str | None:
@@ -104,19 +108,20 @@ def is_durable_command(command: Any) -> bool:
     return _DURABLE_WORD.search(command) is not None
 
 
-def registry_path(team_name: str | None = None) -> Path | None:
-    """Team-scoped registry path, or None when the team name is unusable."""
+def _team_file(filename: str, team_name: str | None = None) -> Path | None:
     name = team_name if team_name is not None else get_team_name()
     if not isinstance(name, str) or not name:
         return None
-    return get_claude_config_dir() / "teams" / name / REGISTRY_FILENAME
+    return get_claude_config_dir() / "teams" / name / filename
+
+
+def registry_path(team_name: str | None = None) -> Path | None:
+    """Team-scoped registry path, or None when the team name is unusable."""
+    return _team_file(REGISTRY_FILENAME, team_name)
 
 
 def unflagged_idle_path(team_name: str | None = None) -> Path | None:
-    name = team_name if team_name is not None else get_team_name()
-    if not isinstance(name, str) or not name:
-        return None
-    return get_claude_config_dir() / "teams" / name / UNFLAGGED_IDLE_FILENAME
+    return _team_file(UNFLAGGED_IDLE_FILENAME, team_name)
 
 
 def _record_expired(record: dict, now: datetime) -> bool:
@@ -159,20 +164,10 @@ def _sanitize_record(raw: Any) -> dict | None:
     return out
 
 
-def load_records(
-    team_name: str | None = None,
-    now: datetime | None = None,
-) -> list[dict]:
-    """Load outstanding (non-expired) records. Fail-open to []."""
-    path = registry_path(team_name)
-    if path is None:
-        return []
-    now = now or utc_now()
+def _parse_records_text(text: str, now: datetime) -> list[dict]:
     try:
-        if not path.exists():
-            return []
-        raw = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError, TypeError, ValueError):
+        raw = json.loads(text) if text.strip() else {}
+    except (json.JSONDecodeError, TypeError, ValueError):
         return []
     items = raw.get("records") if isinstance(raw, dict) else raw
     if not isinstance(items, list):
@@ -186,8 +181,103 @@ def load_records(
     return out
 
 
+def load_records(
+    team_name: str | None = None,
+    now: datetime | None = None,
+) -> list[dict]:
+    """Load outstanding (non-expired) records. Fail-open to []."""
+    path = registry_path(team_name)
+    if path is None:
+        return []
+    now = now or utc_now()
+    try:
+        text = _read_text_shared(path)
+    except FileNotFoundError:
+        return []
+    except (OSError, TypeError, ValueError):
+        return []
+    return _parse_records_text(text, now)
+
+
+def _read_text_shared(path: Path) -> str:
+    """Read text under a shared flock when available.
+
+    Writers take LOCK_EX then truncate-in-place. An unlocked reader can see
+    the empty or partial file and fail-open to no outstanding work.
+    """
+    if HAS_FLOCK:
+        with open(path, "r", encoding="utf-8") as f:
+            fcntl.flock(f, fcntl.LOCK_SH)
+            try:
+                return f.read()
+            finally:
+                fcntl.flock(f, fcntl.LOCK_UN)
+    return path.read_text(encoding="utf-8")
+
+
+def _write_text(path: Path, text: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if HAS_FLOCK:
+        with open(path, "a+", encoding="utf-8") as f:
+            fcntl.flock(f, fcntl.LOCK_EX)
+            try:
+                f.seek(0)
+                f.truncate()
+                f.write(text)
+            finally:
+                fcntl.flock(f, fcntl.LOCK_UN)
+    else:
+        path.write_text(text, encoding="utf-8")
+
+
 def _write_records(path: Path, records: list[dict]) -> None:
     _write_text(path, json.dumps({"records": records}))
+
+
+def _atomic_update_records(
+    mutator,
+    team_name: str | None = None,
+    now: datetime | None = None,
+) -> bool:
+    """Read-modify-write the registry under one lock. Fail-open."""
+    path = registry_path(team_name)
+    if path is None:
+        return False
+    now = now or utc_now()
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    def _apply(text: str) -> tuple[str, bool]:
+        current = _parse_records_text(text, now)
+        updated, changed = mutator(current)
+        if not changed:
+            return text, False
+        clean = [r for r in (_sanitize_record(x) for x in updated) if r is not None]
+        return json.dumps({"records": clean}), True
+
+    try:
+        if HAS_FLOCK:
+            with open(path, "a+", encoding="utf-8") as f:
+                fcntl.flock(f, fcntl.LOCK_EX)
+                try:
+                    f.seek(0)
+                    new_text, changed = _apply(f.read())
+                    if changed:
+                        f.seek(0)
+                        f.truncate()
+                        f.write(new_text)
+                finally:
+                    fcntl.flock(f, fcntl.LOCK_UN)
+            return True
+        try:
+            text = path.read_text(encoding="utf-8")
+        except FileNotFoundError:
+            text = ""
+        new_text, changed = _apply(text)
+        if changed:
+            path.write_text(new_text, encoding="utf-8")
+        return True
+    except OSError:
+        return False
 
 
 def save_records(
@@ -211,22 +301,12 @@ def append_record(record: dict, team_name: str | None = None) -> bool:
     clean = _sanitize_record(record)
     if clean is None:
         return False
-    current = load_records(team_name)
-    current.append(clean)
-    return save_records(current, team_name)
 
+    def _append(current: list[dict]) -> tuple[list[dict], bool]:
+        current.append(clean)
+        return current, True
 
-def remove_matching(
-    pred,
-    team_name: str | None = None,
-) -> int:
-    """Drop records for which pred(record) is true. Returns removals."""
-    current = load_records(team_name)
-    kept = [r for r in current if not pred(r)]
-    removed = len(current) - len(kept)
-    if removed:
-        save_records(kept, team_name)
-    return removed
+    return _atomic_update_records(_append, team_name=team_name)
 
 
 def matching_outstanding(
@@ -283,7 +363,7 @@ def stamp_idled_at(
     stamp = iso_now(now)
     changed = False
 
-    def _apply(records: list[dict]) -> list[dict]:
+    def _apply(records: list[dict]) -> tuple[list[dict], bool]:
         nonlocal changed
         out = []
         for record in records:
@@ -292,13 +372,10 @@ def stamp_idled_at(
                 record["idled_at"] = stamp
                 changed = True
             out.append(record)
-        return out
+        return out, changed
 
-    current = load_records(team_name, now=now)
-    updated = _apply(current)
-    if not changed:
-        return False
-    return save_records(updated, team_name)
+    ok = _atomic_update_records(_apply, team_name=team_name, now=now)
+    return bool(ok and changed)
 
 
 def idled_at_stale(
@@ -314,30 +391,63 @@ def idled_at_stale(
     return (now - idled).total_seconds() >= threshold_minutes * 60
 
 
-def load_unflagged_idle_counts(team_name: str | None = None) -> dict:
-    path = unflagged_idle_path(team_name)
-    if path is None or not path.exists():
-        return {}
+def _parse_idle_counts_text(text: str) -> dict:
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError, TypeError, ValueError):
+        data = json.loads(text) if text.strip() else {}
+    except (json.JSONDecodeError, TypeError, ValueError):
         return {}
     return data if isinstance(data, dict) else {}
 
 
-def _write_text(path: Path, text: str) -> None:
+def load_unflagged_idle_counts(team_name: str | None = None) -> dict:
+    path = unflagged_idle_path(team_name)
+    if path is None:
+        return {}
+    try:
+        text = _read_text_shared(path)
+    except FileNotFoundError:
+        return {}
+    except (OSError, TypeError, ValueError):
+        return {}
+    return _parse_idle_counts_text(text)
+
+
+def update_unflagged_idle_counts(mutator, team_name: str | None = None) -> dict:
+    """Atomic RMW of unflagged_background_idle.json. Fail-open to {}."""
+    path = unflagged_idle_path(team_name)
+    if path is None:
+        return {}
     path.parent.mkdir(parents=True, exist_ok=True)
-    if HAS_FLOCK:
-        with open(path, "a+") as f:
-            fcntl.flock(f, fcntl.LOCK_EX)
-            try:
-                f.seek(0)
-                f.truncate()
-                f.write(text)
-            finally:
-                fcntl.flock(f, fcntl.LOCK_UN)
-    else:
-        path.write_text(text, encoding="utf-8")
+
+    def _apply(text: str) -> tuple[str, dict]:
+        counts = _parse_idle_counts_text(text)
+        updated = mutator(counts)
+        if not isinstance(updated, dict):
+            updated = {}
+        return json.dumps(updated), updated
+
+    try:
+        if HAS_FLOCK:
+            with open(path, "a+", encoding="utf-8") as f:
+                fcntl.flock(f, fcntl.LOCK_EX)
+                try:
+                    f.seek(0)
+                    new_text, updated = _apply(f.read())
+                    f.seek(0)
+                    f.truncate()
+                    f.write(new_text)
+                finally:
+                    fcntl.flock(f, fcntl.LOCK_UN)
+            return updated
+        try:
+            text = path.read_text(encoding="utf-8")
+        except FileNotFoundError:
+            text = ""
+        new_text, updated = _apply(text)
+        path.write_text(new_text, encoding="utf-8")
+        return updated
+    except OSError:
+        return {}
 
 
 def save_unflagged_idle_counts(counts: dict, team_name: str | None = None) -> bool:

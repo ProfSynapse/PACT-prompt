@@ -95,6 +95,18 @@ class TestDurableCommand:
     def test_watchdog_is_not_watch(self):
         assert bw.is_durable_command("python -m watchdog") is False
 
+    def test_path_segment_watch_is_not_durable(self):
+        assert bw.is_durable_command("pytest tests/watch/foo.py") is False
+
+    def test_path_segment_dev_is_not_durable(self):
+        assert bw.is_durable_command("cd packages/dev && pytest -q") is False
+
+    def test_npm_run_start_is_durable(self):
+        assert bw.is_durable_command("npm run start") is True
+
+    def test_test_start_helper_is_not_durable(self):
+        assert bw.is_durable_command("python test_start_helper.py") is False
+
 
 class TestUnflaggedFire:
     def test_in_progress_record_null_wait_fires_null(self):

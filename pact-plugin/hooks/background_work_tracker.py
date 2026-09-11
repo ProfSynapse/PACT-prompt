@@ -89,13 +89,25 @@ def bind_launcher_identity(input_data: dict, team_name: str) -> tuple[str, str, 
     if not isinstance(session_id, str) or not session_id:
         return None
 
-    named_by_field = bool(input_data.get("agent_name") or input_data.get("agent_id"))
-    named_by_registry = False
-    if not named_by_field:
+    named_by_name = (
+        isinstance(input_data.get("agent_name"), str) and bool(input_data.get("agent_name"))
+    )
+    agent_id = input_data.get("agent_id")
+    named_by_id_split = isinstance(agent_id, str) and "@" in agent_id
+    registry_name = None
+    if not named_by_name and not named_by_id_split:
         resolved = registry_resolve(session_id)
-        named_by_registry = bool(resolved and "@" in resolved)
+        if resolved and "@" in resolved:
+            registry_name = resolved.split("@")[0]
+        else:
+            # No unique stdin name and no registry row — do not type-strip.
+            # A hex agent_id is an in-process discriminator, not a teammate name.
+            return None
 
-    agent_name = resolve_agent_name(input_data, team_name=team_name)
+    if registry_name:
+        agent_name = registry_name
+    else:
+        agent_name = resolve_agent_name(input_data, team_name=team_name)
     if not agent_name:
         return None
 
@@ -105,7 +117,12 @@ def bind_launcher_identity(input_data: dict, team_name: str) -> tuple[str, str, 
         type_strip = (
             agent_type[len("pact-"):] if agent_type.startswith("pact-") else agent_type
         )
-    if agent_name == type_strip and not named_by_field and not named_by_registry:
+    if (
+        agent_name == type_strip
+        and not named_by_name
+        and not named_by_id_split
+        and registry_name is None
+    ):
         return None
 
     matches = []
@@ -120,6 +137,8 @@ def bind_launcher_identity(input_data: dict, team_name: str) -> tuple[str, str, 
         if task_id is None:
             continue
         matches.append(str(task_id))
+        if len(matches) > 1:
+            return None
     if len(matches) != 1:
         return None
     return agent_name, session_id, matches[0]
