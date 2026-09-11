@@ -1,25 +1,32 @@
 #!/usr/bin/env python3
 """
 Location: pact-plugin/hooks/teammate_idle.py
-Summary: TeammateIdle hook — resource-management for zombie teammates.
+Summary: TeammateIdle hook — resource-management for zombie teammates,
+         plus the #1625 unflagged-background Layer 2/3 advisory.
          Tracks consecutive idle events for teammates whose task is
          completed; at threshold N=3 suggests shutdown, at N=5 advises the
-         team-lead to `TaskStop` the teammate.
+         team-lead to `TaskStop` the teammate. Separately, when a teammate
+         idles in_progress with outstanding recorded Bash background work
+         and no valid intentional_wait, emits a once-at-N=3 advisory.
 Used by: hooks.json TeammateIdle hook
 
-# livelock-safe: threshold-escalation, not a nag. Message emissions
-# transition only at the IDLE_SUGGEST_THRESHOLD and IDLE_FORCE_THRESHOLD
-# boundaries — not every idle tick. Above IDLE_FORCE_THRESHOLD the stop
-# advisory is re-emitted per tick until the team-lead processes it and the
-# teammate is stopped (safety is protocol-level, not a structural cap).
-# Exits deterministically on every code path. Does NOT consume
-# intentional_wait.
+# livelock-safe: two emission classes, both threshold-gated.
+# (1) completed-task zombie: messages only at IDLE_SUGGEST_THRESHOLD and
+#     IDLE_FORCE_THRESHOLD; per-tick re-emit only after FORCE until TaskStop.
+# (2) unflagged-background: systemMessage once at consecutive idle N=3
+#     (separate counter file unflagged_background_idle.json — idle_counts.json
+#     pops the teammate key on every in_progress tick). No re-emit on later
+#     ticks. No IDLE_PREAMBLE on this advisory (the zombie "no response
+#     needed" line would contradict SET-a-wait).
+# suppressOutput on every other path. Exits deterministically. Consumes
+# intentional_wait only for class (2) via the U1 fire predicate.
 
 Idle cleanup: Track consecutive idle events for completed agents. After 3,
 suggest shutdown. After 5, advise the team-lead to `TaskStop` the teammate.
 
 Input: JSON from stdin with teammate_name, team_name
-Output: JSON with systemMessage (shutdown suggestion / stop advisory)
+Output: JSON with systemMessage (shutdown suggestion / stop advisory /
+        unflagged-background Layer 2/3 advisory)
 """
 
 from __future__ import annotations
@@ -40,6 +47,13 @@ _hooks_dir = Path(__file__).parent
 if str(_hooks_dir) not in sys.path:
     sys.path.insert(0, str(_hooks_dir))
 
+from shared.background_work import (
+    UNFLAGGED_IDLE_THRESHOLD,
+    load_unflagged_idle_counts,
+    save_unflagged_idle_counts,
+    stamp_idled_at,
+    unflagged_fire,
+)
 from shared.error_output import hook_error_json
 import shared.pact_context as pact_context
 from shared.pact_context import get_team_name
@@ -284,6 +298,66 @@ def check_idle_cleanup(
     return None, False
 
 
+UNFLAGGED_ADVISORY = (
+    "Unflagged background work: you have recorded outstanding harness-background "
+    "Bash work and no valid intentional_wait. SET a well-formed "
+    "intentional_wait{reason, expected_resolver, since} before ending the "
+    "turn, or transfer the watch: stage state, SendMessage the team-lead, and "
+    "flag expected_resolver=lead with a free-form reason that is not "
+    "awaiting_lead_completion (e.g. awaiting_lead_takeover)."
+)
+
+
+def check_unflagged_background(
+    tasks: list[dict],
+    teammate_name: str,
+    team_name: str,
+) -> str | None:
+    """Threshold-gated Layer 2/3 advisory for unflagged outstanding work.
+
+    Uses unflagged_background_idle.json — not idle_counts.json — because
+    check_idle_cleanup pops the whole teammate key on every in_progress tick.
+    Emits only at N == UNFLAGGED_IDLE_THRESHOLD (3), never later.
+    """
+    task = find_teammate_task(tasks, teammate_name)
+    if not task or task.get("status") != "in_progress":
+        counts = load_unflagged_idle_counts(team_name)
+        if teammate_name in counts:
+            counts.pop(teammate_name, None)
+            save_unflagged_idle_counts(counts, team_name)
+        return None
+
+    fire, _wait_class, record = unflagged_fire(task, team_name=team_name)
+    if not fire or record is None:
+        counts = load_unflagged_idle_counts(team_name)
+        if teammate_name in counts:
+            counts.pop(teammate_name, None)
+            save_unflagged_idle_counts(counts, team_name)
+        return None
+
+    task_id = str(task.get("id") or "")
+    if task_id:
+        stamp_idled_at(task_id, team_name=team_name)
+
+    counts = load_unflagged_idle_counts(team_name)
+    entry = counts.get(teammate_name, {})
+    if isinstance(entry, int):
+        entry = {"count": entry, "task_id": ""}
+    if not isinstance(entry, dict):
+        entry = {}
+    last_task_id = entry.get("task_id", "")
+    if last_task_id and last_task_id != task_id:
+        entry = {"count": 0, "task_id": task_id}
+    entry["count"] = int(entry.get("count", 0) or 0) + 1
+    entry["task_id"] = task_id
+    counts[teammate_name] = entry
+    save_unflagged_idle_counts(counts, team_name)
+
+    if entry["count"] == UNFLAGGED_IDLE_THRESHOLD:
+        return UNFLAGGED_ADVISORY
+    return None
+
+
 def reset_idle_count(teammate_name: str, idle_counts_path: str) -> None:
     """
     Reset a teammate's idle count (e.g., when they receive new work).
@@ -333,6 +407,8 @@ def main():
         if cleanup_msg:
             messages.append(cleanup_msg)
 
+        unflagged_msg = check_unflagged_background(tasks, teammate_name, team_name)
+
         if messages:
             if should_shutdown:
                 # Hooks cannot call tools directly. Instruct the orchestrator to
@@ -344,6 +420,9 @@ def main():
 
             output = {"systemMessage": IDLE_PREAMBLE + " | ".join(messages)}
             print(json.dumps(output))
+        elif unflagged_msg:
+            # No IDLE_PREAMBLE: "no response needed" would contradict SET-a-wait.
+            print(json.dumps({"systemMessage": unflagged_msg}))
         else:
             print(_SUPPRESS_OUTPUT)
 

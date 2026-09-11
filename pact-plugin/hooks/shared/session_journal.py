@@ -198,6 +198,17 @@ _REQUIRED_FIELDS_BY_TYPE: dict[str, dict[str, type]] = {
         "agent": str,
         "since": str,
     },
+    # hooks/unflagged_background_scan.py writes unflagged_background_wait
+    # (#1625) with task_id, agent (the idle teammate / task owner), and
+    # registered_at (the U1 registry stamp — also the re-arm discriminator
+    # for once-per-(task_id, registered_at) journal-read dedup). Honest wait
+    # class lives in the optional wait_class field; this type must never
+    # stamp awaiting_lead_completion or reuse missed_wake.
+    "unflagged_background_wait": {
+        "task_id": str,
+        "agent": str,
+        "registered_at": str,
+    },
     # commands/orchestrate.md writes s2_state_seeded with worktree (quoted
     # string), agents (JSON list), and boundaries (JSON object → dict).
     # No hook-based writer; CLI-only event.
@@ -471,6 +482,13 @@ _OPTIONAL_FIELDS_BY_TYPE: dict[str, dict[str, type]] = {
     "missed_wake": {
         "task_subject": str,
         "reason": str,
+    },
+    # hooks/unflagged_background_scan.py writes optional task_subject and
+    # wait_class (missing / null / malformed). The required-fields
+    # registration above activates this optional check.
+    "unflagged_background_wait": {
+        "task_subject": str,
+        "wait_class": str,
     },
     # hooks/task_lifecycle_gate.py writes teachback_ack with an optional concern
     # string — the teammate's variety_acknowledgment.concern, present only when

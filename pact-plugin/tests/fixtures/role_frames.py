@@ -77,6 +77,44 @@ def teammate_frame(agent_type="pact-backend-coder", **extra):
     return _frame(agent_type, **extra)
 
 
+def synthesized_teammate_bash_background(
+    command="pytest -q",
+    agent_type="pact-architect",
+    agent_name="architect",
+    session_id="sid-architect",
+    run_in_background=True,
+    **extra,
+):
+    """Synthesized PostToolUse Bash + run_in_background frame.
+
+    Not a live capture — this checkout cannot fire Claude Code teammate
+    PostToolUse. Keys are named from in-repo contracts:
+
+    - ``tool_name`` / ``tool_input.command``: wait_filler_gate.py Input
+    - ``tool_input.run_in_background``: 1620 runbook + pact-qa-engineer.md
+    - ``agent_type`` / ``session_id``: HOOK_STDIN_DISCRIMINATORS PostToolUse
+      row and captured PostToolUse frames
+    - ``agent_name``: in-process identity (tmux frames omit it; bind then
+      uses session_id registry Step 3.5)
+
+    ``tool_response`` is omitted: no committed Bash-background response
+    shape exists. The tracker leaves harness_task_id empty.
+    """
+    frame = teammate_frame(
+        agent_type,
+        hook_event_name="PostToolUse",
+        tool_name="Bash",
+        tool_input={
+            "command": command,
+            "run_in_background": run_in_background,
+        },
+        session_id=session_id,
+        agent_name=agent_name,
+    )
+    frame.update(extra)
+    return frame
+
+
 def plain_frame(**extra):
     """A non-PACT / no-``--agent`` primary frame (agent_type absent)."""
     return _frame(None, **extra)

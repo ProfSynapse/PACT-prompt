@@ -66,7 +66,11 @@ SEAM_DEPENDENT_HOOKS: frozenset[str] = frozenset({
     # (fail-LOUD) -> L2-only, never L3 (no mode-divergent signal -> no both-modes
     # matrix). KD-10.
     "merge_guard_pre", "merge_guard_post",
-})  # 14
+    # #1625 unflagged-background floor: tracker writes the team registry via
+    # get_team_name + iter_team_task_jsons; the lead scan reads get_task_list
+    # + that registry. Both fail-open silent on a broken seam.
+    "background_work_tracker", "unflagged_background_scan",
+})  # 16
 
 # Hooks confirmed to FAIL SILENTLY on a broken seam (a consequential effect that
 # should fire simply does not, with no error) -> they additionally require an L3
@@ -85,7 +89,8 @@ SEAM_DEPENDENT_HOOKS: frozenset[str] = frozenset({
 L3_LIVE_PROBE_HOOKS: frozenset[str] = frozenset({
     "missed_wake_scan", "teammate_idle", "agent_handoff_emitter",
     "task_lifecycle_gate",
-})  # 4
+    "unflagged_background_scan",
+})  # 5
 
 # Seam-dependent hooks ASSESSED in the CODE-phase fails-silent check and HELD at
 # L2-only (no consequential silent no-op meeting the L3 bar). Retained as a
@@ -133,8 +138,19 @@ _SEAM_HOOK_HELPER_CLOSURE: dict[str, frozenset[str]] = {
         "session_journal", "session_registry", "session_state", "task_utils",
     }),
     "teammate_idle": frozenset({
-        "constants", "error_output", "pact_context", "paths", "session_journal",
+        "background_work", "constants", "error_output", "intentional_wait",
+        "pact_context", "paths", "session_journal",
         "session_registry", "session_state", "task_utils",
+    }),
+    "background_work_tracker": frozenset({
+        "background_work", "constants", "intentional_wait", "pact_context",
+        "paths", "session_journal", "session_registry", "session_state",
+        "task_utils",
+    }),
+    "unflagged_background_scan": frozenset({
+        "background_work", "constants", "intentional_wait", "pact_context",
+        "paths", "session_journal", "session_registry", "session_state",
+        "task_utils",
     }),
     "agent_handoff_emitter": frozenset({
         "agent_handoff_marker", "canonical_json", "constants",
