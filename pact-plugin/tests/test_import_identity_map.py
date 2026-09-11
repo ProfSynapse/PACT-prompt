@@ -71,7 +71,10 @@ def test_resolve_origins_working_memory_conditional_on_carrier():
 
 
 def test_resolve_origins_omits_externals():
-    assert resolve_origins(["json", "pathlib", "pytest"]) == {}
+    # json/pathlib/pytest: real path origins outside the plugin tree.
+    # os/sys: sentinel origins ('frozen'/'built-in') — non-path strings that
+    # must not be resolve()-anchored under cwd and leaked into the map.
+    assert resolve_origins(["json", "pathlib", "pytest", "os", "sys"]) == {}
 
 
 def test_resolve_origins_missing_module_recorded_none():

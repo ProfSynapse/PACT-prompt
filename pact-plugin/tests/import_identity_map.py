@@ -72,8 +72,9 @@ def imported_names(test_file):
 
 
 def resolve_origins(names):
-    """find_spec each dotted name -> origin, repo-relative when under the
-    plugin root, None when unresolvable. Externals omitted entirely.
+    """find_spec each dotted name -> origin, repo-relative and
+    resolve-normalized when under the plugin root (no 'tests/../' spellings),
+    None when unresolvable. Externals omitted entirely.
 
     find_spec on a dotted name imports its parent packages — acceptable
     here (scripts/__init__.py is trivial); flagged so a future heavyweight
@@ -90,7 +91,17 @@ def resolve_origins(names):
         if not origin:
             out[name] = None
             continue
+        # resolve() before relative_to: sys.path entries carrying '..' (e.g.
+        # a tests/../skills insert) otherwise leak 'tests/../'-spelled origins
+        # into the map — pure spelling noise that a baseline diff then has to
+        # normalize away. PLUGIN_ROOT is resolved, so the pair stays consistent.
+        # Non-path sentinel origins ('frozen', 'built-in') are relative, so the
+        # is_absolute gate must precede resolve(): resolving first would anchor
+        # them under cwd and leak them into the map as externals.
         p = Path(origin)
+        if not p.is_absolute():
+            continue  # sentinel origin or relative external — not our concern
+        p = p.resolve()
         try:
             out[name] = str(p.relative_to(PLUGIN_ROOT))
         except ValueError:

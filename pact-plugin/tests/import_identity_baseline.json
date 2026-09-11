@@ -59,7 +59,7 @@
       "helpers.make_pin_entry": null,
       "pathlib.Path": null,
       "pin_caps": "hooks/pin_caps.py",
-      "scripts.config": "tests/../skills/pact-memory/scripts/config.py",
+      "scripts.config": "skills/pact-memory/scripts/config.py",
       "scripts.config.MEMORY_DIR_ENV": null,
       "scripts.config.STORE_ORIGIN_HOME": null,
       "scripts.config.resolve_db_path": null,
@@ -190,16 +190,16 @@
       "__future__.annotations": null,
       "helpers": "tests/helpers.py",
       "helpers.create_test_schema": null,
-      "scripts.memory_api": "tests/../skills/pact-memory/scripts/memory_api.py",
+      "scripts.memory_api": "skills/pact-memory/scripts/memory_api.py",
       "scripts.memory_api.PACTMemory": null,
       "unittest.mock.patch": null
     },
     "tests/test_caller_path_is_not_created.py": {
       "__future__.annotations": null,
       "pathlib.Path": null,
-      "scripts": "tests/../skills/pact-memory/scripts/__init__.py",
-      "scripts.cli": "tests/../skills/pact-memory/scripts/cli.py",
-      "scripts.database": "tests/../skills/pact-memory/scripts/database.py",
+      "scripts": "skills/pact-memory/scripts/__init__.py",
+      "scripts.cli": "skills/pact-memory/scripts/cli.py",
+      "scripts.database": "skills/pact-memory/scripts/database.py",
       "scripts.database.get_connection": null
     },
     "tests/test_canary_checklist_count.py": {
@@ -220,8 +220,8 @@
     },
     "tests/test_catchup_reason_is_read.py": {
       "__future__.annotations": null,
-      "scripts": "tests/../skills/pact-memory/scripts/__init__.py",
-      "scripts.embedding_catchup": "tests/../skills/pact-memory/scripts/embedding_catchup.py",
+      "scripts": "skills/pact-memory/scripts/__init__.py",
+      "scripts.embedding_catchup": "skills/pact-memory/scripts/embedding_catchup.py",
       "unittest.mock.patch": null
     },
     "tests/test_check_pin_caps.py": {
@@ -244,9 +244,9 @@
       "pathlib.Path": null
     },
     "tests/test_ci_env_truthiness.py": {
-      "memory_init": "tests/../skills/pact-memory/scripts/memory_init.py",
-      "memory_init._ci_is_declared": null,
-      "memory_init.check_and_install_dependencies": null,
+      "scripts.memory_init": "skills/pact-memory/scripts/memory_init.py",
+      "scripts.memory_init._ci_is_declared": null,
+      "scripts.memory_init.check_and_install_dependencies": null,
       "unittest.mock.MagicMock": null,
       "unittest.mock.patch": null
     },
@@ -274,16 +274,16 @@
     },
     "tests/test_claude_md_resolver_parity.py": {
       "pathlib.Path": null,
-      "scripts.memory_api": "tests/../skills/pact-memory/scripts/memory_api.py",
+      "scripts.memory_api": "skills/pact-memory/scripts/memory_api.py",
       "scripts.memory_api.PACTMemory": null,
+      "scripts.working_memory": "skills/pact-memory/scripts/working_memory.py",
+      "scripts.working_memory._get_claude_md_path": null,
+      "scripts.working_memory._resolve_display_claude_md_path": null,
       "shared.claude_md_manager": "hooks/shared/claude_md_manager.py",
       "shared.claude_md_manager.resolve_project_claude_md_path": null,
       "staleness": "hooks/staleness.py",
       "staleness.get_project_claude_md_path": null,
-      "typing.Optional": null,
-      "working_memory": "skills/pact-memory/scripts/working_memory.py",
-      "working_memory._get_claude_md_path": null,
-      "working_memory._resolve_display_claude_md_path": null
+      "typing.Optional": null
     },
     "tests/test_claudemd_write_prohibition_guard.py": {
       "pathlib.Path": null
@@ -306,7 +306,6 @@
       "pathlib.Path": null
     },
     "tests/test_compact_summary_session_scope.py": {
-      "pathlib.Path": null,
       "postcompact_archive": "hooks/postcompact_archive.py",
       "postcompact_archive.main": null,
       "session_init": "hooks/session_init.py",
@@ -368,25 +367,26 @@
     },
     "tests/test_connection_transaction_mode.py": {
       "__future__.annotations": null,
-      "scripts.database": "tests/../skills/pact-memory/scripts/database.py",
+      "scripts.database": "skills/pact-memory/scripts/database.py",
       "scripts.database.get_connection": null,
       "scripts.database.sqlite3": null
     },
     "tests/test_containment_certification.py": {
       "__future__.annotations": null,
       "pathlib.Path": null,
+      "scripts": "skills/pact-memory/scripts/__init__.py",
+      "scripts.working_memory": "skills/pact-memory/scripts/working_memory.py",
       "session_init": "hooks/session_init.py",
       "session_init.check_pinned_staleness": null,
       "shared.claude_md_manager": "hooks/shared/claude_md_manager.py",
       "shared.claude_md_manager.migrate_to_managed_structure": null,
       "shared.session_resume": "hooks/shared/session_resume.py",
       "shared.session_resume.update_session_info": null,
-      "unittest.mock.patch": null,
-      "working_memory": "skills/pact-memory/scripts/working_memory.py"
+      "unittest.mock.patch": null
     },
     "tests/test_containment_guard.py": {
       "pathlib.Path": null,
-      "scripts.working_memory": "tests/../skills/pact-memory/scripts/working_memory.py",
+      "scripts.working_memory": "skills/pact-memory/scripts/working_memory.py",
       "session_init": "hooks/session_init.py",
       "session_init.check_pinned_staleness": null,
       "shared.claude_md_manager": "hooks/shared/claude_md_manager.py",
@@ -412,8 +412,7 @@
       "helpers.create_test_schema": null,
       "memory_repair": "scripts/memory_repair/__init__.py",
       "memory_repair.shred_detect": "scripts/memory_repair/shred_detect.py",
-      "pathlib.Path": null,
-      "scripts.database": "tests/../skills/pact-memory/scripts/database.py",
+      "scripts.database": "skills/pact-memory/scripts/database.py",
       "scripts.database.DICT_LIST_FIELDS": null,
       "scripts.database.LIST_FIELDS": null,
       "scripts.database.create_memory": null,
@@ -431,9 +430,9 @@
     },
     "tests/test_declared_anchor_contract.py": {
       "pathlib.Path": null,
-      "scripts": "tests/../skills/pact-memory/scripts/__init__.py",
-      "scripts.cli": "tests/../skills/pact-memory/scripts/cli.py",
-      "scripts.working_memory": "tests/../skills/pact-memory/scripts/working_memory.py",
+      "scripts": "skills/pact-memory/scripts/__init__.py",
+      "scripts.cli": "skills/pact-memory/scripts/cli.py",
+      "scripts.working_memory": "skills/pact-memory/scripts/working_memory.py",
       "scripts.working_memory.ContainmentError": null,
       "scripts.working_memory.SyncResult": null,
       "scripts.working_memory._atomic_write_text": null,
@@ -497,7 +496,6 @@
     "tests/test_dispatch_gate_stale_diagnosis.py": {
       "dispatch_gate": "hooks/dispatch_gate.py",
       "dispatch_gate._STALE_REALIGN_HINT": null,
-      "pathlib.Path": null,
       "shared.pact_context": "hooks/shared/pact_context.py",
       "test_dispatch_gate": "tests/test_dispatch_gate.py",
       "test_dispatch_gate._TEAM": null,
@@ -507,7 +505,6 @@
       "test_dispatch_gate._seed_team": null
     },
     "tests/test_dispatch_helpers.py": {
-      "pathlib.Path": null,
       "shared.dispatch_helpers": "hooks/shared/dispatch_helpers.py",
       "shared.dispatch_helpers.is_owner_bearing_write": null,
       "shared.dispatch_helpers.is_owner_wiring_shape": null,
@@ -526,7 +523,6 @@
       "pathlib.Path": null
     },
     "tests/test_dispatch_variety_teachback_ack_emit.py": {
-      "pathlib.Path": null,
       "shared.session_journal": "hooks/shared/session_journal.py",
       "task_lifecycle_gate": "hooks/task_lifecycle_gate.py"
     },
@@ -542,12 +538,12 @@
       "pathlib.Path": null
     },
     "tests/test_embedding_catchup.py": {
-      "embeddings": "skills/pact-memory/scripts/embeddings.py",
-      "embeddings.MIN_CATCHUP_RAM_MB": null,
-      "embeddings.generate_embedding": null,
-      "embeddings.generate_embedding_text": null,
       "io.StringIO": null,
       "pathlib.Path": null,
+      "scripts.embeddings": "skills/pact-memory/scripts/embeddings.py",
+      "scripts.embeddings.MIN_CATCHUP_RAM_MB": null,
+      "scripts.embeddings.generate_embedding": null,
+      "scripts.embeddings.generate_embedding_text": null,
       "types.ModuleType": null,
       "unittest.mock.MagicMock": null,
       "unittest.mock.patch": null
@@ -555,9 +551,9 @@
     "tests/test_embedding_status_contract.py": {
       "__future__.annotations": null,
       "pathlib.Path": null,
-      "scripts": "tests/../skills/pact-memory/scripts/__init__.py",
-      "scripts.cli": "tests/../skills/pact-memory/scripts/cli.py",
-      "scripts.memory_api": "tests/../skills/pact-memory/scripts/memory_api.py",
+      "scripts": "skills/pact-memory/scripts/__init__.py",
+      "scripts.cli": "skills/pact-memory/scripts/cli.py",
+      "scripts.memory_api": "skills/pact-memory/scripts/memory_api.py",
       "scripts.memory_api.PACTMemory": null,
       "types.SimpleNamespace": null,
       "unittest.mock.MagicMock": null,
@@ -567,21 +563,20 @@
     "tests/test_embedding_status_wiring.py": {
       "__future__.annotations": null,
       "pathlib.Path": null,
-      "scripts": "tests/../skills/pact-memory/scripts/__init__.py",
-      "scripts.memory_api": "tests/../skills/pact-memory/scripts/memory_api.py",
+      "scripts": "skills/pact-memory/scripts/__init__.py",
+      "scripts.memory_api": "skills/pact-memory/scripts/memory_api.py",
       "scripts.memory_api.PACTMemory": null,
       "unittest.mock.patch": null
     },
     "tests/test_embedding_window.py": {
       "__future__.annotations": null,
       "pathlib.Path": null,
-      "scripts.embeddings": "tests/../skills/pact-memory/scripts/embeddings.py",
+      "scripts.embeddings": "skills/pact-memory/scripts/embeddings.py",
       "scripts.embeddings.EMBEDDING_MAX_TOKENS": null,
       "scripts.embeddings.EmbeddingService": null,
       "scripts.embeddings.MEASURED_MEDIAN_TOKENS": null
     },
     "tests/test_emit_skip_accounting.py": {
-      "pathlib.Path": null,
       "shared.session_journal": "hooks/shared/session_journal.py",
       "shared.session_journal.SKIP_CAUSE_RAISED": null,
       "shared.session_journal.SKIP_CAUSE_RETURNED_FALSE": null,
@@ -657,8 +652,7 @@
     },
     "tests/test_environment_drift.py": {
       "file_tracker": "hooks/file_tracker.py",
-      "file_tracker.get_environment_delta": null,
-      "pathlib.Path": null
+      "file_tracker.get_environment_delta": null
     },
     "tests/test_environment_drift_convention.py": {
       "pathlib.Path": null
@@ -672,7 +666,6 @@
       "git_commit_check.main": null,
       "merge_guard_post": "hooks/merge_guard_post.py",
       "merge_guard_post.main": null,
-      "pathlib.Path": null,
       "peer_inject": "hooks/peer_inject.py",
       "peer_inject.main": null,
       "postcompact_archive": "hooks/postcompact_archive.py",
@@ -731,10 +724,10 @@
     },
     "tests/test_file_permissions.py": {
       "pathlib.Path": null,
-      "scripts.database": "tests/../skills/pact-memory/scripts/database.py",
+      "scripts.database": "skills/pact-memory/scripts/database.py",
       "scripts.database.get_connection": null,
       "scripts.database.get_db_path": null,
-      "scripts.setup_memory": "tests/../skills/pact-memory/scripts/setup_memory.py",
+      "scripts.setup_memory": "skills/pact-memory/scripts/setup_memory.py",
       "scripts.setup_memory.ensure_directories": null,
       "unittest.mock.patch": null
     },
@@ -744,7 +737,6 @@
       "file_tracker.check_conflict": null,
       "file_tracker.main": null,
       "file_tracker.track_edit": null,
-      "pathlib.Path": null,
       "unittest.mock.patch": null
     },
     "tests/test_file_tracker_composite_key_edges.py": {
@@ -758,18 +750,14 @@
     },
     "tests/test_gate_crashpath_hardening.py": {
       "bootstrap_gate": "hooks/bootstrap_gate.py",
-      "pathlib.Path": null,
       "shared.session_journal": "hooks/shared/session_journal.py",
       "task_lifecycle_gate": "hooks/task_lifecycle_gate.py",
       "tests.test_bootstrap_gate": "tests/test_bootstrap_gate.py",
       "tests.test_bootstrap_gate._make_input": null,
       "tests.test_bootstrap_gate._setup_pact_session": null
     },
-    "tests/test_gate_invalid_mode_resolution.py": {
-      "pathlib.Path": null
-    },
+    "tests/test_gate_invalid_mode_resolution.py": {},
     "tests/test_gh_helpers.py": {
-      "pathlib.Path": null,
       "shared": "hooks/shared/__init__.py",
       "shared.gh_helpers": "hooks/shared/gh_helpers.py",
       "shared.gh_helpers.check_pr_state": null,
@@ -788,7 +776,6 @@
       "git_commit_check.get_staged_file_content": null,
       "git_commit_check.get_staged_files": null,
       "git_commit_check.main": null,
-      "pathlib.Path": null,
       "unittest.mock.MagicMock": null,
       "unittest.mock.patch": null
     },
@@ -867,7 +854,6 @@
       "__future__.annotations": null,
       "fixtures.emitter": "tests/fixtures/emitter.py",
       "fixtures.emitter.VALID_HANDOFF": null,
-      "pathlib.Path": null,
       "shared.handoff_schema": "hooks/shared/handoff_schema.py",
       "shared.handoff_schema.HANDOFF_CANONICAL_FIELDS": null,
       "shared.handoff_schema.HANDOFF_LEGACY_ALIASES": null,
@@ -971,7 +957,7 @@
       "helpers": "tests/helpers.py",
       "helpers.create_test_schema": null,
       "pathlib.Path": null,
-      "scripts.database": "tests/../skills/pact-memory/scripts/database.py",
+      "scripts.database": "skills/pact-memory/scripts/database.py",
       "scripts.database.create_memory": null,
       "unittest.mock.patch": null
     },
@@ -1034,18 +1020,20 @@
     "tests/test_lock_identity_certification.py": {
       "__future__.annotations": null,
       "pathlib.Path": null,
-      "shared.claude_md_manager": "hooks/shared/claude_md_manager.py",
-      "working_memory": "skills/pact-memory/scripts/working_memory.py"
+      "scripts": "skills/pact-memory/scripts/__init__.py",
+      "scripts.working_memory": "skills/pact-memory/scripts/working_memory.py",
+      "shared.claude_md_manager": "hooks/shared/claude_md_manager.py"
     },
     "tests/test_managed_comment_emitted.py": {
       "__future__.annotations": null,
       "pathlib.Path": null,
+      "scripts": "skills/pact-memory/scripts/__init__.py",
+      "scripts.working_memory": "skills/pact-memory/scripts/working_memory.py",
       "shared.claude_md_manager": "hooks/shared/claude_md_manager.py",
       "shared.claude_md_manager._build_migrated_content": null,
       "shared.claude_md_manager.ensure_project_memory_md": null,
       "shared.session_resume": "hooks/shared/session_resume.py",
-      "shared.session_resume.update_session_info": null,
-      "working_memory": "skills/pact-memory/scripts/working_memory.py"
+      "shared.session_resume.update_session_info": null
     },
     "tests/test_managed_comment_mirror.py": {
       "__future__.annotations": null,
@@ -1053,11 +1041,11 @@
     },
     "tests/test_marker_helper_twin_drift.py": {
       "__future__.annotations": null,
-      "pathlib.Path": null,
+      "scripts": "skills/pact-memory/scripts/__init__.py",
+      "scripts.working_memory": "skills/pact-memory/scripts/working_memory.py",
       "shared.pin_markers": "hooks/shared/pin_markers.py",
       "tests": "tests/__init__.py",
-      "tests.test_staleness": "tests/test_staleness.py",
-      "working_memory": "skills/pact-memory/scripts/working_memory.py"
+      "tests.test_staleness": "tests/test_staleness.py"
     },
     "tests/test_marker_namespace.py": {
       "pathlib.Path": null,
@@ -1074,7 +1062,6 @@
     "tests/test_marker_schema.py": {
       "bootstrap_gate": "hooks/bootstrap_gate.py",
       "bootstrap_gate._BLOCKED_TOOLS": null,
-      "pathlib.Path": null,
       "shared.marker_schema": "hooks/shared/marker_schema.py",
       "shared.marker_schema.MARKER_MAX_BYTES": null,
       "shared.marker_schema.MARKER_SCHEMA_VERSION": null,
@@ -1090,7 +1077,7 @@
       "helpers.make_cli_memory_dict": null,
       "io.StringIO": null,
       "pathlib.Path": null,
-      "scripts.cli": "tests/../skills/pact-memory/scripts/cli.py",
+      "scripts.cli": "skills/pact-memory/scripts/cli.py",
       "scripts.cli._COMMANDS": null,
       "scripts.cli._best_effort_report": null,
       "scripts.cli._error": null,
@@ -1107,15 +1094,15 @@
       "scripts.cli.cmd_status": null,
       "scripts.cli.cmd_update": null,
       "scripts.cli.main": null,
-      "scripts.database": "tests/../skills/pact-memory/scripts/database.py",
+      "scripts.database": "skills/pact-memory/scripts/database.py",
       "scripts.database.AmbiguousPrefixError": null,
       "scripts.database.MEMORY_ID_LENGTH": null,
       "scripts.database.MIN_PREFIX_LENGTH": null,
       "scripts.database.PrefixTooShortError": null,
       "scripts.database.create_memory": null,
-      "scripts.memory_api": "tests/../skills/pact-memory/scripts/memory_api.py",
+      "scripts.memory_api": "skills/pact-memory/scripts/memory_api.py",
       "scripts.memory_api.PACTMemory": null,
-      "scripts.working_memory": "tests/../skills/pact-memory/scripts/working_memory.py",
+      "scripts.working_memory": "skills/pact-memory/scripts/working_memory.py",
       "scripts.working_memory.AmbientSyncRefused": null,
       "scripts.working_memory.SyncResult": null,
       "test_working_memory_concurrency_comprehensive": "tests/test_working_memory_concurrency_comprehensive.py",
@@ -1125,7 +1112,7 @@
     },
     "tests/test_memory_ct_fields.py": {
       "pathlib.Path": null,
-      "scripts.database": "tests/../skills/pact-memory/scripts/database.py",
+      "scripts.database": "skills/pact-memory/scripts/database.py",
       "scripts.database.JSON_FIELDS": null,
       "scripts.database._migrate_ct_fields": null,
       "scripts.database.create_memory": null,
@@ -1136,12 +1123,12 @@
       "scripts.database.init_schema": null,
       "scripts.database.search_memories_by_text": null,
       "scripts.database.update_memory": null,
-      "scripts.memory_api": "tests/../skills/pact-memory/scripts/memory_api.py",
+      "scripts.memory_api": "skills/pact-memory/scripts/memory_api.py",
       "scripts.memory_api.CONTENT_FIELDS": null,
-      "scripts.models": "tests/../skills/pact-memory/scripts/models.py",
+      "scripts.models": "skills/pact-memory/scripts/models.py",
       "scripts.models.MemoryObject": null,
       "scripts.models._parse_string_list": null,
-      "scripts.working_memory": "tests/../skills/pact-memory/scripts/working_memory.py",
+      "scripts.working_memory": "skills/pact-memory/scripts/working_memory.py",
       "scripts.working_memory._format_memory_entry": null,
       "scripts.working_memory.sync_to_claude_md": null,
       "unittest.mock.patch": null
@@ -1153,8 +1140,8 @@
       "helpers": "tests/helpers.py",
       "helpers.create_test_schema": null,
       "pathlib.Path": null,
-      "scripts": "tests/../skills/pact-memory/scripts/__init__.py",
-      "scripts.database": "tests/../skills/pact-memory/scripts/database.py",
+      "scripts": "skills/pact-memory/scripts/__init__.py",
+      "scripts.database": "skills/pact-memory/scripts/database.py",
       "scripts.database.AMBIGUOUS_MATCH_CAP": null,
       "scripts.database.AmbiguousPrefixError": null,
       "scripts.database.MIN_PREFIX_LENGTH": null,
@@ -1176,9 +1163,9 @@
       "scripts.database.resolve_memory_id_prefix": null,
       "scripts.database.search_memories_by_text": null,
       "scripts.database.update_memory": null,
-      "scripts.memory_api": "tests/../skills/pact-memory/scripts/memory_api.py",
+      "scripts.memory_api": "skills/pact-memory/scripts/memory_api.py",
       "scripts.memory_api.PACTMemory": null,
-      "scripts.models": "tests/../skills/pact-memory/scripts/models.py",
+      "scripts.models": "skills/pact-memory/scripts/models.py",
       "scripts.models.MemoryObject": null,
       "unittest.mock.patch": null
     },
@@ -1193,7 +1180,7 @@
     "tests/test_memory_graph.py": {
       "helpers": "tests/helpers.py",
       "helpers.create_test_schema": null,
-      "scripts.graph": "tests/../skills/pact-memory/scripts/graph.py",
+      "scripts.graph": "skills/pact-memory/scripts/graph.py",
       "scripts.graph._normalize_path": null,
       "scripts.graph.add_file_relation": null,
       "scripts.graph.get_file_by_id": null,
@@ -1217,16 +1204,17 @@
       "concurrent.futures.ThreadPoolExecutor": null,
       "concurrent.futures.as_completed": null,
       "contextlib.redirect_stderr": null,
-      "memory_init": "tests/../skills/pact-memory/scripts/memory_init.py",
-      "memory_init._get_embedding_attempted_path": null,
-      "memory_init.check_and_install_dependencies": null,
-      "memory_init.clear_embedding_marker": null,
-      "memory_init.ensure_memory_ready": null,
-      "memory_init.is_initialized": null,
-      "memory_init.maybe_embed_pending": null,
-      "memory_init.maybe_migrate_embeddings": null,
-      "memory_init.reset_initialization": null,
       "pathlib.Path": null,
+      "scripts": "skills/pact-memory/scripts/__init__.py",
+      "scripts.memory_init": "skills/pact-memory/scripts/memory_init.py",
+      "scripts.memory_init._get_embedding_attempted_path": null,
+      "scripts.memory_init.check_and_install_dependencies": null,
+      "scripts.memory_init.clear_embedding_marker": null,
+      "scripts.memory_init.ensure_memory_ready": null,
+      "scripts.memory_init.is_initialized": null,
+      "scripts.memory_init.maybe_embed_pending": null,
+      "scripts.memory_init.maybe_migrate_embeddings": null,
+      "scripts.memory_init.reset_initialization": null,
       "unittest.mock.MagicMock": null,
       "unittest.mock.patch": null
     },
@@ -1236,24 +1224,24 @@
       "helpers.create_test_schema": null,
       "model2vec.StaticModel": null,
       "pathlib.Path": null,
-      "scripts": "tests/../skills/pact-memory/scripts/__init__.py",
-      "scripts.cli": "tests/../skills/pact-memory/scripts/cli.py",
-      "scripts.config": "tests/../skills/pact-memory/scripts/config.py",
+      "scripts": "skills/pact-memory/scripts/__init__.py",
+      "scripts.cli": "skills/pact-memory/scripts/cli.py",
+      "scripts.config": "skills/pact-memory/scripts/config.py",
       "scripts.config._STORE_DB_PATH": null,
       "scripts.config.resolve_db_path": null,
-      "scripts.embeddings": "tests/../skills/pact-memory/scripts/embeddings.py",
+      "scripts.embeddings": "skills/pact-memory/scripts/embeddings.py",
       "scripts.embeddings.EMBEDDING_DIM": null,
       "scripts.embeddings.EMBEDDING_MAX_TOKENS": null,
       "scripts.embeddings.MODEL_NAME": null,
       "scripts.embeddings.generate_embedding_text": null,
-      "scripts.memory_api": "tests/../skills/pact-memory/scripts/memory_api.py",
+      "scripts.memory_api": "skills/pact-memory/scripts/memory_api.py",
       "scripts.memory_api.PACTMemory": null,
       "unittest.mock.patch": null
     },
     "tests/test_memory_models.py": {
       "datetime.datetime": null,
       "datetime.timezone": null,
-      "scripts.models": "tests/../skills/pact-memory/scripts/models.py",
+      "scripts.models": "skills/pact-memory/scripts/models.py",
       "scripts.models.Decision": null,
       "scripts.models.Entity": null,
       "scripts.models.MemoryObject": null,
@@ -1273,26 +1261,26 @@
     "tests/test_memory_store_isolation.py": {
       "__future__.annotations": null,
       "pathlib.Path": null,
-      "scripts": "tests/../skills/pact-memory/scripts/__init__.py",
-      "scripts.config": "tests/../skills/pact-memory/scripts/config.py",
+      "scripts": "skills/pact-memory/scripts/__init__.py",
+      "scripts.config": "skills/pact-memory/scripts/config.py",
       "scripts.config.MEMORY_DIR_ENV": null,
       "scripts.config.compute_db_path": null,
       "scripts.config.get_memory_dir": null,
-      "scripts.memory_init": "tests/../skills/pact-memory/scripts/memory_init.py"
+      "scripts.memory_init": "skills/pact-memory/scripts/memory_init.py"
     },
     "tests/test_memory_store_scope.py": {
       "__future__.annotations": null,
       "pathlib.Path": null,
-      "scripts": "tests/../skills/pact-memory/scripts/__init__.py",
-      "scripts.cli": "tests/../skills/pact-memory/scripts/cli.py",
-      "scripts.config": "tests/../skills/pact-memory/scripts/config.py",
+      "scripts": "skills/pact-memory/scripts/__init__.py",
+      "scripts.cli": "skills/pact-memory/scripts/cli.py",
+      "scripts.config": "skills/pact-memory/scripts/config.py",
       "scripts.config.DB_FILENAME": null,
       "scripts.config.get_memory_dir": null,
       "scripts.config.resolve_db_path": null,
       "scripts.config.store_scope": null,
-      "scripts.database": "tests/../skills/pact-memory/scripts/database.py",
+      "scripts.database": "skills/pact-memory/scripts/database.py",
       "scripts.database.db_connection": null,
-      "scripts.memory_api": "tests/../skills/pact-memory/scripts/memory_api.py",
+      "scripts.memory_api": "skills/pact-memory/scripts/memory_api.py",
       "unittest.mock.patch": null,
       "uuid.uuid4": null
     },
@@ -1355,18 +1343,15 @@
       "merge_guard_pre": "hooks/merge_guard_pre.py",
       "merge_guard_pre._strip_non_executable_content": null,
       "merge_guard_pre.is_compound_destructive_command": null,
-      "merge_guard_pre.is_dangerous_command": null,
-      "pathlib.Path": null
+      "merge_guard_pre.is_dangerous_command": null
     },
     "tests/test_merge_guard_1118_output_selector.py": {
-      "pathlib.Path": null,
       "shared.merge_guard_common": "hooks/shared/merge_guard_common.py",
       "shared.merge_guard_common._strip_non_executable_content": null,
       "shared.merge_guard_common.detect_command_operation_type": null,
       "shared.merge_guard_common.is_dangerous_command": null
     },
     "tests/test_merge_guard_1118_output_selector_cert.py": {
-      "pathlib.Path": null,
       "shared.merge_guard_common": "hooks/shared/merge_guard_common.py",
       "shared.merge_guard_common._strip_non_executable_content": null,
       "shared.merge_guard_common.detect_command_operation_type": null,
@@ -1380,7 +1365,6 @@
     "tests/test_merge_guard_1129_r1_branch_set.py": {
       "merge_guard_pre": "hooks/merge_guard_pre.py",
       "merge_guard_pre._token_matches_command": null,
-      "pathlib.Path": null,
       "shared.merge_guard_common": "hooks/shared/merge_guard_common.py",
       "shared.merge_guard_common._canonical_join": null,
       "shared.merge_guard_common._extract_branch_delete_set": null,
@@ -1437,7 +1421,6 @@
     "tests/test_merge_guard_1148_cert.py": {
       "merge_guard_baseline_loader": "tests/merge_guard_baseline_loader.py",
       "merge_guard_baseline_loader.load_baseline": null,
-      "pathlib.Path": null,
       "shared.merge_guard_common": "hooks/shared/merge_guard_common.py"
     },
     "tests/test_merge_guard_1155_cert.py": {
@@ -1445,7 +1428,6 @@
       "merge_guard_baseline_loader.load_baseline": null,
       "merge_guard_post": "hooks/merge_guard_post.py",
       "merge_guard_pre": "hooks/merge_guard_pre.py",
-      "pathlib.Path": null,
       "shared.merge_guard_common": "hooks/shared/merge_guard_common.py"
     },
     "tests/test_merge_guard_1178_cert.py": {
@@ -1459,7 +1441,6 @@
     "tests/test_merge_guard_1181_cert.py": {
       "merge_guard_baseline_loader": "tests/merge_guard_baseline_loader.py",
       "merge_guard_baseline_loader.load_baseline": null,
-      "pathlib.Path": null,
       "shared.merge_guard_common": "hooks/shared/merge_guard_common.py"
     },
     "tests/test_merge_guard_1203_cert.py": {
@@ -1496,8 +1477,7 @@
       "merge_guard_post": "hooks/merge_guard_post.py",
       "merge_guard_post._mint_context_from_bundle": null,
       "merge_guard_post._target_value": null,
-      "merge_guard_pre": "hooks/merge_guard_pre.py",
-      "pathlib.Path": null
+      "merge_guard_pre": "hooks/merge_guard_pre.py"
     },
     "tests/test_merge_guard_obs_cert.py": {
       "merge_guard_baseline_loader": "tests/merge_guard_baseline_loader.py",
@@ -1520,7 +1500,6 @@
       "merge_guard_pre": "hooks/merge_guard_pre.py",
       "merge_guard_pre._token_matches_command": null,
       "merge_guard_pre.check_merge_authorization": null,
-      "pathlib.Path": null,
       "shared.merge_guard_common": "hooks/shared/merge_guard_common.py",
       "shared.merge_guard_common.detect_command_operation_type": null,
       "shared.merge_guard_common.extract_command_context": null,
@@ -1529,8 +1508,7 @@
     "tests/test_merge_guard_output_side_process_sub.py": {
       "merge_guard_pre": "hooks/merge_guard_pre.py",
       "merge_guard_pre._has_process_substitution_to_shell": null,
-      "merge_guard_pre.is_dangerous_command": null,
-      "pathlib.Path": null
+      "merge_guard_pre.is_dangerous_command": null
     },
     "tests/test_merge_guard_over_block_batch.py": {
       "merge_guard_post": "hooks/merge_guard_post.py",
@@ -1538,7 +1516,6 @@
       "merge_guard_pre": "hooks/merge_guard_pre.py",
       "merge_guard_pre.check_merge_authorization": null,
       "merge_guard_pre.main": null,
-      "pathlib.Path": null,
       "shared.merge_guard_common": "hooks/shared/merge_guard_common.py",
       "shared.merge_guard_common.detect_command_operation_type": null,
       "shared.merge_guard_common.extract_privileged_flags": null,
@@ -1550,7 +1527,6 @@
       "merge_guard_baseline_loader.load_baseline": null,
       "merge_guard_post": "hooks/merge_guard_post.py",
       "merge_guard_pre": "hooks/merge_guard_pre.py",
-      "pathlib.Path": null,
       "shared.merge_guard_common": "hooks/shared/merge_guard_common.py",
       "test_merge_guard_1148_cert": "tests/test_merge_guard_1148_cert.py",
       "test_merge_guard_1148_cert.CLOSURES": null,
@@ -1604,7 +1580,6 @@
     "tests/test_merge_guard_pre.py": {
       "merge_guard_pre": "hooks/merge_guard_pre.py",
       "merge_guard_pre._GH_PR_NUMBER_RE": null,
-      "pathlib.Path": null,
       "shared": "hooks/shared/__init__.py",
       "shared.merge_guard_common": "hooks/shared/merge_guard_common.py"
     },
@@ -1656,8 +1631,7 @@
       "fixtures.role_frames.captured_plain_sessionstart": null,
       "fixtures.role_frames.captured_plain_userpromptsubmit": null,
       "fixtures.role_frames.captured_teammate_sessionstart": null,
-      "missed_wake_scan": "hooks/missed_wake_scan.py",
-      "pathlib.Path": null
+      "missed_wake_scan": "hooks/missed_wake_scan.py"
     },
     "tests/test_missed_wake_scan_integration.py": {
       "datetime.datetime": null,
@@ -1693,14 +1667,12 @@
       "typing.Tuple": null
     },
     "tests/test_pact_config.py": {
-      "pathlib.Path": null,
       "shared.pact_config": "hooks/shared/pact_config.py",
       "shared.pact_config.get_bool": null,
       "shared.pact_config.get_enum": null,
       "shared.pact_config.llm_options": null
     },
     "tests/test_pact_config_gate_migration.py": {
-      "pathlib.Path": null,
       "shared.pact_config": "hooks/shared/pact_config.py"
     },
     "tests/test_pact_config_injection.py": {
@@ -1721,11 +1693,11 @@
       "fixtures.role_frames.plain_frame": null,
       "fixtures.role_frames.teammate_frame": null,
       "pathlib.Path": null,
-      "scripts": "tests/../skills/pact-memory/scripts/__init__.py",
-      "scripts.memory_api": "tests/../skills/pact-memory/scripts/memory_api.py",
+      "scripts": "skills/pact-memory/scripts/__init__.py",
+      "scripts.memory_api": "skills/pact-memory/scripts/memory_api.py",
       "scripts.memory_api.PACTMemory": null,
-      "scripts.memory_init": "tests/../skills/pact-memory/scripts/memory_init.py",
-      "scripts.pact_session": "tests/../skills/pact-memory/scripts/pact_session.py",
+      "scripts.memory_init": "skills/pact-memory/scripts/memory_init.py",
+      "scripts.pact_session": "skills/pact-memory/scripts/pact_session.py",
       "scripts.pact_session._context_file_path": null,
       "scripts.pact_session._resolve_context_on_disk": null,
       "scripts.pact_session.get_session_id_from_context_file": null,
@@ -1768,8 +1740,11 @@
     },
     "tests/test_pact_session_config_dir_parity.py": {
       "pathlib.Path": null,
-      "scripts": "tests/../skills/pact-memory/scripts/__init__.py",
-      "scripts.pact_session": "tests/../skills/pact-memory/scripts/pact_session.py"
+      "scripts": "skills/pact-memory/scripts/__init__.py",
+      "scripts.pact_session": "skills/pact-memory/scripts/pact_session.py"
+    },
+    "tests/test_path_setup_pin.py": {
+      "pathlib.Path": null
     },
     "tests/test_paths.py": {
       "pathlib.Path": null,
@@ -1835,7 +1810,6 @@
       "task_lifecycle_gate": "hooks/task_lifecycle_gate.py"
     },
     "tests/test_pin_caps.py": {
-      "pathlib.Path": null,
       "pin_caps": "hooks/pin_caps.py",
       "pin_caps.DENY_REASON_COUNT": null,
       "pin_caps.DENY_REASON_EMBEDDED_PIN": null,
@@ -1856,7 +1830,6 @@
       "pin_caps.parse_pins": null
     },
     "tests/test_pin_caps_adversarial.py": {
-      "pathlib.Path": null,
       "pin_caps": "hooks/pin_caps.py",
       "pin_caps.Pin": null,
       "pin_caps.check_add_allowed": null,
@@ -1873,7 +1846,6 @@
       "helpers": "tests/helpers.py",
       "helpers.make_claude_md_with_pins": null,
       "helpers.make_pin_entry": null,
-      "pathlib.Path": null,
       "pin_caps_gate": "hooks/pin_caps_gate.py",
       "pin_caps_gate._check_tool_allowed": null,
       "staleness": "hooks/staleness.py"
@@ -1882,7 +1854,6 @@
       "helpers": "tests/helpers.py",
       "helpers.make_claude_md_with_pins": null,
       "helpers.make_pin_entry": null,
-      "pathlib.Path": null,
       "pin_caps": "hooks/pin_caps.py",
       "pin_caps.evaluate_full_state": null,
       "pin_caps_gate": "hooks/pin_caps_gate.py",
@@ -1893,7 +1864,6 @@
       "helpers": "tests/helpers.py",
       "helpers.make_claude_md_with_pins": null,
       "helpers.make_pin_entry": null,
-      "pathlib.Path": null,
       "pin_caps_gate": "hooks/pin_caps_gate.py",
       "pin_caps_gate._check_tool_allowed": null,
       "staleness": "hooks/staleness.py"
@@ -1902,7 +1872,6 @@
       "helpers": "tests/helpers.py",
       "helpers.make_claude_md_with_pins": null,
       "helpers.make_pin_entry": null,
-      "pathlib.Path": null,
       "pin_caps": "hooks/pin_caps.py",
       "pin_caps.parse_pins": null,
       "pin_caps_gate": "hooks/pin_caps_gate.py",
@@ -1933,7 +1902,6 @@
       "helpers": "tests/helpers.py",
       "helpers.make_claude_md_with_pins": null,
       "helpers.make_pin_entry": null,
-      "pathlib.Path": null,
       "pin_caps_gate": "hooks/pin_caps_gate.py",
       "pin_caps_gate._check_tool_allowed": null,
       "staleness": "hooks/staleness.py",
@@ -1942,7 +1910,6 @@
     "tests/test_pin_comment_dominance.py": {
       "helpers": "tests/helpers.py",
       "helpers.make_claude_md_with_pins": null,
-      "pathlib.Path": null,
       "pin_caps": "hooks/pin_caps.py",
       "pin_caps.OVERRIDE_COMMENT_RE": null,
       "pin_caps.PIN_SIZE_CAP": null,
@@ -1954,7 +1921,6 @@
       "staleness": "hooks/staleness.py"
     },
     "tests/test_pin_comment_pipeline.py": {
-      "pathlib.Path": null,
       "pin_caps": "hooks/pin_caps.py",
       "pin_caps.OVERRIDE_COMMENT_RE": null,
       "pin_caps.PIN_STALE_BLOCK_THRESHOLD": null,
@@ -1968,6 +1934,10 @@
       "__future__.annotations": null,
       "pathlib.Path": null,
       "pin_marker_writer": "hooks/pin_marker_writer.py",
+      "scripts": "skills/pact-memory/scripts/__init__.py",
+      "scripts.working_memory": "skills/pact-memory/scripts/working_memory.py",
+      "scripts.working_memory._PACT_BOUNDARY_ALT": null,
+      "scripts.working_memory._SESSION_BOUNDARY_ALT": null,
       "shared.claude_md_manager": "hooks/shared/claude_md_manager.py",
       "shared.claude_md_manager.MANAGED_END_MARKER": null,
       "shared.claude_md_manager.MANAGED_START_MARKER": null,
@@ -1996,10 +1966,7 @@
       "staleness": "hooks/staleness.py",
       "staleness._find_terminator_offset": null,
       "staleness._parse_pinned_section": null,
-      "staleness._resolve_project_claude_md_with_base": null,
-      "working_memory": "skills/pact-memory/scripts/working_memory.py",
-      "working_memory._PACT_BOUNDARY_ALT": null,
-      "working_memory._SESSION_BOUNDARY_ALT": null
+      "staleness._resolve_project_claude_md_with_base": null
     },
     "tests/test_pin_marker_writer_adversarial.py": {
       "__future__.annotations": null,
@@ -2057,7 +2024,6 @@
       "staleness._parse_pinned_section": null
     },
     "tests/test_pin_staleness_marker_clear.py": {
-      "pathlib.Path": null,
       "pin_staleness_gate": "hooks/pin_staleness_gate.py",
       "pin_staleness_gate.PIN_STALENESS_MARKER_NAME": null,
       "shared": "hooks/shared/__init__.py",
@@ -2145,19 +2111,19 @@
       "fixtures.project_dir.source_export_line": null,
       "fixtures.project_dir.write_session_context": null,
       "pathlib.Path": null,
-      "scripts": "tests/../skills/pact-memory/scripts/__init__.py",
-      "scripts.memory_api": "tests/../skills/pact-memory/scripts/memory_api.py",
+      "scripts": "skills/pact-memory/scripts/__init__.py",
+      "scripts.memory_api": "skills/pact-memory/scripts/memory_api.py",
       "scripts.memory_api.PACTMemory": null,
-      "scripts.pact_session": "tests/../skills/pact-memory/scripts/pact_session.py",
+      "scripts.pact_session": "skills/pact-memory/scripts/pact_session.py",
       "scripts.pact_session.ProjectScopeDisagreementError": null,
-      "scripts.working_memory": "tests/../skills/pact-memory/scripts/working_memory.py",
+      "scripts.working_memory": "skills/pact-memory/scripts/working_memory.py",
       "shared": "hooks/shared/__init__.py",
       "shared.backlog": "hooks/shared/backlog.py",
       "types.SimpleNamespace": null
     },
     "tests/test_project_id.py": {
       "pathlib.Path": null,
-      "scripts.memory_api": "tests/../skills/pact-memory/scripts/memory_api.py",
+      "scripts.memory_api": "skills/pact-memory/scripts/memory_api.py",
       "scripts.memory_api.PACTMemory": null,
       "unittest.mock.MagicMock": null,
       "unittest.mock.patch": null
@@ -2200,7 +2166,8 @@
     },
     "tests/test_recovery_pointer_fallback.py": {
       "pathlib.Path": null,
-      "working_memory": "skills/pact-memory/scripts/working_memory.py"
+      "scripts": "skills/pact-memory/scripts/__init__.py",
+      "scripts.working_memory": "skills/pact-memory/scripts/working_memory.py"
     },
     "tests/test_resume_team_realign_1507.py": {
       "dispatch_gate": "hooks/dispatch_gate.py",
@@ -2257,7 +2224,7 @@
     "tests/test_seam_line_ending_call_sites.py": {
       "collections.Counter": null,
       "pathlib.Path": null,
-      "scripts.working_memory": "tests/../skills/pact-memory/scripts/working_memory.py",
+      "scripts.working_memory": "skills/pact-memory/scripts/working_memory.py",
       "scripts.working_memory.sync_retrieved_to_claude_md": null,
       "scripts.working_memory.sync_to_claude_md": null,
       "shared.claude_md_manager": "hooks/shared/claude_md_manager.py",
@@ -2268,7 +2235,6 @@
       "test_staleness.over_budget_body": null
     },
     "tests/test_session_block_substitution.py": {
-      "pathlib.Path": null,
       "shared.session_resume": "hooks/shared/session_resume.py",
       "shared.session_resume.update_session_info": null
     },
@@ -2287,8 +2253,8 @@
     "tests/test_session_discovery_route.py": {
       "__future__.annotations": null,
       "pathlib.Path": null,
-      "scripts": "tests/../skills/pact-memory/scripts/__init__.py",
-      "scripts.pact_session": "tests/../skills/pact-memory/scripts/pact_session.py"
+      "scripts": "skills/pact-memory/scripts/__init__.py",
+      "scripts.pact_session": "skills/pact-memory/scripts/pact_session.py"
     },
     "tests/test_session_end.py": {
       "contextlib.ExitStack": null,
@@ -2323,16 +2289,15 @@
     },
     "tests/test_session_end_survives_a_forged_heading.py": {
       "__future__.annotations": null,
-      "pathlib.Path": null,
+      "scripts.working_memory": "skills/pact-memory/scripts/working_memory.py",
+      "scripts.working_memory.sync_retrieved_to_claude_md": null,
+      "scripts.working_memory.sync_to_claude_md": null,
       "shared.claude_md_manager": "hooks/shared/claude_md_manager.py",
       "shared.claude_md_manager.MEMORY_END_MARKER": null,
       "shared.claude_md_manager.MEMORY_START_MARKER": null,
       "tests.test_pin_marker_writer": "tests/test_pin_marker_writer.py",
       "tests.test_pin_marker_writer.build_claude_md": null,
-      "unittest.mock.patch": null,
-      "working_memory": "skills/pact-memory/scripts/working_memory.py",
-      "working_memory.sync_retrieved_to_claude_md": null,
-      "working_memory.sync_to_claude_md": null
+      "unittest.mock.patch": null
     },
     "tests/test_session_init.py": {
       "__future__.annotations": null,
@@ -2594,7 +2559,7 @@
       "unittest.mock.patch": null
     },
     "tests/test_setup_memory.py": {
-      "scripts.setup_memory": "tests/../skills/pact-memory/scripts/setup_memory.py",
+      "scripts.setup_memory": "skills/pact-memory/scripts/setup_memory.py",
       "scripts.setup_memory._get_recommendations": null,
       "scripts.setup_memory.check_dependencies": null,
       "scripts.setup_memory.ensure_directories": null,
@@ -2607,7 +2572,7 @@
       "memory_repair": "scripts/memory_repair/__init__.py",
       "memory_repair.shred_detect": "scripts/memory_repair/shred_detect.py",
       "pathlib.Path": null,
-      "scripts.database": "tests/../skills/pact-memory/scripts/database.py",
+      "scripts.database": "skills/pact-memory/scripts/database.py",
       "scripts.database.LIST_FIELDS": null
     },
     "tests/test_skills_structure.py": {
@@ -2703,16 +2668,15 @@
     },
     "tests/test_splice_window_memory_region.py": {
       "__future__.annotations": null,
-      "pathlib.Path": null,
+      "scripts.working_memory": "skills/pact-memory/scripts/working_memory.py",
+      "scripts.working_memory.sync_retrieved_to_claude_md": null,
+      "scripts.working_memory.sync_to_claude_md": null,
       "shared.claude_md_manager": "hooks/shared/claude_md_manager.py",
       "shared.claude_md_manager.MEMORY_END_MARKER": null,
       "shared.claude_md_manager.MEMORY_START_MARKER": null,
       "tests.test_pin_marker_writer": "tests/test_pin_marker_writer.py",
       "tests.test_pin_marker_writer.build_claude_md": null,
-      "unittest.mock.patch": null,
-      "working_memory": "skills/pact-memory/scripts/working_memory.py",
-      "working_memory.sync_retrieved_to_claude_md": null,
-      "working_memory.sync_to_claude_md": null
+      "unittest.mock.patch": null
     },
     "tests/test_stale_session.py": {
       "pathlib.Path": null,
@@ -2726,6 +2690,14 @@
       "pathlib.Path": null,
       "pin_caps": "hooks/pin_caps.py",
       "pin_caps_gate": "hooks/pin_caps_gate.py",
+      "scripts": "skills/pact-memory/scripts/__init__.py",
+      "scripts.working_memory": "skills/pact-memory/scripts/working_memory.py",
+      "scripts.working_memory.ContainmentError": null,
+      "scripts.working_memory._atomic_write_text": null,
+      "scripts.working_memory._estimate_tokens": null,
+      "scripts.working_memory._project_root_of": null,
+      "scripts.working_memory._sanitize_prompt_field": null,
+      "scripts.working_memory.file_lock": null,
       "session_init": "hooks/session_init.py",
       "session_init.PINNED_STALENESS_DAYS": null,
       "session_init._estimate_tokens": null,
@@ -2755,14 +2727,7 @@
       "staleness.check_pinned_staleness": null,
       "staleness.estimate_tokens": null,
       "unittest.mock.MagicMock": null,
-      "unittest.mock.patch": null,
-      "working_memory": "skills/pact-memory/scripts/working_memory.py",
-      "working_memory.ContainmentError": null,
-      "working_memory._atomic_write_text": null,
-      "working_memory._estimate_tokens": null,
-      "working_memory._project_root_of": null,
-      "working_memory._sanitize_prompt_field": null,
-      "working_memory.file_lock": null
+      "unittest.mock.patch": null
     },
     "tests/test_store_access_bar_presence.py": {
       "__future__.annotations": null,
@@ -2770,7 +2735,7 @@
     },
     "tests/test_store_scope_decorator_contract.py": {
       "__future__.annotations": null,
-      "scripts.memory_api": "tests/../skills/pact-memory/scripts/memory_api.py",
+      "scripts.memory_api": "skills/pact-memory/scripts/memory_api.py",
       "scripts.memory_api.PACTMemory": null
     },
     "tests/test_subagent_start_selects_teammate_frames.py": {
@@ -2786,7 +2751,7 @@
     },
     "tests/test_sync_result_contract.py": {
       "pathlib.Path": null,
-      "scripts.working_memory": "tests/../skills/pact-memory/scripts/working_memory.py",
+      "scripts.working_memory": "skills/pact-memory/scripts/working_memory.py",
       "scripts.working_memory.SyncResult": null
     },
     "tests/test_task_claim_gate.py": {
@@ -2968,7 +2933,6 @@
       "shared.teammate_mode.should_emit_inprocess_notice": null
     },
     "tests/test_telegram_client.py": {
-      "pathlib.Path": null,
       "telegram.telegram_client": "telegram/telegram_client.py",
       "telegram.telegram_client.TelegramAPIError": null,
       "telegram.telegram_client.TelegramClient": null,
@@ -2977,7 +2941,6 @@
       "unittest.mock.patch": null
     },
     "tests/test_telegram_config.py": {
-      "pathlib.Path": null,
       "telegram.config": "telegram/config.py",
       "telegram.config.ConfigError": null,
       "telegram.config.DEFAULT_MODE": null,
@@ -2991,7 +2954,6 @@
       "unittest.mock.patch": null
     },
     "tests/test_telegram_content_filter.py": {
-      "pathlib.Path": null,
       "telegram.content_filter": "telegram/content_filter.py",
       "telegram.content_filter.MAX_INBOUND_LENGTH": null,
       "telegram.content_filter.TELEGRAM_MAX_MESSAGE_LENGTH": null,
@@ -3001,7 +2963,6 @@
       "telegram.content_filter.truncate_message": null
     },
     "tests/test_telegram_deps.py": {
-      "pathlib.Path": null,
       "telegram.deps": "telegram/deps.py",
       "telegram.deps.REQUIRED_PACKAGES": null,
       "telegram.deps.check_dependencies": null,
@@ -3012,7 +2973,6 @@
       "unittest.mock.patch": null
     },
     "tests/test_telegram_main.py": {
-      "pathlib.Path": null,
       "telegram.__main__": "telegram/__main__.py",
       "telegram.__main__.main": null,
       "types.ModuleType": null,
@@ -3020,7 +2980,6 @@
       "unittest.mock.patch": null
     },
     "tests/test_telegram_notify.py": {
-      "pathlib.Path": null,
       "telegram.notify": "telegram/notify.py",
       "telegram.notify._build_session_summary": null,
       "telegram.notify._filter_message": null,
@@ -3049,7 +3008,6 @@
       "unittest.mock.patch": null
     },
     "tests/test_telegram_server.py": {
-      "pathlib.Path": null,
       "telegram.routing": "telegram/routing.py",
       "telegram.routing.DirectRouter": null,
       "telegram.server": "telegram/server.py",
@@ -3069,7 +3027,6 @@
       "unittest.mock.patch": null
     },
     "tests/test_telegram_tools.py": {
-      "pathlib.Path": null,
       "telegram.telegram_client": "telegram/telegram_client.py",
       "telegram.telegram_client.TelegramAPIError": null,
       "telegram.tools": "telegram/tools.py",
@@ -3115,68 +3072,64 @@
       "pathlib.Path": null
     },
     "tests/test_token_budget.py": {
-      "pathlib.Path": null,
+      "scripts.working_memory": "skills/pact-memory/scripts/working_memory.py",
+      "scripts.working_memory.COMPRESSED_ENTRY_TOKEN_CEILING": null,
+      "scripts.working_memory.MAX_WORKING_MEMORIES": null,
+      "scripts.working_memory.SyncResult": null,
+      "scripts.working_memory.WORKING_MEMORY_TOKEN_BUDGET": null,
+      "scripts.working_memory._apply_token_budget": null,
+      "scripts.working_memory._compress_memory_entry": null,
+      "scripts.working_memory._estimate_tokens": null,
+      "scripts.working_memory._find_existing_claude_md": null,
+      "scripts.working_memory._format_memory_entry": null,
+      "scripts.working_memory._format_retrieved_entry": null,
+      "scripts.working_memory._get_claude_md_path": null,
+      "scripts.working_memory._parse_retrieved_context_section": null,
+      "scripts.working_memory._parse_working_memory_section": null,
+      "scripts.working_memory.sync_retrieved_to_claude_md": null,
+      "scripts.working_memory.sync_to_claude_md": null,
       "unittest.mock.MagicMock": null,
-      "unittest.mock.patch": null,
-      "working_memory": "skills/pact-memory/scripts/working_memory.py",
-      "working_memory.COMPRESSED_ENTRY_TOKEN_CEILING": null,
-      "working_memory.MAX_WORKING_MEMORIES": null,
-      "working_memory.SyncResult": null,
-      "working_memory.WORKING_MEMORY_TOKEN_BUDGET": null,
-      "working_memory._apply_token_budget": null,
-      "working_memory._compress_memory_entry": null,
-      "working_memory._estimate_tokens": null,
-      "working_memory._find_existing_claude_md": null,
-      "working_memory._format_memory_entry": null,
-      "working_memory._format_retrieved_entry": null,
-      "working_memory._get_claude_md_path": null,
-      "working_memory._parse_retrieved_context_section": null,
-      "working_memory._parse_working_memory_section": null,
-      "working_memory.sync_retrieved_to_claude_md": null,
-      "working_memory.sync_to_claude_md": null
+      "unittest.mock.patch": null
     },
     "tests/test_token_budget_constants_coupling.py": {
       "pathlib.Path": null,
-      "unittest.mock.patch": null,
-      "working_memory": "skills/pact-memory/scripts/working_memory.py",
-      "working_memory.COMPRESSED_ENTRY_TOKEN_CEILING": null,
-      "working_memory.COMPRESSED_SUMMARY_CHAR_CAP": null,
-      "working_memory.MAX_RETRIEVED_MEMORIES": null,
-      "working_memory.MAX_WORKING_MEMORIES": null,
-      "working_memory.RETRIEVED_CONTEXT_COMMENT": null,
-      "working_memory.RETRIEVED_CONTEXT_TOKEN_BUDGET": null,
-      "working_memory.WORKING_MEMORY_COMMENT": null,
-      "working_memory.WORKING_MEMORY_TOKEN_BUDGET": null,
-      "working_memory._MANAGED_END_MARKER": null,
-      "working_memory._MANAGED_START_MARKER": null,
-      "working_memory._MEMORY_ID_LABEL": null,
-      "working_memory._REFRESH_FIELD_TRUNCATION_LIMIT": null,
-      "working_memory._REFRESH_IDENTIFIER_TRUNCATION_LIMIT": null,
-      "working_memory._SESSION_END_MARKER": null,
-      "working_memory._apply_entry_token_ceiling": null,
-      "working_memory._apply_token_budget": null,
-      "working_memory._compress_memory_entry": null,
-      "working_memory._estimate_tokens": null,
-      "working_memory._format_memory_entry": null,
-      "working_memory._format_retrieved_entry": null,
-      "working_memory._parse_retrieved_context_section": null,
-      "working_memory.sync_retrieved_to_claude_md": null,
-      "working_memory.sync_to_claude_md": null
+      "scripts.working_memory": "skills/pact-memory/scripts/working_memory.py",
+      "scripts.working_memory.COMPRESSED_ENTRY_TOKEN_CEILING": null,
+      "scripts.working_memory.COMPRESSED_SUMMARY_CHAR_CAP": null,
+      "scripts.working_memory.MAX_RETRIEVED_MEMORIES": null,
+      "scripts.working_memory.MAX_WORKING_MEMORIES": null,
+      "scripts.working_memory.RETRIEVED_CONTEXT_COMMENT": null,
+      "scripts.working_memory.RETRIEVED_CONTEXT_TOKEN_BUDGET": null,
+      "scripts.working_memory.WORKING_MEMORY_COMMENT": null,
+      "scripts.working_memory.WORKING_MEMORY_TOKEN_BUDGET": null,
+      "scripts.working_memory._MANAGED_END_MARKER": null,
+      "scripts.working_memory._MANAGED_START_MARKER": null,
+      "scripts.working_memory._MEMORY_ID_LABEL": null,
+      "scripts.working_memory._REFRESH_FIELD_TRUNCATION_LIMIT": null,
+      "scripts.working_memory._REFRESH_IDENTIFIER_TRUNCATION_LIMIT": null,
+      "scripts.working_memory._SESSION_END_MARKER": null,
+      "scripts.working_memory._apply_entry_token_ceiling": null,
+      "scripts.working_memory._apply_token_budget": null,
+      "scripts.working_memory._compress_memory_entry": null,
+      "scripts.working_memory._estimate_tokens": null,
+      "scripts.working_memory._format_memory_entry": null,
+      "scripts.working_memory._format_retrieved_entry": null,
+      "scripts.working_memory._parse_retrieved_context_section": null,
+      "scripts.working_memory.sync_retrieved_to_claude_md": null,
+      "scripts.working_memory.sync_to_claude_md": null,
+      "unittest.mock.patch": null
     },
     "tests/test_tool_response.py": {
-      "pathlib.Path": null,
       "shared.tool_response": "hooks/shared/tool_response.py",
       "shared.tool_response.extract_tool_response": null
     },
     "tests/test_track_files.py": {
       "datetime.datetime": null,
-      "pathlib.Path": null,
       "track_files": "hooks/track_files.py",
       "unittest.mock.MagicMock": null,
       "unittest.mock.patch": null
     },
     "tests/test_validate_handoff.py": {
-      "pathlib.Path": null,
       "unittest.mock.patch": null,
       "validate_handoff": "hooks/validate_handoff.py",
       "validate_handoff.check_lossless_fields": null,
@@ -3193,7 +3146,6 @@
       "validate_handoff": "hooks/validate_handoff.py"
     },
     "tests/test_variety_divergence.py": {
-      "pathlib.Path": null,
       "shared.session_journal": "hooks/shared/session_journal.py",
       "shared.session_journal.make_event": null,
       "shared.variety_divergence": "hooks/shared/variety_divergence.py",
@@ -3208,7 +3160,6 @@
       "pathlib.Path": null
     },
     "tests/test_variety_scorer.py": {
-      "pathlib.Path": null,
       "shared.variety_scorer": "hooks/shared/variety_scorer.py",
       "shared.variety_scorer.COMPACT_MAX": null,
       "shared.variety_scorer.DIMENSION_COUNT": null,
@@ -3233,7 +3184,6 @@
       "hypothesis.given": null,
       "hypothesis.settings": null,
       "hypothesis.strategies": null,
-      "pathlib.Path": null,
       "shared.variety_scorer": "hooks/shared/variety_scorer.py",
       "shared.variety_scorer.COMPACT_MAX": null,
       "shared.variety_scorer.MAX_DIMENSION": null,
@@ -3251,9 +3201,9 @@
     },
     "tests/test_vector_dimension_fixes.py": {
       "pathlib.Path": null,
-      "scripts": "tests/../skills/pact-memory/scripts/__init__.py",
-      "scripts.config": "tests/../skills/pact-memory/scripts/config.py",
-      "scripts.database": "tests/../skills/pact-memory/scripts/database.py",
+      "scripts": "skills/pact-memory/scripts/__init__.py",
+      "scripts.config": "skills/pact-memory/scripts/config.py",
+      "scripts.database": "skills/pact-memory/scripts/database.py",
       "scripts.database._check_and_migrate_vector_table": null,
       "scripts.database.create_memory": null,
       "scripts.database.ensure_initialized": null,
@@ -3261,14 +3211,14 @@
       "scripts.database.get_memory": null,
       "scripts.database.init_schema": null,
       "scripts.database.search_memories_by_text": null,
-      "scripts.embeddings": "tests/../skills/pact-memory/scripts/embeddings.py",
+      "scripts.embeddings": "skills/pact-memory/scripts/embeddings.py",
       "scripts.embeddings.EMBEDDING_DIM": null,
       "scripts.embeddings.check_embedding_availability": null,
       "scripts.embeddings.generate_embedding_text": null,
-      "scripts.memory_init": "tests/../skills/pact-memory/scripts/memory_init.py",
+      "scripts.memory_init": "skills/pact-memory/scripts/memory_init.py",
       "scripts.memory_init.maybe_migrate_embeddings": null,
       "scripts.memory_init.reset_initialization": null,
-      "scripts.search": "tests/../skills/pact-memory/scripts/search.py",
+      "scripts.search": "skills/pact-memory/scripts/search.py",
       "scripts.search.get_search_capabilities": null,
       "scripts.search.vector_search": null,
       "unittest.mock.MagicMock": null,
@@ -3278,7 +3228,7 @@
       "__future__.annotations": null,
       "helpers": "tests/helpers.py",
       "helpers.create_test_schema": null,
-      "scripts.memory_api": "tests/../skills/pact-memory/scripts/memory_api.py",
+      "scripts.memory_api": "skills/pact-memory/scripts/memory_api.py",
       "scripts.memory_api.PACTMemory": null,
       "unittest.mock.patch": null
     },
@@ -3308,50 +3258,52 @@
     },
     "tests/test_window_rule_decline.py": {
       "pathlib.Path": null,
-      "scripts": "tests/../skills/pact-memory/scripts/__init__.py",
-      "scripts.cli": "tests/../skills/pact-memory/scripts/cli.py",
-      "scripts.config": "tests/../skills/pact-memory/scripts/config.py",
-      "unittest.mock.patch": null,
-      "working_memory": "skills/pact-memory/scripts/working_memory.py",
-      "working_memory.MEMORY_END_MARKER": null,
-      "working_memory.MEMORY_START_MARKER": null,
-      "working_memory.SyncResult": null,
-      "working_memory._MANAGED_END_MARKER": null,
-      "working_memory._MANAGED_START_MARKER": null,
-      "working_memory._SESSION_END_MARKER": null,
-      "working_memory._resolve_write_window": null,
-      "working_memory.sync_retrieved_to_claude_md": null,
-      "working_memory.sync_to_claude_md": null
+      "scripts": "skills/pact-memory/scripts/__init__.py",
+      "scripts.cli": "skills/pact-memory/scripts/cli.py",
+      "scripts.config": "skills/pact-memory/scripts/config.py",
+      "scripts.working_memory": "skills/pact-memory/scripts/working_memory.py",
+      "scripts.working_memory.MEMORY_END_MARKER": null,
+      "scripts.working_memory.MEMORY_START_MARKER": null,
+      "scripts.working_memory.SyncResult": null,
+      "scripts.working_memory._MANAGED_END_MARKER": null,
+      "scripts.working_memory._MANAGED_START_MARKER": null,
+      "scripts.working_memory._SESSION_END_MARKER": null,
+      "scripts.working_memory._resolve_write_window": null,
+      "scripts.working_memory.sync_retrieved_to_claude_md": null,
+      "scripts.working_memory.sync_to_claude_md": null,
+      "unittest.mock.patch": null
     },
     "tests/test_working_memory.py": {
-      "pathlib.Path": null,
       "pin_staleness_gate": "hooks/pin_staleness_gate.py",
       "pin_staleness_gate._DATE_LED_HEADING_RE": null,
-      "working_memory": "skills/pact-memory/scripts/working_memory.py"
+      "scripts": "skills/pact-memory/scripts/__init__.py",
+      "scripts.working_memory": "skills/pact-memory/scripts/working_memory.py"
     },
     "tests/test_working_memory_concurrency.py": {
       "contextlib.contextmanager": null,
       "pathlib.Path": null,
+      "scripts": "skills/pact-memory/scripts/__init__.py",
+      "scripts.working_memory": "skills/pact-memory/scripts/working_memory.py",
       "shared": "hooks/shared/__init__.py",
       "shared.claude_md_manager": "hooks/shared/claude_md_manager.py",
-      "shared.claude_md_manager.file_lock": null,
-      "working_memory": "skills/pact-memory/scripts/working_memory.py"
+      "shared.claude_md_manager.file_lock": null
     },
     "tests/test_working_memory_concurrency_comprehensive.py": {
       "importlib.import_module": null,
       "pathlib.Path": null,
+      "scripts": "skills/pact-memory/scripts/__init__.py",
+      "scripts.working_memory": "skills/pact-memory/scripts/working_memory.py",
+      "scripts.working_memory.file_lock": null,
       "shared.claude_md_manager": "hooks/shared/claude_md_manager.py",
       "shared.claude_md_manager.file_lock": null,
       "test_staleness": "tests/test_staleness.py",
-      "test_staleness.TestFileLockTwinCopyDrift": null,
-      "working_memory": "skills/pact-memory/scripts/working_memory.py",
-      "working_memory.file_lock": null
+      "test_staleness.TestFileLockTwinCopyDrift": null
     },
     "tests/test_working_memory_fidelity.py": {
       "helpers": "tests/helpers.py",
       "helpers.create_test_schema": null,
       "pathlib.Path": null,
-      "scripts.working_memory": "tests/../skills/pact-memory/scripts/working_memory.py",
+      "scripts.working_memory": "skills/pact-memory/scripts/working_memory.py",
       "scripts.working_memory.MAX_WORKING_MEMORIES": null,
       "scripts.working_memory.SyncResult": null,
       "scripts.working_memory.project_memories_to_claude_md": null,
@@ -3359,7 +3311,7 @@
       "test_memory_cli._backdate": null
     },
     "tests/test_working_memory_parser.py": {
-      "scripts.working_memory": "tests/../skills/pact-memory/scripts/working_memory.py",
+      "scripts.working_memory": "skills/pact-memory/scripts/working_memory.py",
       "scripts.working_memory.RETRIEVED_CONTEXT_HEADER": null,
       "scripts.working_memory.WORKING_MEMORY_HEADER": null,
       "scripts.working_memory._PACT_BOUNDARY_ALT": null,
@@ -3381,9 +3333,9 @@
       "datetime.timedelta": null,
       "datetime.timezone": null,
       "pathlib.Path": null,
-      "scripts.memory_api": "tests/../skills/pact-memory/scripts/memory_api.py",
+      "scripts.memory_api": "skills/pact-memory/scripts/memory_api.py",
       "scripts.memory_api.PACTMemory": null,
-      "scripts.working_memory": "tests/../skills/pact-memory/scripts/working_memory.py",
+      "scripts.working_memory": "skills/pact-memory/scripts/working_memory.py",
       "scripts.working_memory.MAX_WORKING_MEMORIES": null,
       "scripts.working_memory.SyncResult": null,
       "scripts.working_memory.WORKING_MEMORY_TOKEN_BUDGET": null,
@@ -3394,10 +3346,10 @@
     },
     "tests/test_working_memory_redirected_store_refusal.py": {
       "pathlib.Path": null,
-      "scripts.config": "tests/../skills/pact-memory/scripts/config.py",
+      "scripts.config": "skills/pact-memory/scripts/config.py",
       "scripts.config.STORE_ORIGIN_ENV": null,
       "scripts.config.STORE_ORIGIN_HOME": null,
-      "scripts.working_memory": "tests/../skills/pact-memory/scripts/working_memory.py",
+      "scripts.working_memory": "skills/pact-memory/scripts/working_memory.py",
       "scripts.working_memory.AmbientSyncRefused": null,
       "scripts.working_memory.SyncResult": null,
       "scripts.working_memory._refuse_ambient_sync_from_a_redirected_store": null,
@@ -3405,15 +3357,16 @@
     },
     "tests/test_working_memory_resolver_and_lock_release.py": {
       "pathlib.Path": null,
+      "scripts": "skills/pact-memory/scripts/__init__.py",
+      "scripts.working_memory": "skills/pact-memory/scripts/working_memory.py",
       "shared.claude_md_manager": "hooks/shared/claude_md_manager.py",
-      "shared.claude_md_manager.resolve_project_claude_md_path": null,
-      "working_memory": "skills/pact-memory/scripts/working_memory.py"
+      "shared.claude_md_manager.resolve_project_claude_md_path": null
     },
     "tests/test_working_memory_worktree_sync.py": {
       "pathlib.Path": null,
-      "scripts.memory_api": "tests/../skills/pact-memory/scripts/memory_api.py",
+      "scripts.memory_api": "skills/pact-memory/scripts/memory_api.py",
       "scripts.memory_api.PACTMemory": null,
-      "scripts.working_memory": "tests/../skills/pact-memory/scripts/working_memory.py",
+      "scripts.working_memory": "skills/pact-memory/scripts/working_memory.py",
       "scripts.working_memory.SyncResult": null,
       "scripts.working_memory._project_root_of": null,
       "scripts.working_memory._resolve_display_claude_md_path": null,
@@ -3427,7 +3380,6 @@
       "pathlib.Path": null
     },
     "tests/test_worktree_guard.py": {
-      "pathlib.Path": null,
       "unittest.mock.patch": null,
       "worktree_guard": "hooks/worktree_guard.py",
       "worktree_guard._suggest_worktree_path": null,
@@ -3441,16 +3393,9 @@
     }
   },
   "path_drift_since_sessionstart": [
-    "/private/tmp/baseline-regen/pact-plugin/skills/pact-memory",
-    "/private/tmp/baseline-regen/pact-plugin/skills/pact-memory",
-    "/private/tmp/baseline-regen/pact-plugin/hooks/shared",
-    "/private/tmp/baseline-regen/pact-plugin/tests/fixtures",
-    "/private/tmp/baseline-regen/pact-plugin/skills/pact-memory",
-    "/private/tmp/baseline-regen/pact-plugin/skills/pact-memory",
-    "/private/tmp/baseline-regen/pact-plugin/tests/../scripts",
-    "/private/tmp/baseline-regen/pact-plugin/tests/../skills/pact-memory/scripts",
-    "/private/tmp/baseline-regen/pact-plugin/skills/pact-memory",
-    "/private/tmp/baseline-regen/pact-plugin/skills/pact-handoff-harvest",
-    "/private/tmp/baseline-regen/pact-plugin/skills/pact-agent-teams"
+    "/Users/mj/Sites/collab/PACT-prompt/.worktrees/chore/test-import-restructure/pact-plugin/hooks/shared",
+    "/Users/mj/Sites/collab/PACT-prompt/.worktrees/chore/test-import-restructure/pact-plugin/tests/fixtures",
+    "/Users/mj/Sites/collab/PACT-prompt/.worktrees/chore/test-import-restructure/pact-plugin/skills/pact-handoff-harvest",
+    "/Users/mj/Sites/collab/PACT-prompt/.worktrees/chore/test-import-restructure/pact-plugin/skills/pact-agent-teams"
   ]
 }
