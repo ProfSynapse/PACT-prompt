@@ -35,7 +35,9 @@ PLUGIN = REPO_ROOT / "pact-plugin"
 TEST_GLOBS = ("tests/test_*.py", "skills/*/test_*.py")
 
 # Roots centrally provided for tests/ files by tests/conftest.py after the
-# centralization commit, plus the plugin-root conftest's skills/*/scripts glob.
+# centralization commit, plus the plugin-root conftest's skills/*/scripts glob
+# and its explicit plugin-root insert (added by the precursor commit — the
+# telegram test family's `from telegram.X import ...` resolves through it).
 CENTRAL_ROOTS_TESTS = (
     "tests",  # tests dir itself
     "hooks",
@@ -43,6 +45,7 @@ CENTRAL_ROOTS_TESTS = (
     "skills/pact-memory/scripts",
     "skills/pact-coding-standards/scripts",
     "scripts",  # plugin-level scripts/
+    "plugin root",  # pact-plugin/ itself, via the root conftest
 )
 
 BARE_SCRIPT_MODULES = ("working_memory", "memory_init", "embeddings")
