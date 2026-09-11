@@ -29,6 +29,15 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 # Add pact-memory scripts to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'skills', 'pact-memory'))
 
+# Add the pact-memory scripts dir itself to path (bare-module imports)
+sys.path.insert(0, str(Path(__file__).parent.parent / "skills" / "pact-memory" / "scripts"))
+
+# Add pact-coding-standards scripts to path
+sys.path.insert(0, str(Path(__file__).parent.parent / "skills" / "pact-coding-standards" / "scripts"))
+
+# Add plugin-level scripts to path
+sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
+
 
 # Name of the environment variable that relocates the PACT memory store.
 #
