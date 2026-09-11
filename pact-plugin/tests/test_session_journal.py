@@ -3595,6 +3595,11 @@ class TestValidateEventSchemaPerType:
             "task_subject": "CODE: thing",
             "handoff": {"decisions": ["x"]},
         },
+        "handoff_refusal_degraded": {
+            "agent_type": "pact-backend-coder",
+            "detail": "PACT Handoff Refusal: missing produced",
+            "classes": ["missing_handoff"],
+        },
         "missed_wake": {
             "agent": "devops",
             "task_id": "1",
