@@ -117,15 +117,16 @@ L3_CANDIDATE_HOOKS: frozenset[str] = frozenset({
 # via AST following ABSOLUTE + RELATIVE (`from .X`) + function-level imports
 # (NOT regex — regex silently skips relative edges, e.g. pact_context's
 # `from .session_registry import resolve`, which under-attributes session_registry
-# to its 2 direct importers instead of all 11 pact_context importers). The
+# to its 2 direct importers instead of every pact_context importer). The
 # meta-test re-derives the same way (AST, relative-following) and asserts
 # equality so this literal cannot drift. An edit to any helper in a hook's
 # closure can change that hook's behavior -> the edit is SECONDARY.
 #
 # `paths` (shared/paths.py) is the CLAUDE_CONFIG_DIR / config-dir SSOT resolver
-# added by the config-dir refactor; it is now reached by all 14 seam hooks
-# (validate_handoff was the last holdout until its degrade-path journal
-# telemetry pulled in pact_context/session_journal) because the path-consuming
+# added by the config-dir refactor; it is now reached by every hook in
+# SEAM_DEPENDENT_HOOKS (validate_handoff was the last holdout until its
+# degrade-path journal telemetry pulled in pact_context/session_journal)
+# because the path-consuming
 # shared helpers (constants, pact_context, session_state, task_utils, ... via
 # `from .paths import get_claude_config_dir`) sit in every closure. It is a
 # genuine path-seam resolver -> a legitimate SECONDARY helper (the C6-A oracle
