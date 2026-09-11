@@ -14,6 +14,8 @@ Tests cover:
 8. Lossless field validation (Produced, Key decisions) in structured HANDOFFs
 9. Signal-type completion bypass (AUDIT SIGNAL / audit_summary)
 10. check_lossless_fields() and declares_signal_completion() unit tests
+11. Refusal shape: decision:block + reason on missing/low-quality HANDOFF
+12. stop_hook_active loop guard: refusal degrades to a systemMessage warning
 """
 import io
 import json
@@ -151,7 +153,7 @@ class TestMainLastAssistantMessage:
 
         assert exc_info.value.code == 0
         captured = capsys.readouterr()
-        # Good handoff => no warnings printed
+        # Good handoff => no refusal printed
         assert json.loads(captured.out.strip()) == {"suppressOutput": True}
 
     def test_falls_back_to_transcript_when_no_last_assistant_message(self, capsys):
@@ -191,8 +193,8 @@ class TestMainLastAssistantMessage:
         captured = capsys.readouterr()
         assert json.loads(captured.out.strip()) == {"suppressOutput": True}
 
-    def test_warns_on_missing_handoff_from_last_assistant_message(self, capsys):
-        """When last_assistant_message has poor handoff, should emit warning."""
+    def test_refuses_on_missing_handoff_from_last_assistant_message(self, capsys):
+        """When last_assistant_message has poor handoff, should refuse the stop."""
         from validate_handoff import main
 
         input_data = json.dumps({
@@ -206,10 +208,9 @@ class TestMainLastAssistantMessage:
 
         assert exc_info.value.code == 0
         captured = capsys.readouterr()
-        if captured.out:
-            output = json.loads(captured.out)
-            assert "systemMessage" in output
-            assert "Handoff Warning" in output["systemMessage"]
+        output = json.loads(captured.out)
+        assert output["decision"] == "block"
+        assert "Handoff Refusal" in output["reason"]
 
 
 # =============================================================================
@@ -286,7 +287,7 @@ class TestLastAssistantMessagePreference:
     def test_prefers_last_assistant_message_over_transcript_content(self, capsys):
         """When both fields have content, last_assistant_message wins.
         Verified by: last_assistant_message has good handoff, transcript has bad.
-        If transcript were used, we'd get a warning — no warning = correct field used."""
+        If transcript were used, we'd get a refusal — no refusal = correct field used."""
         from validate_handoff import main
 
         input_data = json.dumps({
@@ -301,7 +302,7 @@ class TestLastAssistantMessagePreference:
 
         assert exc_info.value.code == 0
         captured = capsys.readouterr()
-        assert json.loads(captured.out.strip()) == {"suppressOutput": True}  # No warning = used good handoff from last_assistant_message
+        assert json.loads(captured.out.strip()) == {"suppressOutput": True}  # No refusal = used good handoff from last_assistant_message
 
     def test_last_assistant_message_none_falls_back(self, capsys):
         """When last_assistant_message is explicitly None, falls back to transcript."""
@@ -499,8 +500,8 @@ Stored audit_summary in task metadata.
 class TestLosslessFieldValidation:
     """Tests for lossless field checking in structured HANDOFF sections."""
 
-    def test_handoff_with_both_lossless_fields_no_warning(self):
-        """HANDOFF with both Produced and Key decisions: no lossless warnings."""
+    def test_handoff_with_both_lossless_fields_none_missing(self):
+        """HANDOFF with both Produced and Key decisions: no lossless fields missing."""
         from validate_handoff import validate_handoff
 
         is_valid, missing, lossless = validate_handoff(HANDOFF_BOTH_LOSSLESS)
@@ -508,18 +509,18 @@ class TestLosslessFieldValidation:
         assert missing == []
         assert lossless == []
 
-    def test_handoff_missing_produced_warns(self):
-        """HANDOFF missing 'Produced:' subsection: warns about Produced."""
+    def test_handoff_missing_produced_flagged(self):
+        """HANDOFF missing 'Produced:' subsection: flags Produced."""
         from validate_handoff import validate_handoff
 
         is_valid, missing, lossless = validate_handoff(HANDOFF_MISSING_PRODUCED)
-        assert is_valid is True  # Still valid — warnings don't block
+        assert is_valid is True  # Still valid — the flag is reported, main() decides severity
         assert missing == []
         assert "Produced" in lossless
         assert "Key decisions" not in lossless
 
-    def test_handoff_missing_key_decisions_warns(self):
-        """HANDOFF missing 'Key decisions:' subsection: warns about Key decisions."""
+    def test_handoff_missing_key_decisions_flagged(self):
+        """HANDOFF missing 'Key decisions:' subsection: flags Key decisions."""
         from validate_handoff import validate_handoff
 
         is_valid, missing, lossless = validate_handoff(HANDOFF_MISSING_KEY_DECISIONS)
@@ -528,8 +529,8 @@ class TestLosslessFieldValidation:
         assert "Key decisions" in lossless
         assert "Produced" not in lossless
 
-    def test_handoff_missing_both_warns_both(self):
-        """HANDOFF missing both lossless fields: warns about both."""
+    def test_handoff_missing_both_flags_both(self):
+        """HANDOFF missing both lossless fields: flags both."""
         from validate_handoff import validate_handoff
 
         is_valid, missing, lossless = validate_handoff(HANDOFF_MISSING_BOTH_LOSSLESS)
@@ -659,7 +660,7 @@ class TestDeclaresSignalCompletion:
 
     def test_quoted_mention_deep_in_body_does_not_declare(self):
         """A body that MENTIONS the token far from its opener — here while
-        DENYING it — must not suppress the HANDOFF warning. This is the
+        DENYING it — must not suppress the HANDOFF refusal. This is the
         defect: any closing text quoting dispatch or protocol prose used to
         disable its own check."""
         from validate_handoff import declares_signal_completion
@@ -687,11 +688,11 @@ class TestDeclaresSignalCompletion:
         assert declares_signal_completion(body) is True
 
 
-class TestMainLosslessWarnings:
-    """Integration tests for lossless warnings in main() output."""
+class TestMainLosslessRefusals:
+    """Integration tests for lossless-field refusals in main() output."""
 
-    def test_main_emits_lossless_warning_when_produced_missing(self, capsys):
-        """main() should emit lossless warning when Produced is missing."""
+    def test_main_refuses_when_produced_missing(self, capsys):
+        """main() should refuse the stop when Produced is missing."""
         from validate_handoff import main
 
         # Pad to exceed 100 char minimum + has HANDOFF section but missing Produced
@@ -708,11 +709,12 @@ class TestMainLosslessWarnings:
         assert exc_info.value.code == 0
         captured = capsys.readouterr()
         output = json.loads(captured.out)
-        assert "Lossless Field Warning" in output["systemMessage"]
-        assert "Produced" in output["systemMessage"]
+        assert output["decision"] == "block"
+        assert "Lossless Field Refusal" in output["reason"]
+        assert "Produced" in output["reason"]
 
-    def test_main_emits_lossless_warning_when_both_missing(self, capsys):
-        """main() should name both missing fields in the warning."""
+    def test_main_refusal_names_both_missing_lossless_fields(self, capsys):
+        """main() should name both missing fields in the refusal reason."""
         from validate_handoff import main
 
         transcript = HANDOFF_MISSING_BOTH_LOSSLESS + " " * max(0, 100 - len(HANDOFF_MISSING_BOTH_LOSSLESS))
@@ -728,12 +730,13 @@ class TestMainLosslessWarnings:
         assert exc_info.value.code == 0
         captured = capsys.readouterr()
         output = json.loads(captured.out)
-        assert "Lossless Field Warning" in output["systemMessage"]
-        assert "Produced" in output["systemMessage"]
-        assert "Key decisions" in output["systemMessage"]
+        assert output["decision"] == "block"
+        assert "Lossless Field Refusal" in output["reason"]
+        assert "Produced" in output["reason"]
+        assert "Key decisions" in output["reason"]
 
-    def test_main_no_warning_when_both_lossless_present(self, capsys):
-        """main() should emit no warning when both lossless fields are present."""
+    def test_main_no_refusal_when_both_lossless_present(self, capsys):
+        """main() should allow the stop when both lossless fields are present."""
         from validate_handoff import main
 
         input_data = json.dumps({
@@ -749,8 +752,8 @@ class TestMainLosslessWarnings:
         captured = capsys.readouterr()
         assert json.loads(captured.out.strip()) == {"suppressOutput": True}
 
-    def test_main_no_lossless_warning_for_signal_completion(self, capsys):
-        """main() should not emit lossless warnings for signal-type completions."""
+    def test_main_no_refusal_for_signal_completion(self, capsys):
+        """main() should not refuse signal-type completions."""
         from validate_handoff import main
 
         input_data = json.dumps({
@@ -775,14 +778,16 @@ class TestRoleClassGateOnAgentType:
     """The role-class gate ("is this a PACT agent?") reads ``agent_type``, not
     ``agent_id`` (#812). agent_id is absent under the separate-process teammate
     model, so the prior agent_id-keyed check was DORMANT for all teammates;
-    keying on agent_type re-enables teammate HANDOFF validation. Fail-safe:
-    advisory systemMessage, never DENY.
+    keying on agent_type re-enables teammate HANDOFF validation. The gate is
+    the only thing between a refusal and a non-PACT agent: a PACT agent_type
+    gets its stop blocked on a missing HANDOFF, any other agent_type exits
+    clean.
     """
 
-    def test_teammate_agent_type_fires_handoff_warning(self, capsys):
+    def test_teammate_agent_type_fires_handoff_refusal(self, capsys):
         """A teammate's agent_type (e.g. "pact-preparer") matches the pact-
-        prefix → the gate fires → a missing-HANDOFF transcript warns. This is
-        the validation that was dormant before the #812 swap."""
+        prefix → the gate fires → a missing-HANDOFF transcript refuses the
+        stop. This is the validation that was dormant before the #812 swap."""
         from validate_handoff import main
 
         input_data = json.dumps({
@@ -797,12 +802,12 @@ class TestRoleClassGateOnAgentType:
         assert exc_info.value.code == 0
         captured = capsys.readouterr()
         output = json.loads(captured.out.strip())
-        assert "systemMessage" in output, (
+        assert output.get("decision") == "block", (
             "teammate agent_type 'pact-preparer' must engage the role-class gate "
-            "(re-enabled #812 validation) and warn on a missing HANDOFF"
+            "(re-enabled #812 validation) and refuse the stop on a missing HANDOFF"
         )
-        # The warning labels the agent by its agent_type (no longer the absent agent_id).
-        assert "pact-preparer" in output["systemMessage"]
+        # The refusal reason labels the agent by its agent_type (no longer the absent agent_id).
+        assert "pact-preparer" in output["reason"]
 
     def test_agent_id_only_no_agent_type_is_dormant(self, capsys):
         """DOCUMENTS THE v4.4.0 STATE THE SWAP FIXES: a frame carrying ONLY
@@ -830,7 +835,7 @@ class TestRoleClassGateOnAgentType:
 
     def test_non_pact_agent_type_suppresses(self, capsys):
         """A non-PACT agent_type ("custom-agent") does not match the pact-
-        prefix → suppress (no false-positive HANDOFF warning for non-PACT
+        prefix → suppress (no false-positive HANDOFF refusal for non-PACT
         agents)."""
         from validate_handoff import main
 
@@ -848,3 +853,148 @@ class TestRoleClassGateOnAgentType:
         assert json.loads(captured.out.strip()) == {"suppressOutput": True}, (
             "a non-PACT agent_type must not engage the role-class gate"
         )
+
+
+# =============================================================================
+# stop_hook_active loop guard: refusal degrades to a warning, never a re-block
+# =============================================================================
+
+class TestStopHookActiveLoopGuard:
+    """When ``stop_hook_active`` is set, the agent is already continuing from
+    a stop-hook block. Refusing again can loop an agent that cannot satisfy
+    the check forever, so the hook MUST degrade to a systemMessage warning
+    and let the stop land. When the field is absent or false, the refusal
+    fires normally.
+    """
+
+    def test_stop_hook_active_true_degrades_to_warning(self, capsys):
+        """Missing HANDOFF + stop_hook_active=true → warning, NOT a block."""
+        from validate_handoff import main
+
+        input_data = json.dumps({
+            "agent_type": "pact-backend-coder",
+            "last_assistant_message": "x" * 100 + " " + MISSING_HANDOFF,
+            "stop_hook_active": True,
+        })
+
+        with patch("sys.stdin", io.StringIO(input_data)):
+            with pytest.raises(SystemExit) as exc_info:
+                main()
+
+        assert exc_info.value.code == 0
+        captured = capsys.readouterr()
+        output = json.loads(captured.out.strip())
+        assert "decision" not in output, (
+            "stop_hook_active=true must NOT re-block — that loops an agent "
+            "that cannot satisfy the check"
+        )
+        # The degrade path is user-facing: the framing names the degrade, and
+        # the shared detail (with its refusal-class label) rides inside it.
+        assert "refusal degraded by stop_hook_active loop guard" in output["systemMessage"]
+        assert "Handoff Refusal" in output["systemMessage"]
+
+    def test_stop_hook_active_true_degrades_lossless_refusal(self, capsys, monkeypatch):
+        """Lossless-field refusal + stop_hook_active=true → warning, not block."""
+        import validate_handoff
+        from validate_handoff import main
+
+        events = []
+        monkeypatch.setattr(validate_handoff, "append_event", events.append)
+
+        transcript = HANDOFF_MISSING_PRODUCED + " " * max(0, 100 - len(HANDOFF_MISSING_PRODUCED))
+        input_data = json.dumps({
+            "agent_type": "pact-backend-coder",
+            "last_assistant_message": transcript,
+            "stop_hook_active": True,
+        })
+
+        with patch("sys.stdin", io.StringIO(input_data)):
+            with pytest.raises(SystemExit) as exc_info:
+                main()
+
+        assert exc_info.value.code == 0
+        captured = capsys.readouterr()
+        output = json.loads(captured.out.strip())
+        assert "decision" not in output
+        assert "refusal degraded by stop_hook_active loop guard" in output["systemMessage"]
+        assert "Lossless Field Refusal" in output["systemMessage"]
+        assert events[0]["classes"] == ["lossless_fields"]
+
+    def test_degrade_emits_handoff_refusal_degraded_event(self, monkeypatch):
+        """Degrade path appends one handoff_refusal_degraded journal event
+        carrying agent_type, the refusal detail, and the fired class."""
+        import validate_handoff
+        from validate_handoff import main
+
+        events = []
+        monkeypatch.setattr(validate_handoff, "append_event", events.append)
+
+        input_data = json.dumps({
+            "agent_type": "pact-backend-coder",
+            "last_assistant_message": "x" * 100 + " " + MISSING_HANDOFF,
+            "stop_hook_active": True,
+        })
+
+        with patch("sys.stdin", io.StringIO(input_data)):
+            with pytest.raises(SystemExit) as exc_info:
+                main()
+
+        assert exc_info.value.code == 0
+        assert len(events) == 1
+        event = events[0]
+        assert event["type"] == "handoff_refusal_degraded"
+        assert event["agent_type"] == "pact-backend-coder"
+        assert "Handoff Refusal" in event["detail"]
+        assert event["classes"] == ["missing_handoff"]
+
+    def test_degrade_journal_failure_still_exits_zero(self, capsys, monkeypatch):
+        """A journal-write failure on the degrade path is swallowed: the
+        systemMessage still lands and the hook still exits 0 — telemetry is
+        fail-open and never breaks the exit-0 contract."""
+        import validate_handoff
+        from validate_handoff import main
+
+        def _raise(_event):
+            raise RuntimeError("journal write exploded")
+
+        monkeypatch.setattr(validate_handoff, "append_event", _raise)
+
+        input_data = json.dumps({
+            "agent_type": "pact-backend-coder",
+            "last_assistant_message": "x" * 100 + " " + MISSING_HANDOFF,
+            "stop_hook_active": True,
+        })
+
+        with patch("sys.stdin", io.StringIO(input_data)):
+            with pytest.raises(SystemExit) as exc_info:
+                main()
+
+        assert exc_info.value.code == 0
+        output = json.loads(capsys.readouterr().out.strip())
+        assert "decision" not in output
+        assert "refusal degraded by stop_hook_active loop guard" in output["systemMessage"]
+
+    def test_stop_hook_active_false_still_blocks(self, capsys, monkeypatch):
+        """stop_hook_active=false is the same as absent → the refusal fires."""
+        import validate_handoff
+        from validate_handoff import main
+
+        events = []
+        monkeypatch.setattr(validate_handoff, "append_event", events.append)
+
+        input_data = json.dumps({
+            "agent_type": "pact-backend-coder",
+            "last_assistant_message": "x" * 100 + " " + MISSING_HANDOFF,
+            "stop_hook_active": False,
+        })
+
+        with patch("sys.stdin", io.StringIO(input_data)):
+            with pytest.raises(SystemExit) as exc_info:
+                main()
+
+        assert exc_info.value.code == 0
+        captured = capsys.readouterr()
+        output = json.loads(captured.out.strip())
+        assert output["decision"] == "block"
+        assert "Handoff Refusal" in output["reason"]
+        assert events == []  # telemetry fires only on the degrade path

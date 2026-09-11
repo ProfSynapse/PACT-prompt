@@ -188,6 +188,17 @@ _REQUIRED_FIELDS_BY_TYPE: dict[str, dict[str, type]] = {
         "task_subject": str,
         "handoff": dict,
     },
+    # hooks/validate_handoff.py emits handoff_refusal_degraded when the
+    # stop_hook_active loop guard degrades a HANDOFF refusal to a
+    # systemMessage warning — with refusal as the default, degrade events are
+    # the escape hatch and must be observable. agent_type is the teammate's
+    # role; detail is the refusal text that would have blocked; classes names
+    # which refusal classes fired ("missing_handoff" and/or "lossless_fields").
+    "handoff_refusal_degraded": {
+        "agent_type": str,
+        "detail": str,
+        "classes": list,
+    },
     # hooks/missed_wake_scan.py writes missed_wake (the #903 deferred
     # missed-wake alarm) with task_id, agent (the idle teammate / task owner),
     # and since (the intentional_wait timestamp — also the re-arm discriminator
