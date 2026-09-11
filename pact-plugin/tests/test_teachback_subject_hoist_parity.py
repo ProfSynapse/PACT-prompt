@@ -25,12 +25,9 @@ from the literal `TEACHBACK for ` to a word boundary:
      superset, never a re-aim.
 """
 import re
-import sys
 from pathlib import Path
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 import task_lifecycle_gate as tlg  # noqa: E402
 from shared.task_utils import is_teachback_subject  # noqa: E402

@@ -38,16 +38,12 @@ that holds that reasoning up.
 from __future__ import annotations
 
 import logging
-import os
 import struct
-import sys
 from unittest.mock import patch
 
 import pytest
 
 from helpers import create_test_schema
-
-sys.path.insert(0, os.path.normpath(os.path.join(os.path.dirname(__file__), '..', 'skills', 'pact-memory')))
 
 try:
     import pysqlite3 as sqlite3

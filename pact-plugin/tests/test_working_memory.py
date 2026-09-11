@@ -34,15 +34,8 @@ DESCRIBE the shape. That description becomes a THIRD spelling of the date
 shape, beside the writer format string and the gate pattern. Three spellings
 that must agree is the generator of the drift this arm is here to catch.
 """
-import sys
-from pathlib import Path
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
-sys.path.insert(
-    0, str(Path(__file__).parent.parent / "skills" / "pact-memory" / "scripts")
-)
 
 # The two writers that emit a memory-entry heading. Each is driven for real
 # below; nothing here reconstructs what they emit.

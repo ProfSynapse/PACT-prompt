@@ -20,8 +20,6 @@ from pathlib import Path
 
 import pytest
 
-# skills/pact-memory is the package root, so `scripts.*` imports resolve.
-sys.path.insert(0, os.path.normpath(os.path.join(os.path.dirname(__file__), '..', 'skills', 'pact-memory')))
 
 import scripts.working_memory as wm  # noqa: E402
 from scripts.memory_api import PACTMemory  # noqa: E402

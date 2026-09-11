@@ -38,12 +38,9 @@ safety-net shape) proves the assertion is coupled to the real resolution.
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 # Surgical: exercise the caller-3 resolver via task_utils directly. session_init
 # caller-3 (session_init.py ~:1211) calls the SAME function — session_init

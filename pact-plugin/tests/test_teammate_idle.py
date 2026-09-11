@@ -19,13 +19,10 @@ Tests cover:
 - Concurrent multi-agent tracking independence.
 """
 import json
-import sys
 from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 
 def make_task(task_id="1", subject="CODE: auth", status="in_progress",

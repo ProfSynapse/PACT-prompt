@@ -50,12 +50,9 @@ the task. Empirically confirmed via isolated worktree @ <fix-sha>^: {3 failed}.
 ================================================================================
 """
 import json
-import sys
 from pathlib import Path
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 import session_end  # noqa: E402
 

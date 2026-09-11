@@ -9,11 +9,8 @@ Tests cover:
 5. _get_recommendations: dependency-based recommendations
 """
 import os
-import sys
 from unittest.mock import patch
 
-
-sys.path.insert(0, os.path.normpath(os.path.join(os.path.dirname(__file__), '..', 'skills', 'pact-memory')))
 
 
 # ---------------------------------------------------------------------------

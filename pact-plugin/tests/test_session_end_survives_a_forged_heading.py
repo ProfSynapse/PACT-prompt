@@ -69,16 +69,10 @@ THE FIXTURE RULES, AND EACH ONE ANSWERS A MEASURED FAILURE
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
 from unittest.mock import patch
 
 from shared.claude_md_manager import MEMORY_START_MARKER, MEMORY_END_MARKER
 from tests.test_pin_marker_writer import build_claude_md
-
-sys.path.insert(
-    0, str(Path(__file__).parent.parent / "skills" / "pact-memory" / "scripts")
-)
 
 SESSION_END = "<!-- SESSION_END -->"
 

@@ -8,12 +8,8 @@ Tests cover:
 3. route_workflow: all 4 routing thresholds at exact boundaries
 4. Constants consistency with architecture spec
 """
-import sys
-from pathlib import Path
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 from shared.variety_scorer import (
     COMPACT_MAX,

@@ -30,15 +30,7 @@ Used by: pytest (the working_memory edge-path gate).
 """
 
 import os
-import sys
 from pathlib import Path
-
-_SCRIPTS_DIR = str(
-    Path(__file__).parent.parent / "skills" / "pact-memory" / "scripts"
-)
-if _SCRIPTS_DIR not in sys.path:
-    sys.path.insert(0, _SCRIPTS_DIR)
-
 
 def _seed_claude_md(home: Path) -> Path:
     """Create a minimal project CLAUDE.md with an empty Working Memory section

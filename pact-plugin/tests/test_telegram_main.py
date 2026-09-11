@@ -8,13 +8,10 @@ Tests cover:
 """
 
 import sys
-from pathlib import Path
 from types import ModuleType
 from unittest.mock import MagicMock, patch
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # Mock the mcp module tree before importing anything that touches server.py
 if "mcp" not in sys.modules:

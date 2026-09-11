@@ -23,15 +23,10 @@ coarse fact goes first, the finer discrimination second.
 
 import json
 import os
-import sys
 from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-
-sys.path.insert(
-    0, str(Path(__file__).parent.parent / "skills" / "pact-memory" / "scripts")
-)
 
 
 # ---------------------------------------------------------------------------

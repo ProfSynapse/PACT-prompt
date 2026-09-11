@@ -40,13 +40,10 @@ AC#3 true-positive preservation:
 
 import re
 import subprocess
-import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 # Absolute path to session_journal.py for subprocess-level bash tests. Computed
 # here so the bash-template tests (TestPauseBashConditionalEmission,

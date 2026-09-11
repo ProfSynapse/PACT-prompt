@@ -17,11 +17,9 @@ introduce the per-teammate-spawn cost the v4.0.0 cutover eliminated.
 """
 
 import json
-import sys
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).parent.parent
-sys.path.insert(0, str(_REPO_ROOT / "hooks"))
 
 # Sentinel teammate for the regression check. backend-coder is one of the
 # larger teammate bodies; if it stays under THRESHOLD_BYTES the rest do

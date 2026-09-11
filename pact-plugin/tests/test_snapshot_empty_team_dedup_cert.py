@@ -40,12 +40,9 @@ Used by: pytest. Companion file test_snapshot_marker_root_fallback.py
 """
 
 import os
-import sys
 from pathlib import Path
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 import shared.pact_context as pact_context_module  # noqa: E402
 import shared.session_journal as session_journal  # noqa: E402

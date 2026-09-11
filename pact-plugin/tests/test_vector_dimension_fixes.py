@@ -16,18 +16,12 @@ Risk tier: STANDARD — well-understood pattern fix.
 """
 
 import json
-import os
 import struct
-import sys
 import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-
-# Add paths for imports — scripts/ is a package with __init__.py,
-# so we add its parent to sys.path for proper relative imports.
-sys.path.insert(0, os.path.normpath(os.path.join(os.path.dirname(__file__), '..', 'skills', 'pact-memory')))
 
 
 # =============================================================================

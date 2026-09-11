@@ -16,12 +16,9 @@ Used by: pytest (CODE-phase verification for the gate seams; edge/matrix
 """
 
 import json
-import sys
 from pathlib import Path
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 import shared.task_metadata_snapshot as tms  # noqa: E402
 import task_lifecycle_gate as tlg  # noqa: E402

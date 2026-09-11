@@ -35,8 +35,6 @@ from pathlib import Path
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).parent.parent / "skills" / "pact-memory" / "scripts"))
-
 
 def _densest(nchars):
     """Return the densest string of `nchars` that `str.split()` can meet.

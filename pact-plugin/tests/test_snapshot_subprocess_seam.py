@@ -62,10 +62,8 @@ from pathlib import Path
 
 HOOKS_DIR = Path(__file__).parent.parent / "hooks"
 
-# For the occupant-join oracle only (computing the expected discriminator
-# with the shared SSOT fn) — the modules under test run in SUBPROCESSES and
-# are never imported, patched, or stubbed here.
-sys.path.insert(0, str(HOOKS_DIR))
+# The modules under test run in SUBPROCESSES and are never imported,
+# patched, or stubbed here.
 
 TEAM = "session-subproc"
 SID = "bbbbbbbb-2222-3333-4444-555555555555"

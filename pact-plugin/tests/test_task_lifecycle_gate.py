@@ -44,8 +44,6 @@ from unittest.mock import patch
 import pytest
 
 
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
-
 import task_lifecycle_gate as tlg  # noqa: E402
 # #958: imported from the SSOT module so the message-body echo assertions
 # below are coupled to the EXACT constant the gate appends — a substring check

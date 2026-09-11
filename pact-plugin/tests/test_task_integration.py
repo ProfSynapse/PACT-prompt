@@ -15,14 +15,10 @@ build_refresh_from_tasks in #444).
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
 from typing import Any
 
 import pytest
-
-# Add hooks directory to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 
 # =============================================================================

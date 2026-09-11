@@ -13,10 +13,7 @@ Used by: pytest (the acceptance-criteria trace: load-bearing keys survive
 """
 
 import json
-import sys
 from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "hooks"))
 
 import shared.session_journal as session_journal  # noqa: E402
 import task_lifecycle_gate as tlg  # noqa: E402

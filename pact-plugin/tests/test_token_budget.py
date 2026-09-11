@@ -11,13 +11,8 @@ Tests cover:
 
 import os
 import re
-import sys
-from pathlib import Path
 from unittest.mock import patch, MagicMock
 
-
-# Add paths for imports
-sys.path.insert(0, str(Path(__file__).parent.parent / "skills" / "pact-memory" / "scripts"))
 
 
 class TestEstimateTokens:
