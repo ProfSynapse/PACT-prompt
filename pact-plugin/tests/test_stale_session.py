@@ -25,7 +25,7 @@ from pathlib import Path
 
 import pytest
 
-from shared.stale_session import (  # noqa: E402 — sys.path insert above
+from shared.stale_session import (
     detect_stale_session_block,
     _RESUME_LINE_RE,
 )
