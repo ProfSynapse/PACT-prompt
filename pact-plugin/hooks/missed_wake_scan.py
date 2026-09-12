@@ -355,13 +355,15 @@ def emit_unflagged_forensic(stale: list) -> None:
 
 
 def build_unflagged_surface(stale: list) -> "str | None":
-    """Lead-facing text naming each teammate with unflagged SHELL-SHAPED work.
+    """Lead-facing text naming teammates with an unflagged recorded launch.
 
-    THE LIST IS NOT A CENSUS, and the surface says so. Only shell launches
-    reach the registry, so a teammate with an outstanding monitor, Agent-tool
-    subagent, MCP task, workflow or scheduled wakeup is absent from it. The
-    sentence is true of everyone it names and says nothing about anyone it
-    omits — a reader who takes an empty or short list as an all-clear has
+    THE LIST IS NOT A CENSUS, and the surface says so. A launch reaches the
+    registry only from a Bash frame carrying the harness background flag or
+    whose command ends in a bare `&`. A teammate with an outstanding monitor,
+    Agent-tool subagent, MCP task, workflow or scheduled wakeup is absent
+    from it, and so is one whose shell launch was backgrounded any other way.
+    The sentence is true of everyone it names and says nothing about anyone
+    it omits — a reader who takes an empty or short list as an all-clear has
     drawn a completeness inference the data does not support.
     """
     if not stale:
