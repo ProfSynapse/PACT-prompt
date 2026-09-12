@@ -41,7 +41,12 @@ import pytest
 
 import missed_wake_scan as mw
 import teammate_idle as ti
-from fixtures.role_frames import captured_lead_userpromptsubmit_qualified
+from fixtures.role_frames import (
+    captured_lead_userpromptsubmit_qualified,
+    captured_pretooluse_lead_inprocess,
+    captured_pretooluse_teammate_inprocess_subagent,
+    captured_pretooluse_teammate_tmux,
+)
 from shared import background_work as bw
 
 HOOKS_DIR = Path(__file__).resolve().parents[1] / "hooks"
@@ -754,7 +759,8 @@ class TestRegistryUnderConcurrentProcesses:
 
 
 # ---------------------------------------------------------------------------
-# The actor-blind advisory must never become a term in the deny verdict.
+# The launch advisory must never become a term in the deny verdict, and it
+# reaches teammate frames only.
 # ---------------------------------------------------------------------------
 
 
@@ -765,13 +771,30 @@ _COMMANDS = [
 ]
 
 
-def _gate(command: str, background) -> tuple:
+_TEAMMATE = object()
+
+
+def _gate(command: str, background, frame=_TEAMMATE) -> tuple:
+    """Run the real gate as a subprocess: (returncode, decision, advisory shown).
+
+    THE DEFAULT FRAME IS A REAL TEAMMATE'S. The launch advisory reaches teammate
+    frames only, so a frame carrying no identity measures a gate that is
+    correctly silent, and every arm asserting the advisory would test nothing.
+    The default is the captured tmux-teammate PreToolUse frame with its tool
+    call replaced by this Bash command. Pass another frame to send a different
+    identity, or None for a frame with no identity at all.
+    """
+    if frame is _TEAMMATE:
+        frame = captured_pretooluse_teammate_tmux()
+    frame = {k: v for k, v in (frame or {}).items() if k != "_meta"}
     tool_input = {"command": command}
     if background is not None:
         tool_input["run_in_background"] = background
+    frame["tool_name"] = "Bash"
+    frame["tool_input"] = tool_input
     proc = subprocess.run(
         [sys.executable, str(GATE)],
-        input=json.dumps({"tool_name": "Bash", "tool_input": tool_input}),
+        input=json.dumps(frame),
         capture_output=True, text=True, timeout=30,
     )
     try:
@@ -788,7 +811,7 @@ class TestAdvisoryNeverAltersTheVerdict:
     """The advisory rides the ALLOW branch. Prove it cannot reach the verdict.
 
     "It does not today" is what the code shows. What a test can add is that
-    the verdict is INVARIANT under the only input the advisory reads —
+    the verdict is INVARIANT under the launch flag the advisory reads —
     measured across the corpus rather than argued from the control flow, so a
     future edit that threads `run_in_background` into the filler predicate
     reddens here instead of shipping a gate whose decision depends on a field
@@ -802,7 +825,10 @@ class TestAdvisoryNeverAltersTheVerdict:
 
     def test_the_probe_can_SEE_a_difference(self):
         """The control. The advisory column must vary, or the arm above is
-        measuring a constant and would pass on a hook that emitted nothing."""
+        measuring a constant and would pass on a hook that emitted nothing.
+        `_gate` sends a teammate frame by default because the advisory reaches
+        teammate frames only; a frame with no identity would make this column
+        constant and the control vacuous."""
         assert _gate("echo hi", True)[2] is True
         assert _gate("echo hi", False)[2] is False
 
@@ -812,6 +838,83 @@ class TestAdvisoryNeverAltersTheVerdict:
         clearest possible sign the two concerns had merged."""
         rc, decision, advisory = _gate("sleep 5", True)
         assert (rc, decision, advisory) == (2, "deny", False)
+
+
+class TestTheLaunchAdvisoryReachesTeammateFramesOnly:
+    """Who receives the launch advisory, keyed on stdin `agent_type` alone.
+
+    The advisory tells its reader that nothing will wake it and that it must
+    flag the wait. That is true for a teammate and false for the lead, which is
+    re-invoked when its own background job finishes and holds no task wait to
+    flag. So it must reach a frame whose `agent_type` is present, non-empty and
+    not a lead spelling, and nothing else.
+
+    Each negative sends the same Bash launch as the teammate positive and
+    changes only the identity, so a silent result is attributable to the
+    identity rather than to the command. The lead and subagent frames are real
+    captures; the other identities change one field of a real capture.
+    """
+
+    LAUNCH = ("echo hi", True)
+
+    def test_a_TEAMMATE_frame_gets_the_advisory(self):
+        rc, _decision, advisory = _gate(*self.LAUNCH)
+        assert (rc, advisory) == (0, True), (
+            "a real teammate frame launching background work drew no advisory; "
+            "every negative arm in this class is then vacuous"
+        )
+
+    def test_the_QUALIFIED_lead_spelling_gets_NO_advisory(self):
+        rc, _decision, advisory = _gate(
+            *self.LAUNCH, frame=captured_pretooluse_lead_inprocess())
+        assert (rc, advisory) == (0, False), (
+            "the lead drew the teammate launch advisory, which tells it that "
+            "nothing will wake it; the lead is re-invoked when its own "
+            "background job finishes"
+        )
+
+    def test_the_UNQUALIFIED_lead_spelling_gets_NO_advisory(self):
+        lead = captured_pretooluse_lead_inprocess()
+        lead["agent_type"] = "pact-orchestrator"
+        rc, _decision, advisory = _gate(*self.LAUNCH, frame=lead)
+        assert (rc, advisory) == (0, False), (
+            "the lead's unqualified spelling drew the advisory; both spellings "
+            "the lead can carry must be refused"
+        )
+
+    def test_a_frame_with_NO_agent_type_gets_NO_advisory(self):
+        """A plain session outside PACT carries no `agent_type`."""
+        rc, _decision, advisory = _gate(*self.LAUNCH, frame=None)
+        assert (rc, advisory) == (0, False), (
+            "a frame with no agent_type drew the advisory; a session outside "
+            "PACT has no team wait to flag"
+        )
+
+    def test_an_EMPTY_agent_type_gets_NO_advisory(self):
+        teammate = captured_pretooluse_teammate_tmux()
+        teammate["agent_type"] = ""
+        rc, _decision, advisory = _gate(*self.LAUNCH, frame=teammate)
+        assert (rc, advisory) == (0, False), (
+            "an empty agent_type drew the advisory; an empty string is not an "
+            "identity"
+        )
+
+    def test_KNOWN_LIMIT_an_agent_tool_subagent_frame_ALSO_gets_the_advisory(self):
+        """🔴 PINS A LIMITATION, NOT A REQUIREMENT.
+
+        An Agent-tool subagent carries a non-lead `agent_type` too, and stdin
+        has no field that separates it from a teammate, so it receives the
+        advisory. IF THE GATE LEARNS TO TELL THEM APART, DELETE THIS ARM: its
+        failure is the improvement landing, not a regression.
+        """
+        rc, _decision, advisory = _gate(
+            *self.LAUNCH, frame=captured_pretooluse_teammate_inprocess_subagent())
+        assert (rc, advisory) == (0, True), (
+            "KNOWN LIMIT: a subagent frame is indistinguishable from a teammate "
+            "frame on stdin. If the advisory no longer reaches it, the gate has "
+            "learned to tell them apart; delete this arm rather than restore "
+            "the old behaviour"
+        )
 
 
 # ---------------------------------------------------------------------------
