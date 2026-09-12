@@ -296,7 +296,7 @@ def _unflagged_emitted_keys() -> set:
     return keys
 
 
-def find_stale_unflagged_background(team_name: str) -> list:
+def find_stale_unflagged_background(team_name: str, tasks: "list | None" = None) -> list:
     """Records past their own staleness window. Never raises.
 
     SHARES A PROCESS WITH THE MISSED-WAKE ALARM, NOT A VOCABULARY. This keeps
@@ -306,15 +306,19 @@ def find_stale_unflagged_background(team_name: str) -> list:
 
     GATES ARE NOT OPTIONAL ON THIS PATH. It reads through
     `outstanding_unflagged`, which applies the task-status and flagged-wait
-    gates, and NOT through `load_records`, which applies neither. An earlier
-    version of this function called `load_records` directly and surfaced
-    records for completed tasks and for correctly-flagged waits — the
-    lead-facing text claims "no flagged wait" and nothing evaluated it.
+    gates, and NEVER through `_load_records` or `load_records_for_discharge`,
+    which apply neither. Read either one here and the surface names records
+    for completed tasks and for correctly flagged waits, while its text tells
+    the lead there is "no flagged wait", a claim nothing evaluated.
+
+    Pass `tasks` when the caller has already read the task list, so a lead
+    prompt reads it once; without it the list is read here.
     """
     try:
         from shared.background_work import lead_stale, outstanding_unflagged
 
-        tasks = get_task_list()
+        if tasks is None:
+            tasks = get_task_list()
         return [r for r in outstanding_unflagged(tasks, team_name) if lead_stale(r)]
     except Exception:
         return []
@@ -618,7 +622,7 @@ def run_surface(input_data: dict) -> "str | None":
 
         team_name = get_team_name()
         if team_name:
-            unflagged = find_stale_unflagged_background(team_name)
+            unflagged = find_stale_unflagged_background(team_name, tasks)
             if unflagged:
                 emit_unflagged_forensic(unflagged)
                 surface = build_unflagged_surface(unflagged)
