@@ -64,6 +64,8 @@
       "scripts.config.STORE_ORIGIN_HOME": null,
       "scripts.config.resolve_db_path": null,
       "scripts.config.store_path_origin": null,
+      "shared.project_scope": "hooks/shared/project_scope.py",
+      "shared.project_scope.same_repository": null,
       "staleness": "hooks/staleness.py"
     },
     "tests/test_archive_pin_emit.py": {
@@ -79,7 +81,10 @@
     },
     "tests/test_archive_pin_resolver.py": {
       "archive_pin": "scripts/archive_pin.py",
-      "pathlib.Path": null
+      "pathlib.Path": null,
+      "shared": "hooks/shared/__init__.py",
+      "shared.project_scope": "hooks/shared/project_scope.py",
+      "shared.project_scope.same_repository": null
     },
     "tests/test_artifact_paths_durability.py": {
       "__future__.annotations": null,
@@ -3431,10 +3436,17 @@
       "scripts.working_memory.project_memories_to_claude_md": null
     },
     "tests/test_working_memory_redirected_store_refusal.py": {
+      "archive_pin": "scripts/archive_pin.py",
+      "fixtures.project_dir": "tests/fixtures/project_dir.py",
+      "fixtures.project_dir.enable_record_discovery": null,
+      "fixtures.project_dir.write_session_context": null,
       "pathlib.Path": null,
+      "scripts": "skills/pact-memory/scripts/__init__.py",
       "scripts.config": "skills/pact-memory/scripts/config.py",
       "scripts.config.STORE_ORIGIN_ENV": null,
       "scripts.config.STORE_ORIGIN_HOME": null,
+      "scripts.pact_session": "skills/pact-memory/scripts/pact_session.py",
+      "scripts.pact_session.ProjectScopeDisagreementError": null,
       "scripts.working_memory": "skills/pact-memory/scripts/working_memory.py",
       "scripts.working_memory.AmbientSyncRefused": null,
       "scripts.working_memory.SyncResult": null,

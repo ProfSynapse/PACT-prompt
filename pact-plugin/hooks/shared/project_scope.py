@@ -27,12 +27,8 @@ import os
 from pathlib import Path
 from typing import Optional, Set
 
-try:
-    from .git_helpers import run_git
-    from .paths import get_claude_config_dir
-except ImportError:  # loaded as a top-level module rather than a package member
-    from git_helpers import run_git
-    from paths import get_claude_config_dir
+from .git_helpers import run_git
+from .paths import get_claude_config_dir
 
 # Git LOCATES the repository from these instead of discovering it from `-C`.
 # Inherited -- a git hook runs with GIT_DIR exported for its own repository --

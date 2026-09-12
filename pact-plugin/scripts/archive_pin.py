@@ -172,8 +172,9 @@ from pathlib import Path
 # rationale to check_pin_caps.py: `sys.path.insert(0, hooks_dir)` would
 # PREPEND, so a future hooks/types.py or hooks/json.py would shadow the
 # stdlib. Spec-loading binds by path, not by name resolution; hooks_dir is
-# APPENDED (not prepended) only so staleness's `from shared.claude_md_manager`
-# resolves, with the stdlib retaining priority on any name collision.
+# APPENDED (not prepended) so the `shared` package resolves -- staleness's
+# `from shared.claude_md_manager` and this module's `shared.project_scope` --
+# with the stdlib retaining priority on any name collision.
 _HOOKS_DIR = Path(__file__).resolve().parent.parent / "hooks"
 if str(_HOOKS_DIR) not in sys.path:
     sys.path.append(str(_HOOKS_DIR))
@@ -353,23 +354,6 @@ def _load_hook_module(name: str):
     return module
 
 
-def _load_shared_module(name: str):
-    """Load a module from hooks/shared/ by putting that directory on sys.path.
-
-    DELIBERATELY NOT `_load_hook_module`'s FILE-PATH SHAPE. That helper
-    registers under a BARE top-level name, so anything importing the same name
-    later silently receives this module's instance instead of its own. It is
-    tolerable for the two pin modules it was written for, which nothing else
-    imports; it is not a pattern to spread. A path insert lets the shared
-    package resolve its own intra-package imports normally, which
-    `project_scope` needs to reach `git_helpers`.
-    """
-    shared_dir = str(_HOOKS_DIR / "shared")
-    if shared_dir not in sys.path:
-        sys.path.insert(0, shared_dir)
-    return importlib.import_module(name)
-
-
 _pin_caps = _load_hook_module("pin_caps")
 _staleness = _load_hook_module("staleness")
 
@@ -510,17 +494,15 @@ def extract_pin_block(pinned_content: str, index: int, pins) -> str:
     return pinned_content[block_start:block_end]
 
 
-# `_same_repository` moved to hooks/shared/project_scope.py. It is pure
-# project-identity mechanics with no pin, memory, or archive knowledge, and
-# the working-memory projection path needs the same discriminator -- one
-# implementation, one guard test, no drift. RE-EXPORTED rather than wrapped:
-# a wrapper here could acquire behaviour and become a second definition,
-# which is what the move exists to prevent. Loaded by file path because this
-# module sits outside the hooks package.
-_same_repository = _load_shared_module("project_scope").same_repository
-_stays_in_declared_project = _load_shared_module(
-    "project_scope"
-).stays_in_declared_project
+# The project-identity predicate lives in hooks/shared/project_scope.py, where
+# the working-memory projection uses the same one, so the two refusals cannot
+# drift apart. Imported through the `shared` PACKAGE, which the hooks directory
+# appended to sys.path above makes importable, so this module and every other
+# importer hold ONE module object. Re-exported, never wrapped: a wrapper could
+# acquire behaviour and become a second definition.
+from shared.project_scope import (  # noqa: E402
+    stays_in_declared_project as _stays_in_declared_project,
+)
 
 
 def resolve_claude_md():
