@@ -470,11 +470,14 @@ def build_mutual_surface(mutual: list) -> "str | None":
 def find_unanchored_waits(tasks: list, team_name: "str | None" = None) -> list:
     """Unanchored waits that are ACTIVELY DISCHARGING a record on the fallback.
 
-    A wait with no `covers_since` is not itself a fault. The wait works; what
-    is missing is the field pinning WHICH launches it covers, so coverage falls
-    back to the re-stampable `since`. Surfacing that keeps the fallback from
-    being a silent decision — but only where the fallback has actually decided
-    something.
+    Agents are instructed to write `covers_since` on every SET, so a wait
+    without one predates the field, was written under the earlier instruction
+    or from a template that omits it, or lost it on a re-SET that rewrote the
+    wait without carrying it forward. Nothing here can tell which. The wait
+    still works; what is missing is the field pinning WHICH launches it covers,
+    so coverage falls back to the re-stampable `since`. Surfacing that keeps
+    the fallback from being a silent decision — but only where the fallback
+    has actually decided something.
 
     🔴 GATED ON A COVERED RECORD, NOT ON STALENESS, AND THE DIFFERENCE INVERTS
     THE SIGNAL. Gating on `wait_stale` looks right and is backwards: it reads
@@ -553,13 +556,15 @@ def build_unanchored_surface(unanchored: list) -> "str | None":
         "`covers_since` to say which launches it covers, so the scope is taken "
         "from `since`, which agents re-stamp:\n"
         + "\n".join(lines)
-        + "\nNothing is stalled and no teammate is at fault. What is uncertain "
+        + "\nNothing is stalled. What is uncertain "
         "is whether the wait was really raised BEFORE the launch it is "
         "acquitting: if it was re-stamped, `since` has moved forward and may "
         "now cover work the teammate never acknowledged. Ask the teammate what "
-        "its wait was raised for. `absent` means the wait predates the field or "
-        "an agent dropped it on a re-SET; `malformed` means an agent wrote an "
-        "unparseable value and has a bug worth naming."
+        "its wait was raised for. `absent` means the wait predates the field, "
+        "was written under the earlier instruction or from a template that "
+        "omits it, or an agent dropped it on a re-SET by rewriting the wait "
+        "without `covers_since`; the scan cannot tell which. `malformed` "
+        "means an agent wrote an unparseable value and has a bug worth naming."
     )
 
 

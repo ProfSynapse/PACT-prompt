@@ -41,7 +41,8 @@ TaskUpdate(taskId, metadata={
     "intentional_wait": {
         "reason":            "awaiting_lead_completion",
         "expected_resolver": "lead",
-        "since":             "<canonical_since() output>"
+        "since":             "<canonical_since() output>",
+        "covers_since":      "<the same value as since>"
     }
 })
 ```
@@ -163,7 +164,8 @@ SendMessage(
 TaskUpdate(taskId, metadata={"intentional_wait": {
     "reason": "awaiting_lead_completion",
     "expected_resolver": "lead",
-    "since": "<canonical_since() output: tz-aware ISO-8601 UTC>"
+    "since": "<canonical_since() output: tz-aware ISO-8601 UTC>",
+    "covers_since": "<the same value as since>"
 }})
 ```
 
