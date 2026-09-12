@@ -3439,7 +3439,9 @@
       "scripts.working_memory.AmbientSyncRefused": null,
       "scripts.working_memory.SyncResult": null,
       "scripts.working_memory._refuse_ambient_sync_from_a_redirected_store": null,
-      "scripts.working_memory._target_is_inside_the_declared_project_dir": null
+      "scripts.working_memory._target_is_inside_the_declared_project_dir": null,
+      "shared.project_scope": "hooks/shared/project_scope.py",
+      "shared.project_scope.same_repository": null
     },
     "tests/test_working_memory_resolver_and_lock_release.py": {
       "pathlib.Path": null,
