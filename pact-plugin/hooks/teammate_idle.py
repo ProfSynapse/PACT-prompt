@@ -459,12 +459,12 @@ def main():
         if cleanup_msg:
             messages.append(cleanup_msg)
 
-        # APPENDED, NOT `elif`. PR #1626 emitted this only when the cleanup
-        # branch produced nothing. The two predicates are mutually exclusive
-        # TODAY — cleanup fires on `completed` tasks, this requires
-        # `in_progress` — so an `elif` is currently equivalent and silently
-        # becomes lossy the moment either predicate widens. Appending costs
-        # nothing and does not depend on that coincidence holding.
+        # APPENDED, NOT `elif`. The cleanup message and this advisory come
+        # from predicates that are mutually exclusive TODAY — cleanup fires on
+        # `completed` tasks, the advisory requires `in_progress` — so an
+        # `elif` would be equivalent now and silently lossy the moment either
+        # predicate widens. Appending costs nothing and does not depend on
+        # that coincidence holding.
         # Own try/except: an advisory must never cost the zombie cleanup.
         try:
             unflagged_msg = check_unflagged_background(

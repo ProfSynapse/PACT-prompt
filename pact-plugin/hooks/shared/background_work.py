@@ -1,7 +1,9 @@
 """
 Location: pact-plugin/hooks/shared/background_work.py
-Summary: Team-scoped registry of outstanding teammate harness-background
-         Bash work, plus the unflagged-background fire predicate.
+Summary: Team-scoped registry of outstanding teammate background Bash
+         launches (a frame carrying the harness `run_in_background` flag, or
+         a command ending in a bare `&`), plus the unflagged-background fire
+         predicate.
          Pure helpers and fail-open loaders — no hook I/O, no registration.
 Used by: track_files.py (Layer 1 writer), teammate_idle.py (Layer 2
          advisory), missed_wake_scan.py (Layer 3 lead surface).
@@ -568,14 +570,17 @@ def load_records_for_discharge(
     asking callers to remember two gates — did not hold for the second
     consumer, and would not have held for a third.
 
-    ONLY the discharge path may use this. It must see FLAGGED records,
-    because a flagged record is precisely what it exists to retire; a gated
-    read would hide every record it is looking for and kill the mechanism
-    while every gate test still passed. Tests asserting raw on-disk state are
-    the other legitimate caller.
+    USE IT ONLY WHERE THE READ MUST SEE FLAGGED RECORDS. There are two such
+    production consumers. The discharge path exists to retire a flagged
+    record, so a gated read would hide every record it is looking for and kill
+    the mechanism while every gate test still passed. The lead-side
+    `find_unanchored_waits` (missed_wake_scan) surfaces a wait that is
+    acquitting a record on its fallback anchor, which is by definition a
+    record the flagged-wait gate hides. Tests asserting raw on-disk state are
+    the only other legitimate caller.
 
-    Anything that SURFACES a record to a human or an agent must call
-    `outstanding_unflagged` instead.
+    Anything that surfaces a record AS OUTSTANDING — telling a human or an
+    agent that work is unflagged — must call `outstanding_unflagged` instead.
     """
     return _load_records(team_name, now=now)
 
@@ -683,11 +688,11 @@ def outstanding_unflagged(
     Applies BOTH gates, so a caller cannot surface a record by forgetting one:
       - TASK-STATUS: at least one listed task is still `in_progress`.
       - FLAGGED-WAIT: no listed `in_progress` task carries a valid wait.
-    (The 24h TTL is applied upstream by `load_records`.)
+    (The 24h TTL is applied upstream by `_load_records`.)
 
     WHY THIS EXISTS AS A NAMED SELECTOR RATHER THAN A CONVENTION. Layer 2
     reached records through `unflagged_fire`, which applies both gates; Layer 3
-    went straight to `load_records`, which applies neither. MEASURED on one
+    went straight to `_load_records`, which applies neither. MEASURED on one
     40-minute-old record: the lead-side path surfaced it while the teammate-side
     path refused it, both because the task was `completed` AND because a valid
     wait was flagged. The lead-facing text asserts "outstanding launches and no
@@ -831,9 +836,9 @@ def unflagged_fire(
     # PROPERTY OF THE MODULE.
     #
     # An earlier version of this comment claimed "every consumer reaches a
-    # record through this function" and named `load_records` as a REJECTED
+    # record through this function" and named `_load_records` as a REJECTED
     # place for the predicate on that basis. MEASURED FALSE: Layer 3's
-    # lead-side selector read `load_records` directly and applied neither the
+    # lead-side selector read `_load_records` directly and applied neither the
     # status gate nor the flagged-wait gate, so it surfaced records this line
     # refuses. The comment did not merely fail to prevent that — it argued
     # against the check the other consumer needed, and warned the next reader
@@ -1239,8 +1244,7 @@ def record_background_launch(input_data: Any, now: datetime | None = None) -> bo
     # REMOVE a launch from the registry.
     #
     # The durability question IS answerable, just not here: `intentional_wait`
-    # carries it later, when the agent says what it is waiting for. The
-    # measurement record is in pact-memory.
+    # carries it later, when the agent says what it is waiting for.
     team_name = get_team_name()
     if not team_name:
         return False
