@@ -45,6 +45,9 @@ Registration pins:
   S4  non-membership: "wait_filler_gate" not in SEAM_DEPENDENT_HOOKS
       (decision pin for the seam classification — the hook reads only the
       stdin input contract, no integration seam).
+  S5  parity: the gate's local copy of the lead `agent_type` spellings
+      equals shared.pact_context.LEAD_AGENT_TYPES, which the hook cannot
+      import.
 
 S1 (script exists) is auto-covered by
 test_hooks_json.py::TestReferencedScriptsExist once registered.
@@ -397,3 +400,21 @@ def test_s4_not_seam_dependent():
     from shared.hook_infra_classifier import SEAM_DEPENDENT_HOOKS
 
     assert "wait_filler_gate" not in SEAM_DEPENDENT_HOOKS
+
+
+def test_s5_lead_spellings_match_the_source_set():
+    """The gate keeps its own copy of the lead `agent_type` spellings because it
+    imports only the standard library. That copy must equal
+    `shared.pact_context.LEAD_AGENT_TYPES`, the source of truth for who is the
+    lead. Both are frozensets, so equality compares members."""
+    import wait_filler_gate
+    from shared.pact_context import LEAD_AGENT_TYPES
+
+    assert wait_filler_gate._LEAD_AGENT_TYPES == LEAD_AGENT_TYPES, (
+        "wait_filler_gate._LEAD_AGENT_TYPES has drifted from "
+        f"shared.pact_context.LEAD_AGENT_TYPES (gate {sorted(wait_filler_gate._LEAD_AGENT_TYPES)}, "
+        f"source {sorted(LEAD_AGENT_TYPES)}). A lead spelling missing from the gate "
+        "makes a lead frame read as a teammate, so the lead gets the "
+        "background-launch advisory; a spelling only in the gate silences every "
+        "teammate whose agent_type matches it. Update the gate's copy."
+    )
