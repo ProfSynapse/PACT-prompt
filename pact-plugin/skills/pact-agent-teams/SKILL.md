@@ -354,8 +354,10 @@ When your task is `in_progress` but you are legitimately idle awaiting a message
 (teachback approval, inter-commit hold, peer reply, user decision, blocker
 resolution), signal it via the `intentional_wait` task metadata BEFORE going idle.
 This flag has a lead-side consumer: the `missed_wake_scan` hook re-surfaces tasks
-idling on `awaiting_lead_completion` past the staleness threshold at the
-team-lead's next user prompt or session start. The schema primitives
+idling on `awaiting_lead_completion` past the staleness threshold at the start of
+a team-lead turn opened by a user prompt, a scheduled wake or a background-task
+notification, and at session start — not on a turn opened by a teammate message.
+The schema primitives
 (`KNOWN_REASONS`, `KNOWN_RESOLVERS`, `wait_stale`) in `shared.intentional_wait`
 define the teammate-facing metadata contract for protocol-defined waits. Using the flag documents the wait intent for the team-lead's task-file
 inspection and for post-hoc session review.
@@ -508,7 +510,7 @@ later inspection reflects the real duration.
 
 ### When NOT to set
 
-- **Consultant mode** (no owned `in_progress` task): the flag has no current consumer for consultants anyway.
+- **Consultant mode** (no owned `in_progress` task) with nothing outstanding. If you background work as a consultant, SET the wait on your most recently completed task.
 - **Waits < 30 seconds**: SET+CLEAR bookkeeping isn't worth it for brief waits.
 - **Completion gating**: the flag does NOT suppress the team-lead's HANDOFF acceptance check — an empty or missing `metadata.handoff` is flagged there regardless of intentional_wait state. Store your HANDOFF before you notify the team-lead.
 
