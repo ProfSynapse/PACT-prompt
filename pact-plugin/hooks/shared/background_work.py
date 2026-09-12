@@ -490,19 +490,32 @@ def any_listed_task_flagged(
     silence anything. Metadata writes to a completed task land, so that wait is
     real and readable. Listing is what scopes this — the record names the task
     ids it covers — and the status adds nothing to that.
+
+    A RECORD WRITTEN WITH `anchor_completed` IS SILENCED ONLY BY A WAIT THAT
+    COVERS ITS LAUNCH (`wait_covers_record`). Its anchor task was already
+    completed when the launch happened, and a completed task routinely still
+    carries a wait raised BEFORE that launch — the completion flow leaves one
+    behind. Accepting any valid wait there would let that older wait hide
+    every later launch the consultant makes. Records anchored on in_progress
+    tasks keep the unscoped rule above: any valid wait on a listed task
+    silences.
     """
     if not isinstance(tasks, list):
         return False
     listed = set(record_task_ids(record))
     if not listed:
         return False
+    scoped = isinstance(record, dict) and record.get("anchor_completed") is True
     for task in tasks:
         if not isinstance(task, dict):
             continue
         if str(task.get("id")) not in listed:
             continue
-        if classify_wait(task) is None:
-            return True
+        if classify_wait(task) is not None:
+            continue
+        if scoped and not wait_covers_record(task, record):
+            continue
+        return True
     return False
 
 
