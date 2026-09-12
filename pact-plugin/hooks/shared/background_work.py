@@ -881,10 +881,31 @@ def bind_launcher_identity(
     """Return (agent_name, session_id, task_ids) or None when identity is absent.
 
     Steps 1-3.5 of resolve_agent_name only. `agent_type` is deliberately NOT
-    type-stripped as the owner: that field does not reliably carry a type, so
-    stripping it would attribute a launch to whatever string happens to be
-    there. A hex agent_id is an in-process discriminator, not a teammate name.
+    type-stripped as the owner.
+
+    THE FIELD IS POLYMORPHIC BY ROLE, NOT RANDOMLY UNRELIABLE, and the
+    distinction decides when the membership match can be trusted. MEASURED:
+    on TEAMMATE frames it carried the member's NAME every time — three
+    teammates, two independent instruments, two operators — and on LEAD
+    frames it carries the agent-type spelling (`PACT:pact-orchestrator` in
+    the team whose file-edits rows were the original evidence). So it is
+    consistently a name for teammates and consistently a type for the lead.
+    Reading it as "sometimes one, sometimes the other, per frame" would be
+    wrong and would undersell a mechanism that is deterministic per role.
+    Stripping it unconditionally would therefore attribute a launch to
+    whatever string happens to be there, which is why the value is VALIDATED
+    against the team config instead of trusted for its shape.
+
+    A hex agent_id is an in-process discriminator, not a teammate name.
     Refusing to guess means the registry stays silent rather than wrong.
+
+    STEP 1 IS INERT IN EVERY TOPOLOGY MEASURED SO FAR AND STAYS ANYWAY.
+    `agent_name` is absent from the in-process frame's 15 keys, and the SSOT
+    records it absent under tmux too, so it may be dead everywhere — nobody
+    has established that. The branch costs one dict lookup on a fail-open
+    ordering, so keeping it is a cheap option on a future harness that does
+    carry the field, not dead weight. Do not delete it as unreachable
+    without measuring the topology you are deleting it for.
 
     ALL matching in_progress tasks are returned, not one. Requiring exactly
     one silently recorded nothing for a teammate holding two — and holding two

@@ -115,7 +115,10 @@ _CAPTURED_FRAMES_JSON = r'''
   "posttooluse_teammate_inprocess_bash_background": {
     "_meta": {
       "capture_method": "live in-process Agent-Teams TEAMMATE PostToolUse, captured 2026-09-11 by a temporary keys-only diagnostic in an authorized, hash-verified, immediately-reverted patch of the INSTALLED track_files.py. KEY SET IS REAL AND VERBATIM. EVERY VALUE IS SYNTHETIC.",
-      "authority": "THE KEY SET ONLY. The emission was keys-only by design because the live frame carries command text, absolute paths and session identifiers, none of which may enter the repository. Do not read any value below as observed. Value SHAPES marked <synthetic> were never observed at all.",
+      "authority": "THE KEY SET AND THE VALUE TYPES. Every VALUE is synthetic — the captures were keys-and-types only by design, because the live frame carries command text, absolute paths and session identifiers, none of which may enter the repository. Do not read any value below as observed.",
+      "provenance_is_split_and_it_matters": "THE TOP-LEVEL KEY SET is from my own capture (background-work-coder, 2026-09-11). THE tool_response KEY SET AND TYPES are from a SECOND capture taken by another teammate through a different instrument — my own emission recorded tool_response as a BARE BOOLEAN (present: true) and therefore could not answer the question that field later turned out to decide. That is the lesson this entry now carries twice: A BOOLEAN CANNOT BE RE-INTERROGATED LATER. When a capture is expensive and non-repeatable, record SHAPE for everything on the frame, not PRESENCE.",
+      "corrected_after_commit": "This entry first shipped with tool_response as the STRING '<synthetic>' and effort likewise, where the measured tool_response is a DICT. A fixture whose purpose is to give future readers ground truth misrepresented the type of the one field that mattered, and any test built on it would have modelled tool_response as a string. Fixed. `effort`'s dict shape is INHERITED from the sibling lead capture in this same file (2026-06-06, CC 2.1.167) and was NOT measured on this frame — it is the least certain thing in this entry.",
+      "tool_response_KEYS_VARY_BETWEEN_FRAMES": "The key set shown is one observed shape, NOT a fixed schema. `backgroundTaskId` appears on a run_in_background frame; a non-background frame carried `bashEditDiff` instead; `timedOutAfterMs` and `returnCodeInterpretation` each appeared on some frames and not others. ANY CODE READING tool_response MUST TREAT EVERY KEY AS OPTIONAL — `.get()` with a default, never an index and never a required-key assumption. A fixture showing one fixed key set invites exactly the wrong inference, which is why this is stated rather than left to the shape.",
       "why_it_matters": "FIRST capture of an in-process Agent-Teams TEAMMATE frame on any event in this repository. Every prior teammate fixture was synthesized-from-matrix, and the one in-process PostToolUse capture (pretooluse_teammate_inprocess_subagent) is an Agent-TOOL subagent, a different spawn mechanism.",
       "negative_result": "IDENTITY IS NOT BINDABLE ON THIS FRAME by any route that refuses a type-strip. 'agent_name' is ABSENT (no such key). 'agent_id' is PRESENT and contains NO '@'. So resolve_agent_name Steps 1 and 2 both MISS, Step 3 is structurally dead, Step 3.5 has no registry row in-process, and the value is produced by STEP 4.",
       "the_load_bearing_fact": "'agent_type' ON THIS FRAME CARRIED THE TEAMMATE'S OWN name, NOT the agentType recorded for that member in the team config (which was a 'pact-'-prefixed type). Frame agent_type and config agentType ARE DIFFERENT VALUES. Any argument that excludes a Step-4 type-strip by pointing at distinct names across same-agentType members is therefore invalid: Step 4 strips the FRAME's field, which already differs per member.",
@@ -133,7 +136,9 @@ _CAPTURED_FRAMES_JSON = r'''
     "agent_type": "probe-work-coder",
     "cwd": "<cwd>",
     "duration_ms": 0,
-    "effort": "<synthetic>",
+    "effort": {
+      "level": "<synthetic>"
+    },
     "hook_event_name": "PostToolUse",
     "permission_mode": "<synthetic>",
     "prompt_id": "<synthetic>",
@@ -145,7 +150,14 @@ _CAPTURED_FRAMES_JSON = r'''
       "run_in_background": true
     },
     "tool_name": "Bash",
-    "tool_response": "<synthetic>",
+    "tool_response": {
+      "backgroundTaskId": "<synthetic>",
+      "interrupted": false,
+      "isImage": false,
+      "noOutputExpected": false,
+      "stderr": "<synthetic>",
+      "stdout": "<synthetic>"
+    },
     "tool_use_id": "<synthetic>",
     "transcript_path": "<transcript_path>"
   },
@@ -517,8 +529,16 @@ def captured_posttooluse_teammate_inprocess_bash_background():
     IT RECORDS A NEGATIVE RESULT, and that is the point. `agent_name` is
     absent, `agent_id` carries no `@`, and `agent_type` carries the teammate's
     own NAME rather than the `pact-`-prefixed type its team config records. So
-    identity on this frame is reachable ONLY through a Step-4 type-strip of a
-    field that does not reliably hold a type.
+    identity on this frame is reachable ONLY through a Step-4 type-strip.
+
+    `agent_type` IS POLYMORPHIC BY ROLE, NOT RANDOMLY UNRELIABLE. MEASURED:
+    teammate frames carried the NAME every time — three teammates, two
+    independent instruments, two operators — while lead frames carry the
+    agent-type spelling (`PACT:pact-orchestrator`). It is consistently a name
+    for teammates and consistently a type for the lead, so a reader must not
+    take "unreliable" to mean it varies per frame: it does not, and a consumer
+    that validates the value against the team config's `members[]` can rely on
+    that determinism per role.
 
     DO NOT build a write-path expectation on this fixture. It is evidence
     about frame SHAPE, not a statement that recording should or should not
