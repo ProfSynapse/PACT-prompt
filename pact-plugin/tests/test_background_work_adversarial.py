@@ -106,38 +106,10 @@ class TestLayer2EntryPoint:
     ramps it correctly was untested behaviour.
     """
 
-    # THE ENTRY POINT TAKES NO now=, SO THE CLOCK IS PINNED AT THE MODULE
-    # SEAM INSTEAD. `check_unflagged_background(tasks, teammate_name,
-    # team_name)` has no clock parameter; it delegates to
-    # `discharge_acknowledged`, `unflagged_fire` and `stamp_idled_at` and
-    # passes `now` to NONE of them, although all three accept it. So there is
-    # no argument these arms can pass, and `teammate_idle` itself reads no
-    # clock directly — every clock read in this path resolves
-    # `background_work.utc_now`, which makes patching that one name total for
-    # this surface rather than a partial stand-in.
-    #
-    # THIS IS CLOCK INJECTION, NOT A RELATIVE FIXTURE. The arm controls the
-    # clock it is measured against, so no fixture date can age out from under
-    # it at any TTL. The alternative — rebasing T0 to `utc_now() - 1h` — keeps
-    # the bomb and only resets its fuse.
-    #
-    # An in-process patch is sound HERE because nothing in these four arms
-    # spawns a subprocess or reloads the module. The concurrent-writer arm
-    # below does spawn, which is why it is repaired the other way.
-    #
-    # IF THIS ENTRY POINT EVER GAINS A `now=` PARAMETER, MOVE THESE ARMS ONTO
-    # IT AND DELETE THIS FIXTURE. A parameter is strictly better than pinning
-    # a module attribute: patching one name can only control clock reads that
-    # actually resolve THROUGH that name, so it silently misses any reader
-    # that does not — the same blind spot in reverse was measured on this
-    # surface, where pinning `utc_now` alone manufactured failures the real
-    # clock cannot produce. The first sentence of this comment is the
-    # condition for its own removal.
-    FROZEN_NOW = T0 + timedelta(minutes=5)
-
-    @pytest.fixture(autouse=True)
-    def _pinned_clock(self, monkeypatch):
-        monkeypatch.setattr(bw, "utc_now", lambda: self.FROZEN_NOW)
+    # THE CLOCK IS PASSED AS now=, so no fixture date can age out from under
+    # these arms at any TTL, and every clock read on this path is the one the
+    # arm controls.
+    NOW = T0 + timedelta(minutes=5)
 
     def _seed(self):
         assert bw.save_records([_record()], team_name=TEAM) is True
@@ -152,7 +124,7 @@ class TestLayer2EntryPoint:
         self._seed()
         tasks = [_task()]
         fired = [
-            bool(ti.check_unflagged_background(tasks, "adv-coder", TEAM))
+            bool(ti.check_unflagged_background(tasks, "adv-coder", TEAM, now=self.NOW))
             for _ in range(5)
         ]
         assert fired == [False, False, True, False, False], fired
@@ -170,11 +142,11 @@ class TestLayer2EntryPoint:
         """
         self._seed()
         unflagged, flagged = [_task()], [_task(wait=_wait(T0 + timedelta(minutes=1)))]
-        ti.check_unflagged_background(unflagged, "adv-coder", TEAM)
-        ti.check_unflagged_background(unflagged, "adv-coder", TEAM)
+        ti.check_unflagged_background(unflagged, "adv-coder", TEAM, now=self.NOW)
+        ti.check_unflagged_background(unflagged, "adv-coder", TEAM, now=self.NOW)
         assert bw.load_unflagged_idle_counts(TEAM)["adv-coder"]["count"] == 2
 
-        assert ti.check_unflagged_background(flagged, "adv-coder", TEAM) is None
+        assert ti.check_unflagged_background(flagged, "adv-coder", TEAM, now=self.NOW) is None
         assert "adv-coder" not in bw.load_unflagged_idle_counts(TEAM), (
             "a flagged idle must CLEAR the counter, not pause it"
         )
@@ -189,11 +161,11 @@ class TestLayer2EntryPoint:
         # One task visible at a time, so the arm pins the counter's own reset
         # rather than find_teammate_task's selection order among several.
         for _ in range(2):
-            ti.check_unflagged_background([_task("13")], "adv-coder", TEAM)
+            ti.check_unflagged_background([_task("13")], "adv-coder", TEAM, now=self.NOW)
         entry = bw.load_unflagged_idle_counts(TEAM)["adv-coder"]
         assert (entry["count"], entry["task_id"]) == (2, "13"), entry
 
-        assert ti.check_unflagged_background([_task("14")], "adv-coder", TEAM) is None
+        assert ti.check_unflagged_background([_task("14")], "adv-coder", TEAM, now=self.NOW) is None
         entry = bw.load_unflagged_idle_counts(TEAM)["adv-coder"]
         assert (entry["count"], entry["task_id"]) == (1, "14"), entry
 
@@ -205,7 +177,7 @@ class TestLayer2EntryPoint:
         """
         tasks = [_task()]
         assert [
-            ti.check_unflagged_background(tasks, "adv-coder", TEAM) for _ in range(5)
+            ti.check_unflagged_background(tasks, "adv-coder", TEAM, now=self.NOW) for _ in range(5)
         ] == [None] * 5
 
     def test_the_discharge_runs_BEFORE_the_test_not_after(self, team_root):
@@ -217,7 +189,7 @@ class TestLayer2EntryPoint:
         """
         self._seed()
         flagged = [_task(wait=_wait(T0 + timedelta(minutes=1)))]
-        assert ti.check_unflagged_background(flagged, "adv-coder", TEAM) is None
+        assert ti.check_unflagged_background(flagged, "adv-coder", TEAM, now=self.NOW) is None
         assert bw.load_records_for_discharge(TEAM, now=T0) == [], (
             "the flagged tick must leave the registry empty"
         )
