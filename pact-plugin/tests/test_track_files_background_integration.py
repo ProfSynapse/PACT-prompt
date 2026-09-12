@@ -179,11 +179,37 @@ class TestTrackFilesBackgroundSeam:
         assert _run(seam, _frame(agent_type="pact-backend-coder")).returncode == 0
         assert _registry(seam) == []
 
-    def test_a_durable_command_writes_nothing(self, seam):
+    def test_a_LONG_RUNNING_command_IS_recorded_now(self, seam):
+        """INVERTED. This arm asserted the opposite until the text predicate
+        was deleted, and the inversion IS the fix's observable effect.
+
+        `is_durable_command` suppressed the Layer 1 write whenever the command
+        text contained `dev|start|serve|watch`. It was deleted because "is
+        this command durable" is not answerable from the string: it caught
+        `npm run dev` and equally silenced `pytest -k start` and
+        `grep -rn watch hooks/`, which are ordinary one-shot work. The
+        question IS answerable later — `intentional_wait` carries it, when the
+        agent says what it is waiting for — so the launch is recorded here and
+        judged there.
+
+        WHY THIS ARM SURVIVED THE DELETION RATHER THAN GOING WITH IT. It never
+        named the predicate; it reached it through the seam, by sending a
+        command whose TEXT happened to match. A symbol census over
+        `is_durable_command` returned a true zero tree-wide and could not see
+        this, and a collection check passed because the failure is at RUN time.
+        Kept and inverted so the seam still has an arm on what a long-running
+        command does, which is now the same as any other command.
+        """
         frame = _frame()
         frame["tool_input"] = {"command": "npm run dev", "run_in_background": True}
         assert _run(seam, frame).returncode == 0
-        assert _registry(seam) == []
+        records = _registry(seam)
+        assert len(records) == 1, (
+            "a long-running command must now be RECORDED — the text-based "
+            "suppressor was deleted deliberately; if this is empty the "
+            "predicate has been re-added"
+        )
+        assert records[0]["task_ids"] == ["7"]
 
     def test_the_hosts_ORIGINAL_job_still_runs(self, seam):
         """The fold must not cost this hook its file tracking.

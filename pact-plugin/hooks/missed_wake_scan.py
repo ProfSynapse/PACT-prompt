@@ -371,6 +371,185 @@ def build_unflagged_surface(stale: list) -> "str | None":
     )
 
 
+def find_mutual_waits(tasks: list) -> list:
+    """Distinct owners each idling on `peer`, all aged past the threshold.
+
+    WHAT THIS DETECTS IS A CANDIDATE, NOT A PROVEN CYCLE, AND THE SURFACE MUST
+    SAY SO. `expected_resolver` records the KIND of resolver, never which one,
+    so the task store cannot say that X waits on Y and Y waits on X. What it
+    can say is that two or more agents are each waiting on some peer and none
+    of them is working — which is what a mutual wait looks like from outside,
+    and is also what two agents independently waiting on a third looks like.
+    Both are worth a look; only the first is a deadlock.
+
+    BLIND BY CONSTRUCTION — `user` and `external` resolvers. Neither is a task
+    store entity, so a cycle running through the user cannot be seen here at
+    all. This is peer-peer only and no accumulation of evidence makes it
+    otherwise: it is not that such cycles are rare, it is that this instrument
+    cannot represent them. Do not let an empty result read as "no deadlock".
+
+    AGE IS MEASURED FROM THE ANCHOR, NOT FROM `since`, AND THAT IS WHY THIS
+    DEPENDS ON THE ANCHOR EXISTING. Agents are instructed to re-SET `since` so
+    a long wait does not read as stale, so two agents deadlocked against each
+    other and dutifully re-stamping stay permanently fresh and never age into
+    this detector — the exact case it exists to catch. wait_scope_anchor
+    returns the first-set anchor where there is one and falls back to `since`
+    otherwise, so a pair that predates the anchor is still only as detectable
+    as it was before: no worse, and better once anchors are being written.
+
+    Threshold is the existing 30-minute wait_stale. No second constant.
+    """
+    try:
+        from shared.background_work import wait_scope_anchor
+    except Exception:
+        return []
+    waiting = []
+    for task in tasks or []:
+        if not isinstance(task, dict):
+            continue
+        if task.get("status") != "in_progress":
+            continue
+        wait = (task.get("metadata") or {}).get("intentional_wait")
+        if not validate_wait(wait):
+            continue
+        if wait.get("expected_resolver") != "peer":
+            continue
+        anchor, _ = wait_scope_anchor(wait)
+        if anchor is None:
+            continue
+        # Reuse wait_stale for BOTH the threshold and the staleness logic,
+        # evaluated against the anchor rather than the re-stampable clock.
+        if not wait_stale({**wait, "since": anchor.isoformat()}):
+            continue
+        waiting.append(task)
+    owners = {t.get("owner") for t in waiting if t.get("owner")}
+    return waiting if len(owners) >= 2 else []
+
+
+def build_mutual_surface(mutual: list) -> "str | None":
+    """Lead-facing text for a candidate mutual wait. Names it as a candidate."""
+    if not mutual:
+        return None
+    lines = []
+    for task in mutual:
+        task_id = _sanitize_member_name(str(task.get("id") or "")) or "?"
+        owner = _sanitize_member_name(task.get("owner") or "") or "unknown"
+        subject = _sanitize_member_name(task.get("subject") or "")
+        label = f"#{task_id} ({owner}"
+        label += f": {subject}" if subject else ""
+        lines.append(f"- Task {label})")
+    if not lines:
+        return None
+    return (
+        "POSSIBLE MUTUAL WAIT — every one of these is idling on a PEER and "
+        "none has moved past the staleness threshold:\n"
+        + "\n".join(lines)
+        + "\nNobody here is waiting on you, so this will not resolve itself "
+        "and no teammate can see it — each one can only see its own wait. "
+        "This is a CANDIDATE, not a proven cycle: the flag records that a "
+        "peer is expected, never which peer, so two agents waiting on a third "
+        "look identical to two waiting on each other. Ask each what it is "
+        "waiting for. Waits on `user` or `external` CANNOT appear here at "
+        "all, so this finding never rules a deadlock out."
+    )
+
+
+def find_unanchored_waits(tasks: list, team_name: "str | None" = None) -> list:
+    """Unanchored waits that are ACTIVELY DISCHARGING a record on the fallback.
+
+    A wait with no `covers_since` is not itself a fault. The wait works; what
+    is missing is the field pinning WHICH launches it covers, so coverage falls
+    back to the re-stampable `since`. Surfacing that keeps the fallback from
+    being a silent decision — but only where the fallback has actually decided
+    something.
+
+    🔴 GATED ON A COVERED RECORD, NOT ON STALENESS, AND THE DIFFERENCE INVERTS
+    THE SIGNAL. Gating on `wait_stale` looks right and is backwards: it reads
+    `since`, and re-stamping is BOTH what makes an unanchored wait dangerous
+    and what makes it look fresh. MEASURED — a never-re-stamped 90-minute wait
+    (harmless, because its fallback still equals its true anchor) reads stale
+    and would surface; a wait re-stamped two minutes ago (harmful, its fallback
+    has drifted forward over launches it never acknowledged) reads fresh and
+    would be hidden. The gate would show exactly the population that is fine
+    and suppress the one that is not.
+
+    A record this wait covers is the actionable condition, and it is the whole
+    of it: the anchor exists to scope records, so with no covered record there
+    is nothing for the absence to have affected and nothing to tell the lead.
+    That is also why a fresh team with no background work produces no surface —
+    not a special case, just the general rule with an empty record set.
+
+    Never raises: an import failure, an unusable task list, or an unreadable
+    registry yields [].
+    """
+    try:
+        from shared.background_work import (
+            load_records_for_discharge,
+            record_task_ids,
+            wait_anchor_class,
+            wait_covers_record,
+        )
+    except Exception:
+        return []
+    try:
+        records = load_records_for_discharge(team_name) if team_name else []
+    except Exception:
+        return []
+    if not records:
+        return []
+    out = []
+    for task in tasks or []:
+        if not isinstance(task, dict):
+            continue
+        if task.get("status") != "in_progress":
+            continue
+        try:
+            anchor_class = wait_anchor_class(task)
+            if not anchor_class:
+                continue
+            task_id = str(task.get("id"))
+            covered = any(
+                task_id in record_task_ids(r) and wait_covers_record(task, r)
+                for r in records
+            )
+        except Exception:
+            continue
+        if covered:
+            out.append((task, anchor_class))
+    return out
+
+
+def build_unanchored_surface(unanchored: list) -> "str | None":
+    """Lead-facing text naming each wait with no usable scoping anchor."""
+    if not unanchored:
+        return None
+    lines = []
+    for task, anchor_class in unanchored:
+        if not isinstance(task, dict):
+            continue
+        # Teammate-authored fields, sanitized before interpolation into the
+        # lead's additionalContext for the same reason as build_surface.
+        task_id = _sanitize_member_name(str(task.get("id") or "")) or "?"
+        owner = _sanitize_member_name(task.get("owner") or "") or "unknown"
+        lines.append(f"- Task #{task_id} ({owner}) — anchor {anchor_class}")
+    if not lines:
+        return None
+    return (
+        "BACKGROUND WORK DISCHARGED ON A FALLBACK ANCHOR — each of these waits "
+        "is valid and is currently acquitting a recorded launch WITHOUT a "
+        "`covers_since` to say which launches it covers, so the scope is taken "
+        "from `since`, which agents re-stamp:\n"
+        + "\n".join(lines)
+        + "\nNothing is stalled and no teammate is at fault. What is uncertain "
+        "is whether the wait was really raised BEFORE the launch it is "
+        "acquitting: if it was re-stamped, `since` has moved forward and may "
+        "now cover work the teammate never acknowledged. Ask the teammate what "
+        "its wait was raised for. `absent` means the wait predates the field or "
+        "an agent dropped it on a re-SET; `malformed` means an agent wrote an "
+        "unparseable value and has a bug worth naming."
+    )
+
+
 def run_surface(input_data: dict) -> "str | None":
     """Lead-side missed-wake surface + forensic emit. is_lead-gated; teammate /
     plain frames no-op (the structural fail-safe default).
@@ -383,9 +562,9 @@ def run_surface(input_data: dict) -> "str | None":
     if not is_lead(input_data):
         return None
 
-    # TWO INDEPENDENT ALARMS SHARING ONE SUBPROCESS. Each is computed and
-    # emitted separately, and NEITHER early-returns on the other's absence —
-    # an empty missed-wake scan must not suppress the background surface, and
+    # FOUR INDEPENDENT ALARMS SHARING ONE SUBPROCESS. Each is computed and
+    # emitted separately, and NONE early-returns on another's absence — an
+    # empty missed-wake scan must not suppress the background surface, and
     # vice versa. They share only this process and the lead-frame guard above.
     parts = []
 
@@ -395,6 +574,11 @@ def run_surface(input_data: dict) -> "str | None":
         if stale:
             emit_forensic(stale)
             surface = build_surface(stale)
+            if surface:
+                parts.append(surface)
+        mutual = find_mutual_waits(tasks)
+        if mutual:
+            surface = build_mutual_surface(mutual)
             if surface:
                 parts.append(surface)
 
@@ -407,6 +591,13 @@ def run_surface(input_data: dict) -> "str | None":
             if unflagged:
                 emit_unflagged_forensic(unflagged)
                 surface = build_unflagged_surface(unflagged)
+                if surface:
+                    parts.append(surface)
+            # Needs the team name to read the registry, so it lives here rather
+            # than with the task-only alarms above.
+            unanchored = find_unanchored_waits(tasks, team_name)
+            if unanchored:
+                surface = build_unanchored_surface(unanchored)
                 if surface:
                     parts.append(surface)
     except Exception:

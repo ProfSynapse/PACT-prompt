@@ -416,7 +416,12 @@ class TestTheValidatedNameIsTheNameUSED:
         """The fix. The validated value is recorded, with its own member's task."""
         bound = bw.bind_launcher_identity(self._frame(self.PREFIXED), TEAM)
         assert bound is not None, "the membership match resolved nothing"
-        agent_name, _session_id, task_ids = bound
+        # 4-tuple since consultant coverage landed: the fourth element says the
+        # ids are a COMPLETED anchor rather than in_progress work. Irrelevant
+        # here — this fixture's member holds a live task — so it is unpacked
+        # and ignored rather than indexed, which keeps the arity explicit and
+        # reddens loudly if the shape moves again.
+        agent_name, _session_id, task_ids, _anchor_completed = bound
         assert (agent_name, task_ids) == (self.PREFIXED, ["5"]), bound
 
     def test_CONTROL_an_unprefixed_member_still_binds_correctly(self, twins):
@@ -830,136 +835,6 @@ class TestExactBoundaries:
         record = bw._sanitize_record(_record(registered_at=_iso(T0 + timedelta(hours=5))))
         assert bw._record_expired(record, T0) is False
         assert bw.lead_stale(record, now=T0) is False
-
-
-class TestDurableCommandFilterBreadth:
-    """CHARACTERIZATION, NOT ENDORSEMENT. Both directions are open findings.
-
-    `is_durable_command` refuses to record a launch whose command matches
-    `dev|start|serve|watch` as a standalone word. Its docstring offers
-    `watchdog` and `test_start_helper` as the false positives it avoids, which
-    describes ADJACENCY. The measured predicate is wider than that: it is
-    "mentions one of four common English words anywhere", and three of the
-    four are ordinary vocabulary in test, build and grep commands.
-
-    DIRECTION 1 — IT MISSED THE FLAG SPELLING OF ITS OWN TARGETS. **CLOSED**
-    by dropping `-` from the lookbehind class: `vite --watch` and friends were
-    recorded, never discharged, and would eventually draw an advisory about a
-    process meant to run forever — the false alarm the filter exists to
-    prevent. The fix is one-directional: measured, SIX commands newly filter
-    and ZERO newly record. The cost is a new silence class, `re-start` and
-    `auto-dev`, pinned below rather than buried.
-
-    A PREDICTED COST OF THAT FIX DID NOT EXIST, and it is worth recording
-    because it nearly stopped the fix. The claim was that the same character
-    would make `test-start-helper` match `start`. It does not: that case is
-    blocked by the LOOKAHEAD `(?![A-Za-z0-9_-])`, which the fix never touches,
-    so both guards had to fail for the predicted regression and only one
-    moved. The control row below pins it.
-
-    DIRECTION 2 — IT OVER-FIRES ON ORDINARY ONE-SHOT COMMANDS, so Layers 1-3
-    are silently off for those launches. **STILL OPEN**, deliberately: it
-    fails toward silence, which is the safe direction, and narrowing the
-    predicate is a redesign rather than a patch. The redesign is tracked; the
-    behaviour is pinned here so it cannot drift unobserved in the meantime.
-
-    THIS CLASS PINS WHAT THE CODE DOES so the next reader meets the real
-    predicate instead of two examples. It is arranged so a change REDDENS it:
-    the rows are the evidence, and altering the filter should have to come
-    here and edit them rather than slip past a suite that never looked.
-    """
-
-    @pytest.mark.parametrize(
-        "command", ["npm run dev", "npm start", "yarn serve", "npm run watch"]
-    )
-    def test_the_subcommand_spelling_IS_filtered(self, command):
-        """The intended population, and the control for the row below."""
-        assert bw.is_durable_command(command) is True
-
-    @pytest.mark.parametrize(
-        "command",
-        [
-            "vite --watch", "tsc --watch", "webpack --watch", "jest --watch",
-            "hugo --serve", "python3 -m http.server --dev",
-        ],
-    )
-    def test_a_token_reachable_ONLY_as_a_flag_is_NOW_filtered(self, command):
-        """CLOSED. These escaped until `-` came out of the lookbehind class.
-
-        Each is unambiguously a durable process, and each previously got a
-        registry record it would never discharge — a false alarm about work
-        meant to run forever, which is the direction the standing ruling calls
-        unacceptable. This is the arm that reddens if the lookbehind is ever
-        widened back.
-        """
-        assert bw.is_durable_command(command) is True
-
-    @pytest.mark.parametrize("command", ["re-start", "auto-dev"])
-    def test_FINDING_the_fix_newly_silences_hyphenated_NAMES_too(self, command):
-        """OPEN FINDING, and it is the price of the arm above.
-
-        The same character that catches `--watch` also catches any token
-        preceded by a hyphen, so a script genuinely named `auto-dev` or a
-        command `re-start` is now silently NOT recorded. Small, and in the
-        safe direction — but it is a real new silence class created by the
-        fix, and it belongs where it reddens rather than in a commit message.
-
-        `test-start-helper` is NOT in this class: it is blocked by the
-        LOOKAHEAD `(?![A-Za-z0-9_-])`, which the fix does not touch. That
-        distinction is the whole reason the fix is one-directional, and it is
-        pinned by the control row below.
-        """
-        assert bw.is_durable_command(command) is True
-
-    @pytest.mark.parametrize(
-        "command", ["npm run dev -- --watch", "next dev --turbo=false"]
-    )
-    def test_a_bare_token_ANYWHERE_still_catches_the_flag_form(self, command):
-        """Bounds the finding above, so it is not read as "flags are exempt"."""
-        assert bw.is_durable_command(command) is True
-
-    @pytest.mark.parametrize(
-        "command",
-        [
-            "python3 -m pytest -q -k start",
-            "git log --oneline | grep start",
-            "python3 manage.py migrate --database dev",
-            "gh run list --workflow dev",
-            "grep -rn watch hooks/",
-            "python3 build.py --env dev > out.log",
-        ],
-    )
-    def test_FINDING_ordinary_one_shot_commands_are_ALSO_filtered(self, command):
-        """OPEN FINDING, safe direction — silently not recorded.
-
-        Every command here is a plausible thing to background during ordinary
-        work, and none is a durable process. Narrowing the predicate trades
-        this silence for false alarms, which is a design call rather than a
-        testing one, so the behaviour is recorded rather than corrected.
-        """
-        assert bw.is_durable_command(command) is True
-
-    @pytest.mark.parametrize(
-        "command",
-        [
-            "python3 -m pytest tests/ -q",
-            "pytest tests/test_start_helper.py",
-            "test-start-helper",
-            "./scripts/dev-check.sh",
-            "rsync -a ./dist/ server:/srv/dev",
-        ],
-    )
-    def test_CONTROL_commands_that_correctly_survive_the_filter(self, command):
-        """Without this the rows above could pass on a filter matching
-        everything, and the breadth claim would be unmeasured.
-
-        `test_start_helper` and `test-start-helper` are the load-bearing
-        members: both are blocked by the LOOKAHEAD, which is why removing `-`
-        from the LOOKBEHIND cost no new silence here. If either ever flips to
-        True, the fix has stopped being one-directional and the trade that was
-        priced and refuted has become real after all.
-        """
-        assert bw.is_durable_command(command) is False
 
 
 class TestGateInputsNobodyEnumerated:

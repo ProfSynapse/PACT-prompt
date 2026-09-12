@@ -31,7 +31,6 @@ from shared.background_work import (
     classify_wait,
     discharge_acknowledged,
     effective_since,
-    is_durable_command,
     lead_stale,
     load_records_for_discharge,
     matching_outstanding,
@@ -695,13 +694,3 @@ class TestBindLauncherIdentity:
             )
         )
         assert agent_type_names_a_member("pact-architect", TEAM) is False
-
-
-class TestDurableCommandFilter:
-    @pytest.mark.parametrize("cmd", ["npm run dev", "yarn start", "make serve"])
-    def test_durable_commands_are_not_recorded(self, cmd):
-        assert is_durable_command(cmd) is True
-
-    @pytest.mark.parametrize("cmd", ["echo hi", "pytest -q", "watchdog --help"])
-    def test_ordinary_commands_are_recorded(self, cmd):
-        assert is_durable_command(cmd) is False

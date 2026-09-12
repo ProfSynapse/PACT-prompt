@@ -120,7 +120,6 @@
       "shared.background_work.classify_wait": null,
       "shared.background_work.discharge_acknowledged": null,
       "shared.background_work.effective_since": null,
-      "shared.background_work.is_durable_command": null,
       "shared.background_work.lead_stale": null,
       "shared.background_work.load_records_for_discharge": null,
       "shared.background_work.matching_outstanding": null,
@@ -1676,6 +1675,10 @@
       "fixtures.role_frames.captured_plain_userpromptsubmit": null,
       "fixtures.role_frames.captured_teammate_sessionstart": null,
       "missed_wake_scan": "hooks/missed_wake_scan.py"
+    },
+    "tests/test_missed_wake_scan_d5_structure.py": {
+      "__future__.annotations": null,
+      "pathlib.Path": null
     },
     "tests/test_missed_wake_scan_integration.py": {
       "datetime.datetime": null,

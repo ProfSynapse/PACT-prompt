@@ -41,7 +41,6 @@ the counter every tick and Layer 2 can never reach three.
 from __future__ import annotations
 
 import json
-import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -71,23 +70,19 @@ LEAD_STALE_MINUTES = 10
 LEAD_UNIDLED_STALE_MINUTES = 30
 
 UNFLAGGED_IDLE_THRESHOLD = 3
-DURABLE_COMMAND_TOKENS = frozenset({"dev", "start", "serve", "watch"})
 WAIT_CLASS_MISSING = "missing"
 WAIT_CLASS_NULL = "null"
 WAIT_CLASS_MALFORMED = "malformed"
 
-# F5: `-` is deliberately ABSENT from the LOOKBEHIND class so that the FLAG
-# spelling of these tokens matches — `--watch`, `-w --serve`, `foo --dev bar`.
-# It remains in the LOOKAHEAD, which is what still excludes `test-start-helper`
-# and `run-dev-script`: those have a token followed by `-`, and only the
-# lookbehind changed. Both guards had to fail for a hyphenated NAME to start
-# matching, and only one of them moved, so this change is one-directional.
-_DURABLE_WORD = re.compile(
-    r"(?<![A-Za-z0-9_./])("
-    + "|".join(re.escape(tok) for tok in sorted(DURABLE_COMMAND_TOKENS))
-    + r")(?![A-Za-z0-9_-])",
-    re.IGNORECASE,
-)
+# The wait key holding the SCOPING ANCHOR, as distinct from `since`, which is
+# the freshness clock. Absent and malformed are kept apart because they have
+# different causes and different remedies: absent means written before this
+# field existed, or dropped by an agent on a re-SET; malformed means an agent
+# wrote something unparseable and has a bug. Both fall back to `since` and
+# both are surfaced, so neither is collapsed into a pass or a fail.
+WAIT_ANCHOR_KEY = "covers_since"
+ANCHOR_CLASS_ABSENT = "absent"
+ANCHOR_CLASS_MALFORMED = "malformed"
 
 
 def parse_iso(ts: Any) -> datetime | None:
@@ -134,55 +129,61 @@ def classify_wait(task: Any) -> str | None:
     return WAIT_CLASS_MALFORMED
 
 
-def is_durable_command(command: Any) -> bool:
-    """Matches dev/start/serve/watch as a standalone word or immediately after
-    a hyphen, so `--watch` and `re-start` both hit.
+def wait_scope_anchor(wait: Any) -> "tuple[datetime | None, str | None]":
+    """The timestamp scoping what a wait covers, plus its anchor class.
 
-    A hit means "do not record". READ THE FIRST LINE LITERALLY: this is NOT a
-    test for a durable process, and calling it one understates its breadth in
-    both directions. Both are MEASURED and both are recorded as open findings
-    in tests/test_background_work_adversarial.py; neither is fixed here,
-    because the one-character change that closes the second opens a new false
-    negative, so the predicate needs redesigning rather than patching.
+    Returns (anchor, None) when `covers_since` is present and parseable, and
+    (fallback, ANCHOR_CLASS_ABSENT|ANCHOR_CLASS_MALFORMED) otherwise, where
+    the fallback is `since`. A non-None class means the scope is resting on
+    the freshness clock, which is exactly the thing that moves.
 
-    IT OVER-FIRES ON ORDINARY ONE-SHOT COMMANDS. Three of the four tokens are
-    everyday vocabulary in test, build and grep commands, so `pytest -k start`,
-    `grep -rn watch hooks/` and `build.py --env dev` are all silently NOT
-    recorded, and Layers 1-3 are off for those launches. The word-boundary
-    exclusions (`watchdog`, `test_start_helper`, `./scripts/dev-check.sh`,
-    `/srv/dev`) prevent ADJACENCY false positives only; the standalone-word
-    ones remain and are the common case.
+    WHY `since` CANNOT DO BOTH JOBS. `since` is the freshness clock and
+    agents are INSTRUCTED to re-SET it so a long wait does not read as stale.
+    Scoping on it means every re-stamp widens the wait FORWARD to cover
+    launches made after it was raised — a rolling amnesty, and precisely the
+    blanket the `>= registered_at` comparison exists to prevent. So the
+    clock re-stamps and the anchor does not.
 
-    THE FLAG SPELLING IS NOW CAUGHT — this was the harmful direction and it is
-    FIXED. `-` was in the lookbehind exclusion class, so `--watch` never
-    matched and `vite --watch` WAS recorded: a process meant to run forever,
-    eventually drawing an advisory and a lead-side surface. Dropping `-` from
-    the LOOKBEHIND closes it. MEASURED as newly filtered: `--watch`,
-    `vite --watch`, `-w --serve`, `foo --dev bar`. Newly recorded: NOTHING —
-    the change is one-directional.
+    THE ANCHOR IS WRITTEN ONCE BY CONVENTION AND NOTHING ENFORCES THAT.
+    It is agent-written, in the same TaskUpdate that re-stamps `since`, so an
+    agent that drops it on a re-SET silently returns to the old behaviour via
+    the fallback below. Calling it immutable would claim a guarantee this
+    mechanism does not provide. It is strictly better than scoping on a
+    re-stamped clock and it is not robust, and those are different claims.
 
-    WHY THAT COST NOTHING, because the obvious objection is wrong and was
-    believed for hours. It was argued that the same character makes
-    `test-start-helper` match `start` and go silently unrecorded. It does not:
-    that case is blocked by the LOOKAHEAD `(?![A-Za-z0-9_-])` — `start` is
-    followed by `-helper` — and F5 touches only the lookbehind. BOTH guards had
-    to fail for that regression and only one moved. `test_start_helper`,
-    `run-dev-script`, `pre-serve-hook` and `my-watch-list` are all unchanged.
+    THE FALLBACK IS DELIBERATE AND IS NOT A FAIL-OPEN. An absent anchor is a
+    third state beside covered and uncovered, and collapsing it into either
+    is the overloaded-null failure: scoping it closed would refuse to cover
+    anything for every wait written before this field existed, which today is
+    all of them. So coverage falls back to `since` — behaviour identical to
+    before — and the missing anchor is SURFACED to the lead instead, where it
+    is visible rather than silently resolved in either direction.
 
-    THE REAL COST, small and in the silence direction: a token at the END of a
-    hyphenated name now matches, so `re-start` and `auto-dev` are no longer
-    recorded. A script genuinely named `auto-dev` therefore gets no Layer 1
-    row. That is the same hyphen-prefixed class as the flag forms and it is
-    accepted deliberately rather than discovered.
-
-    STILL OPEN, and NOT fixed here: the over-firing above. `pytest -k start`
-    and `grep -rn watch hooks/` remain silently unrecorded. That needs the
-    predicate redesigned rather than patched, and it is recorded as an open
-    finding with its measured command set rather than papered over.
+    Pure: reads a wait dict, writes nothing.
     """
-    if not isinstance(command, str) or not command.strip():
-        return False
-    return _DURABLE_WORD.search(command) is not None
+    if not isinstance(wait, dict):
+        return None, ANCHOR_CLASS_ABSENT
+    fallback = parse_iso(wait.get("since"))
+    if WAIT_ANCHOR_KEY not in wait:
+        return fallback, ANCHOR_CLASS_ABSENT
+    anchor = parse_iso(wait.get(WAIT_ANCHOR_KEY))
+    if anchor is None:
+        return fallback, ANCHOR_CLASS_MALFORMED
+    return anchor, None
+
+
+def wait_anchor_class(task: Any) -> str | None:
+    """Anchor class for a task's VALID wait, or None when it is anchored.
+
+    Returns None for a task carrying no valid wait at all — the anchor is a
+    property of a wait, so a task without one has no anchor defect to report.
+    Callers wanting the absence of a wait itself use classify_wait.
+    """
+    if classify_wait(task) is not None:
+        return None
+    metadata = task.get("metadata") if isinstance(task, dict) else None
+    wait = metadata.get("intentional_wait") if isinstance(metadata, dict) else None
+    return wait_scope_anchor(wait)[1]
 
 
 def _team_file(filename: str, team_name: str | None = None) -> Path | None:
@@ -258,6 +259,12 @@ def _sanitize_record(raw: Any) -> dict | None:
     idled_at = raw.get("idled_at")
     if parse_iso(idled_at) is not None:
         out["idled_at"] = idled_at
+    # Preserved only when TRUE. A row without it is a teammate row, which is
+    # also what every row written before this field existed is — and those
+    # SHOULD expire on completion, so absence defaulting to False is correct
+    # rather than merely convenient.
+    if raw.get("anchor_completed") is True:
+        out["anchor_completed"] = True
     return out
 
 
@@ -458,6 +465,13 @@ def any_listed_task_flagged(
     `tasks` is the team's task list. When it is None the caller has no
     task set to check and only the task in hand can be judged, so this
     returns False and the caller's own classify_wait decides.
+
+    NO STATUS FILTER, DELIBERATELY. This used to require `in_progress`, which
+    silently excluded consultants: a consultant's carrier is its most recently
+    COMPLETED task, so its wait sat on a task this loop skipped and could never
+    silence anything. Metadata writes to a completed task land, so that wait is
+    real and readable. Listing is what scopes this — the record names the task
+    ids it covers — and the status adds nothing to that.
     """
     if not isinstance(tasks, list):
         return False
@@ -466,8 +480,6 @@ def any_listed_task_flagged(
         return False
     for task in tasks:
         if not isinstance(task, dict):
-            continue
-        if task.get("status") != "in_progress":
             continue
         if str(task.get("id")) not in listed:
             continue
@@ -501,6 +513,57 @@ def load_records_for_discharge(
     return _load_records(team_name, now=now)
 
 
+def owner_anchor_tasks(tasks: Any, owner: Any) -> "tuple[list[str], bool]":
+    """This owner's anchor task ids, and whether the anchor is already completed.
+
+    Returns (ids, anchor_completed): EVERY `in_progress` task owned by `owner`
+    when there is at least one, otherwise the single most-recently-completed
+    one. Empty list when the owner has no task at all.
+
+    LIFTED FROM teammate_idle.find_teammate_task, WHICH ALREADY HAD THIS RIGHT.
+    That resolver returns `in_progress or most-recently-completed`, and the
+    shared module used to disagree with it by filtering on `in_progress`
+    everywhere. The disagreement is what made a CONSULTANT invisible: a
+    consultant owns no `in_progress` task BY DEFINITION — that is what being
+    one means — so it matched zero tasks, nothing was recorded, and every
+    layer was off for it. One resolver, used by both, is the fix.
+
+    It generalises the lifted version in one direction only: ALL in_progress
+    tasks rather than one, because a teammate may hold several and the
+    framework's own instructions permit it. Most-recent-completed stays
+    single — "most recent" has no plural.
+
+    Recency is by integer task id. Ids are numeric strings, so a string
+    compare would rank "3" above "20".
+    """
+    in_progress: list[str] = []
+    completed_id: int | None = None
+    completed: str | None = None
+    if not isinstance(tasks, list):
+        return [], False
+    for task in tasks:
+        if not isinstance(task, dict):
+            continue
+        if task.get("owner") != owner:
+            continue
+        task_id = task.get("id")
+        if task_id is None:
+            continue
+        status = task.get("status")
+        if status == "in_progress":
+            in_progress.append(str(task_id))
+        elif status == "completed":
+            try:
+                num = int(task_id)
+            except (ValueError, TypeError):
+                continue
+            if completed_id is None or num > completed_id:
+                completed_id, completed = num, str(task_id)
+    if in_progress:
+        return in_progress, False
+    return ([completed], True) if completed is not None else ([], False)
+
+
 def task_is_live(task: Any) -> bool:
     """True iff this task is still `in_progress`. The liveness SSOT.
 
@@ -512,9 +575,32 @@ def task_is_live(task: Any) -> bool:
 
 
 def has_live_listed_task(record: Any, tasks: Any) -> bool:
-    """True iff some task this record covers is still live."""
+    """True iff some task this record covers is still live.
+
+    🔴 CONSULTANT RECORDS HAVE NO STRUCTURAL EXPIRY, AND THAT IS A WEAKER
+    GUARANTEE THAN A TEAMMATE'S — STATED HERE RATHER THAN LEFT TO BE FOUND.
+    For a teammate, task-completion IS the expiry signal: the record dies when
+    no listed task is `in_progress` any more. A consultant's anchor task is
+    ALREADY completed at the moment the record is written, so that signal is
+    spent before it can ever fire. Expiring on it would kill the record on
+    arrival, which is why such records are exempt here — and the price is that
+    nothing retires them except the 24h TTL upstream in `_load_records`.
+
+    Coverage yes, expiry parity NO. Do not describe consultant coverage as
+    equal to teammate coverage; an undocumented weaker guarantee reads as an
+    equal one, and this is the sentence that stops that.
+
+    The exemption keys on a flag written at RECORD time, not on the task's
+    status now, because those differ: a teammate whose task has since
+    completed must still expire, and only the write-time fact separates the
+    two. `task_is_live` stays the unqualified liveness SSOT — the exemption
+    belongs here, where the record is in hand, rather than inside a predicate
+    whose whole job is to answer "is this task in_progress".
+    """
     if not isinstance(tasks, list):
         return False
+    if isinstance(record, dict) and record.get("anchor_completed") is True:
+        return True
     listed = set(record_task_ids(record))
     return any(task_is_live(t) and str(t.get("id")) in listed for t in tasks)
 
@@ -591,10 +677,19 @@ def wait_covers_record(task: Any, record: Any) -> bool:
     associated the two, and the record has done its job — whether or not the
     job itself has finished. Nothing needs to observe the shell.
 
-    `since >= registered_at` IS LOAD-BEARING AND MUST NOT BE SIMPLIFIED AWAY.
+    `anchor >= registered_at` IS LOAD-BEARING AND MUST NOT BE SIMPLIFIED AWAY.
     It is what makes this precise rather than a blanket amnesty: a wait
     flagged for job 1 does NOT acquit a job 2 launched afterwards, because
-    job 2's `registered_at` is later than that wait's `since`.
+    job 2's `registered_at` is later than that wait's anchor.
+
+    SCOPE ON THE ANCHOR, NEVER ON `since`. `since` is the freshness clock and
+    agents are instructed to re-SET it; comparing against it would let every
+    re-stamp widen the wait forward over launches it never acknowledged,
+    which annuls the comparison above. wait_scope_anchor reads the anchor and
+    falls back to `since` only when there is none, so an unanchored wait
+    behaves exactly as it did before rather than breaking — and the lead-side
+    scan reports the missing anchor instead of this returning a quiet verdict
+    on it. Callers needing that class use wait_anchor_class.
 
     Pure: reads a task dict and a record dict, writes nothing.
     """
@@ -604,11 +699,11 @@ def wait_covers_record(task: Any, record: Any) -> bool:
         return False  # no valid wait to acknowledge anything
     metadata = task.get("metadata")
     wait = metadata.get("intentional_wait") if isinstance(metadata, dict) else None
-    since = parse_iso(wait.get("since")) if isinstance(wait, dict) else None
+    anchor, _ = wait_scope_anchor(wait)
     registered = parse_iso(record.get("registered_at"))
-    if since is None or registered is None:
+    if anchor is None or registered is None:
         return False
-    return since >= registered
+    return anchor >= registered
 
 
 def discharge_acknowledged(
@@ -944,8 +1039,13 @@ def agent_type_names_a_member(agent_type: Any, team_name: str) -> bool:
 
 def bind_launcher_identity(
     input_data: Any, team_name: str
-) -> tuple[str, str, list[str]] | None:
-    """Return (agent_name, session_id, task_ids) or None when identity is absent.
+) -> "tuple[str, str, list[str], bool] | None":
+    """Return (agent_name, session_id, task_ids, anchor_completed), or None.
+
+    None means identity is absent. `anchor_completed` is True when the owner
+    held no `in_progress` task and the ids are its most recently completed one
+    — the consultant case — and it is APPENDED to the tuple rather than
+    inserted, so positional readers of the first three elements are unaffected.
 
     Steps 1-3.5 of resolve_agent_name only. `agent_type` is deliberately NOT
     type-stripped as the owner.
@@ -978,9 +1078,17 @@ def bind_launcher_identity(
     one silently recorded nothing for a teammate holding two — and holding two
     is behaviour the pact-teachback skill explicitly permits, so the mechanism
     switched itself off for teammates following the framework's own
-    instruction. Zero matches stays a no-write: a teammate with no in_progress
-    task is not inside a dispatch, so there is no task context for an advisory
-    to reference.
+    instruction.
+
+    ZERO in_progress TASKS FALLS BACK TO THE MOST RECENTLY COMPLETED ONE. This
+    previously stayed a no-write, on the stated reason that "a teammate with no
+    in_progress task is not inside a dispatch, so there is no task context for
+    an advisory to reference". THAT REASON IS FALSE and the no-write it
+    justified was the whole consultant hole: a CONSULTANT owns no in_progress
+    task by definition, is a supported state, does real work, and can carry a
+    wait on its completed anchor because metadata writes to a completed task
+    land. So there IS a task context; the old predicate just refused to look at
+    it. Only an owner with no task at all is a no-write now.
     """
     # Function-level: the whole module is imported only once a Bash frame
     # arrives, and these three are needed only once identity is being bound.
@@ -1056,21 +1164,12 @@ def bind_launcher_identity(
     if not agent_name:
         return None
 
-    task_ids = []
-    for task in iter_team_task_jsons(team_name):
-        if not isinstance(task, dict):
-            continue
-        if task.get("status") != "in_progress":
-            continue
-        if task.get("owner") != agent_name:
-            continue
-        task_id = task.get("id")
-        if task_id is None:
-            continue
-        task_ids.append(str(task_id))
+    task_ids, anchor_completed = owner_anchor_tasks(
+        list(iter_team_task_jsons(team_name)), agent_name
+    )
     if not task_ids:
         return None
-    return agent_name, session_id, task_ids
+    return agent_name, session_id, task_ids, anchor_completed
 
 
 def record_background_launch(input_data: Any) -> bool:
@@ -1086,20 +1185,37 @@ def record_background_launch(input_data: Any) -> bool:
     if classify_session_role(input_data) != "teammate":
         return False
     command = command_from_frame(input_data)
-    if is_durable_command(command):
-        return False
+    # NO DURABILITY FILTER HERE, DELIBERATELY. A predicate over command TEXT
+    # was tried and deleted: "is this command durable" is not answerable from
+    # the string. It caught the intended population (`npm run dev`) and also
+    # silently dropped ordinary one-shot work whose text merely contains a
+    # token (`pytest -k start`), and those two are indistinguishable to any
+    # matcher — so the over-fire was drawn FROM the target population rather
+    # than being a tunable miss rate. Both directions were measured and
+    # neither was fixable by patching the pattern.
+    # The question IS answerable, just not here: `intentional_wait` carries it
+    # later, when the agent says what it is waiting for. Re-adding a text
+    # predicate at this point re-adds the silence. Measurement record and the
+    # widening-trades-blind-spots evidence are in pact-memory.
     team_name = get_team_name()
     if not team_name:
         return False
     bound = bind_launcher_identity(input_data, team_name)
     if bound is None:
         return False
-    agent_name, session_id, task_ids = bound
+    agent_name, session_id, task_ids, anchor_completed = bound
     return append_record(
         {
             "agent_name": agent_name,
             "session_id": session_id,
             "task_ids": task_ids,
+            # Write-time fact, not a status to be re-read later: it records
+            # that this owner had no in_progress task when the launch
+            # happened, which is what exempts the row from completion-expiry
+            # in has_live_listed_task. A teammate whose task completes AFTER
+            # this point must still expire, and only the write-time value
+            # separates those two.
+            "anchor_completed": anchor_completed,
             "command": command,
             "registered_at": iso_now(),
         },

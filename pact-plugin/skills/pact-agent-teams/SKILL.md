@@ -489,6 +489,7 @@ still cannot poll while idle; this rule fires ON wake, whatever woke you.
 | `reason` | yes | Non-empty string. Prefer `KNOWN_REASONS` from `shared.intentional_wait`: `awaiting_teachback_approved`, `awaiting_lead_commit`, `awaiting_amendment_review`, `awaiting_post_handoff_decision`, `awaiting_peer_response`, `awaiting_user_decision`, `awaiting_blocker_resolution`, `awaiting_lead_takeover`. Free-form permitted. |
 | `expected_resolver` | yes | Non-empty string. Prefer `KNOWN_RESOLVERS`: `lead`, `peer`, `user`, `external`. Free-form permitted. |
 | `since` | yes | tz-aware ISO-8601 UTC timestamp, seconds precision. |
+| `covers_since` | on re-SET | tz-aware ISO-8601 UTC timestamp. Not written on a first SET. When you re-SET a wait you are still holding, write the value `since` held BEFORE you overwrite it; if `covers_since` is already present, leave it unchanged. |
 
 Unknown keys are preserved (forward-compat).
 
@@ -499,6 +500,8 @@ minutes from `since`. The `missed_wake_scan` hook surfaces `awaiting_lead_comple
 this threshold to the team-lead; for all other reasons the flag is advisory
 metadata the team-lead may inspect by reading the task file. If your wait genuinely takes longer, re-SET with a fresh `since` so
 later inspection reflects the real duration.
+
+**When you re-SET a wait you are still holding, move the OLD `since` value into `covers_since` first, and leave `covers_since` alone if it is already there.** `since` is the freshness clock and `covers_since` is the scoping anchor; they are two jobs and re-stamping must move only the first. The anchor is what decides which background launches your wait already acknowledged, so carrying it forward unchanged is what keeps a long wait from silently acquiring launches you started after raising it. This does not apply after a CLEAR — a wait you SET following a CLEAR is a new wait and starts with no `covers_since`.
 
 ### When NOT to set
 
