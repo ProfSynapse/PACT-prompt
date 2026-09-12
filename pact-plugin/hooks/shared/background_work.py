@@ -23,7 +23,8 @@ That is the OUTER limit. There is an inner one: within shell work this
 records two shapes and no others — a frame carrying the harness background
 flag, or a command ENDING in a bare `&`. A shell launch backgrounded any
 other way (`( cmd & )`, `cmd & echo started`, `… & disown`) is as invisible
-as a subagent; `is_shell_backgrounded_bash` carries the measured list.
+as a subagent; `background_launch.is_shell_backgrounded_bash` carries the
+measured list.
 DO NOT DESCRIBE THIS AS ENFORCING THE WAIT RULE GENERALLY, AND DO NOT
 DESCRIBE IT AS COVERING SHELL WORK GENERALLY EITHER. The instruction to
 agents is unconditional — flag every self-started wait — but what is
@@ -52,6 +53,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .background_launch import (  # noqa: F401 — re-exported for callers of this module
+    command_from_frame,
+    is_background_launch,
+    is_harness_background_bash,
+    is_shell_backgrounded_bash,
+)
 from .intentional_wait import canonical_since, validate_wait
 from .pact_context import get_team_name
 from .paths import get_claude_config_dir
@@ -973,76 +980,9 @@ def save_unflagged_idle_counts(counts: dict, team_name: str | None = None) -> bo
 # --------------------------------------------------------------------------
 
 
-def _truthy_background(value: Any) -> bool:
-    return value is True or value == "true" or value == 1
-
-
-def is_harness_background_bash(input_data: Any) -> bool:
-    """True iff this frame is a Bash launch with run_in_background set."""
-    if not isinstance(input_data, dict):
-        return False
-    if input_data.get("tool_name") != "Bash":
-        return False
-    tool_input = input_data.get("tool_input")
-    if not isinstance(tool_input, dict):
-        return False
-    return _truthy_background(tool_input.get("run_in_background"))
-
-
-def command_from_frame(input_data: Any) -> str:
-    tool_input = input_data.get("tool_input") if isinstance(input_data, dict) else None
-    if not isinstance(tool_input, dict):
-        return ""
-    command = tool_input.get("command")
-    return command if isinstance(command, str) else ""
-
-
-def is_shell_backgrounded_bash(input_data: Any) -> bool:
-    """True iff this Bash frame's command ends in a bare `&`.
-
-    Complements `is_harness_background_bash`, which reads only the
-    `run_in_background` field. Work backgrounded by the SHELL inside a
-    foreground Bash call sets no such field, so without this it is invisible
-    to every layer.
-
-    DELIBERATELY UNDER-INCLUSIVE, and this is the entire population it adds:
-    a command ENDING in a bare `&`, nothing more. Measured misses, each of
-    which backgrounds work this hook still will not see:
-
-        nohup ./gate.sh & echo started
-        ( ./gate.sh & )
-        ./gate.sh & sleep 1
-        setsid ./gate.sh & disown
-
-    So the recorded population is "the flag, OR a command ending in a bare
-    `&`". It is NOT "shell-shaped work", and nothing downstream may describe
-    it as though it were.
-
-    Excluded because they are not backgrounding, all measured false: `a && b`,
-    `2>&1`, a quoted `&`, a heredoc body, `cmd & wait`, `echo done \\&`.
-
-    DO NOT EXTEND THIS INTO INFERENCE ABOUT WHAT THE COMMAND WILL DO. Matching
-    command text is admissible here for two reasons, and the second is the one
-    that holds. First, `&` is shell GRAMMAR with one meaning, which the string
-    answers; "will this run a long time" is a fact about program BEHAVIOUR,
-    which it does not. Second and decisive: this predicate only ever ADDS to
-    the recorded population, so an over-fire costs one extra row that someone
-    can see and discharge. A predicate that SUBTRACTS — the durability filter
-    this module used to carry — pays for an over-fire in silence, which is the
-    miss the whole mechanism exists to prevent. So the presence of text
-    matching here licenses nothing: a new check may widen what is recorded and
-    may never narrow it.
-    """
-    if not isinstance(input_data, dict):
-        return False
-    if input_data.get("tool_name") != "Bash":
-        return False
-    command = command_from_frame(input_data).rstrip()
-    if not command.endswith("&"):
-        return False
-    # `&&` is a conjunction and `\&` is a literal ampersand; neither
-    # backgrounds.
-    return not command.endswith("&&") and not command.endswith("\\&")
+# The launch predicate (the flag, or a command ending in a bare `&`) lives in
+# `background_launch`, shared with the PreToolUse advisory. Its names are
+# re-exported at the top of this module.
 
 
 # Platform-supplied agent types that are NOT this plugin's agents. Hard-coded
@@ -1259,10 +1199,7 @@ def record_background_launch(input_data: Any, now: datetime | None = None) -> bo
     """
     from .pact_context import classify_session_role
 
-    if not (
-        is_harness_background_bash(input_data)
-        or is_shell_backgrounded_bash(input_data)
-    ):
+    if not is_background_launch(input_data):
         return False
     if classify_session_role(input_data) != "teammate":
         return False

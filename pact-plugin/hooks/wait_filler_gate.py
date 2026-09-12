@@ -42,6 +42,7 @@ Output: deny = {"hookSpecificOutput": {...}} + exit 2;
 from __future__ import annotations
 
 import json
+import os
 import re
 import sys
 
@@ -98,15 +99,43 @@ _BACKGROUND_ADVISORY = (
 )
 
 
-def _truthy_background(value) -> bool:
-    return value is True or value == "true" or value == 1
+def _load_launch_predicate():
+    """`background_launch.is_background_launch`, loaded by file path, or None.
+
+    Loaded by PATH, not imported, so this hook never runs the `shared`
+    package's `__init__`, which costs tens of milliseconds on a call that
+    happens before every Bash. The module is not registered in `sys.modules`.
+    Any failure returns None, and the caller then emits no advisory: the
+    advisory is optional, and the deny verdict never reaches this call.
+    """
+    try:
+        import importlib.util
+
+        path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            "shared",
+            "background_launch.py",
+        )
+        spec = importlib.util.spec_from_file_location("_pact_background_launch", path)
+        if spec is None or spec.loader is None:
+            return None
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module.is_background_launch
+    except Exception:
+        return None
 
 
-def is_background_launch(tool_input) -> bool:
-    """True iff this Bash frame commits a background launch."""
-    if not isinstance(tool_input, dict):
+def is_background_launch(input_data) -> bool:
+    """True iff this frame launches background work (the flag, or a command
+    ending in a bare `&`). False when the shared predicate cannot be loaded."""
+    launched = _load_launch_predicate()
+    if launched is None:
         return False
-    return _truthy_background(tool_input.get("run_in_background"))
+    try:
+        return launched(input_data) is True
+    except Exception:
+        return False
 
 
 # The lead's `agent_type` spellings. Mirrors `shared.pact_context.LEAD_AGENT_TYPES`,
@@ -169,7 +198,9 @@ def main() -> None:
         if not isinstance(command, str) or not _is_filler_command(command):
             # ALLOW. The background advisory rides this branch and only this
             # branch; it did not participate in reaching it.
-            if is_background_launch(tool_input) and is_teammate_frame(input_data):
+            # The role test runs first, so a lead or plain frame never loads
+            # the launch predicate.
+            if is_teammate_frame(input_data) and is_background_launch(input_data):
                 print(json.dumps({
                     "hookSpecificOutput": {
                         "hookEventName": "PreToolUse",
