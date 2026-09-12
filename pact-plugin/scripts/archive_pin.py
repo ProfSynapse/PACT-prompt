@@ -353,6 +353,23 @@ def _load_hook_module(name: str):
     return module
 
 
+def _load_shared_module(name: str):
+    """Load a module from hooks/shared/ by putting that directory on sys.path.
+
+    DELIBERATELY NOT `_load_hook_module`'s FILE-PATH SHAPE. That helper
+    registers under a BARE top-level name, so anything importing the same name
+    later silently receives this module's instance instead of its own. It is
+    tolerable for the two pin modules it was written for, which nothing else
+    imports; it is not a pattern to spread. A path insert lets the shared
+    package resolve its own intra-package imports normally, which
+    `project_scope` needs to reach `git_helpers`.
+    """
+    shared_dir = str(_HOOKS_DIR / "shared")
+    if shared_dir not in sys.path:
+        sys.path.insert(0, shared_dir)
+    return importlib.import_module(name)
+
+
 _pin_caps = _load_hook_module("pin_caps")
 _staleness = _load_hook_module("staleness")
 
@@ -493,43 +510,14 @@ def extract_pin_block(pinned_content: str, index: int, pins) -> str:
     return pinned_content[block_start:block_end]
 
 
-def _same_repository(env_dir: Path, base: Path) -> bool:
-    """True when `base` is the main repo of the git checkout at `env_dir`.
-
-    The discriminator between a LEGITIMATE fall-through and a wrong-project
-    one. PACT's own primary workflow sets CLAUDE_PROJECT_DIR to a WORKTREE,
-    where CLAUDE.md is gitignored and therefore absent; the resolver's
-    git-common-dir step then finds the MAIN repo's file, which is the correct
-    and intended answer. A blanket "env dir has no CLAUDE.md -> refuse" rule
-    would break that flow on every invocation -- a cardinal over-block.
-    Measured: this worktree has no CLAUDE.md and the main checkout does.
-
-    So the question is not "did we fall through" but "did we fall through to
-    somewhere that is still the same project". `--git-common-dir` answers it:
-    every worktree of a repo shares one common dir, so its parent is the main
-    root for both the worktree and the main checkout.
-
-    Fail-safe: any git error, timeout, or non-repo directory returns False,
-    which routes to a REFUSAL. On a destructive path declining to guess is the
-    safe direction -- refusing costs a recoverable UNEVALUABLE, while guessing
-    wrong archives and evicts from a project nobody named.
-    """
-    try:
-        result = subprocess.run(
-            ["git", "-C", str(env_dir), "rev-parse", "--git-common-dir"],
-            capture_output=True, text=True, timeout=5,
-        )
-    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
-        return False
-    if result.returncode != 0 or not result.stdout.strip():
-        return False
-    common_dir = Path(result.stdout.strip())
-    if not common_dir.is_absolute():
-        common_dir = Path(env_dir) / common_dir
-    try:
-        return common_dir.resolve().parent == Path(base).resolve()
-    except OSError:
-        return False
+# `_same_repository` moved to hooks/shared/project_scope.py. It is pure
+# project-identity mechanics with no pin, memory, or archive knowledge, and
+# the working-memory projection path needs the same discriminator -- one
+# implementation, one guard test, no drift. RE-EXPORTED rather than wrapped:
+# a wrapper here could acquire behaviour and become a second definition,
+# which is what the move exists to prevent. Loaded by file path because this
+# module sits outside the hooks package.
+_same_repository = _load_shared_module("project_scope").same_repository
 
 
 def resolve_claude_md():

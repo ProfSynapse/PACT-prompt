@@ -270,31 +270,45 @@ class TestRedirectedStoreDoesNotProjectIntoAnAmbientDocument:
         # Containment: the write must have landed below tmp_path and nowhere else.
         target.resolve().relative_to(tmp_path.resolve())
 
-    def test_the_default_store_is_admitted_even_when_it_escapes(self, tmp_path):
-        """THE ACCEPTED UNDER-BLOCK, ARMED SO THAT IT IS A DECISION AND NOT A GAP.
+    def test_the_default_store_is_REFUSED_when_it_escapes_into_another_project(
+        self, tmp_path
+    ):
+        """THE UNDER-BLOCK WAS ACCEPTED, THEN DELIBERATELY CLOSED. THE TRIPWIRE
+        FIRED AND THIS IS THE DECISION IT ASKED SOMEBODY TO TAKE.
 
-        A DEFAULT-store save that resolves outside the declared root is
-        ADMITTED.
+        This arm previously asserted the OPPOSITE — that a default-store save
+        resolving outside the declared scope is ADMITTED — and said so as an
+        accepted under-block, armed so a later widening would be a decision and
+        not a drift. The widening came, the arm reddened, and the decision was
+        taken by the team lead: store origin was a PROXY that did not track the
+        property. The incident had a redirected store and escaped anyway,
+        because the projection path never consults store origin at all.
+        REPOSITORY IDENTITY is the property. Working in project A while
+        resolution lands in project B's file is wrong whichever store is in use.
 
-        THE CAUSE IS THAT THE FALL-THROUGH IS THE DESIGNED PATH, NOT AN ANOMALY,
-        and that is what makes the admission correct rather than merely tolerable.
-        A PACT worktree holds no CLAUDE.md of its own. Resolution therefore falls
-        through to the MAIN checkout's file on purpose, and each ordinary worktree
-        session depends on that fall-through to reach the file it displays. So for
-        a default store, resolving outside the declared root IS the normal case,
-        and a refusal here breaks the memory display for each such session. That
-        is the cardinal over-block.
+        SO THE OLD DOCSTRING'S CAUSE WAS SOUND AND ITS SCOPE WAS TOO WIDE. It
+        argued that a worktree holds no CLAUDE.md of its own, that resolution
+        falls through to the main checkout on purpose, and that refusing it
+        would be the cardinal over-block. Every word of that is still true and
+        is still honoured — but it is honoured by `same_repository`, which asks
+        whether the fall-through landed back in the SAME project, not by
+        admitting every escape a default store makes. The fall-through the old
+        arm was protecting is protected. What it also admitted, and should not
+        have, was a fall-through into a DIFFERENT project.
 
-        A WEAKER CAUSE WAS RECORDED HERE BEFORE AND IS REPLACED, because a weak
-        cause invites a later reader to overturn a correct decision. The weaker
-        one: the row sits in the store the display reads from, so the entry can
-        be looked up. That is correct, and it compares HARM SEVERITY. The cause
-        above says the behaviour is the design, which is much harder to argue
-        away.
+        🔴 THIS FIXTURE IS NOT THE WORKTREE CASE AND MUST NOT BE READ AS ONE.
+        Nothing in this file creates a git repository: `_seed_project` and
+        `_escaped_root` are plain directories, so `same_repository` reaches its
+        non-repo branch and returns False. That is a faithful model of the
+        INCIDENT and a false model of the cardinal over-block, which the old
+        docstring named but its fixture could never reach. The worktree case is
+        pinned separately in `TestTheCardinalFallthroughSurvives` below, with a
+        real `git worktree add` — see that class for why a subdirectory is not
+        a substitute.
 
-        The arm is available so that a later reader finds this boundary stated
-        and measured. If a future change makes this refuse, this arm reddens and
-        the widening becomes a decision somebody takes on purpose.
+        THE TRIPWIRE FRAMING IS KEPT, POINTING THE OTHER WAY. If a future
+        change re-admits this, the arm reddens and the narrowing becomes a
+        decision somebody takes on purpose, exactly as the widening was.
         """
         target = _seed_project(tmp_path)
         before = target.read_bytes()
@@ -305,8 +319,16 @@ class TestRedirectedStoreDoesNotProjectIntoAnAmbientDocument:
             env, tmp_path / "project", "save", _save_payload("default-escape-arm")
         )
 
-        assert _sync_status(result) == SyncResult.WROTE
-        assert target.read_bytes() != before
+        assert _sync_status(result) == SyncResult.REFUSED, (
+            "a DEFAULT-store save whose declared scope resolved into a "
+            "different project was admitted. Store origin is not the property "
+            "— the incident had a redirected store and escaped anyway, because "
+            "the projection path never reads store origin. If this admission "
+            "is deliberate, say which property replaced repository identity."
+        )
+        assert target.read_bytes() == before, (
+            "the projection reached a document outside the declared scope"
+        )
 
     def test_the_retrieved_context_site_is_guarded_too(self, tmp_path, monkeypatch):
         """THE SECOND CALL SITE, driven IN PROCESS because the CLI cannot reach it.
@@ -491,3 +513,114 @@ class TestTheDeclaredProjectDirCheck:
         assert _target_is_inside_the_declared_project_dir(
             elsewhere / "CLAUDE.md"
         ) is False
+
+
+def _git(*args: str, cwd: Path) -> subprocess.CompletedProcess:
+    """Run git and require success. Real git, never a simulation of one.
+
+    The predicate under test shells out to `git rev-parse --git-common-dir`,
+    so a fixture that models a repository with plain directories is measuring
+    the non-repo branch and nothing else.
+    """
+    r = subprocess.run(["git", *args], cwd=str(cwd), capture_output=True,
+                       text=True, timeout=60)
+    assert r.returncode == 0, f"git {' '.join(args)} failed: {r.stderr}"
+    return r
+
+
+class TestTheCardinalFallthroughSurvives:
+    """A REAL WORKTREE reaching the MAIN checkout's document must still WRITE.
+
+    🔴 WHY THIS CLASS EXISTS, AND IT IS NOT A RESTATEMENT OF THE ARM ABOVE.
+    The guard's own docstring names this as the cardinal over-block: PACT
+    declares CLAUDE_PROJECT_DIR as a worktree, CLAUDE.md is gitignored and
+    therefore absent there, and resolution falls through to the main
+    checkout's file on purpose. Refusing that breaks the memory display for
+    every worktree session — including the one this suite is running in.
+
+    NOTHING IN THE SUITE WAS DRIVING IT. Every other fixture in this file
+    builds plain directories, so `same_repository` reaches its non-repo branch
+    and returns False; those arms cannot distinguish a guard that allows the
+    fall-through from one that refuses everything. The nearest existing
+    coverage lives in the pin-resolver suite and uses a SUBDIRECTORY, with a
+    comment calling it "structurally the worktree case".
+
+    A SUBDIRECTORY IS NOT STRUCTURALLY THE WORKTREE CASE, AND THE DIFFERENCE
+    IS A BRANCH. Measured with real git:
+
+        git -C <main>           rev-parse --git-common-dir  ->  .git
+        git -C <main>/sub       rev-parse --git-common-dir  ->  ../.git
+        git -C <main>/sub/deep  rev-parse --git-common-dir  ->  ../../.git
+        git -C <worktree>       rev-parse --git-common-dir  ->  /abs/.../main/.git
+
+    A subdirectory returns a RELATIVE path and a worktree returns an ABSOLUTE
+    one, so they take opposite sides of `same_repository`'s
+    `if not common_dir.is_absolute()` join. The subdir arm exercises the join;
+    the cardinal case skips it. Only the case below covers the branch PACT
+    actually runs on every session.
+
+    Verdicts measured on the same fixture, all seven:
+
+        same_repository(worktree,    main)      True   <- the cardinal case
+        same_repository(main,        worktree)  False  <- argument order matters
+        same_repository(subdir,      root)      True
+        same_repository(root,        subdir)    False
+        same_repository(deep subdir, root)      True
+        same_repository(worktree,    itself)    False  (unreachable: the guard
+                                                 returns on declared == resolved
+                                                 before the predicate is asked)
+        same_repository(non-git,     main)      False  <- every other arm here
+    """
+
+    def test_a_real_worktree_still_projects_into_the_main_checkout(self, tmp_path):
+        """THE OVER-BLOCK ARM. If this reddens, every worktree session has lost
+        its working-memory display — which is a strictly worse outcome than the
+        under-block the sibling arm above closed.
+
+        MUTANT that reddens this arm: delete the `same_repository(...)` return
+        from `_refuse_ambient_sync_on_declared_scope_escape`. The declared
+        worktree then differs from the resolved main root, no exemption
+        applies, and the cardinal fall-through is refused.
+        """
+        main = tmp_path / "mainrepo"
+        (main / ".claude").mkdir(parents=True)
+        (main / ".claude" / "CLAUDE.md").write_text(_SEED_DOCUMENT, encoding="utf-8")
+        _git("init", "-q", ".", cwd=main)
+        _git("config", "user.email", "t@example.invalid", cwd=main)
+        _git("config", "user.name", "t", cwd=main)
+        # A TRACKED FILE THAT IS NOT THE DOCUMENT. `git worktree add` needs a
+        # commit, and `.claude/` is covered by the operator's global gitignore
+        # — which is WHY this whole fall-through exists, so the fixture leans
+        # on it rather than forcing the document into the index.
+        (main / "README").write_text("seed\n", encoding="utf-8")
+        _git("add", "README", cwd=main)
+        _git("commit", "-qm", "seed", cwd=main)
+
+        worktree = tmp_path / "wt"
+        _git("worktree", "add", "-q", str(worktree), "-b", "wt", cwd=main)
+        assert not (worktree / ".claude" / "CLAUDE.md").exists(), (
+            "the fixture must reproduce the real shape — a worktree with NO "
+            "CLAUDE.md of its own, which is what forces the fall-through"
+        )
+
+        target = main / ".claude" / "CLAUDE.md"
+        before = target.read_bytes()
+
+        env = _base_env(tmp_path)
+        env["CLAUDE_PROJECT_DIR"] = str(worktree)
+        result = _run_cli(env, worktree, "save", _save_payload("cardinal-worktree-arm"))
+
+        assert _sync_status(result) == SyncResult.WROTE, (
+            "a save from a real git worktree, declaring that worktree and "
+            "falling through to the MAIN checkout's CLAUDE.md, was refused. "
+            "This is the cardinal over-block the escape guard is shaped to "
+            "avoid: CLAUDE.md is gitignored in a worktree, so this is the "
+            "NORMAL path for every PACT session, not an edge case. Check that "
+            "`same_repository(declared, resolved)` is still consulted and that "
+            "its arguments are still in DECLARATION-FIRST order — swapping "
+            "them returns False here and nothing else would fail."
+        )
+        assert target.read_bytes() != before, (
+            "the sync reported WROTE but the main checkout's document did not "
+            "change — the projection went somewhere else"
+        )
