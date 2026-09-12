@@ -735,3 +735,43 @@ class TestMainDrivesTheUnflaggedAdvisoryThroughARealStore:
             "unflagged advisory on idle %r; the advisory tells it that it has "
             "no flagged wait, which is false" % (fired,)
         )
+
+    def test_an_unflagged_idle_STAMPS_idled_at_so_the_lead_uses_its_shorter_window(
+        self, store, capsys, tmp_path
+    ):
+        """Layer 2 hands Layer 3 a clock. An unflagged idle through `main()`
+        stamps `idled_at` on the record, and the lead-side window runs from that
+        stamp with the shorter threshold. Without the stamp the lead falls back
+        to `registered_at` and the longer window, so a stranded teammate is
+        surfaced later than it should be.
+        """
+        store()
+        assert self._idle_once(capsys) is False
+        registry = tmp_path / ".claude" / "teams" / self.TEAM / "background_work.json"
+        (record,) = json.loads(registry.read_text(encoding="utf-8"))["records"]
+        assert record.get("idled_at"), (
+            "an unflagged idle through main() left the record without idled_at, "
+            "so the lead-side scan falls back to registered_at and the longer "
+            "window: %r" % (record,)
+        )
+
+    def test_a_NON_NUMERIC_idle_count_restarts_the_ramp_instead_of_breaking_it(
+        self, store, capsys, tmp_path
+    ):
+        """A hand-edited or corrupted counter file can hold a count that is not a
+        number. It must read as zero, so the advisory still fires on the third
+        consecutive idle; it must not raise and silence the advisory for good.
+        """
+        store()
+        counter = (tmp_path / ".claude" / "teams" / self.TEAM
+                   / "unflagged_background_idle.json")
+        counter.parent.mkdir(parents=True, exist_ok=True)
+        counter.write_text(json.dumps(
+            {self.TEAMMATE: {"count": "not-a-number", "task_id": self.TASK_ID}}),
+            encoding="utf-8")
+        fired = [self._idle_once(capsys) for _ in range(3)]
+        assert fired == [False, False, True], (
+            "with a non-numeric count on file, the advisory fired on idles %r "
+            "instead of exactly the third; an unreadable count must restart the "
+            "ramp at zero, not stop it" % (fired,)
+        )
