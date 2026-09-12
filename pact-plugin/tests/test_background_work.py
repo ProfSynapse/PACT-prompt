@@ -18,7 +18,9 @@ carrying none produces nothing.
 
 from __future__ import annotations
 
+import ast
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 import pytest
 
@@ -31,6 +33,7 @@ from shared.background_work import (
     classify_wait,
     discharge_acknowledged,
     effective_since,
+    is_shell_backgrounded_bash,
     lead_stale,
     load_records_for_discharge,
     matching_outstanding,
@@ -717,3 +720,291 @@ class TestBindLauncherIdentity:
             )
         )
         assert agent_type_names_a_member("pact-architect", TEAM) is False
+
+
+class TestShellBackgroundedLaunchPopulation:
+    """`is_shell_backgrounded_bash` — the population the detector ADDS.
+
+    🔴 WHAT THIS CLASS DOES NOT SHOW, STATED FIRST BECAUSE IT IS THE TRAP.
+    Every arm here tests the PREDICATE IN ISOLATION. All of them pass whether
+    or not `record_background_launch` ever calls it, so none of them can tell
+    you the widening is wired in. That is not a defect in these arms; it is
+    what a predicate test is. The wiring is pinned by a POSITIVE-RECORD arm
+    through the real seam, in test_track_files_background_integration.py, and
+    the general rule is worth stating once: only an arm asserting that a
+    record WAS written can detect a wiring break, because an unwired gate
+    fails CLOSED and a silent refusal is observationally identical to a
+    correct one. Every negative-asserting arm below is structurally incapable
+    of catching it.
+
+    THE POPULATION IS EXACTLY "a command ENDING in a bare `&`", and nothing
+    here may be read as broader. A mid-line background, a subshell and a
+    disowned job all miss, and they are pinned as such below rather than left
+    to a docstring — the prose describing this feature has already been wrong
+    twice in the overclaiming direction.
+    """
+
+    @staticmethod
+    def _frame(command, tool_name="Bash"):
+        return {"tool_name": tool_name, "tool_input": {"command": command}}
+
+    # MEASURED against the predicate before being written down, not predicted.
+    LAUNCHES = [
+        "nohup ./gate.sh &",
+        "sleep 720 &",
+        "python3 -m pytest -q > out.log 2>&1 &",
+        "./run.sh --flag &   ",          # trailing whitespace, rstrip'd
+        "nohup bash -c 'a; b' &",
+    ]
+    NOT_BACKGROUNDING = [
+        "a && b",                        # conjunction
+        "make -j4 &&",                   # ENDS in `&&` — the exclusion's own case
+        "echo x 2>&1",                   # fd redirect
+        "echo 'a & b'",                  # quoted
+        "cmd & wait",                    # backgrounds, then waits: not a launch
+        "echo done \\&",                 # escaped literal
+        "echo plain",                    # no ampersand at all
+        "cat <<'EOF'\nbody &\nEOF",      # `&` inside a heredoc body
+    ]
+    DOCUMENTED_MISSES = [
+        "nohup ./gate.sh & echo started",
+        "( ./gate.sh & )",
+        "./gate.sh & sleep 1",
+        "setsid ./gate.sh & disown",
+    ]
+
+    @pytest.mark.parametrize("command", LAUNCHES)
+    def test_a_command_ENDING_in_a_bare_ampersand_is_a_launch(self, command):
+        """ARM 1. The shapes the widening exists to catch.
+
+        MUTANT that reddens this arm: drop the `.rstrip()` — the trailing-
+        whitespace case then stops matching, which is the realistic edit
+        because the strip looks redundant until you have a command built by
+        string concatenation.
+        """
+        assert is_shell_backgrounded_bash(self._frame(command)) is True, command
+
+    @pytest.mark.parametrize("command", NOT_BACKGROUNDING)
+    def test_an_ampersand_that_does_not_background_is_NOT_a_launch(self, command):
+        """ARM 2. The over-fire direction.
+
+        An over-fire here costs one spurious registry row, which is visible
+        and dischargeable — so this is the CHEAP direction and the arm exists
+        to keep it cheap rather than to prevent a catastrophe. The expensive
+        direction is a miss, which is silent.
+
+        MUTANT that reddens this arm: drop the `&&` / `\\&` exclusions, and
+        `a && b` and `echo done \\&` start recording.
+        """
+        assert is_shell_backgrounded_bash(self._frame(command)) is False, command
+
+    @pytest.mark.parametrize("command", DOCUMENTED_MISSES)
+    def test_the_DOCUMENTED_LIMITS_are_still_missed(self, command):
+        """ARM 7. A pin on a KNOWN GAP, so widening the predicate forces the
+        docstring to move with it.
+
+        🔴 THIS ARM ASSERTS A LIMITATION, NOT A REQUIREMENT. Each command
+        below genuinely backgrounds work that this hook will not see. They are
+        listed verbatim in `is_shell_backgrounded_bash`'s docstring as measured
+        misses, and this arm is what stops that list going quietly stale: if a
+        future change starts catching one of these, this arm reddens and
+        whoever widened the predicate must update the docstring in the same
+        commit rather than leaving prose that understates coverage.
+
+        IF YOU HAVE DELIBERATELY WIDENED THE PREDICATE, DELETE THE CASE YOU
+        NOW CATCH — its reddening is the improvement landing, not a
+        regression. Do not restore the old behaviour to keep this green.
+
+        MUTANT that reddens this arm: change `endswith("&")` to `"&" in
+        command`, which is the obvious "surely we should catch mid-line too"
+        edit; all four then match.
+        """
+        assert is_shell_backgrounded_bash(self._frame(command)) is False, (
+            "%r is a DOCUMENTED miss. If the predicate now catches it, that is "
+            "a widening — delete this case and update the docstring's measured-"
+            "misses list in the same commit." % (command,)
+        )
+
+    def test_a_NON_Bash_frame_ending_in_an_ampersand_is_refused(self):
+        """ARM 3. The tool gate, which no command-text case can cover.
+
+        Without it a Write or Edit frame whose payload happens to end in `&`
+        would be recorded as a launch.
+
+        MUTANT that reddens this arm: drop the `tool_name != "Bash"` check.
+        """
+        assert is_shell_backgrounded_bash(
+            self._frame("sleep 1 &", tool_name="Write")) is False
+
+    @pytest.mark.parametrize("frame", [
+        None, {}, {"tool_name": "Bash"},
+        {"tool_name": "Bash", "tool_input": {"command": None}},
+        {"tool_name": "Bash", "tool_input": "not-a-dict"},
+    ])
+    def test_a_MALFORMED_frame_returns_False_rather_than_raising(self, frame):
+        """ARM 4. Fail-open, at the predicate.
+
+        The host calls this for its side effect only and must not be disturbed
+        by anything here, so a malformed frame returns False rather than
+        propagating. `assert is False` rather than `assert not` on purpose: a
+        raise would fail the arm, but so would a None return, and those are
+        different defects.
+
+        MUTANT that reddens this arm: drop the isinstance guards and a None
+        frame raises AttributeError instead of returning False.
+        """
+        assert is_shell_backgrounded_bash(frame) is False
+
+
+MODULE_SOURCE = Path(__file__).resolve().parents[1] / "hooks" / "shared" / "background_work.py"
+
+
+def _module_functions():
+    """Top-level functions of background_work.py, as AST nodes."""
+    tree = ast.parse(MODULE_SOURCE.read_text(encoding="utf-8"))
+    return [n for n in tree.body if isinstance(n, ast.FunctionDef)]
+
+
+def _params(fn) -> list:
+    return [a.arg for a in fn.args.args] + [a.arg for a in fn.args.kwonlyargs]
+
+
+def _references(fn, name: str) -> bool:
+    """True if `name` is READ anywhere in the body, or passed as a keyword."""
+    for node in ast.walk(fn):
+        if isinstance(node, ast.Name) and node.id == name and isinstance(node.ctx, ast.Load):
+            return True
+        if isinstance(node, ast.keyword) and node.arg == name:
+            return True
+    return False
+
+
+class TestTheClockIsNotDecorative:
+    """Structural guard: a `now=` parameter must mean something.
+
+    🔴 WHY THIS EXISTS, and it is a guard against a well-intentioned edit
+    rather than against a bug. An earlier dispatch on this module asked for
+    the clock to be threaded through its write paths, and that instruction was
+    too wide: some of these functions have no clock to thread. A `now=` on a
+    function that never consults it PROMISES DETERMINISM WHERE THERE IS
+    NOTHING TO DETERMINE — and a test written against that promise passes for
+    no reason at all, which is strictly worse than no test, because it reports
+    coverage of a behaviour that does not exist.
+
+    The reader this stops is someone tidying up: they see `append_record(...,
+    now=None)` beside `save_records(...)` without one, read it as an
+    oversight, and "finish the job".
+    """
+
+    def test_a_now_parameter_is_never_DECORATIVE(self):
+        """THE GENERAL INVARIANT, and it is derived rather than listed.
+
+        Every function taking `now=` must actually REFERENCE it — in
+        arithmetic, in a comparison, or by forwarding it onward. This is
+        deliberately NOT 'must read a clock': `_record_expired` reads no clock
+        and is correct, because it does the subtraction itself, and a
+        reads-a-clock rule would have false-fired on it. Nor is it 'must
+        forward': the same function forwards nothing.
+
+        A LIST OF FUNCTION NAMES WOULD HAVE GONE STALE ALREADY. The set of
+        clock-threaded functions on this module changed once during this
+        branch, so this arm computes its own population from the source every
+        run and cannot describe a module that has moved.
+        """
+        offenders = [
+            fn.name for fn in _module_functions()
+            if "now" in _params(fn) and not _references(fn, "now")
+        ]
+        assert offenders == [], (
+            "these functions accept `now=` and never use it: %s. A clock "
+            "parameter that is ignored advertises determinism the function "
+            "does not provide, and any test written against it passes without "
+            "exercising anything. Either use it or remove it." % (offenders,)
+        )
+
+    # MEASURED FROM SOURCE, NOT COPIED FROM A DISPATCH. Two corrections came
+    # out of measuring rather than accepting a handed-down list:
+    #   - `load_unflagged_idle_counts` was named as one of these and is NOT a
+    #     writer at all — it is a pure reader, so it could never have been a
+    #     clockless WRITER.
+    #   - `_write_text` and `_rewrite_locked` are clockless writers and were
+    #     not named.
+    # The set is six, not five, and it is listed here as a DECISION rather
+    # than as an inventory.
+    CLOCKLESS_WRITERS = (
+        "_rewrite_locked",
+        "_write_text",
+        "_write_records",
+        "save_records",
+        "update_unflagged_idle_counts",
+        "save_unflagged_idle_counts",
+    )
+
+    def test_the_deliberately_clockless_writers_take_no_now(self):
+        """These six persist bytes and consult no clock, ON PURPOSE.
+
+        They are pure I/O: given the content, they write it. None of them
+        prunes, compares, stamps or expires anything, so there is no moment at
+        which 'what time is it' could change what they do.
+
+        IF YOU ARE HERE BECAUSE THIS WENT RED, the question to answer first is
+        NOT 'how do I thread the clock' but 'what in this function now depends
+        on the time'. If the honest answer is nothing, the `now=` should come
+        back out. If something genuinely does, delete the name from the tuple
+        above in the same commit and say what changed — the tuple is a record
+        of a decision, and moving it is a decision too.
+        """
+        by_name = {fn.name: fn for fn in _module_functions()}
+        missing = [n for n in self.CLOCKLESS_WRITERS if n not in by_name]
+        assert missing == [], (
+            "named clockless writers no longer exist in the module: %s. They "
+            "were renamed or removed, so this guard is now pointing at "
+            "nothing — re-derive the set rather than deleting the arm."
+            % (missing,)
+        )
+        acquired = [n for n in self.CLOCKLESS_WRITERS if "now" in _params(by_name[n])]
+        assert acquired == [], (
+            "these writers acquired a `now=` parameter: %s. They read no clock "
+            "and decide nothing from the time, so the parameter cannot change "
+            "their behaviour — it only promises a determinism they do not "
+            "have. If one genuinely became time-dependent, remove it from "
+            "CLOCKLESS_WRITERS in the same commit and say what changed."
+            % (acquired,)
+        )
+
+    def test_CONTROL_the_guard_can_see_a_now_parameter_at_all(self):
+        """Non-vacuity. Both arms above assert an EMPTY list, and an empty
+        list is what a broken parser returns too — a typo in the module path,
+        an `ast` walk that finds no FunctionDef, or a `_params` that never
+        sees a keyword-only argument would all report a clean pass.
+
+        So: the module must contain functions that DO take `now=`, and
+        `_references` must return True for them. If this reddens, the two arms
+        above are measuring nothing and their green means nothing.
+        """
+        with_now = [fn for fn in _module_functions() if "now" in _params(fn)]
+        assert len(with_now) >= 5, (
+            "found %d functions taking `now=` in %s — the parser is not seeing "
+            "the module and the guards above are vacuous"
+            % (len(with_now), MODULE_SOURCE.name)
+        )
+        # DELIBERATELY NOT re-asserting the invariant here. A control that
+        # fails for the SAME reason as the arm it controls is not an
+        # independent control — it inflates the kill set and hides which
+        # property actually broke.
+        #
+        # Instead the HELPER is checked against synthetic functions whose
+        # answers are known, which is independent of whatever the module
+        # currently looks like: if `_references` ever stops discriminating,
+        # both guards above go quietly green and this is the only arm that
+        # says so.
+        probe = ast.parse(
+            "def uses(now):\n    return now\n"
+            "def ignores(now):\n    return 1\n"
+        ).body
+        assert _references(probe[0], "now") is True, (
+            "_references cannot see a parameter that IS used — both guards "
+            "above would report a clean pass on a module full of offenders")
+        assert _references(probe[1], "now") is False, (
+            "_references reports a use where there is none — both guards "
+            "above are then unfalsifiable")

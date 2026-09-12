@@ -167,6 +167,44 @@ class TestTrackFilesBackgroundSeam:
         assert records[0]["agent_name"] == "seam-coder"
         assert records[0]["task_ids"] == ["7"]
 
+    def test_a_SHELL_backgrounded_launch_with_NO_FLAG_lands_a_record(self, seam):
+        """ARM 5 — THE COMPOSITION ARM. It proves the gate CONSULTS the
+        trailing-`&` predicate, which no predicate-level arm can show.
+
+        🔴 WHY THIS ARM AND NOT A PREDICATE TEST. `is_shell_backgrounded_bash`
+        can be tested seven ways and pass every time while
+        `record_background_launch` never calls it — the widening would be
+        entirely unwired and the suite fully green. Only an arm asserting a
+        POSITIVE record THROUGH the gate can see that, because an unwired gate
+        fails CLOSED and a silent refusal is observationally identical to a
+        correct one. Every negative-asserting arm in this file is structurally
+        incapable of catching it.
+
+        THE FRAME CARRIES NO `run_in_background` KEY AT ALL — not False, absent
+        — because that is the shape a foreground Bash call actually has, and it
+        is the shape that was invisible to all three layers until the gate was
+        widened. A live probe measured it: a teammate backgrounded a test sweep
+        with `nohup … &` and nothing recorded it.
+
+        MUTANT that reddens this arm (arm 6): revert the gate to
+        `if not is_harness_background_bash(input_data)`. That is the PRIOR
+        BEHAVIOUR rather than a broken function, which is this branch's
+        acceptance standard.
+        """
+        frame = _frame()
+        frame["tool_input"] = {"command": "nohup ./gate.sh &"}
+        assert "run_in_background" not in frame["tool_input"]
+        assert _registry(seam) == []
+        assert _run(seam, frame).returncode == 0
+        records = _registry(seam)
+        assert len(records) == 1, (
+            "a foreground Bash call whose command ends in a bare `&` was not "
+            "recorded, so the trailing-`&` predicate is not wired into the "
+            "gate — the widening is inert and every predicate-level arm would "
+            "still be green"
+        )
+        assert records[0]["command"] == "nohup ./gate.sh &"
+
     def test_a_NON_background_bash_writes_nothing(self, seam):
         """The negative control, so the positive above is not vacuous."""
         frame = _frame()
