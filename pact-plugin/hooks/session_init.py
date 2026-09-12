@@ -135,16 +135,26 @@ from shared.session_resume import (
 )
 
 
-# #864 Phase 1: one-time startup notice recommending tmux for unattended runs
-# when the effective teammateMode is not positively "tmux". Emitted via
-# system_messages (user-facing) by main() step 0b. Lives HERE (presentation
-# layer) rather than in shared/teammate_mode.py (resolution layer) per SRP.
+# One-time startup notice about unattended-run stalls, emitted when the
+# effective teammateMode is not positively "tmux". Emitted via system_messages
+# (user-facing) by main() step 0b. Lives HERE (presentation layer) rather than
+# in shared/teammate_mode.py (resolution layer) per SRP.
 # Pure literal (no interpolation) so tests can pin the exact substring.
+#
+# THE tmux CLAIM IS SCOPED ON PURPOSE AND MUST STAY SCOPED. An unattended run
+# stalls on two independent channels: a teammate wake not being delivered, and
+# a background job finishing with nobody listening. Switching teammate mode
+# addresses the FIRST ONLY — the second never uses the message path. An earlier
+# version of this notice recommended tmux without that bound, so a reader could
+# follow it, switch modes, and still stall on the failure the notice appears to
+# warn about. Do not restore an unqualified "relaunch with tmux for hands-off
+# runs": that sentence is the defect, not a simplification of it.
 _INPROCESS_MODE_NOTICE = (
     "PACT: unattended runs may stall in in-process teammate mode "
     "(the lead can sit idle awaiting a wake that needs a manual nudge). "
-    "For hands-off runs, relaunch with `--teammate-mode tmux` for reliable "
-    "native delivery, or keep a heartbeat — see reference/unattended-runs.md."
+    "`--teammate-mode tmux` makes teammate wake delivery reliable; it does "
+    "NOT cover a background job that finishes with nobody watching "
+    "— see reference/unattended-runs.md."
 )
 
 # Unknown-role startup warning. The lead-only writes below are gated

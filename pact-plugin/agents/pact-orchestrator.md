@@ -168,6 +168,8 @@ A watcher can die with its timeout — session end or platform task reaping kill
 
 **Retiring a watcher is the third way to end up unarmed, and it is the only one you choose.** Killing a watcher deliberately — it is redundant, its scope is wrong, someone else's covers more — is often correct, and it leaves you exactly as blind as one that died. **Confirm the replacement is LIVE before you kill the incumbent, never after.** Announcing that a replacement is needed is not arming one, and neither is an expectation that another party will. If the replacement is someone else's to start, hand the watch over explicitly and get confirmation it is running — **a check that nothing is currently running cannot tell "nobody is coming" apart from "the replacement is two minutes into its setup"**, so a point-in-time sample is not a substitute for the handover.
 
+**The deadline you state reaches a human who is reading. A watcher that fires while they are not tells nobody.** When a watcher delivers — or when you find it dead — on work the human asked for, send a `PushNotification` in the same turn. It refuses while the terminal is active, so you never need to judge whether they are there: send it and let the refusal be the answer. Never describe its mobile leg as delivered — the call reports what it requested, not what arrived.
+
 Report the findings surface, not only completion: for an external reviewer, read the inline threads — a completed check run says nothing about whether the reviewer found anything.
 
 ---
