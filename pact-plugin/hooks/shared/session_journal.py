@@ -211,13 +211,14 @@ _REQUIRED_FIELDS_BY_TYPE: dict[str, dict[str, type]] = {
     },
     # hooks/missed_wake_scan.py ALSO writes unflagged_background_wait — a
     # SEPARATE alarm with a separate vocabulary, sharing only the process.
-    # It records a teammate holding outstanding SHELL-SHAPED background work
+    # It records a teammate holding an outstanding RECORDED background launch
     # with no flagged wait: which agent, when the launch was registered (also
-    # the dedup discriminator), and every task the record covers. Shell-shaped
-    # is the whole population, not a qualifier on it — the launch is observed
-    # from a Bash tool event, so monitors, subagents, MCP tasks, workflows and
-    # scheduled wakeups never produce one of these events at all. An absence
-    # in this stream is not evidence a teammate had nothing outstanding.
+    # the dedup discriminator), and every task the record covers. A launch is
+    # recorded only from a Bash tool event that carries the harness background
+    # flag or whose command ends in a bare `&`. Monitors, subagents, MCP tasks,
+    # workflows and scheduled wakeups never produce one of these events, and
+    # neither does a shell launch backgrounded any other way. An absence in
+    # this stream is not evidence a teammate had nothing outstanding.
     # `task_ids` is a LIST, not a scalar `task_id`. A teammate may hold more
     # than one in_progress task — the pact-teachback skill permits it — and a
     # launch is recorded against all of them, so the dedup key is
