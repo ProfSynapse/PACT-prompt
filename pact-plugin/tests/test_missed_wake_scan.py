@@ -777,18 +777,18 @@ class TestUnflaggedBackgroundSurfaceIsGated:
     WHY THIS EXISTS SEPARATELY FROM THE SELECTOR'S OWN TESTS, and it is the
     whole point of the class: `outstanding_unflagged` was already covered by
     unit tests on both gates, and reverting THIS function to the ungated
-    `load_records` read still passed every one of them. MEASURED — that
+    `_load_records` read still passed every one of them. MEASURED — that
     mutation survived 113 tests. Testing the gate implementation does not
     test that the caller uses it, and the defect was in the caller.
 
-    The original defect: this surface read `load_records` directly, which
+    The original defect: this surface read `_load_records` directly, which
     applies the 24h TTL and nothing else, so it named teammates whose task
     was COMPLETED and teammates who had FLAGGED correctly — while the
     lead-facing text asserts "outstanding launches and no flagged wait".
     """
 
     # 40 minutes old: PAST the 30-minute registered_at window so it is stale,
-    # but well INSIDE the 24h TTL so `load_records` still returns it. A fixed
+    # but well INSIDE the 24h TTL so `_load_records` still returns it. A fixed
     # calendar date fails the positive control for the wrong reason — the TTL
     # drops the record before any gate is reached, and every arm then passes
     # vacuously. Measured: that is exactly how the first draft of this class

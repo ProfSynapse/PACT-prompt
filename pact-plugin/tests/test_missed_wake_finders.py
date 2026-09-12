@@ -177,8 +177,10 @@ class TestUnanchoredWaitsGateOnACoveredRecord:
     """The surface fires only where the missing anchor has actually DECIDED
     something — i.e. where a record exists that the fallback covers.
 
-    An unanchored wait is not itself a fault: the wait works, and what is
-    missing is the field pinning WHICH launches it covers. With no covered
+    An unanchored wait still works; what is missing is the field pinning
+    WHICH launches it covers. Agents write that field on every SET, so its
+    absence means the wait predates the field, came from an older instruction
+    or a template that omits it, or lost the field on a re-SET. With no covered
     record there is nothing for the absence to have affected and nothing to
     tell the lead.
     """

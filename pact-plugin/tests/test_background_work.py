@@ -306,7 +306,10 @@ class TestDischargeSequences:
         """The target case must be untouched by the discharge."""
         self._seed()
         assert discharge_acknowledged(_task(), team_name=TEAM, now=T0) == 0
-        assert unflagged_fire(_task(), team_name=TEAM, now=T0)[0] is True
+        assert unflagged_fire(_task(), team_name=TEAM, now=T0)[0] is True, (
+            "a teammate that never flagged a wait must still draw the advisory: "
+            "a discharge with nothing to acknowledge leaves the record firing"
+        )
 
     def test_3_a_wait_discharges_job1_ONLY_and_job2_fires_once_the_wait_clears(
         self,
@@ -331,7 +334,10 @@ class TestDischargeSequences:
         assert len(left) == 1
         assert left[0]["registered_at"] == _iso(T0 + timedelta(minutes=10))
         # the wait has since been cleared: no valid wait on the task, no tasks list
-        assert unflagged_fire(_task(), team_name=TEAM, now=T0)[0] is True
+        assert unflagged_fire(_task(), team_name=TEAM, now=T0)[0] is True, (
+            "job 2 was launched after the wait was flagged, so the discharge "
+            "spared it; with the wait cleared, job 2 must fire"
+        )
 
 
     def test_4_RESIDUAL_flag_and_clear_within_one_turn_keeps_the_record(self):
@@ -494,7 +500,7 @@ class TestOutstandingUnflagged:
 
     WHY THIS CLASS EXISTS. Layer 2 reached records through `unflagged_fire`,
     which applies the task-status and flagged-wait gates. Layer 3's lead-side
-    selector read `load_records` directly and applied NEITHER, so it surfaced
+    selector read `_load_records` directly and applied NEITHER, so it surfaced
     records for completed tasks and for correctly-flagged waits — while the
     lead-facing text asserts "outstanding launches and no flagged wait".
     MEASURED on one 40-minute-old record: `lead_stale` True (surfaced) against
