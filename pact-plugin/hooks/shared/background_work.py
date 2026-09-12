@@ -1007,6 +1007,18 @@ def is_shell_backgrounded_bash(input_data: Any) -> bool:
 
     Excluded because they are not backgrounding, all measured false: `a && b`,
     `2>&1`, a quoted `&`, a heredoc body, `cmd & wait`, `echo done \\&`.
+
+    DO NOT EXTEND THIS INTO INFERENCE ABOUT WHAT THE COMMAND WILL DO. Matching
+    command text is admissible here for two reasons, and the second is the one
+    that holds. First, `&` is shell GRAMMAR with one meaning, which the string
+    answers; "will this run a long time" is a fact about program BEHAVIOUR,
+    which it does not. Second and decisive: this predicate only ever ADDS to
+    the recorded population, so an over-fire costs one extra row that someone
+    can see and discharge. A predicate that SUBTRACTS — the durability filter
+    this module used to carry — pays for an over-fire in silence, which is the
+    miss the whole mechanism exists to prevent. So the presence of text
+    matching here licenses nothing: a new check may widen what is recorded and
+    may never narrow it.
     """
     if not isinstance(input_data, dict):
         return False
@@ -1015,7 +1027,8 @@ def is_shell_backgrounded_bash(input_data: Any) -> bool:
     command = command_from_frame(input_data).rstrip()
     if not command.endswith("&"):
         return False
-    # `&&` is a conjunction and `\&` is a literal ampersand; neither backgrounds.
+    # `&&` is a conjunction and `\&` is a literal ampersand; neither
+    # backgrounds.
     return not command.endswith("&&") and not command.endswith("\\&")
 
 
