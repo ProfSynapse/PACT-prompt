@@ -371,14 +371,16 @@ def build_unflagged_surface(stale: list) -> "str | None":
         return None
     return (
         "UNFLAGGED BACKGROUND WORK — these teammates have outstanding "
-        "shell-shaped background launches and no flagged wait: "
+        "recorded background launches and no flagged wait: "
         + "; ".join(lines)
         + ". SendMessage each one to collect its result or SET "
         "metadata.intentional_wait. This is NOT a missed wake — nobody is "
         "waiting on you; they failed to flag their own wait. "
-        "This list covers shell launches only: a teammate waiting on a "
-        "monitor, a subagent, an MCP task, a workflow or a scheduled wakeup "
-        "will not appear, so do not read a short list as an all-clear."
+        "This list covers recorded shell launches only: a teammate waiting "
+        "on a monitor, a subagent, an MCP task, a workflow or a scheduled "
+        "wakeup will not appear, and neither will a shell launch "
+        "backgrounded in a shape the recorder does not match, so do not "
+        "read a short list as an all-clear."
     )
 
 

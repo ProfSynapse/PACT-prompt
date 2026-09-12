@@ -11,17 +11,24 @@ intentional_wait is recorded here. Detection requires a registry row PLUS
 in_progress PLUS validate_wait false — mid-arc in_progress with no row
 must not fire.
 
-SCOPE — SHELL-SHAPED WORK ONLY, AND THE LIMIT IS STRUCTURAL RATHER THAN AN
-OVERSIGHT. The launch is observed from a PostToolUse `Bash` frame, so the
-only background work this registry can ever hold is a shell command. The
+SCOPE — A SUBSET OF SHELL-SHAPED WORK, AND BOTH LIMITS ARE STRUCTURAL
+RATHER THAN OVERSIGHTS. The launch is observed from a PostToolUse `Bash`
+frame, so the only background work this registry can ever hold is a shell
+command. The
 platform tracks several other kinds — a monitor, an Agent-tool subagent, an
 MCP task, a workflow, a scheduled wakeup — and none of them raises a `Bash`
 tool event, so none is recorded and no layer fires for one. A teammate can
 therefore hold genuinely outstanding work that this mechanism cannot see.
-DO NOT DESCRIBE THIS AS ENFORCING THE WAIT RULE GENERALLY. It enforces it
-for shell-shaped launches. The instruction to agents is unconditional —
-flag every self-started wait — but what is DETECTED here is a subset, and
-conflating the two is what makes an absent advisory read as an all-clear.
+That is the OUTER limit. There is an inner one: within shell work this
+records two shapes and no others — a frame carrying the harness background
+flag, or a command ENDING in a bare `&`. A shell launch backgrounded any
+other way (`( cmd & )`, `cmd & echo started`, `… & disown`) is as invisible
+as a subagent; `is_shell_backgrounded_bash` carries the measured list.
+DO NOT DESCRIBE THIS AS ENFORCING THE WAIT RULE GENERALLY, AND DO NOT
+DESCRIBE IT AS COVERING SHELL WORK GENERALLY EITHER. The instruction to
+agents is unconditional — flag every self-started wait — but what is
+DETECTED here is a subset of a subset, and conflating any of the three is
+what makes an absent advisory read as an all-clear.
 
 Contract: never raise on missing/corrupt files, empty team name, or
 malformed records. Read-time 24h TTL drops stale rows. Team path uses
@@ -977,6 +984,41 @@ def command_from_frame(input_data: Any) -> str:
     return command if isinstance(command, str) else ""
 
 
+def is_shell_backgrounded_bash(input_data: Any) -> bool:
+    """True iff this Bash frame's command ends in a bare `&`.
+
+    Complements `is_harness_background_bash`, which reads only the
+    `run_in_background` field. Work backgrounded by the SHELL inside a
+    foreground Bash call sets no such field, so without this it is invisible
+    to every layer.
+
+    DELIBERATELY UNDER-INCLUSIVE, and this is the entire population it adds:
+    a command ENDING in a bare `&`, nothing more. Measured misses, each of
+    which backgrounds work this hook still will not see:
+
+        nohup ./gate.sh & echo started
+        ( ./gate.sh & )
+        ./gate.sh & sleep 1
+        setsid ./gate.sh & disown
+
+    So the recorded population is "the flag, OR a command ending in a bare
+    `&`". It is NOT "shell-shaped work", and nothing downstream may describe
+    it as though it were.
+
+    Excluded because they are not backgrounding, all measured false: `a && b`,
+    `2>&1`, a quoted `&`, a heredoc body, `cmd & wait`, `echo done \\&`.
+    """
+    if not isinstance(input_data, dict):
+        return False
+    if input_data.get("tool_name") != "Bash":
+        return False
+    command = command_from_frame(input_data).rstrip()
+    if not command.endswith("&"):
+        return False
+    # `&&` is a conjunction and `\&` is a literal ampersand; neither backgrounds.
+    return not command.endswith("&&") and not command.endswith("\\&")
+
+
 # Platform-supplied agent types that are NOT this plugin's agents. Hard-coded
 # because they come from the harness rather than from a file we can enumerate.
 # This list going stale is a real exposure — see the residual note on
@@ -1191,23 +1233,36 @@ def record_background_launch(input_data: Any, now: datetime | None = None) -> bo
     """
     from .pact_context import classify_session_role
 
-    if not is_harness_background_bash(input_data):
+    if not (
+        is_harness_background_bash(input_data)
+        or is_shell_backgrounded_bash(input_data)
+    ):
         return False
     if classify_session_role(input_data) != "teammate":
         return False
     command = command_from_frame(input_data)
-    # NO DURABILITY FILTER HERE, DELIBERATELY. A predicate over command TEXT
-    # was tried and deleted: "is this command durable" is not answerable from
-    # the string. It caught the intended population (`npm run dev`) and also
-    # silently dropped ordinary one-shot work whose text merely contains a
-    # token (`pytest -k start`), and those two are indistinguishable to any
-    # matcher — so the over-fire was drawn FROM the target population rather
-    # than being a tunable miss rate. Both directions were measured and
-    # neither was fixable by patching the pattern.
-    # The question IS answerable, just not here: `intentional_wait` carries it
-    # later, when the agent says what it is waiting for. Re-adding a text
-    # predicate at this point re-adds the silence. Measurement record and the
-    # widening-trades-blind-spots evidence are in pact-memory.
+    # NO DURABILITY FILTER HERE, DELIBERATELY. A predicate over command text
+    # DOES now run in the gate above, so be exact about what this forbids.
+    #
+    # What was deleted was a FILTER: it inferred program BEHAVIOUR ("will this
+    # run a long time") from a word, and it SUBTRACTED from the population.
+    # It caught the intended population (`npm run dev`) and also silently
+    # dropped ordinary one-shot work whose text merely contains a token
+    # (`pytest -k start`), and those two are indistinguishable to any matcher
+    # — so the over-fire was drawn FROM the target population rather than
+    # being a tunable miss rate. Both directions were measured and neither
+    # was fixable by patching the pattern.
+    #
+    # The gate's trailing-`&` check differs on both axes: it reads shell
+    # GRAMMAR, which the string does answer, and it ADDS rows. An over-fire
+    # there costs one extra record, which is visible and can be discharged;
+    # an over-fire in a filter costs a record nobody knows is missing. So the
+    # standing rule is not "no text matching" — it is that nothing here may
+    # REMOVE a launch from the registry.
+    #
+    # The durability question IS answerable, just not here: `intentional_wait`
+    # carries it later, when the agent says what it is waiting for. The
+    # measurement record is in pact-memory.
     team_name = get_team_name()
     if not team_name:
         return False
