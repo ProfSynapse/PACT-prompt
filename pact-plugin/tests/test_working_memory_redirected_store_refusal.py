@@ -624,3 +624,195 @@ class TestTheCardinalFallthroughSurvives:
             "the sync reported WROTE but the main checkout's document did not "
             "change — the projection went somewhere else"
         )
+
+
+class TestTheBOUNDARYOfTheEscapeRefusal:
+    """Where the refusal STOPS. Each arm pins a claim the change asserts.
+
+    These exist because a refusal's edges are what a future editor moves, and
+    an edge with no arm is indistinguishable from an oversight. Each one below
+    corresponds to a sentence the change claims, so the prose and the suite
+    cannot drift apart silently.
+    """
+
+    def test_a_project_that_resolves_NOTHING_never_reaches_the_guard(self, tmp_path):
+        """THE OVER-BLOCK THAT DOES NOT EXIST, PINNED SO IT CANNOT START TO.
+
+        Declared scope, no CLAUDE.md anywhere, cwd IS the declared directory.
+        Resolution finds no document, so the guard is never consulted and the
+        outcome is UNRESOLVED — a different fact from REFUSED, and the two must
+        never be read alike: REFUSED means a guard declined a resolved target,
+        UNRESOLVED means there was no target to decline.
+
+        WHY THE EXACT VALUE AND NOT `!= REFUSED`. A negative assertion would
+        also pass on FAILED, which is a genuine defect, so it would convert a
+        crash into a green.
+
+        MUTANT that reddens this arm: move the escape guard ahead of the
+        resolution step. It then fires on a declared scope whose probe found
+        nothing, which is the blanket "absence means refuse" rule the design
+        explicitly rejects.
+        """
+        env = _base_env(tmp_path)
+        declared = tmp_path / "declared"
+        declared.mkdir()
+        env["CLAUDE_PROJECT_DIR"] = str(declared)
+
+        result = _run_cli(env, declared, "save", _save_payload("no-document-arm"))
+
+        assert _sync_status(result) == SyncResult.UNRESOLVED, (
+            "a declared scope with no resolvable CLAUDE.md produced %r. The "
+            "guard must not be reachable here: refusing on ABSENCE rather than "
+            "on ESCAPE is the cardinal over-block, and it would fire on every "
+            "project that simply has no document yet."
+            % (_sync_status(result),)
+        )
+
+    @pytest.mark.parametrize("git_backed", [False, True], ids=["non_git", "git"])
+    def test_git_and_non_git_layouts_refuse_IDENTICALLY(self, tmp_path, git_backed):
+        """NO GIT-VERSUS-NON-GIT ASYMMETRY, asserted on IDENTICAL layouts.
+
+        The two runs differ in ONE variable — whether the escaped-into project
+        is a git repository — so a difference in outcome is attributable to that
+        and nothing else. An asymmetry here would mean the refusal depends on a
+        property of the DESTINATION rather than on the relationship between the
+        declared scope and it, which is the class of proxy this change replaced.
+        """
+        target = _seed_project(tmp_path)
+        if git_backed:
+            _git("init", "-q", ".", cwd=tmp_path / "project")
+        before = target.read_bytes()
+
+        env = _base_env(tmp_path)
+        env["CLAUDE_PROJECT_DIR"] = _escaped_root(tmp_path)
+        result = _run_cli(
+            env, tmp_path / "project", "save", _save_payload("symmetry-arm")
+        )
+
+        assert _sync_status(result) == SyncResult.REFUSED, (
+            "git_backed=%s changed the verdict. The refusal must depend on the "
+            "RELATIONSHIP between declared scope and resolved root, never on "
+            "whether the destination happens to be a repository."
+            % (git_backed,)
+        )
+        assert target.read_bytes() == before
+
+    def test_a_SAME_PROJECT_subdirectory_escape_is_STILL_refused(self, tmp_path):
+        """🔴 THE ACCEPTED OVER-BLOCK THAT REMAINS, ARMED AS THE LAST ONE WAS.
+
+        Declared root has no CLAUDE.md; a SUBDIRECTORY of the same repository
+        has one; cwd is that subdirectory. Same project, and it is REFUSED.
+
+        THIS IS A DECISION, NOT AN OVERSIGHT, and the reason is what stops a
+        later reader relaxing it. The obvious widening is a containment check —
+        "resolved is under declared, so allow" — and it was ruled against
+        because CONTAINMENT IS NOT SAMENESS: a nested directory can be its own
+        project, and a CLAUDE.md sitting above several project directories is
+        that exact pattern on a real machine. A path prefix is a proxy that does
+        not track repository identity, which is precisely the failure that store
+        origin had — the property this change exists to replace. Swapping one
+        proxy for another would re-open the class under a new name.
+
+        `same_repository(declared, resolved)` returns False here because it asks
+        "is `resolved` the MAIN REPO of the checkout at `declared`", and a
+        subdirectory is not a main repo. That is the predicate answering
+        correctly, not a gap in it.
+
+        THE COST IS BOUNDED AND IS THE SAFE DIRECTION: a refusal costs the
+        PROJECTION and never the RECORD, so this over-block costs a display line
+        that the next sync rebuilds.
+
+        IF A FUTURE CHANGE ADMITS THIS, THIS ARM REDDENS AND THE RELAXATION
+        BECOMES A DECISION SOMEBODY TAKES ON PURPOSE — the same framing the
+        arm above carried, which is what made the widening it guarded visible
+        rather than silent. Whoever relaxes it must say which property replaced
+        repository identity, and why that one tracks it.
+        """
+        repo = tmp_path / "repo"
+        (repo / "sub" / ".claude").mkdir(parents=True)
+        (repo / "sub" / ".claude" / "CLAUDE.md").write_text(
+            _SEED_DOCUMENT, encoding="utf-8"
+        )
+        _git("init", "-q", ".", cwd=repo)
+        assert not (repo / ".claude" / "CLAUDE.md").exists(), (
+            "the declared root must hold NO document, or resolution never "
+            "leaves it and this arm measures nothing"
+        )
+
+        target = repo / "sub" / ".claude" / "CLAUDE.md"
+        before = target.read_bytes()
+
+        env = _base_env(tmp_path)
+        env["CLAUDE_PROJECT_DIR"] = str(repo)
+        result = _run_cli(env, repo / "sub", "save", _save_payload("same-project-arm"))
+
+        assert _sync_status(result) == SyncResult.REFUSED, (
+            "a same-project SUBDIRECTORY escape was admitted. If that is "
+            "deliberate, say which property replaced repository identity and "
+            "why a path prefix tracks it — containment does not, which is why "
+            "this refusal was accepted rather than widened away."
+        )
+        assert target.read_bytes() == before
+
+
+@pytest.fixture(scope="module")
+def repo_shapes(tmp_path_factory):
+    """A real repo, a real subdirectory and a REAL worktree, built once.
+
+    Module-scoped and a plain function rather than a class instance method: a
+    class-scoped fixture defined as a method is deprecated and would add a
+    warning to the suite's standing count.
+    """
+    base = tmp_path_factory.mktemp("samerepo")
+    main = base / "main"
+    (main / "sub").mkdir(parents=True)
+    _git("init", "-q", ".", cwd=main)
+    _git("config", "user.email", "t@example.invalid", cwd=main)
+    _git("config", "user.name", "t", cwd=main)
+    (main / "README").write_text("seed\n", encoding="utf-8")
+    _git("add", "README", cwd=main)
+    _git("commit", "-qm", "seed", cwd=main)
+    worktree = base / "wt"
+    _git("worktree", "add", "-q", str(worktree), "-b", "wt", cwd=main)
+    return {"main": main, "sub": main / "sub", "worktree": worktree}
+
+
+class TestSameRepositoryIsNotSymmetric:
+    """The predicate's four documented directions, on ONE real fixture.
+
+    Its docstring states these and warns that swapping the arguments silently
+    returns a different verdict with nothing failing to tell you. That warning
+    was measurably true: a 226-arm selection could not detect an argument swap.
+    These pin the claim at the predicate rather than only through a caller, so
+    a future reader finds it verified where it is asserted.
+
+    THE FIXTURE BUILDS A REAL WORKTREE rather than a subdirectory standing in
+    for one. Measured, the two are not interchangeable:
+
+        git -C <main>/sub  rev-parse --git-common-dir  ->  ../.git      RELATIVE
+        git -C <worktree>  rev-parse --git-common-dir  ->  /abs/.../.git ABSOLUTE
+
+    They take opposite sides of the predicate's `is_absolute()` join, so a
+    subdirectory cannot cover the worktree rows however much it resembles them.
+    """
+
+    @pytest.mark.parametrize(
+        "env_dir,base,expected",
+        [
+            ("worktree", "main", True),
+            ("main", "worktree", False),
+            ("sub", "main", True),
+            ("main", "sub", False),
+        ],
+    )
+    def test_the_four_documented_directions(self, repo_shapes, env_dir, base, expected):
+        from shared.project_scope import same_repository
+
+        got = same_repository(repo_shapes[env_dir], repo_shapes[base])
+        assert got is expected, (
+            "same_repository(%s, %s) returned %r, expected %r. The predicate "
+            "asks 'is the SECOND argument the main repo of the checkout at the "
+            "FIRST' — it is NOT a symmetric relation, and every caller must "
+            "pass the DECLARED scope first. A swap returns a plausible boolean "
+            "and changes the meaning." % (env_dir, base, got, expected)
+        )
