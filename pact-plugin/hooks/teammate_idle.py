@@ -24,6 +24,14 @@ Output: JSON with systemMessage (shutdown suggestion / stop advisory)
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    # Annotation-only. This file has `from __future__ import annotations`, so
+    # the type below is a string at runtime and this import never executes --
+    # which is what keeps a per-session hook from paying for a type.
+    from datetime import datetime
+
 import json
 import sys
 from collections.abc import Callable
@@ -302,7 +310,7 @@ def _clear_unflagged_idle(teammate_name: str, team_name: str) -> None:
 
 
 def check_unflagged_background(
-    tasks: list, teammate_name: str, team_name: str, now=None
+    tasks: list, teammate_name: str, team_name: str, now: datetime | None = None
 ) -> str | None:
     """Layer 2 — advise once at three consecutive unflagged idles.
 
