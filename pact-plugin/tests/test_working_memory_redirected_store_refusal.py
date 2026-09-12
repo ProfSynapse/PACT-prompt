@@ -986,6 +986,34 @@ def _moved_away_worktree_of_a_git_home_landing_at_home(t):
     return worktree, home, _document_in(home), {}
 
 
+def _independent_repository_nested_in_the_enclosing_one(t):
+    enclosing = _committed_repo(t / "enclosing")
+    nested = enclosing / "vendor" / "nested"
+    nested.mkdir(parents=True)
+    _git("init", "-q", ".", cwd=nested)
+    return nested, enclosing, _document_in(enclosing), {}
+
+
+def _removed_independent_repository_nested_in_the_enclosing_one(t):
+    # The removed twin of the layout above. Once the nested repository is gone
+    # its nearest existing ancestor sits in the enclosing repository, and
+    # nothing the check reads separates that from a removed subdirectory.
+    import shutil
+
+    declared, enclosing, document, extra_env = (
+        _independent_repository_nested_in_the_enclosing_one(t)
+    )
+    shutil.rmtree(declared)
+    return declared, enclosing, document, extra_env
+
+
+def _worktree_removed_from_the_claude_code_worktree_location(t):
+    main = _committed_repo(t / "main")
+    removed = _worktree_at(main, main / ".claude" / "worktrees" / "x")
+    _git("worktree", "remove", str(removed), cwd=main)
+    return removed, main, _document_in(main), {}
+
+
 def _inherited_git_dir_naming_another_repository(t):
     project = _committed_repo(t / "p1")
     (t / "unrelated").mkdir()
@@ -1006,6 +1034,8 @@ _SAME_PROJECT = {
     "live_declaration_into_the_config_root_document": _live_declaration_into_the_config_root_document,
     "live_declaration_under_a_git_home": _live_declaration_under_a_git_home,
     "moved_away_worktree_of_a_git_home_landing_at_home": _moved_away_worktree_of_a_git_home_landing_at_home,
+    "removed_independent_repository_nested_in_the_enclosing_one": _removed_independent_repository_nested_in_the_enclosing_one,
+    "worktree_removed_from_the_claude_code_worktree_location": _worktree_removed_from_the_claude_code_worktree_location,
 }
 
 _OUTSIDE_THE_PROJECT = {
@@ -1017,6 +1047,7 @@ _OUTSIDE_THE_PROJECT = {
     "deleted_project_under_a_git_home": _deleted_project_under_a_git_home,
     "deleted_project_under_a_git_home_legacy_document": _deleted_project_under_a_git_home_legacy_document,
     "inherited_git_dir_naming_another_repository": _inherited_git_dir_naming_another_repository,
+    "independent_repository_nested_in_the_enclosing_one": _independent_repository_nested_in_the_enclosing_one,
 }
 
 

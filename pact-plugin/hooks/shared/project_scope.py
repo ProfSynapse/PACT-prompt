@@ -171,15 +171,21 @@ def stays_in_declared_project(
     it is admitted. Otherwise it is judged from its nearest existing ancestor,
     so a removed worktree or subdirectory still maps to the repository it was
     in; rules 2 and 3 still require the resolution to land in that repository.
-    The ancestor stands in for a directory git can no longer see, so it NEVER
-    admits a resolution at the home directory or into the config root's own
-    CLAUDE.md: every project under the user loads those files, and a deleted
-    project under a git-versioned home would otherwise project into them. A
-    live declaration that resolves there is not affected.
+    That includes a removed INDEPENDENT repository that was nested inside
+    another: its nearest ancestor lies in the enclosing repository, so a
+    resolution into the enclosing repository is admitted, because nothing this
+    check reads separates it from a removed subdirectory, which must stay
+    admitted. (A removed submodule leaves a record under the enclosing
+    repository's .git/modules, which this check does not read.) The ancestor
+    stands in for a directory git can no longer see, so it NEVER admits a
+    resolution at the home directory or into the config root's own CLAUDE.md:
+    every project under the user loads those files, and a deleted project
+    under a git-versioned home would otherwise project into them. A live
+    declaration that resolves there is not affected.
 
     REFUSED: a SUBDIRECTORY that is not a checkout root (a path below a root is
     containment, not identity — a nested directory can be its own project), a
-    different repository nested inside or around the declaration, a worktree
+    different repository nested inside or around a LIVE declaration, a worktree
     removed with `git worktree remove` from outside its repository's tree, and
     any non-git layout other than the declaration itself.
 
