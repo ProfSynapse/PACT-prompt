@@ -67,9 +67,14 @@ _TRAILING_COMMENT = re.compile(r"\s+#.*\Z")
 # wake me" and ends the turn without flagging. A later idle-time reminder
 # reaches that agent only after they have already stalled.
 #
-# IT IS ACTOR-BLIND BY CONSTRUCTION: it reads `run_in_background` and nothing
-# else — no identity, no team config, no task store. It therefore works on
-# frames where identity cannot be resolved at all.
+# IT FIRES ON TEAMMATE FRAMES ONLY, keyed on stdin `agent_type` alone: present,
+# non-empty, and not a lead spelling. No identity, team config or task store is
+# read, so it still works where identity cannot be resolved. A lead frame gets
+# nothing, because a lead IS re-invoked when its background job finishes and
+# holds no task wait to flag. A plain non-PACT frame carries no `agent_type`
+# and gets nothing. An Agent-tool subagent carries a non-lead `agent_type`
+# too, and stdin has no field that separates it from a teammate, so it also
+# receives the advisory.
 #
 # IT IS NOT A TERM IN THE DENY VERDICT AND MUST NEVER BECOME ONE. It rides
 # the ALLOW branch only. `_is_filler_command` and its inputs are untouched by
@@ -78,11 +83,11 @@ _TRAILING_COMMENT = re.compile(r"\s+#.*\Z")
 # the allow output rather than the deny one, and not because the verdict
 # feeds it.
 #
-# CHANNEL CAVEAT, INHERITED AND NOT RESOLVED HERE: whether PreToolUse
-# `additionalContext` reliably reaches the model is an open question in this
-# repo — see the same caveat in `task_claim_gate.py`. This advisory carries
-# that uncertainty. It is a prompt-time nudge, not a mechanical guarantee,
-# and nothing downstream may assume it was seen.
+# DELIVERY: an allow-path `additionalContext` reaches the model together with
+# the tool result, after the call has run. The advisory is read once the
+# launch has happened and before the agent decides how to end the turn, which
+# is the decision it addresses. It is advice, not enforcement: nothing
+# downstream may assume the agent acted on it.
 _BACKGROUND_ADVISORY = (
     "This Bash call runs in the background. NOTHING WILL WAKE YOU when it "
     "finishes — the result waits for you to collect it. Before you end this "
@@ -98,10 +103,28 @@ def _truthy_background(value) -> bool:
 
 
 def is_background_launch(tool_input) -> bool:
-    """True iff this Bash frame commits a background launch. Actor-blind."""
+    """True iff this Bash frame commits a background launch."""
     if not isinstance(tool_input, dict):
         return False
     return _truthy_background(tool_input.get("run_in_background"))
+
+
+# The lead's `agent_type` spellings. Mirrors `shared.pact_context.LEAD_AGENT_TYPES`,
+# which is the source of truth; held locally because this hook runs before every
+# Bash call and imports the standard library only.
+_LEAD_AGENT_TYPES = frozenset({"PACT:pact-orchestrator", "pact-orchestrator"})
+
+
+def is_teammate_frame(input_data) -> bool:
+    """True iff stdin carries a non-empty `agent_type` that is not a lead spelling."""
+    if not isinstance(input_data, dict):
+        return False
+    agent_type = input_data.get("agent_type")
+    return (
+        isinstance(agent_type, str)
+        and bool(agent_type)
+        and agent_type not in _LEAD_AGENT_TYPES
+    )
 
 
 def _is_filler_command(command: str) -> bool:
@@ -146,7 +169,7 @@ def main() -> None:
         if not isinstance(command, str) or not _is_filler_command(command):
             # ALLOW. The background advisory rides this branch and only this
             # branch; it did not participate in reaching it.
-            if is_background_launch(tool_input):
+            if is_background_launch(tool_input) and is_teammate_frame(input_data):
                 print(json.dumps({
                     "hookSpecificOutput": {
                         "hookEventName": "PreToolUse",
