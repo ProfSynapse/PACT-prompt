@@ -256,11 +256,20 @@ def build_surface(stale: list, now: "datetime | None" = None) -> "str | None":
         lines.append(f"- Task {label} — idle {age_str} on awaiting_lead_completion")
     return (
         "PACT missed-wake alarm: the teammate(s) below are idling on "
-        "awaiting_lead_completion past the staleness threshold. You likely wrote "
-        "their completion metadata but did NOT send the paired wake-SendMessage, "
-        "so they are stranded (an idle teammate cannot self-wake). ACTION: send a "
-        "wake-SendMessage to each (or re-set / complete the task) — this notice "
-        "re-shows every turn until the wait resolves.\n" + "\n".join(lines)
+        "awaiting_lead_completion past the staleness threshold. WHAT IS KNOWN: "
+        "the wait is well-formed and stale, and an idle teammate cannot "
+        "self-wake, so it will not resolve on its own. THE CAUSE IS NOT KNOWN "
+        "and this condition has several, needing three different responses. "
+        "(1) SEND A wake-SendMessage — you wrote their completion metadata and "
+        "did not send the paired wake, or you sent one that was not delivered. "
+        "(2) NOTHING, THE WAIT IS LEGITIMATE — you are deliberately holding for "
+        "a gate or a review, or have not reached it yet, or the teammate "
+        "re-stamped and is genuinely still waiting. The hold is simply not "
+        "recorded anywhere this hook can see it. (3) THE TEAMMATE MUST CLEAR "
+        "ITS OWN FLAG — it was woken and never did. ACTION: check which, then "
+        "send a wake-SendMessage to each that needs one (or re-set / complete "
+        "the task) — this notice re-shows every turn until the wait "
+        "resolves.\n" + "\n".join(lines)
     )
 
 
