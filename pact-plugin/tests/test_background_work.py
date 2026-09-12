@@ -870,11 +870,16 @@ def _params(fn) -> list:
 
 
 def _references(fn, name: str) -> bool:
-    """True if `name` is READ anywhere in the body, or passed as a keyword."""
+    """True if `name` is READ as a value anywhere in the body.
+
+    A keyword argument that merely CARRIES the name does not count. Counting it
+    let `f(now=None)` pass as a use: that call names the parameter while
+    discarding the clock it holds, which is exactly the decorative parameter
+    this guard exists to catch. Forwarding the clock, `f(now=now)`, still
+    counts, because the keyword's value is itself a read of `now`.
+    """
     for node in ast.walk(fn):
         if isinstance(node, ast.Name) and node.id == name and isinstance(node.ctx, ast.Load):
-            return True
-        if isinstance(node, ast.keyword) and node.arg == name:
             return True
     return False
 
@@ -922,19 +927,16 @@ class TestTheClockIsNotDecorative:
             "exercising anything. Either use it or remove it." % (offenders,)
         )
 
-    # MEASURED FROM SOURCE, NOT COPIED FROM A DISPATCH. Two corrections came
-    # out of measuring rather than accepting a handed-down list:
-    #   - `load_unflagged_idle_counts` was named as one of these and is NOT a
-    #     writer at all — it is a pure reader, so it could never have been a
-    #     clockless WRITER.
-    #   - `_write_text` and `_rewrite_locked` are clockless writers and were
-    #     not named.
-    # The set is six, not five, and it is listed here as a DECISION rather
-    # than as an inventory.
+    # MEASURED FROM SOURCE, NOT COPIED FROM A LIST. Every state-file write in
+    # the module goes through `_locked_update`, the one open path that writes.
+    # The clockless writers are that helper plus each function that reaches it
+    # with no `now=` and no clock read. Writers that DO take a clock
+    # (`_atomic_update_records`, `append_record`, `discharge_acknowledged`,
+    # `stamp_idled_at`, `record_background_launch`) are outside this list on
+    # purpose, and `_read_text_shared` only reads. Listed as a DECISION rather
+    # than as an inventory: if the write path is restructured, re-derive it.
     CLOCKLESS_WRITERS = (
-        "_rewrite_locked",
-        "_write_text",
-        "_write_records",
+        "_locked_update",
         "save_records",
         "update_unflagged_idle_counts",
         "save_unflagged_idle_counts",
@@ -1001,6 +1003,8 @@ class TestTheClockIsNotDecorative:
         probe = ast.parse(
             "def uses(now):\n    return now\n"
             "def ignores(now):\n    return 1\n"
+            "def forwards(now):\n    return f(now=now)\n"
+            "def forwards_none(now):\n    return f(now=None)\n"
         ).body
         assert _references(probe[0], "now") is True, (
             "_references cannot see a parameter that IS used — both guards "
@@ -1008,3 +1012,103 @@ class TestTheClockIsNotDecorative:
         assert _references(probe[1], "now") is False, (
             "_references reports a use where there is none — both guards "
             "above are then unfalsifiable")
+        assert _references(probe[2], "now") is True, (
+            "_references no longer counts forwarding the clock as a use, so "
+            "the guard would flag every function that threads `now` onward")
+        assert _references(probe[3], "now") is False, (
+            "_references counts `f(now=None)` as a use: a call that names the "
+            "parameter while discarding the clock passes the guard")
+
+
+class TestTheLaunchPathThreadsOneClock:
+    """`record_background_launch(now=)` stamps AND prunes on the clock it is
+    given, never on the real one.
+
+    The launch writes a new row and, in the same locked write, prunes rows
+    older than the 24-hour TTL. If one step reads the injected clock and the
+    other reads the real one, the launch stamps at one time and prunes at
+    another, which no real clock can produce. The structural guard above
+    cannot see that: dropping `now=` from one call leaves the function still
+    reading `now` elsewhere.
+
+    THE EXISTING ROW IS STAMPED IN THE YEAR 2000. Correct code never reads the
+    real clock here, so that date cannot age out. Any real clock is more than
+    24 hours later, so a step that falls back to the real clock prunes the row,
+    and the arm sees it.
+    """
+
+    LAUNCHER = "clock-coder"
+    SESSION_ID = "clock-arm-session"
+    PROJECT_DIR = "/clock-arm/project"
+    CLOCK_TEAM = "session-clockarm"
+    OLD = datetime(2000, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+    NOW = OLD + timedelta(hours=1)
+
+    @pytest.fixture
+    def rows_after_launch(self, tmp_path, monkeypatch):
+        """Seed one row at OLD, launch at NOW, return the rows as written."""
+        import json
+
+        import shared.pact_context as pact_context
+        from shared import background_work as bw
+        from shared.pact_context import project_slug
+
+        config = tmp_path / ".claude"
+        monkeypatch.setenv("HOME", str(tmp_path))
+        monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(config))
+        monkeypatch.setenv("CLAUDE_PROJECT_DIR", self.PROJECT_DIR)
+
+        def write(path, payload):
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(json.dumps(payload), encoding="utf-8")
+
+        write(config / "teams" / self.CLOCK_TEAM / "config.json", {
+            "leadSessionId": self.SESSION_ID,
+            "members": [{"name": self.LAUNCHER,
+                         "agentId": f"{self.LAUNCHER}@{self.CLOCK_TEAM}",
+                         "agentType": "pact-backend-coder",
+                         "backendType": "in-process"}],
+        })
+        write(config / "pact-sessions" / project_slug(self.PROJECT_DIR)
+              / self.SESSION_ID / "pact-session-context.json", {
+            "session_id": self.SESSION_ID,
+            "project_dir": self.PROJECT_DIR,
+            "team_name": self.CLOCK_TEAM,
+        })
+        write(config / "tasks" / self.CLOCK_TEAM / "13.json",
+              {"id": "13", "status": "in_progress", "owner": self.LAUNCHER})
+        assert bw.save_records([{
+            "agent_name": self.LAUNCHER,
+            "session_id": self.SESSION_ID,
+            "task_ids": ["13"],
+            "registered_at": self.OLD.isoformat(),
+        }], team_name=self.CLOCK_TEAM) is True
+
+        frame = {
+            "hook_event_name": "PostToolUse",
+            "session_id": self.SESSION_ID,
+            "tool_name": "Bash",
+            "agent_type": self.LAUNCHER,
+            "agent_id": "0123456789abcdef",
+            "tool_input": {"command": "sleep 5", "run_in_background": True},
+        }
+        pact_context.init(frame)
+        assert bw.record_background_launch(frame, now=self.NOW) is True
+        registry = config / "teams" / self.CLOCK_TEAM / "background_work.json"
+        return json.loads(registry.read_text(encoding="utf-8")).get("records", [])
+
+    def test_the_launch_PRUNES_on_the_injected_clock(self, rows_after_launch):
+        stamps = sorted(r.get("registered_at") for r in rows_after_launch)
+        assert len(rows_after_launch) == 2, (
+            "the launch pruned a row stamped one hour before the injected "
+            "clock, so its prune ran on the real clock instead. Rows left: %r"
+            % (stamps,)
+        )
+
+    def test_the_new_row_is_STAMPED_on_the_injected_clock(self, rows_after_launch):
+        new = [r.get("registered_at") for r in rows_after_launch
+               if r.get("registered_at") != self.OLD.isoformat()]
+        assert new == [self.NOW.isoformat(timespec="seconds")], (
+            "the new row was stamped %r, not the injected clock %r, so the "
+            "stamp ran on the real clock" % (new, self.NOW.isoformat(timespec="seconds"))
+        )
