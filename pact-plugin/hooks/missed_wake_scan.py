@@ -411,6 +411,10 @@ def find_mutual_waits(tasks: list) -> list:
     as it was before: no worse, and better once anchors are being written.
 
     Threshold is the existing 30-minute wait_stale. No second constant.
+
+    Never raises on a malformed task: non-dict metadata is skipped and a
+    non-string owner is not counted, because a raise here drops every lead
+    surface.
     """
     try:
         from shared.background_work import wait_scope_anchor
@@ -422,7 +426,10 @@ def find_mutual_waits(tasks: list) -> list:
             continue
         if task.get("status") != "in_progress":
             continue
-        wait = (task.get("metadata") or {}).get("intentional_wait")
+        metadata = task.get("metadata")
+        if not isinstance(metadata, dict):
+            continue
+        wait = metadata.get("intentional_wait")
         if not validate_wait(wait):
             continue
         if wait.get("expected_resolver") != "peer":
@@ -435,7 +442,10 @@ def find_mutual_waits(tasks: list) -> list:
         if not wait_stale({**wait, "since": anchor.isoformat()}):
             continue
         waiting.append(task)
-    owners = {t.get("owner") for t in waiting if t.get("owner")}
+    owners = {
+        t["owner"] for t in waiting
+        if isinstance(t.get("owner"), str) and t["owner"]
+    }
     return waiting if len(owners) >= 2 else []
 
 
@@ -584,6 +594,9 @@ def run_surface(input_data: dict) -> "str | None":
     # emitted separately, and NONE early-returns on another's absence — an
     # empty missed-wake scan must not suppress the background surface, and
     # vice versa. They share only this process and the lead-frame guard above.
+    # The two task-list alarms below run outside any try, so their independence
+    # also rests on each finder skipping a malformed task instead of raising:
+    # one raise there drops every surface.
     parts = []
 
     tasks = get_task_list()
