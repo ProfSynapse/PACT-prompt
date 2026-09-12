@@ -611,3 +611,127 @@ class TestMainEdgeCases:
         # first, so the weaker one could never be the sole failure. Removed
         # rather than kept as a line that cannot fail.
         assert 'TaskStop("coder-a")' in msg
+
+
+class TestMainDrivesTheUnflaggedAdvisoryThroughARealStore:
+    """Layer 2, driven through `teammate_idle.main()` against a real store.
+
+    Every other arm on this surface calls the Layer 2 helper directly, and the
+    `main()` arms above mock the team lookup and the task list. So the call
+    from `main()` into the helper could be deleted with every one of them
+    green: an unwired advisory fails closed, and a silent hook looks exactly
+    like a hook with nothing to say. Only an arm asserting that the advisory
+    DOES appear, reached through `main()`, can see that.
+
+    THE STORE IS REAL AND CONFINED TO tmp_path. `CLAUDE_CONFIG_DIR` and `HOME`
+    both point into the test's tmp tree, so the team config, the task store,
+    the session context and the registry all live there; nothing touches the
+    real config root.
+
+    THE REGISTRY ROW IS STAMPED AT WRITE TIME. `main()` takes no clock, so the
+    row cannot be aged against an injected one. A fixed calendar date would
+    expire under the 24-hour TTL and turn this arm into a date bomb; a stamp
+    taken at write time is read back within the same test, so no TTL boundary
+    can fall between the write and the read.
+
+    THE STDIN FRAME IS BUILT, NOT CAPTURED. It carries only the fields `main()`
+    reads: `session_id`, which locates the session context, and
+    `teammate_name`.
+    """
+
+    TEAM = "session-idlearm"
+    SESSION_ID = "idle-arm-session"
+    PROJECT_DIR = "/idle-arm/project"
+    TEAMMATE = "idle-coder"
+    TASK_ID = "13"
+    ADVISORY_FRAGMENT = "outstanding background work and no flagged wait"
+
+    @pytest.fixture
+    def store(self, tmp_path, monkeypatch):
+        from shared import background_work as bw
+        from shared.pact_context import project_slug
+
+        config = tmp_path / ".claude"
+        monkeypatch.setenv("HOME", str(tmp_path))
+        monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(config))
+        monkeypatch.setenv("CLAUDE_PROJECT_DIR", self.PROJECT_DIR)
+
+        def write(path, payload):
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(json.dumps(payload), encoding="utf-8")
+
+        write(config / "teams" / self.TEAM / "config.json", {
+            "leadSessionId": self.SESSION_ID,
+            "members": [{"name": self.TEAMMATE,
+                         "agentId": f"{self.TEAMMATE}@{self.TEAM}",
+                         "agentType": "pact-backend-coder",
+                         "backendType": "in-process"}],
+        })
+        write(config / "pact-sessions" / project_slug(self.PROJECT_DIR)
+              / self.SESSION_ID / "pact-session-context.json", {
+            "session_id": self.SESSION_ID,
+            "project_dir": self.PROJECT_DIR,
+            "team_name": self.TEAM,
+        })
+
+        def seed(wait=None):
+            task = {"id": self.TASK_ID, "status": "in_progress",
+                    "owner": self.TEAMMATE, "subject": "CODE: idle arm"}
+            registered_at = bw.iso_now()
+            if wait is not None:
+                # Anchored at or after the launch, so the wait covers it.
+                task["metadata"] = {"intentional_wait": {
+                    "reason": "awaiting_blocker_resolution",
+                    "expected_resolver": "lead",
+                    "since": registered_at,
+                    "covers_since": registered_at,
+                }}
+            write(config / "tasks" / self.TEAM / f"{self.TASK_ID}.json", task)
+            assert bw.save_records([{
+                "agent_name": self.TEAMMATE,
+                "session_id": self.SESSION_ID,
+                "task_ids": [self.TASK_ID],
+                "registered_at": registered_at,
+            }], team_name=self.TEAM) is True
+
+        return seed
+
+    def _idle_once(self, capsys):
+        """One TeammateIdle tick through `main()`. True if the advisory fired."""
+        import io
+        from teammate_idle import main
+
+        frame = {"hook_event_name": "TeammateIdle",
+                 "session_id": self.SESSION_ID,
+                 "teammate_name": self.TEAMMATE}
+        capsys.readouterr()
+        with patch("sys.stdin", io.StringIO(json.dumps(frame))):
+            with pytest.raises(SystemExit) as exc:
+                main()
+        assert exc.value.code == 0
+        out = capsys.readouterr().out.strip()
+        payload = json.loads(out) if out else {}
+        return self.ADVISORY_FRAGMENT in payload.get("systemMessage", "")
+
+    def test_the_advisory_fires_on_the_THIRD_consecutive_unflagged_idle(
+        self, store, capsys
+    ):
+        store()
+        fired = [self._idle_once(capsys) for _ in range(3)]
+        assert fired == [False, False, True], (
+            "expected the unflagged-background advisory on exactly the third "
+            "consecutive idle through teammate_idle.main(); got %r. All False "
+            "means main() no longer reaches the Layer 2 check at all, which "
+            "every helper-level arm would miss." % (fired,)
+        )
+
+    def test_a_FLAGGED_wait_covering_the_launch_keeps_every_idle_silent(
+        self, store, capsys
+    ):
+        store(wait=True)
+        fired = [self._idle_once(capsys) for _ in range(3)]
+        assert fired == [False, False, False], (
+            "a teammate that flagged a wait covering its launch drew the "
+            "unflagged advisory on idle %r; the advisory tells it that it has "
+            "no flagged wait, which is false" % (fired,)
+        )
