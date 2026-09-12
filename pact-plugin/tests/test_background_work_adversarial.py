@@ -101,6 +101,39 @@ class TestLayer2EntryPoint:
     ramps it correctly was untested behaviour.
     """
 
+    # THE ENTRY POINT TAKES NO now=, SO THE CLOCK IS PINNED AT THE MODULE
+    # SEAM INSTEAD. `check_unflagged_background(tasks, teammate_name,
+    # team_name)` has no clock parameter; it delegates to
+    # `discharge_acknowledged`, `unflagged_fire` and `stamp_idled_at` and
+    # passes `now` to NONE of them, although all three accept it. So there is
+    # no argument these arms can pass, and `teammate_idle` itself reads no
+    # clock directly — every clock read in this path resolves
+    # `background_work.utc_now`, which makes patching that one name total for
+    # this surface rather than a partial stand-in.
+    #
+    # THIS IS CLOCK INJECTION, NOT A RELATIVE FIXTURE. The arm controls the
+    # clock it is measured against, so no fixture date can age out from under
+    # it at any TTL. The alternative — rebasing T0 to `utc_now() - 1h` — keeps
+    # the bomb and only resets its fuse.
+    #
+    # An in-process patch is sound HERE because nothing in these four arms
+    # spawns a subprocess or reloads the module. The concurrent-writer arm
+    # below does spawn, which is why it is repaired the other way.
+    #
+    # IF THIS ENTRY POINT EVER GAINS A `now=` PARAMETER, MOVE THESE ARMS ONTO
+    # IT AND DELETE THIS FIXTURE. A parameter is strictly better than pinning
+    # a module attribute: patching one name can only control clock reads that
+    # actually resolve THROUGH that name, so it silently misses any reader
+    # that does not — the same blind spot in reverse was measured on this
+    # surface, where pinning `utc_now` alone manufactured failures the real
+    # clock cannot produce. The first sentence of this comment is the
+    # condition for its own removal.
+    FROZEN_NOW = T0 + timedelta(minutes=5)
+
+    @pytest.fixture(autouse=True)
+    def _pinned_clock(self, monkeypatch):
+        monkeypatch.setattr(bw, "utc_now", lambda: self.FROZEN_NOW)
+
     def _seed(self):
         assert bw.save_records([_record()], team_name=TEAM) is True
 
@@ -622,9 +655,18 @@ deadline = time.time() + 30
 while len(list(rv.iterdir())) < 2 and time.time() < deadline:
     time.sleep(0.005)
 for _ in range(n):
+    # STAMPED AT WRITE TIME, exactly as a real launch records it. A fixed
+    # date here is not merely stale, it CORRUPTS THE INSTRUMENT: every
+    # append re-reads the registry through the TTL prune, so once the
+    # literal ages past RECORD_TTL_SECONDS each write drops every record
+    # already present and the surviving count collapses to ~1 — the arm
+    # would report a lost-append failure that the lock had nothing to do
+    # with. `append_record` takes no now=, so this is the only injection
+    # point available, and it needs none: the offset is ZERO, so there is
+    # no gap for a future threshold change to sit inside.
     bw.append_record({"agent_name": tag, "session_id": "sid",
                       "task_ids": ["13"],
-                      "registered_at": "2026-09-11T12:00:00+00:00"},
+                      "registered_at": bw.iso_now()},
                      team_name="adv-team")
 '''
 

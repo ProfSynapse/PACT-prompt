@@ -268,16 +268,33 @@ class TestDischargeSequences:
         monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path))
         (tmp_path / "teams" / TEAM).mkdir(parents=True)
 
-    def _seed(self, **over):
-        from shared.background_work import append_record
+    def _seed(self, *records: dict):
+        """Seed the registry in ONE clock-free write.
 
-        assert append_record(_record(**over), team_name=TEAM) is True
+        🔴 `save_records` WRITES DIRECTLY AND NEVER READS, so no TTL prune can
+        touch the fixture on the way in. `append_record` READS FIRST — through
+        `_parse_records_text`, which drops any record older than
+        RECORD_TTL_SECONDS against the REAL clock — so two successive appends
+        of a fixed-date record silently lose the first one once the fixture
+        ages past 24h. The append still returns True, so the loss is invisible
+        at seed time and surfaces later as a count that is short by one.
+
+        Seeding is not the subject of any arm in this class, so it must not be
+        able to fail. Where `append_record` IS the subject — the concurrent
+        two-writer arm — it stays, and its fixture is made time-independent a
+        different way.
+        """
+        from shared.background_work import save_records
+
+        assert save_records(
+            [_record(**over) for over in (records or ({},))], team_name=TEAM
+        ) is True
 
     def test_1_flag_then_idle_then_clear_then_idle_DOES_NOT_FIRE(self):
         """The whole point. A teammate that did everything right stays silent."""
         self._seed()
         flagged = _task(wait=_wait(T0 + timedelta(minutes=1)))
-        assert discharge_acknowledged(flagged, team_name=TEAM) == 1
+        assert discharge_acknowledged(flagged, team_name=TEAM, now=T0) == 1
         assert load_records_for_discharge(TEAM, now=T0) == []
         # later it clears the wait and keeps working the same task
         assert unflagged_fire(_task(), team_name=TEAM, now=T0)[0] is False
@@ -285,7 +302,7 @@ class TestDischargeSequences:
     def test_2_never_flag_then_idle_FIRES(self):
         """The target case must be untouched by the discharge."""
         self._seed()
-        assert discharge_acknowledged(_task(), team_name=TEAM) == 0
+        assert discharge_acknowledged(_task(), team_name=TEAM, now=T0) == 0
         assert unflagged_fire(_task(), team_name=TEAM, now=T0)[0] is True
 
     def test_3_a_wait_discharges_job1_ONLY_and_job2_fires_once_the_wait_clears(
@@ -300,10 +317,10 @@ class TestDischargeSequences:
         and spares job 2. See the sibling class below for what happens while
         the wait is still open, which is the opposite of what the name implied.
         """
-        self._seed(registered_at=_iso(T0))
-        self._seed(registered_at=_iso(T0 + timedelta(minutes=10)))
+        self._seed({"registered_at": _iso(T0)},
+                   {"registered_at": _iso(T0 + timedelta(minutes=10))})
         flagged = _task(wait=_wait(T0 + timedelta(minutes=1)))
-        assert discharge_acknowledged(flagged, team_name=TEAM) == 1, (
+        assert discharge_acknowledged(flagged, team_name=TEAM, now=T0) == 1, (
             "exactly one record — job 1 — may be discharged by a wait flagged "
             "before job 2 was launched"
         )
@@ -369,14 +386,20 @@ class TestSuppressionIsTemporaryNotPermanent:
         (tmp_path / "teams" / TEAM).mkdir(parents=True)
 
     def _two_jobs(self):
-        from shared.background_work import append_record
+        """Two launches, seeded in ONE clock-free write. See the sibling
+        class's `_seed` for why this is not two `append_record` calls: the
+        second append RE-READS the registry and the TTL prune drops the first
+        record once the fixture ages past 24h, so the arm would be measuring
+        one job while its name and its assertions claim two."""
+        from shared.background_work import save_records
 
-        assert append_record(_record(registered_at=_iso(T0)), team_name=TEAM)
-        assert append_record(
-            _record(registered_at=_iso(T0 + timedelta(minutes=10))), team_name=TEAM
-        )
+        assert save_records(
+            [_record(registered_at=_iso(T0)),
+             _record(registered_at=_iso(T0 + timedelta(minutes=10)))],
+            team_name=TEAM,
+        ) is True
         flagged = _task(wait=_wait(T0 + timedelta(minutes=1)))
-        assert discharge_acknowledged(flagged, team_name=TEAM) == 1
+        assert discharge_acknowledged(flagged, team_name=TEAM, now=T0) == 1
         return flagged
 
     def test_job2_is_SILENT_while_the_job1_wait_is_still_open(self):
