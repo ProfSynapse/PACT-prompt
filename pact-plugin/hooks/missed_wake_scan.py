@@ -6,7 +6,7 @@ Summary: UserPromptSubmit + SessionStart hook — lead-side missed-wake SURFACER
          (SessionStart), re-scans the team's task list for a teammate idling on
          intentional_wait.reason == "awaiting_lead_completion" past the
          staleness threshold and SURFACES an actionable additionalContext
-         prompt so the lead actually sends the forgotten paired wake-SendMessage.
+         prompt naming what to check and the responses available.
          Also writes a once-per-(task,since) forensic `missed_wake` journal
          event (GC-proof record), deduped by reading the journal — no marker.
 Used by: hooks.json UserPromptSubmit + SessionStart registration.
@@ -25,9 +25,14 @@ false-positive for exactly this). This alarm instead keys on the DURATION of the
 wait via wait_stale() (the existing 30-min threshold) — by which time a wake, if
 sent, would already have landed.
 
-WHY LEAD-SIDE (is_lead-gated): the missed wake is a LEAD failure (the lead wrote
-completion metadata but forgot the paired wake), and only the lead can ACT on
-the alarm. The journal is NOT the cause: an in-process teammate frame reaches
+WHY LEAD-SIDE (is_lead-gated): only the lead can ACT on any of the causes this
+condition has — sending an owed wake, letting a deliberate hold stand, or telling
+a teammate to clear its own flag are all lead actions. Do NOT restate this as
+"the missed wake is a LEAD failure because the lead forgot the paired wake": a
+task the lead completed is filtered out by the in_progress gate below, so that
+particular cause cannot reach this surface at all, and naming it as THE cause is
+what this justification previously got wrong.
+The journal is NOT the cause: an in-process teammate frame reaches
 the canonical journal too (see is_canonical_journal_frame), so the ROLE is what
 makes this hook lead-side. Journal-resolvability stays process-scoped.
 Teammate / plain frames no-op — the in-process-default
@@ -256,20 +261,17 @@ def build_surface(stale: list, now: "datetime | None" = None) -> "str | None":
         lines.append(f"- Task {label} — idle {age_str} on awaiting_lead_completion")
     return (
         "PACT missed-wake alarm: the teammate(s) below are idling on "
-        "awaiting_lead_completion past the staleness threshold. WHAT IS KNOWN: "
-        "the wait is well-formed and stale, and an idle teammate cannot "
-        "self-wake, so it will not resolve on its own. THE CAUSE IS NOT KNOWN "
-        "and this condition has several, needing three different responses. "
-        "(1) SEND A wake-SendMessage — you wrote their completion metadata and "
-        "did not send the paired wake, or you sent one that was not delivered. "
-        "(2) NOTHING, THE WAIT IS LEGITIMATE — you are deliberately holding for "
-        "a gate or a review, or have not reached it yet, or the teammate "
-        "re-stamped and is genuinely still waiting. The hold is simply not "
-        "recorded anywhere this hook can see it. (3) THE TEAMMATE MUST CLEAR "
-        "ITS OWN FLAG — it was woken and never did. ACTION: check which, then "
-        "send a wake-SendMessage to each that needs one (or re-set / complete "
-        "the task) — this notice re-shows every turn until the wait "
-        "resolves.\n" + "\n".join(lines)
+        "awaiting_lead_completion past the staleness threshold. KNOWN: the wait "
+        "is well-formed and stale and an idle teammate cannot self-wake, so it "
+        "will not resolve itself. THE CAUSE IS NOT KNOWN; several produce this, "
+        "needing three responses. (1) SEND A wake-SendMessage — a rejection "
+        "went out without its paired wake, or a wake was sent and not "
+        "delivered. (2) NOTHING, THE WAIT IS LEGITIMATE — a deliberate hold, "
+        "not reached yet, or a re-stamped teammate still genuinely waiting; no "
+        "hook can see a hold. (3) THE TEAMMATE MUST CLEAR ITS OWN FLAG — it was "
+        "woken and did not. ACTION: check which, then send a wake-SendMessage "
+        "to each that needs one (or re-set / complete the task) — re-shows "
+        "every turn until it resolves.\n" + "\n".join(lines)
     )
 
 
