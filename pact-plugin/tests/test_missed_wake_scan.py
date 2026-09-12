@@ -33,6 +33,7 @@ append_event (module-global on missed_wake_scan), per devops's confirmed levers.
 """
 import io
 import json
+import re
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -839,3 +840,204 @@ class TestUnflaggedBackgroundSurfaceIsGated:
         assert mw.build_unflagged_surface(
             mw.find_stale_unflagged_background(team)
         ) is None
+
+
+# --- class (2) must keep prescribing nothing ---------------------------------
+#
+# HAND-WRITTEN, NEVER DERIVED FROM THE HEADER. Deriving this set from the text
+# it polices makes every arm below an identity: whatever the header says is
+# what the set would contain, so the set would follow a regression rather than
+# catch it. The cost of a literal is that a reword can false-fire it, and that
+# is the intended trade — a false fire sends a human to read the clause, which
+# is the outcome this arm exists to produce.
+#
+# `wake` and `resolve` were MEASURED as viable members and DELIBERATELY LEFT
+# OUT. Both are the surface's own descriptive vocabulary ("a wake was sent",
+# "it will not resolve itself"), so an innocent reword of class (2) would
+# almost certainly use one, and a guard that fires on innocent prose is one
+# that gets waived. The remaining members are remediation imperatives.
+NON_ACTION_DIRECTIVE = "NOTHING"
+REMEDIATION_VERBS = frozenset({
+    "send", "clear", "must", "check", "re-set", "complete",
+    "confirm", "ask", "ping", "notify", "reply", "respond", "nudge",
+})
+CLASS_MARKERS = ("(1) ", "(2) ", "(3) ")
+
+
+def _class_segments(header: str) -> "list[str]":
+    """The three response-class clauses, sliced out of the RENDERED header.
+
+    Parses the RUN, not the source text. The header is an inline f-string
+    inside `build_surface`'s return, so a source-text rule over it is emptied
+    by an ordinary quoting or line-wrap change while continuing to report
+    green — the arm would be measuring the literal's formatting, not the text
+    the lead actually receives.
+
+    Raises rather than returning a degraded result: a header that no longer
+    carries three ordered, non-empty class markers has been restructured, and
+    every arm below is then asserting about a shape that no longer exists.
+    Loud is the point — a silent empty segment makes the ban-list arm pass
+    vacuously, which is the one failure it must never have.
+    """
+    missing = [m for m in CLASS_MARKERS if m not in header]
+    assert not missing, (
+        "the missed-wake header no longer carries %s, so the response classes "
+        "cannot be located. If the header was deliberately restructured, these "
+        "arms need rewriting against the new shape — do NOT delete them, the "
+        "invariant they carry (class 2 prescribes no action) is independent of "
+        "how the classes are numbered." % (missing,)
+    )
+    idx = [header.index(m) for m in CLASS_MARKERS]
+    assert idx == sorted(idx), (
+        "the class markers appear out of order at %s — the slicing below would "
+        "silently mis-attribute one class's text to another" % (idx,)
+    )
+    segments = [header[idx[0]:idx[1]], header[idx[1]:idx[2]], header[idx[2]:]]
+    assert all(s.strip() for s in segments), (
+        "a class segment sliced empty: %r" % (segments,))
+    return segments
+
+
+def _remediation_hits(text: str) -> "list[str]":
+    """Members of REMEDIATION_VERBS present as whole words, lowercased.
+
+    The lookbehind stops a verb matching inside a longer word — without it
+    `ask` fires on `tasked` and `clear` on `unclear`, and the arm becomes a
+    prose-style check rather than a directive check.
+    """
+    return sorted(v for v in REMEDIATION_VERBS
+                  if re.search(r"(?<![A-Za-z])" + re.escape(v) + r"(?![A-Za-z])",
+                               text, re.IGNORECASE))
+
+
+class TestResponseClassTwoPrescribesNothing:
+    """The alarm must keep saying NOTHING for a legitimate wait.
+
+    🔴 WHAT REGRESSION THIS CATCHES. The header names three responses because
+    the hook CANNOT KNOW which applies — it can see that a wait is well-formed
+    and stale, and nothing more. Class (2) is the one that says the correct
+    response may be to do nothing at all. It is the load-bearing half: the
+    alarm re-shows every turn until it resolves, so an editor who makes every
+    class actionable converts a re-showing advisory into a standing instruction
+    to act on a wait that is behaving exactly as designed.
+
+    AND THE DRIFT IS ATTRACTIVE, which is why it needs an arm rather than a
+    comment. A reader arriving at a string called a missed-wake ALARM and
+    finding one branch that prescribes nothing will read it as an unfinished
+    sentence, not a decision — "surely we should at least confirm the hold" is
+    a one-word edit that looks like a completion and is the defect being
+    re-introduced. The alarm was previously reworded for exactly this reason:
+    it asserted a cause it could not know.
+
+    THE ARMS ARE PAIRED IN BOTH DIRECTIONS. Quiet on the cure (the real class
+    2), loud on a real positive (classes 1 and 3, which genuinely prescribe
+    action), and loud on a synthetic positive injected into class 2's own slot
+    — the last is what proves the detector is not simply blind to that segment.
+
+    MEASURED, against a 162-arm missed-wake selection with the header mutated
+    in a detached worktree and byte-restored after each run:
+
+      - directive replaced with `RAISE IT WITH THE TEAMMATE`  -> directive arm
+        only. The ban arm stayed GREEN, because `raise` is not in the set.
+      - `confirm first` added to the explanation, directive left alone
+        -> ban arm only. The directive arm stayed GREEN.
+      - directive replaced with `ASK THE TEAMMATE TO CONFIRM` -> both.
+
+    So the two arms are NOT redundant and NEITHER IS COMPLETE. The ban list is
+    a fixed set and a remediation verb outside it walks past it; the directive
+    arm is what catches an arbitrary replacement, and it is blind to an
+    addition. That is the whole reason both exist, and it is a bound on this
+    guard rather than a gap to close by lengthening the set — every verb added
+    buys one more caught rewrite and one more way to false-fire on prose.
+
+    The pre-existing selection killed ZERO of those three mutations. It killed
+    one arm on a FULL revert to the pre-fix header, and that kill was
+    incidental: the older header is shorter, so the slack control on
+    MAX_HEADER_CHARS fired on its size. Nothing in the suite was reading the
+    response classes.
+    """
+
+    @staticmethod
+    def _header() -> str:
+        stale = [_task(task_id="42", owner="test-engineer",
+                       subject="do the thing",
+                       wait=_wait(since=_since_of(FIXED_NOW, 45)))]
+        return mw.build_surface(stale, now=FIXED_NOW).splitlines()[0]
+
+    def test_class_2_still_leads_with_the_non_action_directive(self):
+        """The directive clause — the text before the em dash — not the whole
+        segment. A rewrite that makes class 2 actionable has to replace that
+        clause, while any reword of the EXPLANATION after it leaves it alone,
+        so this is the half that is worth pinning literally."""
+        directive = _class_segments(self._header())[1].split("—")[0]
+        assert NON_ACTION_DIRECTIVE in directive.upper(), (
+            "response class (2) now reads %r. It is the branch that tells the "
+            "lead the correct response may be NO ACTION — a deliberate hold, a "
+            "task not reached yet, or a teammate genuinely still waiting — and "
+            "no hook can distinguish those from a stranded wait. If it now "
+            "prescribes an action, the alarm has gone back to asserting a cause "
+            "it cannot know, and it re-shows EVERY turn while it is stale."
+            % (directive.strip(),)
+        )
+
+    def test_class_2_prescribes_no_remediation_anywhere_in_its_clause(self):
+        """The directive arm above is satisfied by `NOTHING ... but first
+        CONFIRM with the teammate`, which is the same regression arriving as an
+        addition rather than a replacement. This arm reads the whole clause."""
+        segment = _class_segments(self._header())[1]
+        hits = _remediation_hits(segment)
+        assert hits == [], (
+            "response class (2) now contains remediation %s: %r. Class (2) is "
+            "the DO-NOTHING branch; an action word inside it makes every class "
+            "actionable, which is the state this text was rewritten to leave. "
+            "If the word is descriptive rather than an instruction, reword the "
+            "clause — the arm's subject is that class (2) prescribes nothing, "
+            "and prose that reads as an instruction IS the defect regardless of "
+            "what was meant." % (hits, segment.strip())
+        )
+
+    def test_CONTROL_classes_1_and_3_DO_prescribe_remediation(self):
+        """Non-vacuity against REAL text. Without this the ban-list arm passes
+        just as happily on an empty verb set, a broken regex, or a segment
+        slicer returning whitespace — every one of which reports the same
+        green as a correct header."""
+        first, _, third = _class_segments(self._header())
+        assert _remediation_hits(first), (
+            "class (1) contains none of REMEDIATION_VERBS: the detector cannot "
+            "see action vocabulary in text that unambiguously has it, so the "
+            "class-(2) arms are passing vacuously. Fix the detector, not the "
+            "header. Class (1) text: %r" % (first.strip(),)
+        )
+        assert _remediation_hits(third), (
+            "class (3) contains none of REMEDIATION_VERBS — same vacuity "
+            "failure as above. Class (3) text: %r" % (third.strip(),)
+        )
+
+    def test_CONTROL_the_ban_fires_on_an_actionable_class_2(self):
+        """Non-vacuity in class 2's OWN slot, which the arm above cannot give.
+
+        Classes 1 and 3 prove the verb set is live SOMEWHERE. They do not prove
+        the slicer returns class 2's text rather than, say, class 3's — a
+        mis-sliced segment 2 would pass the ban arm on borrowed silence. So
+        inject an action into the real header at the real class-2 offset and
+        require a hit. The injected clause is built from the SLICED segment
+        rather than a copied literal, so a future reword of class 2 cannot
+        turn this mutation into a silent no-op.
+        """
+        header = self._header()
+        segment = _class_segments(header)[1]
+        mutated = header.replace(
+            segment, "(2) CONFIRM THE HOLD — ask the teammate whether it is "
+                     "still waiting on purpose. ", 1)
+        assert mutated != header, (
+            "the synthetic mutation did not apply, so this control measured "
+            "nothing. The sliced segment is not a substring of the header it "
+            "came from, which means the slicer is wrong.")
+        hits = _remediation_hits(_class_segments(mutated)[1])
+        assert hits, (
+            "an explicitly actionable class (2) was injected into the header "
+            "and the detector found no remediation verb in it. The class-(2) "
+            "arms are therefore blind in the exact slot they police — their "
+            "green says nothing. Segment read back: %r"
+            % (_class_segments(mutated)[1],)
+        )
