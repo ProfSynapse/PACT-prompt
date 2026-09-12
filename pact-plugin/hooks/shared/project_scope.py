@@ -4,7 +4,8 @@ Summary: Predicates answering "are these two directories the same project?".
 Used by: scripts/archive_pin.py (pin archival resolution) and
          skills/pact-memory/scripts/working_memory.py (working-memory
          projection), both of which resolve a CLAUDE.md and must tell a
-         legitimate fall-through from a wrong-project one.
+         legitimate fall-through from a wrong-project one. Both call
+         `stays_in_declared_project`; `same_repository` is one of its rules.
 
 WHY THIS IS NOT IN git_helpers.py. That module is a narrow subprocess
 wrapper whose docstring scopes it to "try/except + subprocess boilerplate
@@ -23,11 +24,47 @@ consumer would acquire a global namespace mutation to borrow one predicate.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Optional, Set
 
 try:
     from .git_helpers import run_git
+    from .paths import get_claude_config_dir
 except ImportError:  # loaded as a top-level module rather than a package member
     from git_helpers import run_git
+    from paths import get_claude_config_dir
+
+
+def _git_output(directory: Path, *args: str) -> Optional[str]:
+    """Return the stripped stdout of `git -C <directory> <args>`, or None.
+
+    None on a git error, a timeout, a non-repo directory or an OSError, so
+    every rule built on it fails toward refusal.
+    """
+    # `run_git` absorbs TimeoutExpired and FileNotFoundError only. The original
+    # predicate caught OSError entire, and that breadth is load-bearing here:
+    # a PermissionError reaching a caller as an exception instead of a refusal
+    # would turn a fail-safe into a crash on a write path.
+    try:
+        result = run_git(["-C", str(directory), *args], timeout=5)
+    except OSError:
+        return None
+    if result is None or result.returncode != 0 or not result.stdout.strip():
+        return None
+    return result.stdout.strip()
+
+
+def _rev_parse_path(directory: Path, flag: str) -> Optional[Path]:
+    """Return `git -C <directory> rev-parse <flag>` as a resolved path, or None."""
+    output = _git_output(directory, "rev-parse", flag)
+    if output is None:
+        return None
+    path = Path(output)
+    if not path.is_absolute():
+        path = Path(directory) / path
+    try:
+        return path.resolve()
+    except OSError:
+        return None
 
 
 def same_repository(env_dir: Path, base: Path) -> bool:
@@ -43,47 +80,126 @@ def same_repository(env_dir: Path, base: Path) -> bool:
         same_repository(subdir,    repo_root) -> True
         same_repository(repo_root, subdir)    -> False  (a subdir is not one)
 
-    Callers and the direction each uses: archive_pin passes
-    (declared_env_dir, resolved_base); the working-memory escape guard passes
-    (declared_scope, resolved_root). Both ask the same question — "did
-    resolution land on the main repo of the scope I declared" — so both put
-    the DECLARATION first. Put the declaration first or invert the meaning.
+    Its one production caller, `stays_in_declared_project`, passes the
+    DECLARATION first. Put the declaration first or invert the meaning.
 
-    THE DISCRIMINATOR BETWEEN A LEGITIMATE FALL-THROUGH AND A WRONG-PROJECT
-    ONE. A resolver that probes a declared directory and finds no CLAUDE.md
-    continues to its git anchors. That is CORRECT when it lands back inside
-    the same project — PACT's own spawned paths set CLAUDE_PROJECT_DIR to a
-    worktree, where CLAUDE.md is gitignored and therefore absent, and the
-    git-common-dir step then finds the MAIN repo's file, which is the intended
-    answer. A blanket "declared dir has no CLAUDE.md -> refuse" rule breaks
-    that on every such invocation — a cardinal over-block.
-
-    So the question is not "did we fall through" but "did we fall through to
-    somewhere still in the same project". `--git-common-dir` answers it: every
-    worktree of a repo shares one common dir, so its parent is the main root
-    for both the worktree and the main checkout.
+    `--git-common-dir` is shared by every worktree of a repo, so its parent is
+    the main root for both the worktree and the main checkout. It is NOT a
+    checkout root for a submodule or a `--separate-git-dir` repository, whose
+    common dir lives elsewhere; `stays_in_declared_project` covers those.
 
     FAIL-SAFE IS FALSE, WHICH MEANS REFUSE. Any git error, timeout, or
     non-repo directory returns False. Declining to guess is the safe direction
     on a write path: refusing costs a recoverable skip, while guessing wrong
     writes into a project nobody named.
     """
-    # `run_git` absorbs TimeoutExpired and FileNotFoundError only. The original
-    # predicate caught OSError entire, and that breadth is load-bearing here:
-    # a PermissionError reaching a caller as an exception instead of a refusal
-    # would turn a fail-safe into a crash on a write path.
+    common_dir = _rev_parse_path(Path(env_dir), "--git-common-dir")
+    if common_dir is None:
+        return False
     try:
-        result = run_git(
-            ["-C", str(env_dir), "rev-parse", "--git-common-dir"], timeout=5
-        )
+        return common_dir.parent == Path(base).resolve()
     except OSError:
         return False
-    if result is None or result.returncode != 0 or not result.stdout.strip():
-        return False
-    common_dir = Path(result.stdout.strip())
-    if not common_dir.is_absolute():
-        common_dir = Path(env_dir) / common_dir
+
+
+def _nearest_existing_directory(path: Path) -> Optional[Path]:
+    """Return `path` if it is a directory, else its closest ancestor that is."""
+    for candidate in (path, *path.parents):
+        try:
+            if candidate.is_dir():
+                return candidate
+        except OSError:
+            return None
+    return None
+
+
+def _listed_worktrees(checkout: Path) -> Set[Path]:
+    """Resolved paths of every worktree git records for the repository at `checkout`.
+
+    Includes a PRUNABLE worktree, whose directory is gone but whose record
+    remains until `git worktree prune`. `git worktree remove` deletes the
+    record as well, so a worktree removed that way is not listed.
+    """
+    output = _git_output(checkout, "worktree", "list", "--porcelain")
+    listed: Set[Path] = set()
+    for line in (output or "").splitlines():
+        if line.startswith("worktree "):
+            try:
+                listed.add(Path(line[len("worktree "):]).resolve())
+            except OSError:
+                continue
+    return listed
+
+
+def stays_in_declared_project(
+    declared: Path, resolved_root: Path, claude_md: Path
+) -> bool:
+    """True when resolution that started at `declared` ended in the same project.
+
+    `resolved_root` is the directory the resolver found `claude_md` under.
+
+    THE DISCRIMINATOR BETWEEN A LEGITIMATE FALL-THROUGH AND A WRONG-PROJECT
+    ONE. A resolver that probes a declared directory and finds no CLAUDE.md
+    continues to its git anchors. That is CORRECT when it lands back inside
+    the same project — PACT's own spawned paths set CLAUDE_PROJECT_DIR to a
+    worktree, where CLAUDE.md is gitignored and therefore absent, and the git
+    anchors then find the MAIN repo's file, which is the intended answer. A
+    blanket "declared dir has no CLAUDE.md -> refuse" rule breaks that on every
+    such invocation — a cardinal over-block.
+
+    ADMITTED, and nothing else:
+      1. The declaration itself.
+      2. The main repo of the declaration's checkout (`same_repository`).
+      3. The root of ANY checkout of the declaration's repository: the
+         declaration's own checkout, the main checkout, or another worktree.
+         The resolvers anchor on `--show-toplevel` as well as
+         `--git-common-dir`, and for a submodule, a `--separate-git-dir`
+         repository, or a main checkout whose worktree holds the CLAUDE.md,
+         the common dir's parent is not the root they landed on. Judging by
+         one anchor alone refused those same-project writes.
+
+    A DECLARATION THAT NO LONGER EXISTS is judged two ways. If the resolved
+    repository still lists it as a worktree, that record proves identity and
+    it is admitted. Otherwise it is judged from its nearest existing ancestor,
+    so a removed worktree or subdirectory still maps to the repository it was
+    in; rules 2 and 3 still require the resolution to land in that repository.
+    The ancestor stands in for a directory git can no longer see, so it NEVER
+    admits a resolution into the config root's own CLAUDE.md: a deleted
+    project under a git-versioned home would otherwise project into the
+    user-global file. A live declaration that resolves there is not affected.
+
+    REFUSED: a SUBDIRECTORY that is not a checkout root (a path below a root is
+    containment, not identity — a nested directory can be its own project), a
+    different repository nested inside or around the declaration, a worktree
+    removed with `git worktree remove` from outside its repository's tree, and
+    any non-git layout other than the declaration itself.
+
+    FAIL-SAFE IS FALSE, WHICH MEANS REFUSE.
+    """
+    declared = Path(declared)
     try:
-        return common_dir.resolve().parent == Path(base).resolve()
+        resolved = Path(resolved_root).resolve()
+        if declared.resolve() == resolved:
+            return True
     except OSError:
         return False
+    anchor = _nearest_existing_directory(declared)
+    if anchor is None:
+        return False
+    if anchor != declared:
+        try:
+            if declared.resolve() in _listed_worktrees(resolved):
+                return True
+            config_claude_md = (get_claude_config_dir() / "CLAUDE.md").resolve()
+            if Path(claude_md).resolve() == config_claude_md:
+                return False
+        except OSError:
+            return False
+    if same_repository(anchor, resolved):
+        return True
+    if _rev_parse_path(resolved, "--show-toplevel") != resolved:
+        return False
+    anchor_common_dir = _rev_parse_path(anchor, "--git-common-dir")
+    return anchor_common_dir is not None and anchor_common_dir == _rev_parse_path(
+        resolved, "--git-common-dir"
+    )

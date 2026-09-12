@@ -2167,6 +2167,7 @@ def _refuse_ambient_sync_on_declared_scope_escape(
     target: Optional[Path],
     claude_md_root: Optional[Path],
     resolved_root: Optional[Path],
+    claude_md_path: Optional[Path],
 ) -> None:
     """Refuse an AMBIENT sync that resolved OUTSIDE its declared scope.
 
@@ -2195,24 +2196,20 @@ def _refuse_ambient_sync_on_declared_scope_escape(
     """
     if target is not None or claude_md_root is not None:
         return
-    if resolved_root is None:
+    if resolved_root is None or claude_md_path is None:
         return
     declared = os.environ.get("CLAUDE_PROJECT_DIR") or (
         get_project_dir_from_session_record() or ""
     )
     if not declared:
         return
-    declared_path = Path(declared)
-    try:
-        if declared_path.resolve() == Path(resolved_root).resolve():
-            return
-    except OSError:
-        pass
     # Function-level: the shared package is importable only after
     # pact_session's sys.path bootstrap has run at module import.
-    from shared.project_scope import same_repository
+    from shared.project_scope import stays_in_declared_project
 
-    if same_repository(declared_path, Path(resolved_root)):
+    if stays_in_declared_project(
+        Path(declared), Path(resolved_root), Path(claude_md_path)
+    ):
         return
     raise AmbientSyncRefused(
         f"the declared project scope ({declared}) resolved to a CLAUDE.md "
@@ -2544,7 +2541,7 @@ def sync_to_claude_md(
     # root; the two guards above run before because they need only the
     # declaration. Same ordering in the sibling.
     _refuse_ambient_sync_on_declared_scope_escape(
-        target, claude_md_root, resolved_root
+        target, claude_md_root, resolved_root, claude_md_path
     )
 
     # THE DECLARED ANCHOR REPLACES THE CONTAINMENT BASE. IT DOES NOT STEER
@@ -2992,7 +2989,7 @@ def sync_retrieved_to_claude_md(
 
     claude_md_path, resolved_root = _resolve_display_claude_md_with_base()
     _refuse_ambient_sync_on_declared_scope_escape(
-        None, claude_md_root, resolved_root
+        None, claude_md_root, resolved_root, claude_md_path
     )
 
     # Declared anchor replaces the containment base; it does not steer

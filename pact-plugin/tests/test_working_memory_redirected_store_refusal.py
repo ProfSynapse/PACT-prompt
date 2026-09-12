@@ -577,8 +577,8 @@ class TestTheCardinalFallthroughSurvives:
         its working-memory display — which is a strictly worse outcome than the
         under-block the sibling arm above closed.
 
-        MUTANT that reddens this arm: delete the `same_repository(...)` return
-        from `_refuse_ambient_sync_on_declared_scope_escape`. The declared
+        MUTANT that reddens this arm: delete the `stays_in_declared_project(...)`
+        return from `_refuse_ambient_sync_on_declared_scope_escape`. The declared
         worktree then differs from the resolved main root, no exemption
         applies, and the cardinal fall-through is refused.
         """
@@ -616,9 +616,8 @@ class TestTheCardinalFallthroughSurvives:
             "This is the cardinal over-block the escape guard is shaped to "
             "avoid: CLAUDE.md is gitignored in a worktree, so this is the "
             "NORMAL path for every PACT session, not an edge case. Check that "
-            "`same_repository(declared, resolved)` is still consulted and that "
-            "its arguments are still in DECLARATION-FIRST order — swapping "
-            "them returns False here and nothing else would fail."
+            "`stays_in_declared_project(declared, resolved_root, claude_md)` "
+            "is still consulted and still receives the DECLARATION first."
         )
         assert target.read_bytes() != before, (
             "the sync reported WROTE but the main checkout's document did not "
@@ -713,10 +712,10 @@ class TestTheBOUNDARYOfTheEscapeRefusal:
         origin had — the property this change exists to replace. Swapping one
         proxy for another would re-open the class under a new name.
 
-        `same_repository(declared, resolved)` returns False here because it asks
-        "is `resolved` the MAIN REPO of the checkout at `declared`", and a
-        subdirectory is not a main repo. That is the predicate answering
-        correctly, not a gap in it.
+        `stays_in_declared_project` refuses it because the subdirectory is not
+        the declaration, not the main repo of the declaration's checkout, and
+        not the root of any checkout of that repository. That is the predicate
+        answering correctly, not a gap in it.
 
         THE COST IS BOUNDED AND IS THE SAFE DIRECTION: a refusal costs the
         PROJECTION and never the RECORD, so this over-block costs a display line
@@ -815,4 +814,253 @@ class TestSameRepositoryIsNotSymmetric:
             "FIRST' — it is NOT a symmetric relation, and every caller must "
             "pass the DECLARED scope first. A swap returns a plausible boolean "
             "and changes the meaning." % (env_dir, base, got, expected)
+        )
+
+
+# ---------------------------------------------------------------------------
+# One population of layouts, driven through every site that judges project scope
+# ---------------------------------------------------------------------------
+
+_SITES = ("sync_to_claude_md", "sync_retrieved_to_claude_md", "archive_pin")
+
+
+def _committed_repo(path: Path) -> Path:
+    """A real repository with one commit, which `git worktree add` requires."""
+    path.mkdir(parents=True, exist_ok=True)
+    _git("init", "-q", ".", cwd=path)
+    (path / "README").write_text("seed\n", encoding="utf-8")
+    _git("add", "README", cwd=path)
+    _git("-c", "user.email=t@example.invalid", "-c", "user.name=t",
+         "commit", "-qm", "seed", cwd=path)
+    return path
+
+
+def _document_in(directory: Path) -> Path:
+    target = directory / ".claude" / "CLAUDE.md"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(_SEED_DOCUMENT, encoding="utf-8")
+    return target
+
+
+def _worktree_at(main: Path, path: Path) -> Path:
+    _git("worktree", "add", "-q", str(path), "-b", path.name, cwd=main)
+    return path
+
+
+# Each layout returns (declared, cwd, document, extra environment). The cwd is a
+# checkout root, so all three resolvers reach the same document from it.
+
+def _submodule_subdirectory(t):
+    superproject = _committed_repo(t / "superproject")
+    _git("-c", "protocol.file.allow=always", "submodule", "add", "-q",
+         str(_committed_repo(t / "source")), "sub", cwd=superproject)
+    sub = superproject / "sub"
+    (sub / "dir").mkdir()
+    return sub / "dir", sub, _document_in(sub), {}
+
+
+def _separate_git_dir_subdirectory(t):
+    (t / "gitdirs").mkdir()
+    root = t / "repo"
+    _git("init", "-q", "--separate-git-dir", str(t / "gitdirs" / "repo.git"),
+         str(root), cwd=t)
+    (root / "dir").mkdir()
+    return root / "dir", root, _document_in(root), {}
+
+
+def _worktree_subdirectory_worktree_document(t):
+    main = _committed_repo(t / "main")
+    worktree = _worktree_at(main, t / "worktree")
+    (worktree / "sub").mkdir()
+    return worktree / "sub", worktree, _document_in(worktree), {}
+
+
+def _declared_main_worktree_document(t):
+    main = _committed_repo(t / "main")
+    worktree = _worktree_at(main, t / "worktree")
+    return main, worktree, _document_in(worktree), {}
+
+
+def _declared_main_subdirectory_worktree_document(t):
+    main = _committed_repo(t / "main")
+    (main / "sub").mkdir()
+    worktree = _worktree_at(main, t / "worktree")
+    return main / "sub", worktree, _document_in(worktree), {}
+
+
+def _sibling_worktrees(t):
+    main = _committed_repo(t / "main")
+    declared = _worktree_at(main, t / "w1")
+    worktree = _worktree_at(main, t / "w2")
+    return declared, worktree, _document_in(worktree), {}
+
+
+def _removed_worktree_inside_its_repository(t):
+    main = _committed_repo(t / "main")
+    removed = _worktree_at(main, main / ".worktrees" / "x")
+    _git("worktree", "remove", str(removed), cwd=main)
+    return removed, main, _document_in(main), {}
+
+
+def _removed_subdirectory(t):
+    repo = _committed_repo(t / "repo")
+    return repo / "gone", repo, _document_in(repo), {}
+
+
+def _moved_away_worktree_still_listed(t):
+    main = _committed_repo(t / "main")
+    worktree = _worktree_at(main, t / "moved")
+    worktree.rename(t / "moved-away")
+    return worktree, main, _document_in(main), {}
+
+
+def _live_declaration_into_the_config_root_document(t):
+    home = _committed_repo(t / "home")
+    (home / "other").mkdir()
+    return (home / "other", home / "other", _document_in(home),
+            {"CLAUDE_CONFIG_DIR": str(home / ".claude")})
+
+
+def _another_repository(t):
+    project = _committed_repo(t / "p1")
+    return _committed_repo(t / "p2"), project, _document_in(project), {}
+
+
+def _removed_declaration_in_another_repository(t):
+    project = _committed_repo(t / "p1")
+    return _committed_repo(t / "p2") / "gone", project, _document_in(project), {}
+
+
+def _repository_root_declared_subdirectory_document(t):
+    repo = _committed_repo(t / "repo")
+    (repo / "sub").mkdir()
+    return repo, repo / "sub", _document_in(repo / "sub"), {}
+
+
+def _worktree_removed_outside_its_repository(t):
+    main = _committed_repo(t / "main")
+    removed = _worktree_at(main, t / "worktree")
+    _git("worktree", "remove", str(removed), cwd=main)
+    return removed, main, _document_in(main), {}
+
+
+def _deleted_project_under_a_git_versioned_home(t):
+    home = _committed_repo(t / "home")
+    (home / "other").mkdir()
+    return (home / "proj-gone", home / "other", _document_in(home),
+            {"CLAUDE_CONFIG_DIR": str(home / ".claude")})
+
+
+_SAME_PROJECT = {
+    "submodule_subdirectory": _submodule_subdirectory,
+    "separate_git_dir_subdirectory": _separate_git_dir_subdirectory,
+    "worktree_subdirectory_worktree_document": _worktree_subdirectory_worktree_document,
+    "declared_main_worktree_document": _declared_main_worktree_document,
+    "declared_main_subdirectory_worktree_document": _declared_main_subdirectory_worktree_document,
+    "sibling_worktrees": _sibling_worktrees,
+    "removed_worktree_inside_its_repository": _removed_worktree_inside_its_repository,
+    "removed_subdirectory": _removed_subdirectory,
+    "moved_away_worktree_still_listed": _moved_away_worktree_still_listed,
+    "live_declaration_into_the_config_root_document": _live_declaration_into_the_config_root_document,
+}
+
+_OUTSIDE_THE_PROJECT = {
+    "another_repository": _another_repository,
+    "removed_declaration_in_another_repository": _removed_declaration_in_another_repository,
+    "repository_root_declared_subdirectory_document": _repository_root_declared_subdirectory_document,
+    "worktree_removed_outside_its_repository": _worktree_removed_outside_its_repository,
+    "deleted_project_under_a_git_versioned_home": _deleted_project_under_a_git_versioned_home,
+}
+
+
+def _arrange(layout, tmp_path, monkeypatch) -> Path:
+    probe = subprocess.run(["git", "-C", str(tmp_path), "rev-parse", "--git-dir"],
+                           capture_output=True, text=True, timeout=30)
+    assert probe.returncode != 0, (
+        f"tmp_path sits inside a repository ({probe.stdout.strip()}), so "
+        "resolution could fall through to a real CLAUDE.md"
+    )
+    declared, cwd, document, extra_env = layout(tmp_path)
+    monkeypatch.setenv("CLAUDE_PROJECT_DIR", str(declared))
+    for key, value in extra_env.items():
+        monkeypatch.setenv(key, value)
+    monkeypatch.chdir(cwd)
+    return document
+
+
+def _run_site(site):
+    if site == "archive_pin":
+        import archive_pin
+
+        return archive_pin.resolve_claude_md()
+    import scripts.working_memory as wm
+
+    if site == "sync_to_claude_md":
+        return wm.sync_to_claude_md(
+            {"context": "scope-arm", "goal": "scope-arm"}, memory_id="0" * 32
+        )
+    return wm.sync_retrieved_to_claude_md(
+        [{"id": "0" * 32, "context": "scope-arm"}], query="scope-arm"
+    )
+
+
+class TestEverySiteJudgesProjectScopeAlike:
+    """ONE population, THREE sites, the real resolver at each.
+
+    `sync_to_claude_md`, `sync_retrieved_to_claude_md` and
+    `archive_pin.resolve_claude_md` all decide scope with
+    `stays_in_declared_project`. A layout is admitted or refused at all three or
+    at none, so each case below runs at each site: a guard dropped from one site
+    fails that site's refusal cases and no other.
+
+    WHY IN PROCESS. The escape guard has no in-process exemption, unlike its
+    sibling guards, so it is reachable here, and the second sync site has no CLI
+    route at all. `CLAUDE_PROJECT_DIR` stays SET in every case: a case that
+    unsets it exits at the guard's "nothing declared" return and measures
+    nothing.
+    """
+
+    @pytest.mark.parametrize("site", _SITES)
+    @pytest.mark.parametrize("layout", sorted(_SAME_PROJECT))
+    def test_a_same_project_resolution_is_admitted(
+        self, tmp_path, monkeypatch, layout, site
+    ):
+        document = _arrange(_SAME_PROJECT[layout], tmp_path, monkeypatch)
+        before = document.read_bytes()
+
+        result = _run_site(site)
+
+        if site == "archive_pin":
+            assert Path(result[0]).resolve() == document.resolve(), (
+                f"{layout}: archive_pin resolved {result[0]}, not the document "
+                "in the declared project"
+            )
+            return
+        assert result == SyncResult(SyncResult.WROTE), (
+            f"{layout}: {site} returned {result!r}. The layout stays inside the "
+            "declared project, so refusing it is an over-block."
+        )
+        assert document.read_bytes() != before, (
+            f"{layout}: {site} reported WROTE but the document did not change"
+        )
+
+    @pytest.mark.parametrize("site", _SITES)
+    @pytest.mark.parametrize("layout", sorted(_OUTSIDE_THE_PROJECT))
+    def test_a_resolution_outside_the_declared_project_is_refused(
+        self, tmp_path, monkeypatch, layout, site
+    ):
+        document = _arrange(_OUTSIDE_THE_PROJECT[layout], tmp_path, monkeypatch)
+        before = document.read_bytes()
+
+        if site == "archive_pin":
+            import archive_pin
+
+            with pytest.raises(archive_pin._Unevaluable) as excinfo:
+                _run_site(site)
+            assert "different project" in excinfo.value.reason, excinfo.value.reason
+        else:
+            with pytest.raises(AmbientSyncRefused):
+                _run_site(site)
+        assert document.read_bytes() == before, (
+            f"{layout}: {site} wrote into a document outside the declared project"
         )

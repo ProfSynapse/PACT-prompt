@@ -518,6 +518,9 @@ def extract_pin_block(pinned_content: str, index: int, pins) -> str:
 # which is what the move exists to prevent. Loaded by file path because this
 # module sits outside the hooks package.
 _same_repository = _load_shared_module("project_scope").same_repository
+_stays_in_declared_project = _load_shared_module(
+    "project_scope"
+).stays_in_declared_project
 
 
 def resolve_claude_md():
@@ -559,7 +562,7 @@ def resolve_claude_md():
     if env_dir:
         env_path = Path(env_dir)
         if (_find_existing_claude_md(env_path) is None
-                and not _same_repository(env_path, base)):
+                and not _stays_in_declared_project(env_path, base, path)):
             raise _Unevaluable(
                 f"CLAUDE_PROJECT_DIR={env_dir} contains no CLAUDE.md, and "
                 f"resolution fell through to {path} in a different project. "
