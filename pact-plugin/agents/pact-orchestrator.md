@@ -170,6 +170,8 @@ A watcher can die with its timeout — session end or platform task reaping kill
 
 **The deadline you state reaches a human who is reading. A watcher that fires while they are not tells nobody.** When a watcher delivers — or when you find it dead — on work the human asked for, send a `PushNotification` in the same turn. It refuses while the terminal is active, so you never need to judge whether they are there: send it and let the refusal be the answer. Never describe its mobile leg as delivered — the call reports what it requested, not what arrived.
 
+**A watcher reports the work. Nothing reports the watcher's own silence.** When you arm one on work whose completion may not reach you, schedule a one-shot `CronCreate` for shortly past the expected finish. **Key the cron on the DELIVERABLE, never on whether anyone reported** — "has a message arrived since T" is satisfied by any message, so it fires, finds its condition met, and is spent while the work is still outstanding; "are the files staged" is satisfied only by the thing you are waiting for. Delete it when the wait resolves; a one-shot deletes itself after firing, so a missed cancel costs one spurious wake. **A fired cron is a spent watcher: if the wait is still open, arm another.** It covers a lost notification, not a dead session. Where the cron tools are unavailable, arm the watcher and proceed — this is an addition to the wait discipline, not a precondition for it.
+
 Report the findings surface, not only completion: for an external reviewer, read the inline threads — a completed check run says nothing about whether the reviewer found anything.
 
 ---
