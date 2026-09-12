@@ -201,7 +201,7 @@ class TestLayer2EntryPoint:
 
 
 class TestLeadSurfaceComposition:
-    """`missed_wake_scan.run_surface` hosts TWO independent alarms.
+    """`missed_wake_scan.run_surface` hosts independent alarms.
 
     The selector `find_stale_unflagged_background` has arms. The composition
     does not, and the composition is where the interesting failure lives: the
@@ -312,7 +312,7 @@ class TestLeadSurfaceComposition:
         )
 
     def test_a_gated_out_record_produces_no_surface(self, lead, monkeypatch):
-        """The negative control, so the two positives are not vacuous."""
+        """The negative control, so the positives above are not vacuous."""
         monkeypatch.setattr(
             mw, "get_task_list", lambda: [self._bg_task(status="completed")]
         )
@@ -352,14 +352,14 @@ class TestTheValidatedNameIsTheNameUSED:
     that makes this unacceptable rather than untidy.
 
     WHY THE DENY SET DOES NOT SAVE THIS, and it is the corollary that makes
-    the finding general: all 13 `agents/*.md` stems carry a `pact-` prefix and
+    the finding general: every `agents/*.md` stem carries a `pact-` prefix and
     none is unprefixed, so the runtime-derived deny set can only ever refuse a
     `pact-`-prefixed member name — precisely the set the strip breaks. Its
     sole reachable function today is preventing this same mis-bind, and it
     only reaches the names that happen to be shipped agent types.
 
     NON-VACUITY GUARD, ASSERTED RATHER THAN ASSUMED. The fixture member must
-    NOT be one of those 13 stems: if it were, the deny set would refuse it
+    NOT be one of those stems: if it were, the deny set would refuse it
     BEFORE the name comparison ever runs and every arm here would pass for the
     wrong reason. `test_the_fixture_name_is_not_a_shipped_stem` pins that.
     """
@@ -519,7 +519,7 @@ class TestTheEmittedEventPassesTheRealValidator:
     def test_a_record_missing_a_required_field_emits_NOTHING(self, monkeypatch):
         """Fail by dropping the event, never by writing an invalid one.
 
-        The negative control for the two arms above: an invalid write would
+        The negative control for the arms above: an invalid write would
         exit 0 and be lost anyway, so the skip must happen before the append.
         """
         broken = _record()
@@ -545,7 +545,7 @@ class TestDenySetIsLive:
     """
 
     def test_the_deny_set_is_NOT_EMPTY_in_the_shipped_tree(self):
-        """The relocation tripwire. Two lines, and nothing else has it.
+        """The relocation tripwire, and nothing else has it.
 
         An empty deny set is indistinguishable from a working one in every
         other arm, because the collision it guards needs a specific team
@@ -895,7 +895,7 @@ class TestTheLaunchAdvisoryReachesTeammateFramesOnly:
 
 
 class TestExactBoundaries:
-    """`>=` versus `>`, on all three clocks.
+    """`>=` versus `>`, on every clock.
 
     The primary pins one minute either side of each window, which cannot tell
     `>=` from `>`. These land exactly on it. An off-by-one here is invisible

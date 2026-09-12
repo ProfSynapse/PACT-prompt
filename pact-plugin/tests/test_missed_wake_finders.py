@@ -1,10 +1,10 @@
-"""Behavioural pins for the two lead-side finders and their ENTRY POINT.
+"""Behavioural pins for the lead-side finders and their ENTRY POINT.
 
 Location: pact-plugin/tests/test_missed_wake_finders.py
 Summary: pins `find_mutual_waits`, `find_unanchored_waits`,
-         `build_unanchored_surface`, and that both finders are reached from
-         `run_surface` — the registered entry point — rather than only from a
-         test calling them directly.
+         `build_unanchored_surface`, and that every finder in FINDERS is
+         reached from `run_surface` — the registered entry point — rather
+         than only from a test calling them directly.
 Used by: the suite. No module-level sys.path.insert — path setup is
          conftest-owned; see tests/test_path_setup_pin.py.
 

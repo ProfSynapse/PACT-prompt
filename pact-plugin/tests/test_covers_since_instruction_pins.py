@@ -12,8 +12,8 @@ Used by: the suite. No module-level sys.path.insert — path setup is
 EVERY SITE, AND COUNTS WHERE A FILE HAS SEVERAL. An agent copies the wait from
 whichever template it is reading. A template that drops the field produces
 waits with no anchor however correct the rule table is, so each template is
-pinned in its own file, and a file carrying a template at two sites is pinned
-at two: a presence check stays green with one of the two reverted.
+pinned in its own file, and a file carrying a template at several sites is
+pinned at that many: a presence check stays green with one of them reverted.
 
 PRESENCE PINS, NORMALISED. Backticks are stripped and whitespace runs collapsed
 on both sides, so a re-wrap or an inline-code change does not fail a pin and a

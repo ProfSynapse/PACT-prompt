@@ -1130,7 +1130,7 @@ def bind_launcher_identity(
     it. Only an owner with no task at all is a no-write now.
     """
     # Function-level: the whole module is imported only once a Bash frame
-    # arrives, and these three are needed only once identity is being bound.
+    # arrives, and these imports are needed only once identity is being bound.
     from .pact_context import resolve_agent_name
     from .session_registry import resolve as registry_resolve
     from .task_utils import iter_team_task_jsons
@@ -1161,8 +1161,9 @@ def bind_launcher_identity(
     # direction: a mis-bind names a teammate who did not launch the work.
     #
     # A second guard further down used to restate this. It was DEAD — reaching
-    # it with all three flags false implies `registry_name is not None`,
-    # because that exact combination already returned here, so its conjunction
+    # it with every flag in the condition below false implies
+    # `registry_name is not None`, because that exact combination already
+    # returned here, so its conjunction
     # was unsatisfiable. Deleting it proved zero kills across the full suite.
     # Do not reintroduce one: a redundant predicate implies this line does not
     # already hold the property, which invites the next reader to delete the
@@ -1265,7 +1266,7 @@ def record_background_launch(input_data: Any, now: datetime | None = None) -> bo
             # separates those two.
             "anchor_completed": anchor_completed,
             "command": command,
-            # BOTH clocks on this path take `now`. A bare iso_now() here
+            # Every clock on this path takes `now`. A bare iso_now() here
             # falls through to canonical_since(), which reads datetime.now
             # DIRECTLY and is not reachable from this module's utc_now — so an
             # injected clock would prune at `now` while stamping at real-now,

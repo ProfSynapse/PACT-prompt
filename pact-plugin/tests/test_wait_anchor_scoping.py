@@ -205,7 +205,7 @@ class TestAbsentAndMalformedStayTwoDistinctClasses:
 
 
 class TestWaitScopeAnchorReturnsBothHalves:
-    """The predicate underneath both surfaces above, pinned directly.
+    """The predicate underneath the surfaces above, pinned directly.
 
     It returns (anchor, class) and the callers use the halves separately —
     `wait_covers_record` takes the anchor and ignores the class,

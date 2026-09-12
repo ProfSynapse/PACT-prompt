@@ -2538,7 +2538,7 @@ def sync_to_claude_md(
     else:
         claude_md_path, resolved_root = _resolve_display_claude_md_with_base()
     # Escape guard runs AFTER resolution because it needs the resolved
-    # root; the two guards above run before because they need only the
+    # root; the guards above run before because they need only the
     # declaration. Same ordering in the sibling.
     _refuse_ambient_sync_on_declared_scope_escape(
         target, claude_md_root, resolved_root, claude_md_path

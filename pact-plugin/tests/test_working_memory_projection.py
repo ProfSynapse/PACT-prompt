@@ -512,8 +512,8 @@ class TestEveryResolverCallerCallsTheEscapeGuard:
 
         found = {member.split("::")[1] for member in members}
         assert _KNOWN_GUARDED_CALLERS <= found and len(members) >= 3, (
-            f"the scan found {members}; it must reach at least the three known "
-            "callers, or it is not reading the files it claims to"
+            f"the scan found {members}; it must reach every known caller, "
+            "or it is not reading the files it claims to"
         )
         assert unguarded == [], (
             f"these callers resolve a CLAUDE.md without the escape guard after "

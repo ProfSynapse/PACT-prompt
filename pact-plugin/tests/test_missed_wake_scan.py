@@ -576,7 +576,7 @@ class TestSurfaceCharacterBudget:
 
     @staticmethod
     def _header_chars(out: str) -> int:
-        """Header size, derived from HEADER_LINES so the two arms agree.
+        """Header size, derived from HEADER_LINES so the arms that use it agree.
 
         Not a slice at a hard-coded index: if the header ever becomes
         multi-line, HEADER_LINES is the one place that changes and this follows
@@ -865,7 +865,7 @@ CLASS_MARKERS = ("(1) ", "(2) ", "(3) ")
 
 
 def _class_segments(header: str) -> "list[str]":
-    """The three response-class clauses, sliced out of the RENDERED header.
+    """The CLASS_MARKERS clauses, sliced out of the RENDERED header.
 
     Parses the RUN, not the source text. The header is an inline f-string
     inside `build_surface`'s return, so a source-text rule over it is emptied
@@ -874,8 +874,9 @@ def _class_segments(header: str) -> "list[str]":
     the lead actually receives.
 
     Raises rather than returning a degraded result: a header that no longer
-    carries three ordered, non-empty class markers has been restructured, and
-    every arm below is then asserting about a shape that no longer exists.
+    carries every CLASS_MARKERS entry, in order and non-empty, has been
+    restructured, and every arm below is then asserting about a shape that no
+    longer exists.
     Loud is the point — a silent empty segment makes the ban-list arm pass
     vacuously, which is the one failure it must never have.
     """
@@ -913,7 +914,7 @@ def _remediation_hits(text: str) -> "list[str]":
 class TestResponseClassTwoPrescribesNothing:
     """The alarm must keep saying NOTHING for a legitimate wait.
 
-    🔴 WHAT REGRESSION THIS CATCHES. The header names three responses because
+    🔴 WHAT REGRESSION THIS CATCHES. The header names several responses because
     the hook CANNOT KNOW which applies — it can see that a wait is well-formed
     and stale, and nothing more. Class (2) is the one that says the correct
     response may be to do nothing at all. It is the load-bearing half: the

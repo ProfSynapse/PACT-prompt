@@ -777,7 +777,7 @@ def repo_shapes(tmp_path_factory):
 
 
 class TestSameRepositoryIsNotSymmetric:
-    """The predicate's four documented directions, on ONE real fixture.
+    """The predicate's documented directions, on ONE real fixture.
 
     Its docstring states these and warns that swapping the arguments silently
     returns a different verdict with nothing failing to tell you. That warning
@@ -804,7 +804,7 @@ class TestSameRepositoryIsNotSymmetric:
             ("main", "sub", False),
         ],
     )
-    def test_the_four_documented_directions(self, repo_shapes, env_dir, base, expected):
+    def test_the_documented_directions(self, repo_shapes, env_dir, base, expected):
         from shared.project_scope import same_repository
 
         got = same_repository(repo_shapes[env_dir], repo_shapes[base])
@@ -848,7 +848,7 @@ def _worktree_at(main: Path, path: Path) -> Path:
 
 
 # Each layout returns (declared, cwd, document, extra environment). The cwd is a
-# checkout root, so all three resolvers reach the same document from it.
+# checkout root, so every resolver reaches the same document from it.
 
 def _submodule_subdirectory(t):
     superproject = _committed_repo(t / "superproject")

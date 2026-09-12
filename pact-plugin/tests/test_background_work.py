@@ -251,7 +251,7 @@ class TestWaitCoversRecord:
 
 
 class TestDischargeSequences:
-    """The four sequences that decide whether Layers 2 and 3 may ship.
+    """The sequences that decide whether Layers 2 and 3 may ship.
 
     Each is a full sequence rather than a point check, because the defect
     being pinned only exists ACROSS steps: a record that outlives its own
@@ -372,19 +372,19 @@ class TestSuppressionIsTemporaryNotPermanent:
     THE SUPPRESSION IS OVER-DETERMINED, AND SAYING WHICH GATE DOES IT WOULD BE
     WRONG. `unflagged_fire` consults `any_listed_task_flagged` first and
     `classify_wait` second, and on this input EITHER ALONE suffices: MEASURED,
-    disabling `any_listed_task_flagged` entirely leaves both arms below green,
-    because `classify_wait` refuses the same frame. So these arms pin an
-    OUTCOME with two independent causes, and no arm here should be read as
+    disabling `any_listed_task_flagged` entirely leaves the job-2 arms below
+    green, because `classify_wait` refuses the same frame. So these arms pin
+    an OUTCOME with two independent causes, and no arm here should be read as
     evidence about which gate is load-bearing. The R5 silencing gate is
     isolated by `test_a_flag_on_EITHER_held_task_silences_the_advisory`, which
     puts the flag on a DIFFERENT task than the one in hand — the only shape
     where the two gates disagree.
 
-    WHAT THESE TWO ARMS UNIQUELY PIN is the discharge's `since` scoping:
+    WHAT THE JOB-2 ARMS UNIQUELY PIN is the discharge's `since` scoping:
     job 2's record SURVIVES an acknowledgment aimed at job 1, and fires once
-    the wait closes. MEASURED — both arms die when `since >= registered` is
-    widened to a blanket amnesty and when it is narrowed to never discharge.
-    Suppression is temporary; discharge is permanent.
+    the wait closes. MEASURED — the job-2 arms die when `since >= registered`
+    is widened to a blanket amnesty and when it is narrowed to never
+    discharge. Suppression is temporary; discharge is permanent.
 
     AND FIRING WOULD BE WORSE THAN A MISSED TICK. The advisory's own text says
     "no flagged wait" — literally false at a teammate holding one open. A
@@ -523,7 +523,7 @@ class TestOutstandingUnflagged:
         assert outstanding_unflagged(tasks, records=[rec]) == []
 
     def test_an_in_progress_unflagged_task_IS_surfaced(self):
-        """The positive, so the two negatives above are not vacuous."""
+        """The positive, so the negatives above are not vacuous."""
         rec = _sanitize_record(_record())
         assert outstanding_unflagged([_task()], records=[rec]) == [rec]
 
@@ -832,7 +832,7 @@ class TestShellBackgroundedLaunchPopulation:
 
         MUTANT that reddens this arm: change `endswith("&")` to `"&" in
         command`, which is the obvious "surely we should catch mid-line too"
-        edit; all four then match.
+        edit; every command listed then matches.
         """
         assert is_shell_backgrounded_bash(self._frame(command)) is False, (
             "%r is a DOCUMENTED miss. If the predicate now catches it, that is "
@@ -958,7 +958,7 @@ class TestTheClockIsNotDecorative:
     )
 
     def test_the_deliberately_clockless_writers_take_no_now(self):
-        """These six persist bytes and consult no clock, ON PURPOSE.
+        """The writers in CLOCKLESS_WRITERS persist bytes and consult no clock, ON PURPOSE.
 
         They are pure I/O: given the content, they write it. None of them
         prunes, compares, stamps or expires anything, so there is no moment at
@@ -990,14 +990,14 @@ class TestTheClockIsNotDecorative:
         )
 
     def test_CONTROL_the_guard_can_see_a_now_parameter_at_all(self):
-        """Non-vacuity. Both arms above assert an EMPTY list, and an empty
+        """Non-vacuity. The guard arms above assert an EMPTY list, and an empty
         list is what a broken parser returns too — a typo in the module path,
         an `ast` walk that finds no FunctionDef, or a `_params` that never
         sees a keyword-only argument would all report a clean pass.
 
         So: the module must contain functions that DO take `now=`, and
-        `_references` must return True for them. If this reddens, the two arms
-        above are measuring nothing and their green means nothing.
+        `_references` must return True for them. If this reddens, the guard
+        arms above are measuring nothing and their green means nothing.
         """
         with_now = [fn for fn in _module_functions() if "now" in _params(fn)]
         assert len(with_now) >= 5, (
@@ -1013,7 +1013,7 @@ class TestTheClockIsNotDecorative:
         # Instead the HELPER is checked against synthetic functions whose
         # answers are known, which is independent of whatever the module
         # currently looks like: if `_references` ever stops discriminating,
-        # both guards above go quietly green and this is the only arm that
+        # the guards above go quietly green and this is the only arm that
         # says so.
         probe = ast.parse(
             "def uses(now):\n    return now\n"
@@ -1022,10 +1022,10 @@ class TestTheClockIsNotDecorative:
             "def forwards_none(now):\n    return f(now=None)\n"
         ).body
         assert _references(probe[0], "now") is True, (
-            "_references cannot see a parameter that IS used — both guards "
+            "_references cannot see a parameter that IS used — the guards "
             "above would report a clean pass on a module full of offenders")
         assert _references(probe[1], "now") is False, (
-            "_references reports a use where there is none — both guards "
+            "_references reports a use where there is none — the guards "
             "above are then unfalsifiable")
         assert _references(probe[2], "now") is True, (
             "_references no longer counts forwarding the clock as a use, so "

@@ -604,11 +604,11 @@ def run_surface(input_data: dict) -> "str | None":
     if not is_lead(input_data):
         return None
 
-    # FOUR INDEPENDENT ALARMS SHARING ONE SUBPROCESS. Each is computed and
+    # INDEPENDENT ALARMS SHARING ONE SUBPROCESS. Each is computed and
     # emitted separately, and NONE early-returns on another's absence — an
     # empty missed-wake scan must not suppress the background surface, and
     # vice versa. They share only this process and the lead-frame guard above.
-    # The two task-list alarms below run outside any try, so their independence
+    # The task-list alarms below run outside any try, so their independence
     # also rests on each finder skipping a malformed task instead of raising:
     # one raise there drops every surface.
     parts = []
