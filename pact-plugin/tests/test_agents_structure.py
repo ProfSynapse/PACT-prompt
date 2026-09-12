@@ -609,7 +609,8 @@ class TestTeachbackMicroSkillExtraction:
     # chars, was cut to 221, and the ceiling is set to the resulting size
     # plus 36 rather than to a round number, so the next addition is
     # deliberate rather than absorbed.
-    MAX_SKILL_CHARS = 18600
+    # RAISED 18600 -> 18800 for the covers_since field the wait templates now carry (18722 then).
+    MAX_SKILL_CHARS = 18800
 
     # Key protocol elements that must be in the extracted skill.
     # Presence-only checks are deliberately strict — any drop indicates
