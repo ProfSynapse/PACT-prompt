@@ -110,6 +110,20 @@ class TestMutualWaitsNeedsTwoDistinctPeersAndAge:
             [_task("1", "alice", since=FRESH_MIN),
              _task("2", "bob", since=FRESH_MIN)]) == []
 
+    def test_a_NON_STRING_owner_is_not_counted_and_does_not_raise(self):
+        """An owner that is not a string is not an agent. It must not count
+        toward the two distinct owners, and it must not raise: this finder runs
+        outside any try in `run_surface`, where one raise drops every surface."""
+        odd = _task("1", "alice")
+        odd["owner"] = ["x"]
+        try:
+            found = mw.find_mutual_waits([odd, _task("2", "carol")])
+        except Exception as exc:
+            pytest.fail("a non-string owner made find_mutual_waits raise %r" % (exc,))
+        assert found == [], (
+            "only one real owner is waiting, so this is not a mutual wait: %r" % (found,)
+        )
+
     def test_CHARACTERIZATION_a_user_resolver_cycle_is_INVISIBLE(self):
         """🔴 THIS ARM PINS A KNOWN LIMITATION, NOT A REQUIREMENT.
 
@@ -272,3 +286,63 @@ class TestBothFindersAreReachedFromTheRegisteredEntryPoint:
             "entry point. A finder arm cannot see this: the finder works and "
             "nothing calls it, or the call is never reached."
         )
+
+
+class TestTheMutualWaitSurfaceReachesTheLead:
+    """The mutual-wait alarm, driven through the registered entry point.
+
+    The structural arm sees the finder CALLED. It cannot see the finder's
+    result dropped before it reaches the output, and it cannot see a raise
+    that stops the call being reached. Only the composed text shows either.
+    """
+
+    @pytest.fixture
+    def surface(self, tmp_path, monkeypatch):
+        """Run `run_surface` as a lead on a given task list.
+
+        No team name, so the registry-backed alarms stay out of the output and
+        nothing reads a config root outside tmp_path. The journal is stubbed so
+        no alarm can write anywhere.
+        """
+        from shared import pact_context
+
+        monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path))
+        monkeypatch.setattr(pact_context, "get_team_name", lambda: None)
+        monkeypatch.setattr(mw, "read_events", lambda et: [])
+        monkeypatch.setattr(mw, "append_event", lambda e: True)
+        monkeypatch.setattr(mw, "get_journal_path", lambda: str(tmp_path / "journal.jsonl"))
+
+        def run(tasks):
+            monkeypatch.setattr(mw, "get_task_list", lambda: tasks)
+            return mw.run_surface(captured_lead_userpromptsubmit_qualified()) or ""
+
+        return run
+
+    def test_an_aged_peer_pair_reaches_the_lead_as_a_MUTUAL_WAIT(self, surface):
+        out = surface([_task("1", "alice"), _task("2", "bob")])
+        assert "POSSIBLE MUTUAL WAIT" in out, (
+            "two distinct agents each idling on a peer past the threshold did "
+            "not reach the lead. A finder can be called and its result still "
+            "dropped, and only the output shows that: %r" % (out,)
+        )
+        assert "- Task #1 (alice" in out and "- Task #2 (bob" in out, out
+
+    def test_a_FRESH_peer_pair_does_not_reach_the_lead(self, surface):
+        """Paired with the arm above, so neither passes on an entry point that
+        prints the header for any two peers. Both anchors are fresh: a fresh
+        `since` over an old `covers_since` still reads stale, by design."""
+        out = surface([_task("1", "alice", since=FRESH_MIN, anchor=FRESH_MIN),
+                       _task("2", "bob", since=FRESH_MIN, anchor=FRESH_MIN)])
+        assert "POSSIBLE MUTUAL WAIT" not in out, out
+
+    def test_a_task_with_NON_DICT_metadata_does_not_blank_the_surface(self, surface):
+        """The finder runs outside any try in `run_surface`, so a malformed task
+        that raises there drops every lead surface, not only this one."""
+        malformed = {"id": "3", "status": "in_progress", "owner": "carol",
+                     "metadata": ["not", "a", "dict"]}
+        try:
+            out = surface([_task("1", "alice"), _task("2", "bob"), malformed])
+        except Exception as exc:
+            pytest.fail("a task whose metadata is not a dict made run_surface "
+                        "raise %r, which drops every lead surface" % (exc,))
+        assert "POSSIBLE MUTUAL WAIT" in out, out
