@@ -414,6 +414,14 @@
       "scripts.database.get_connection": null,
       "scripts.database.sqlite3": null
     },
+    "tests/test_consultant_anchor_coverage.py": {
+      "__future__.annotations": null,
+      "shared.background_work": "hooks/shared/background_work.py",
+      "shared.background_work._sanitize_record": null,
+      "shared.background_work.any_listed_task_flagged": null,
+      "shared.background_work.has_live_listed_task": null,
+      "shared.background_work.owner_anchor_tasks": null
+    },
     "tests/test_containment_certification.py": {
       "__future__.annotations": null,
       "pathlib.Path": null,
@@ -1662,6 +1670,18 @@
       "shared.claude_md_manager.RETRIEVED_CONTEXT_COMMENT": null,
       "shared.claude_md_manager.WORKING_MEMORY_COMMENT": null,
       "shared.claude_md_manager._build_migrated_content": null
+    },
+    "tests/test_missed_wake_finders.py": {
+      "__future__.annotations": null,
+      "datetime.datetime": null,
+      "datetime.timedelta": null,
+      "datetime.timezone": null,
+      "fixtures.role_frames": "tests/fixtures/role_frames.py",
+      "fixtures.role_frames.captured_lead_userpromptsubmit_qualified": null,
+      "missed_wake_scan": "hooks/missed_wake_scan.py",
+      "pathlib.Path": null,
+      "shared": "hooks/shared/__init__.py",
+      "shared.pact_context": "hooks/shared/pact_context.py"
     },
     "tests/test_missed_wake_scan.py": {
       "datetime.datetime": null,
@@ -3288,6 +3308,19 @@
     "tests/test_verify_gate_tree.py": {
       "__future__.annotations": null,
       "pathlib.Path": null
+    },
+    "tests/test_wait_anchor_scoping.py": {
+      "__future__.annotations": null,
+      "datetime.datetime": null,
+      "datetime.timedelta": null,
+      "datetime.timezone": null,
+      "shared.background_work": "hooks/shared/background_work.py",
+      "shared.background_work.ANCHOR_CLASS_ABSENT": null,
+      "shared.background_work.ANCHOR_CLASS_MALFORMED": null,
+      "shared.background_work.WAIT_ANCHOR_KEY": null,
+      "shared.background_work.wait_anchor_class": null,
+      "shared.background_work.wait_covers_record": null,
+      "shared.background_work.wait_scope_anchor": null
     },
     "tests/test_wait_discipline_layers_pinned.py": {
       "pathlib.Path": null,
