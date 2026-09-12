@@ -511,7 +511,7 @@ class TestEveryResolverCallerCallsTheEscapeGuard:
                 unguarded += [f"{rel}::{name}" for name in missing]
 
         found = {member.split("::")[1] for member in members}
-        assert _KNOWN_GUARDED_CALLERS <= found and len(members) >= 3, (
+        assert _KNOWN_GUARDED_CALLERS <= found and len(members) >= len(_KNOWN_GUARDED_CALLERS), (
             f"the scan found {members}; it must reach every known caller, "
             "or it is not reading the files it claims to"
         )
