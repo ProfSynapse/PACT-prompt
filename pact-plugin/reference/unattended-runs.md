@@ -18,6 +18,10 @@ addresses the first and does nothing for the second.**
 | A **teammate wake** is not delivered to an idle lead | `--teammate-mode tmux` |
 | A **background job finishes** and nobody is listening | the lead sends you a notification when it does |
 
+**Neither row helps if you are not there to act on it.** The heartbeat under
+*If you must stay on in-process mode* below covers both, because it depends on
+neither channel working — it only reminds you to look.
+
 Relaunch Claude Code with tmux teammate delivery:
 
 ```bash
