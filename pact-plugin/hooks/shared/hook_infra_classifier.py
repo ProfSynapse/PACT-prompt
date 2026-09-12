@@ -141,17 +141,20 @@ L3_CANDIDATE_HOOKS: frozenset[str] = frozenset({
 # derivation).
 _SEAM_HOOK_HELPER_CLOSURE: dict[str, frozenset[str]] = {
     "missed_wake_scan": frozenset({
-        "background_work", "constants", "intentional_wait", "pact_context",
+        "background_launch", "background_work",
+        "constants", "intentional_wait", "pact_context",
         "paths",
         "session_journal", "session_registry", "session_state", "task_utils",
     }),
     "teammate_idle": frozenset({
-        "background_work", "constants", "error_output", "intentional_wait",
+        "background_launch", "background_work",
+        "constants", "error_output", "intentional_wait",
         "pact_context", "paths", "session_journal",
         "session_registry", "session_state", "task_utils",
     }),
     "track_files": frozenset({
-        "background_work", "claude_md_manager", "constants", "error_output",
+        "background_launch", "background_work",
+        "claude_md_manager", "constants", "error_output",
         "failure_cause", "intentional_wait", "pact_context", "paths",
         "pin_caps", "session_journal", "session_registry", "session_state",
         "staleness", "task_utils",
