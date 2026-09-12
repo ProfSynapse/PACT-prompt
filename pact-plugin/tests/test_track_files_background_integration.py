@@ -16,18 +16,19 @@ exactly how the feature this replaces shipped inert.
 REVERT-CARDINALITY NON-VACUITY GATE — MEASURED, not asserted. Source-revert
 the Layer 1 call in `hooks/track_files.py` (replace the guarded
 `record_background_launch(input_data)` block with `pass`) and this file
-reports **1 failed, 6 passed**. The one kill is
-`test_a_background_launch_lands_a_real_record_on_disk`, which is the only arm
-that asserts the write actually happens; the other six pin fail-open and
+reports **3 failed, 5 passed**. The three kills are the arms that assert a
+record IS written: `test_a_background_launch_lands_a_real_record_on_disk`,
+`test_a_SHELL_backgrounded_launch_with_NO_FLAG_lands_a_record` and
+`test_a_LONG_RUNNING_command_IS_recorded_now`. The other five pin fail-open and
 negative behaviour and correctly survive a feature that does nothing. If a
 future edit makes that ablation report **0 failed**, this file has stopped
 measuring the seam and the number above is the tripwire.
 
 A SECOND ABLATION IS ALREADY PINNED BY THE FIXTURE: omitting the
-`pact-session-context.json` write also reports 1 failed, for a DIFFERENT
-reason — `get_team_name()` fail-closes on an empty SSOT. Two distinct
-single-point ablations, same cardinality, different cause; see the fixture
-docstring.
+`pact-session-context.json` write also reports 3 failed, 5 passed, on the same
+three positive-record arms, for a DIFFERENT reason: `get_team_name()`
+fail-closes on an empty SSOT. Two distinct single-point ablations, same
+cardinality, different cause; see the fixture docstring.
 
 NO module-level sys.path.insert: path setup is conftest-owned.
 """
