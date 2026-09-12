@@ -64,8 +64,14 @@ WAIT_CLASS_MISSING = "missing"
 WAIT_CLASS_NULL = "null"
 WAIT_CLASS_MALFORMED = "malformed"
 
+# F5: `-` is deliberately ABSENT from the LOOKBEHIND class so that the FLAG
+# spelling of these tokens matches — `--watch`, `-w --serve`, `foo --dev bar`.
+# It remains in the LOOKAHEAD, which is what still excludes `test-start-helper`
+# and `run-dev-script`: those have a token followed by `-`, and only the
+# lookbehind changed. Both guards had to fail for a hyphenated NAME to start
+# matching, and only one of them moved, so this change is one-directional.
 _DURABLE_WORD = re.compile(
-    r"(?<![A-Za-z0-9_./-])("
+    r"(?<![A-Za-z0-9_./])("
     + "|".join(re.escape(tok) for tok in sorted(DURABLE_COMMAND_TOKENS))
     + r")(?![A-Za-z0-9_-])",
     re.IGNORECASE,
@@ -117,10 +123,50 @@ def classify_wait(task: Any) -> str | None:
 
 
 def is_durable_command(command: Any) -> bool:
-    """True iff the command looks like a durable process (dev/start/serve/watch).
+    """Matches dev/start/serve/watch as a standalone word or immediately after
+    a hyphen, so `--watch` and `re-start` both hit.
 
-    Word-boundary match so `watchdog` and `test_start_helper` do not hit.
-    Conservative: a hit means "do not record".
+    A hit means "do not record". READ THE FIRST LINE LITERALLY: this is NOT a
+    test for a durable process, and calling it one understates its breadth in
+    both directions. Both are MEASURED and both are recorded as open findings
+    in tests/test_background_work_adversarial.py; neither is fixed here,
+    because the one-character change that closes the second opens a new false
+    negative, so the predicate needs redesigning rather than patching.
+
+    IT OVER-FIRES ON ORDINARY ONE-SHOT COMMANDS. Three of the four tokens are
+    everyday vocabulary in test, build and grep commands, so `pytest -k start`,
+    `grep -rn watch hooks/` and `build.py --env dev` are all silently NOT
+    recorded, and Layers 1-3 are off for those launches. The word-boundary
+    exclusions (`watchdog`, `test_start_helper`, `./scripts/dev-check.sh`,
+    `/srv/dev`) prevent ADJACENCY false positives only; the standalone-word
+    ones remain and are the common case.
+
+    THE FLAG SPELLING IS NOW CAUGHT — this was the harmful direction and it is
+    FIXED. `-` was in the lookbehind exclusion class, so `--watch` never
+    matched and `vite --watch` WAS recorded: a process meant to run forever,
+    eventually drawing an advisory and a lead-side surface. Dropping `-` from
+    the LOOKBEHIND closes it. MEASURED as newly filtered: `--watch`,
+    `vite --watch`, `-w --serve`, `foo --dev bar`. Newly recorded: NOTHING —
+    the change is one-directional.
+
+    WHY THAT COST NOTHING, because the obvious objection is wrong and was
+    believed for hours. It was argued that the same character makes
+    `test-start-helper` match `start` and go silently unrecorded. It does not:
+    that case is blocked by the LOOKAHEAD `(?![A-Za-z0-9_-])` — `start` is
+    followed by `-helper` — and F5 touches only the lookbehind. BOTH guards had
+    to fail for that regression and only one moved. `test_start_helper`,
+    `run-dev-script`, `pre-serve-hook` and `my-watch-list` are all unchanged.
+
+    THE REAL COST, small and in the silence direction: a token at the END of a
+    hyphenated name now matches, so `re-start` and `auto-dev` are no longer
+    recorded. A script genuinely named `auto-dev` therefore gets no Layer 1
+    row. That is the same hyphen-prefixed class as the flag forms and it is
+    accepted deliberately rather than discovered.
+
+    STILL OPEN, and NOT fixed here: the over-firing above. `pytest -k start`
+    and `grep -rn watch hooks/` remain silently unrecorded. That needs the
+    predicate redesigned rather than patched, and it is recorded as an open
+    finding with its measured command set rather than papered over.
     """
     if not isinstance(command, str) or not command.strip():
         return False
@@ -752,7 +798,16 @@ def update_unflagged_idle_counts(mutator, team_name: str | None = None) -> dict:
         if changed:
             path.write_text(new_text, encoding="utf-8")
         return updated
-    except OSError:
+    # TypeError / ValueError are here to keep the module's stated contract —
+    # "never raise on missing/corrupt files, empty team name, or MALFORMED
+    # RECORDS". A counter entry whose `count` is a non-int is a malformed
+    # record, and a mutator coercing it raises ValueError from inside this
+    # call. MEASURED before this was added: a `{"count": "not-an-int"}` entry
+    # raised straight out of here, so the docstring was false.
+    # The caller's own coercion is total as well (see teammate_idle), so this
+    # is the contract backstop rather than the primary defence — a mutator
+    # should not depend on it to be careless.
+    except (OSError, TypeError, ValueError):
         return {}
 
 
@@ -938,6 +993,21 @@ def bind_launcher_identity(
         input_data.get("agent_type"), team_name
     )
     registry_name = None
+    # THIS EARLY RETURN IS THE COLLAPSE PROTECTION. With no name on the frame,
+    # no `@`-bearing id, and no validated membership match, the only remaining
+    # route would be an UNVALIDATED type-strip of `agent_type` — which would
+    # attribute a launch to whatever string that field happens to hold and
+    # collapse same-type siblings onto one name. Refusing here is what makes
+    # the registry silent rather than wrong, and silence is the acceptable
+    # direction: a mis-bind names a teammate who did not launch the work.
+    #
+    # A second guard further down used to restate this. It was DEAD — reaching
+    # it with all three flags false implies `registry_name is not None`,
+    # because that exact combination already returned here, so its conjunction
+    # was unsatisfiable. Deleting it proved zero kills across the full suite.
+    # Do not reintroduce one: a redundant predicate implies this line does not
+    # already hold the property, which invites the next reader to delete the
+    # wrong one of the two.
     if not named_by_name and not named_by_id_split and not named_by_membership:
         resolved = registry_resolve(session_id)
         if resolved and "@" in resolved:
@@ -945,31 +1015,33 @@ def bind_launcher_identity(
         else:
             return None
 
+    # THE VALUE THAT PASSED VALIDATION IS THE VALUE THAT GETS RECORDED.
+    # `agent_type_names_a_member` validates the RAW `agent_type`; routing that
+    # case back through `resolve_agent_name` would re-derive a DIFFERENT
+    # string, because its Step 4 strips a `pact-` prefix. MEASURED before this
+    # was fixed: a member named `pact-reviewer` validated, then bound to its
+    # sibling `reviewer` and to that sibling's task — a launch attributed to a
+    # teammate who did not make it, which is the unacceptable direction.
+    #
+    # THE RAW VALUE IS USED ON THE MEMBERSHIP ROUTE AND NOWHERE ELSE. On the
+    # registry route and the `agent_name` / `@`-bearing `agent_id` routes the
+    # resolved value is the correct one and `agent_type` may hold a genuine
+    # type there, so letting the raw value reach those branches would move the
+    # mis-bind rather than close it.
+    #
+    # Precedence is preserved: Steps 1 and 2 still win over the validated
+    # Step-4 route, which is why they are tested before it rather than after.
+    # The final branch needs no `named_by_membership` test — reaching it means
+    # `registry_name` is None and neither earlier flag is set, and that
+    # combination already returned at the early return above unless membership
+    # matched.
     if registry_name:
         agent_name = registry_name
-    else:
+    elif named_by_name or named_by_id_split:
         agent_name = resolve_agent_name(input_data, team_name=team_name)
+    else:
+        agent_name = input_data.get("agent_type")
     if not agent_name:
-        return None
-
-    # COLLAPSE GUARD. An unvalidated type-strip would attribute a launch to
-    # whatever string `agent_type` happens to hold, collapsing same-type
-    # siblings onto one name. `named_by_membership` is exempt because it is
-    # the validated form of exactly this route: the value was confirmed
-    # against the team config's members[] before we got here.
-    agent_type = input_data.get("agent_type")
-    type_strip = ""
-    if isinstance(agent_type, str) and agent_type:
-        type_strip = (
-            agent_type[len("pact-"):] if agent_type.startswith("pact-") else agent_type
-        )
-    if (
-        agent_name == type_strip
-        and not named_by_name
-        and not named_by_id_split
-        and not named_by_membership
-        and registry_name is None
-    ):
         return None
 
     task_ids = []

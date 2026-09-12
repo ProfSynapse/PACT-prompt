@@ -114,6 +114,7 @@
       "shared.background_work._known_agent_types": null,
       "shared.background_work._sanitize_record": null,
       "shared.background_work.agent_type_names_a_member": null,
+      "shared.background_work.any_listed_task_flagged": null,
       "shared.background_work.append_record": null,
       "shared.background_work.bind_launcher_identity": null,
       "shared.background_work.classify_wait": null,
@@ -127,6 +128,24 @@
       "shared.background_work.record_task_ids": null,
       "shared.background_work.unflagged_fire": null,
       "shared.background_work.wait_covers_record": null
+    },
+    "tests/test_background_work_adversarial.py": {
+      "__future__.annotations": null,
+      "datetime.datetime": null,
+      "datetime.timedelta": null,
+      "datetime.timezone": null,
+      "fixtures.role_frames": "tests/fixtures/role_frames.py",
+      "fixtures.role_frames.captured_lead_userpromptsubmit_qualified": null,
+      "missed_wake_scan": "hooks/missed_wake_scan.py",
+      "pathlib.Path": null,
+      "shared": "hooks/shared/__init__.py",
+      "shared.background_work": "hooks/shared/background_work.py",
+      "shared.intentional_wait": "hooks/shared/intentional_wait.py",
+      "shared.intentional_wait.DEFAULT_THRESHOLD_MINUTES": null,
+      "shared.pact_context": "hooks/shared/pact_context.py",
+      "shared.session_journal": "hooks/shared/session_journal.py",
+      "shared.session_journal._validate_event_schema": null,
+      "teammate_idle": "hooks/teammate_idle.py"
     },
     "tests/test_backlog.py": {
       "datetime.datetime": null,

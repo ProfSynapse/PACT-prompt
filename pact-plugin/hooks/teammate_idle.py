@@ -368,7 +368,15 @@ def check_unflagged_background(
         last_task_id = entry.get("task_id", "")
         if last_task_id and last_task_id != task_id:
             entry = {"count": 0, "task_id": task_id}
-        current = int(entry.get("count", 0) or 0)
+        # TOTAL COERCION. A hand-edited or corrupted counter file can carry a
+        # non-numeric `count`, and a bare int() raises ValueError from inside
+        # the atomic update. Treating an unreadable count as 0 restarts the
+        # threshold rather than crashing the tick — the advisory fires later
+        # than it might have, which is the safe direction for an alarm.
+        try:
+            current = int(entry.get("count", 0) or 0)
+        except (TypeError, ValueError):
+            current = 0
         # Emit once at N == threshold; later same-task ticks must not re-emit.
         if last_task_id == task_id and current >= UNFLAGGED_IDLE_THRESHOLD:
             return counts

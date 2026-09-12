@@ -289,7 +289,18 @@ class TestDischargeSequences:
         assert discharge_acknowledged(_task(), team_name=TEAM) == 0
         assert unflagged_fire(_task(), team_name=TEAM, now=T0)[0] is True
 
-    def test_3_flag_job1_then_launch_job2_unflagged_FIRES_FOR_JOB2_ONLY(self):
+    def test_3_a_wait_discharges_job1_ONLY_and_job2_fires_once_the_wait_clears(
+        self,
+    ):
+        """RENAMED. It previously read `..._FIRES_FOR_JOB2_ONLY`, which
+        asserted more than the arm measures: the fire check below runs on a
+        task with NO wait and without a `tasks` list, so at that point the
+        job-1 flag is already cleared and the R5 silencing gate is not
+        evaluated at all. What this arm actually pins — and it is the
+        load-bearing half — is that `since >= registered_at` discharges job 1
+        and spares job 2. See the sibling class below for what happens while
+        the wait is still open, which is the opposite of what the name implied.
+        """
         self._seed(registered_at=_iso(T0))
         self._seed(registered_at=_iso(T0 + timedelta(minutes=10)))
         flagged = _task(wait=_wait(T0 + timedelta(minutes=1)))
@@ -300,7 +311,9 @@ class TestDischargeSequences:
         left = load_records_for_discharge(TEAM, now=T0)
         assert len(left) == 1
         assert left[0]["registered_at"] == _iso(T0 + timedelta(minutes=10))
+        # the wait has since been cleared: no valid wait on the task, no tasks list
         assert unflagged_fire(_task(), team_name=TEAM, now=T0)[0] is True
+
 
     def test_4_RESIDUAL_flag_and_clear_within_one_turn_keeps_the_record(self):
         """Documented residue, not a bug to fix.
@@ -314,6 +327,132 @@ class TestDischargeSequences:
         # no idle occurs, so discharge_acknowledged is never called
         assert unflagged_fire(_task(), team_name=TEAM, now=T0)[0] is True
         assert len(load_records_for_discharge(TEAM, now=T0)) == 1
+
+
+class TestSuppressionIsTemporaryNotPermanent:
+    """What an OPEN wait does to a job launched after it.
+
+    THE DESIGN DOCUMENT SAYS THIS FIRES. IT DOES NOT, AND THE CODE IS RIGHT.
+    §6.2's discharge table reads "job 2's registered_at > the wait's since,
+    test fails, job 2 not discharged -> fires". Only the first clause is true.
+    The record does survive the discharge — and then nothing surfaces it,
+    because the task carries a valid wait.
+
+    THE SUPPRESSION IS OVER-DETERMINED, AND SAYING WHICH GATE DOES IT WOULD BE
+    WRONG. `unflagged_fire` consults `any_listed_task_flagged` first and
+    `classify_wait` second, and on this input EITHER ALONE suffices: MEASURED,
+    disabling `any_listed_task_flagged` entirely leaves both arms below green,
+    because `classify_wait` refuses the same frame. So these arms pin an
+    OUTCOME with two independent causes, and no arm here should be read as
+    evidence about which gate is load-bearing. The R5 silencing gate is
+    isolated by `test_a_flag_on_EITHER_held_task_silences_the_advisory`, which
+    puts the flag on a DIFFERENT task than the one in hand — the only shape
+    where the two gates disagree.
+
+    WHAT THESE TWO ARMS UNIQUELY PIN is the discharge's `since` scoping:
+    job 2's record SURVIVES an acknowledgment aimed at job 1, and fires once
+    the wait closes. MEASURED — both arms die when `since >= registered` is
+    widened to a blanket amnesty and when it is narrowed to never discharge.
+    Suppression is temporary; discharge is permanent.
+
+    AND FIRING WOULD BE WORSE THAN A MISSED TICK. The advisory's own text says
+    "no flagged wait" — literally false at a teammate holding one open. A
+    discredited alarm never recovers, which is the standing posture and what
+    decides this.
+
+    Pinned as a pair — suppressed while open, fires once cleared — because
+    either arm alone reads as the other's bug.
+    """
+
+    @pytest.fixture(autouse=True)
+    def _isolated_team(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path))
+        (tmp_path / "teams" / TEAM).mkdir(parents=True)
+
+    def _two_jobs(self):
+        from shared.background_work import append_record
+
+        assert append_record(_record(registered_at=_iso(T0)), team_name=TEAM)
+        assert append_record(
+            _record(registered_at=_iso(T0 + timedelta(minutes=10))), team_name=TEAM
+        )
+        flagged = _task(wait=_wait(T0 + timedelta(minutes=1)))
+        assert discharge_acknowledged(flagged, team_name=TEAM) == 1
+        return flagged
+
+    def test_job2_is_SILENT_while_the_job1_wait_is_still_open(self):
+        flagged = self._two_jobs()
+        fire, wait_class, record = unflagged_fire(
+            flagged, team_name=TEAM, now=T0, tasks=[flagged]
+        )
+        assert fire is False, (
+            "an advisory here would tell a teammate it has no flagged wait "
+            "while it holds one open"
+        )
+        assert wait_class is None
+        assert record is not None, "and the record must SURVIVE, not be discharged"
+        assert record["registered_at"] == _iso(T0 + timedelta(minutes=10))
+
+    def test_BOTH_gates_independently_refuse_so_NEITHER_reads_AS_DEAD(self):
+        """States the over-determination, so nobody has to re-derive it.
+
+        `unflagged_fire` refuses THIS frame twice over: `any_listed_task_flagged`
+        returns True and `classify_wait` returns None, and either alone
+        suffices. Nothing else asserts that, because every other arm checks the
+        combined outcome, which cannot distinguish one gate from two.
+
+        WHAT THIS ARM IS *NOT*. It is not closing a coverage gap. Both gates
+        were ALREADY pinned before it existed — MEASURED at primary +
+        adversarial scope, with this arm removed: disabling
+        `any_listed_task_flagged` kills 5 arms
+        (`test_a_flag_on_EITHER_held_task_silences_the_advisory`,
+        `..._suppresses_the_surface`, `test_a_FLAGGED_task_is_NOT_surfaced`,
+        `test_the_discharge_read_stays_RAW_so_it_can_still_see_a_flag`,
+        `test_the_two_alarms_are_EXCLUSIVE_on_one_task`) and disabling
+        `classify_wait`'s validation kills 14. Neither gate can be deleted on a
+        green suite.
+
+        That correction matters more than the arm. The belief that neither gate
+        was pinned came from a TRUE but NARROW measurement — disabling one gate
+        left the two suppression arms in this class green — generalised to the
+        suite without re-measuring. The arms that pin each gate use a fixture
+        where the two gates DISAGREE (flag on a different task than the one in
+        hand); this class uses one where they agree, so of course it could not
+        see them.
+
+        What is left for this arm to do is name the property: these two agree
+        here and disagree elsewhere, so neither is redundant, and a reader who
+        mutates one in THIS shape and sees nothing should not conclude it is
+        dead.
+        """
+        from shared.background_work import any_listed_task_flagged
+
+        flagged = self._two_jobs()
+        record = matching_outstanding(
+            flagged, records=load_records_for_discharge(TEAM, now=T0)
+        )
+        assert record is not None
+
+        assert any_listed_task_flagged(record, [flagged]) is True, (
+            "gate 1 (R5 silencing) no longer refuses this frame"
+        )
+        assert classify_wait(flagged) is None, (
+            "gate 2 (valid-wait) no longer refuses this frame"
+        )
+        # and gate 2 alone still suppresses, with no task list for gate 1 to read
+        assert unflagged_fire(flagged, team_name=TEAM, now=T0, tasks=None)[0] is False
+
+    def test_job2_FIRES_as_soon_as_that_wait_is_cleared(self):
+        """The other half. Without it the arm above reads as a swallowed alarm."""
+        self._two_jobs()
+        cleared = _task()
+        fire, wait_class, record = unflagged_fire(
+            cleared, team_name=TEAM, now=T0, tasks=[cleared]
+        )
+        assert fire is True and wait_class == "missing"
+        assert record["registered_at"] == _iso(T0 + timedelta(minutes=10)), (
+            "and it fires for JOB 2 — job 1 stays discharged"
+        )
 
 
 # ------------------------------------------------ the Layer 3 read path (gates)
@@ -451,6 +590,41 @@ class TestBindLauncherIdentity:
 
     def test_task_ids_is_a_list_on_the_bound_result(self):
         bound = bind_launcher_identity(self._frame(agent_name="probe-coder"), TEAM)
+        assert bound[2] == ["13"]
+
+    def test_the_raw_agent_type_does_NOT_leak_into_the_step1_route(self):
+        """Steps 1/2 must still win, and must NOT record the raw agent_type.
+
+        The membership route records the RAW `agent_type` because that is the
+        value validation passed. If that raw value reached the `agent_name`
+        or `@`-bearing `agent_id` branches, the mis-bind would MOVE rather
+        than close — and a membership-route test cannot see it, because that
+        route is the one behaving correctly.
+
+        Here `agent_name` says `probe-coder` while `agent_type` says
+        `preparer` — a different LIVE member. Step 1 must win, so the bind
+        must report `probe-coder` and `probe-coder`'s task, not `preparer`.
+        """
+        frame = self._frame(agent_name="probe-coder", agent_type="preparer")
+        bound = bind_launcher_identity(frame, TEAM)
+        assert bound is not None
+        assert bound[0] == "probe-coder", (
+            f"Step 1 lost to the agent_type route: bound {bound[0]!r}"
+        )
+        assert bound[2] == ["13"], (
+            "bound the wrong member's tasks — the raw agent_type leaked past "
+            "the membership route"
+        )
+
+    def test_the_raw_agent_type_does_NOT_leak_into_the_step2_route(self):
+        """Same claim for the `@`-bearing `agent_id` branch."""
+        frame = self._frame(
+            agent_id=f"probe-coder@{TEAM}", agent_type="preparer"
+        )
+        assert "agent_name" not in frame
+        bound = bind_launcher_identity(frame, TEAM)
+        assert bound is not None
+        assert bound[0] == "probe-coder"
         assert bound[2] == ["13"]
 
     def test_no_identity_writes_nothing(self):
