@@ -338,7 +338,15 @@ def emit_unflagged_forensic(stale: list) -> None:
 
 
 def build_unflagged_surface(stale: list) -> "str | None":
-    """Lead-facing text naming each teammate with unflagged background work."""
+    """Lead-facing text naming each teammate with unflagged SHELL-SHAPED work.
+
+    THE LIST IS NOT A CENSUS, and the surface says so. Only shell launches
+    reach the registry, so a teammate with an outstanding monitor, Agent-tool
+    subagent, MCP task, workflow or scheduled wakeup is absent from it. The
+    sentence is true of everyone it names and says nothing about anyone it
+    omits — a reader who takes an empty or short list as an all-clear has
+    drawn a completeness inference the data does not support.
+    """
     if not stale:
         return None
     lines = []
@@ -352,11 +360,14 @@ def build_unflagged_surface(stale: list) -> "str | None":
         return None
     return (
         "UNFLAGGED BACKGROUND WORK — these teammates have outstanding "
-        "background launches and no flagged wait: "
+        "shell-shaped background launches and no flagged wait: "
         + "; ".join(lines)
         + ". SendMessage each one to collect its result or SET "
         "metadata.intentional_wait. This is NOT a missed wake — nobody is "
-        "waiting on you; they failed to flag their own wait."
+        "waiting on you; they failed to flag their own wait. "
+        "This list covers shell launches only: a teammate waiting on a "
+        "monitor, a subagent, an MCP task, a workflow or a scheduled wakeup "
+        "will not appear, so do not read a short list as an all-clear."
     )
 
 

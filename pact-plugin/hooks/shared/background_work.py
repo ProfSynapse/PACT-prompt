@@ -11,6 +11,18 @@ intentional_wait is recorded here. Detection requires a registry row PLUS
 in_progress PLUS validate_wait false — mid-arc in_progress with no row
 must not fire.
 
+SCOPE — SHELL-SHAPED WORK ONLY, AND THE LIMIT IS STRUCTURAL RATHER THAN AN
+OVERSIGHT. The launch is observed from a PostToolUse `Bash` frame, so the
+only background work this registry can ever hold is a shell command. The
+platform tracks several other kinds — a monitor, an Agent-tool subagent, an
+MCP task, a workflow, a scheduled wakeup — and none of them raises a `Bash`
+tool event, so none is recorded and no layer fires for one. A teammate can
+therefore hold genuinely outstanding work that this mechanism cannot see.
+DO NOT DESCRIBE THIS AS ENFORCING THE WAIT RULE GENERALLY. It enforces it
+for shell-shaped launches. The instruction to agents is unconditional —
+flag every self-started wait — but what is DETECTED here is a subset, and
+conflating the two is what makes an absent advisory read as an all-clear.
+
 Contract: never raise on missing/corrupt files, empty team name, or
 malformed records. Read-time 24h TTL drops stale rows. Team path uses
 pact_context.get_team_name() after init() — the same identity-aligned
