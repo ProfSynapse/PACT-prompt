@@ -344,8 +344,14 @@ class TestDischargeSequences:
         """
         self._seed()
         # no idle occurs, so discharge_acknowledged is never called
-        assert unflagged_fire(_task(), team_name=TEAM, now=T0)[0] is True
-        assert len(load_records_for_discharge(TEAM, now=T0)) == 1
+        assert unflagged_fire(_task(), team_name=TEAM, now=T0)[0] is True, (
+            "with no idle between setting and clearing the flag, nothing observed "
+            "the flag, so the record must still fire"
+        )
+        assert len(load_records_for_discharge(TEAM, now=T0)) == 1, (
+            "a flag set and cleared inside one turn must leave the record in place: "
+            "discharge runs only on TeammateIdle, and no idle occurred"
+        )
 
 
 class TestSuppressionIsTemporaryNotPermanent:
@@ -656,7 +662,10 @@ class TestBindLauncherIdentity:
         frame = self._frame(agent_id="0123456789abcdef", agent_type="pact-backend-coder")
         assert bind_launcher_identity(frame, TEAM) is None
 
-    def test_owner_with_no_in_progress_task_writes_nothing(self):
+    def test_a_member_owning_no_task_at_all_writes_nothing(self):
+        """A member holding only a completed task is a consultant and is
+        recorded on that anchor. Only a member owning no task at all binds
+        nothing."""
         frame = self._frame(agent_name="preparer")
         assert bind_launcher_identity(frame, TEAM) is None
 
