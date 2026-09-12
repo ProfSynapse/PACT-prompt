@@ -20,7 +20,7 @@ INSTRUCTED to re-SET it so a long wait does not read as stale. Scoping coverage
 on `since` therefore let every re-stamp widen a wait FORWARD over launches it
 had never acknowledged — a rolling amnesty that annulled the
 `anchor >= registered_at` comparison. `covers_since` is a separate field that
-is written once and not re-stamped, so the clock moves and the scope does not.
+every SET carries forward unchanged, so the clock moves and the scope does not.
 
 NON-COVERAGE, STATED. These arms pin the PREDICATE. They do not pin that any
 agent actually writes `covers_since` — that contract lives in
@@ -120,10 +120,10 @@ class TestAnAbsentAnchorSTILLCoversDeliberately:
     absent field feeding a security-shaped comparison looks like an oversight.
 
     WHY FAILING CLOSED WOULD BE WRONG. The anchor is agent-written. Every wait
-    raised before the field shipped has none, and so does every first-SET wait
-    — which at transition is all of them. Refusing to cover an unanchored wait
-    would make the discharge mechanism stop retiring records for every existing
-    teammate at once, silently, in the safe-looking direction.
+    raised before the field shipped has none, and so does every wait written
+    under the earlier instruction or from a template that omits it. Refusing to
+    cover an unanchored wait would make the discharge mechanism stop retiring
+    those records at once, silently, in the safe-looking direction.
 
     AND AN UNANCHORED WAIT THAT WAS NEVER RE-STAMPED IS HARMLESS BY
     CONSTRUCTION: its `since` still equals its true anchor, so the fallback
@@ -154,7 +154,7 @@ class TestAnAbsentAnchorSTILLCoversDeliberately:
         task = _task(since=_iso(ANCHOR_AT))
         assert wait_covers_record(task, _record(LAUNCH_AT)) is False
 
-    def test_a_first_SET_wait_covers_its_own_launch_instant(self):
+    def test_a_never_restamped_unanchored_wait_covers_its_own_launch_instant(self):
         """The never-re-stamped case: `since` equals the true anchor, so the
         fallback is exactly right and the wait is harmless by construction."""
         task = _task(since=_iso(LAUNCH_AT))
@@ -166,7 +166,8 @@ class TestAbsentAndMalformedStayTwoDistinctClasses:
     `absent` and `uncheckable` into one null.
 
     They have different causes and different remedies. ABSENT means the wait
-    predates the field, or an agent dropped it on a re-SET. MALFORMED means an
+    predates the field, was written under the earlier instruction or from a
+    template that omits it, or lost the field on a re-SET. MALFORMED means an
     agent wrote something unparseable and has a bug worth naming. Both fall back
     to `since` and both are surfaced, so neither is collapsed into a pass or a
     fail — but a reader told only "no anchor" cannot tell which they have.
