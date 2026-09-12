@@ -31,8 +31,12 @@ agents is unconditional — flag every self-started wait — but what is
 DETECTED here is a subset of a subset, and conflating any of the three is
 what makes an absent advisory read as an all-clear.
 
-Contract: never raise on missing/corrupt files, empty team name, or
-malformed records. Read-time 24h TTL drops stale rows. Team path uses
+Contract: never raise on missing/corrupt files, an unusable team directory,
+empty team name, or malformed records. Every state-file open goes through
+`_read_text_shared` or `_locked_update`: no symlink at the file is followed,
+files are created 0o600, undecodable bytes read as empty and are rewritten on
+the next change, and a no-op update creates no file. Read-time 24h TTL drops
+stale rows. Team path uses
 pact_context.get_team_name() after init() — the same identity-aligned
 resolver teammate_idle and get_task_list use.
 
@@ -49,6 +53,7 @@ the counter every tick and Layer 2 can never reach three.
 from __future__ import annotations
 
 import json
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -67,7 +72,14 @@ try:
     import fcntl
     HAS_FLOCK = True
 except ImportError:
+    fcntl = None  # no advisory locking on this platform
     HAS_FLOCK = False
+
+
+def _flock(f, operation: str) -> None:
+    """`fcntl.flock(f, fcntl.<operation>)` where flock exists; a no-op otherwise."""
+    if fcntl is not None:
+        fcntl.flock(f, getattr(fcntl, operation))
 
 REGISTRY_FILENAME = "background_work.json"
 UNFLAGGED_IDLE_FILENAME = "unflagged_background_idle.json"
@@ -299,20 +311,78 @@ def _parse_records_text(text: str, now: datetime) -> list[dict]:
     return out
 
 
+_NOFOLLOW = getattr(os, "O_NOFOLLOW", 0)
+_CLOEXEC = getattr(os, "O_CLOEXEC", 0)
+STATE_FILE_MODE = 0o600
+
+
 def _read_text_shared(path: Path) -> str:
-    """Read text under a shared flock when available.
+    """Read a state file under a shared flock when available.
 
     Writers take LOCK_EX, truncate-in-place, and flush before unlock so a
     LOCK_SH reader cannot observe the empty or partial mid-write file.
+
+    Opens with O_NOFOLLOW, so a symlink at the path raises OSError rather than
+    reading its target. Undecodable bytes are replaced rather than raised, so a
+    corrupt file parses as empty and the next write rewrites it clean. Raises
+    FileNotFoundError when the file does not exist.
     """
-    if HAS_FLOCK:
-        with open(path, "r", encoding="utf-8") as f:
-            fcntl.flock(f, fcntl.LOCK_SH)
-            try:
-                return f.read()
-            finally:
-                fcntl.flock(f, fcntl.LOCK_UN)
-    return path.read_text(encoding="utf-8")
+    fd = os.open(str(path), os.O_RDONLY | _NOFOLLOW | _CLOEXEC)
+    with os.fdopen(fd, "rb") as f:
+        _flock(f, "LOCK_SH")
+        try:
+            data = f.read()
+        finally:
+            _flock(f, "LOCK_UN")
+    return data.decode("utf-8", errors="replace")
+
+
+def _locked_update(path: Path, apply) -> Any:
+    """Read-modify-write one state file under LOCK_EX. The ONE open path for
+    every state-file write in this module. Raises OSError; callers catch.
+
+    `apply(text) -> (new_text, changed, result)`; `result` is returned.
+
+    NO FILE IS CREATED FOR A NO-OP. When the file is absent, `apply` runs on
+    empty text first, and if that changes nothing its result is returned
+    without creating the file or its directory. So an idle that finds nothing
+    to record, discharge or count leaves no state files behind. When it does
+    change something, the file is created and `apply` runs AGAIN under the
+    lock on whatever the file now holds, because another writer may have
+    created it in between. `apply` must therefore be safe to call twice.
+
+    Opens with O_NOFOLLOW: a symlink at the path fails the write instead of
+    truncating the symlink's target. Creates with mode 0o600, and narrows an
+    existing file to 0o600, because records carry command text.
+    """
+    flags = os.O_RDWR | _NOFOLLOW | _CLOEXEC
+    try:
+        fd = os.open(str(path), flags)
+    except FileNotFoundError:
+        _new_text, changed, result = apply("")
+        if not changed:
+            return result
+        path.parent.mkdir(parents=True, exist_ok=True)
+        fd = os.open(str(path), flags | os.O_CREAT, STATE_FILE_MODE)
+    with os.fdopen(fd, "r+b") as f:
+        _flock(f, "LOCK_EX")
+        try:
+            if hasattr(os, "fchmod"):
+                try:
+                    if os.fstat(f.fileno()).st_mode & 0o777 != STATE_FILE_MODE:
+                        os.fchmod(f.fileno(), STATE_FILE_MODE)
+                except OSError:
+                    pass
+            text = f.read().decode("utf-8", errors="replace")
+            new_text, changed, result = apply(text)
+            if changed:
+                f.seek(0)
+                f.truncate()
+                f.write(new_text.encode("utf-8"))
+                f.flush()
+        finally:
+            _flock(f, "LOCK_UN")
+    return result
 
 
 def _load_records(
@@ -337,72 +407,30 @@ def _load_records(
     return _parse_records_text(text, now)
 
 
-def _rewrite_locked(f, text: str) -> None:
-    """Truncate-in-place and flush while the caller still holds LOCK_EX."""
-    f.seek(0)
-    f.truncate()
-    f.write(text)
-    f.flush()
-
-
-def _write_text(path: Path, text: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    if HAS_FLOCK:
-        with open(path, "a+", encoding="utf-8") as f:
-            fcntl.flock(f, fcntl.LOCK_EX)
-            try:
-                _rewrite_locked(f, text)
-            finally:
-                fcntl.flock(f, fcntl.LOCK_UN)
-    else:
-        path.write_text(text, encoding="utf-8")
-
-
-def _write_records(path: Path, records: list[dict]) -> None:
-    _write_text(path, json.dumps({"records": records}))
-
-
 def _atomic_update_records(
     mutator,
     team_name: str | None = None,
     now: datetime | None = None,
 ) -> bool:
-    """Read-modify-write the registry under one lock. Fail-open."""
-    path = registry_path(team_name)
-    if path is None:
-        return False
-    now = now or utc_now()
-    path.parent.mkdir(parents=True, exist_ok=True)
+    """Read-modify-write the registry under one lock. Fail-open: returns False
+    on any error and never raises, including an unusable team directory and
+    an undecodable registry."""
+    clock = now if now is not None else utc_now()
 
-    def _apply(text: str) -> tuple[str, bool]:
-        current = _parse_records_text(text, now)
+    def _apply(text: str) -> "tuple[str, bool, bool]":
+        current = _parse_records_text(text, clock)
         updated, changed = mutator(current)
         if not changed:
-            return text, False
+            return text, False, True
         clean = [r for r in (_sanitize_record(x) for x in updated) if r is not None]
-        return json.dumps({"records": clean}), True
+        return json.dumps({"records": clean}), True, True
 
     try:
-        if HAS_FLOCK:
-            with open(path, "a+", encoding="utf-8") as f:
-                fcntl.flock(f, fcntl.LOCK_EX)
-                try:
-                    f.seek(0)
-                    new_text, changed = _apply(f.read())
-                    if changed:
-                        _rewrite_locked(f, new_text)
-                finally:
-                    fcntl.flock(f, fcntl.LOCK_UN)
-            return True
-        try:
-            text = path.read_text(encoding="utf-8")
-        except FileNotFoundError:
-            text = ""
-        new_text, changed = _apply(text)
-        if changed:
-            path.write_text(new_text, encoding="utf-8")
-        return True
-    except OSError:
+        path = registry_path(team_name)
+        if path is None:
+            return False
+        return _locked_update(path, _apply)
+    except (OSError, TypeError, ValueError):
         return False
 
 
@@ -411,14 +439,15 @@ def save_records(
     team_name: str | None = None,
 ) -> bool:
     """Replace the registry. Fail-open: return False on any error."""
-    path = registry_path(team_name)
-    if path is None:
-        return False
-    clean = [r for r in (_sanitize_record(x) for x in records) if r is not None]
     try:
-        _write_records(path, clean)
+        path = registry_path(team_name)
+        if path is None:
+            return False
+        clean = [r for r in (_sanitize_record(x) for x in records) if r is not None]
+        text = json.dumps({"records": clean})
+        _locked_update(path, lambda _current: (text, True, None))
         return True
-    except OSError:
+    except (OSError, TypeError, ValueError):
         return False
 
 
@@ -769,6 +798,8 @@ def discharge_acknowledged(
 
     def _apply(records: list[dict]) -> tuple[list[dict], bool]:
         nonlocal dropped
+        # Reset per call: the state-file writer may call this twice.
+        dropped = 0
         kept = []
         for record in records:
             if task_id in record_task_ids(record) and wait_covers_record(task, record):
@@ -843,6 +874,8 @@ def stamp_idled_at(
 
     def _apply(records: list[dict]) -> tuple[list[dict], bool]:
         nonlocal changed
+        # Reset per call: the state-file writer may call this twice.
+        changed = False
         out = []
         for record in records:
             if task_id in record_task_ids(record) and not record.get("idled_at"):
@@ -909,40 +942,21 @@ def load_unflagged_idle_counts(team_name: str | None = None) -> dict:
 
 def update_unflagged_idle_counts(mutator, team_name: str | None = None) -> dict:
     """Atomic RMW of unflagged_background_idle.json. Fail-open to {}."""
-    path = unflagged_idle_path(team_name)
-    if path is None:
-        return {}
-    path.parent.mkdir(parents=True, exist_ok=True)
 
-    def _apply(text: str) -> tuple[str, dict, bool]:
+    def _apply(text: str) -> "tuple[str, bool, dict]":
         counts = _parse_idle_counts_text(text)
         before = json.dumps(counts)
         updated = mutator(counts)
         if not isinstance(updated, dict):
             updated = {}
         new_text = json.dumps(updated)
-        return new_text, updated, new_text != before
+        return new_text, new_text != before, updated
 
     try:
-        if HAS_FLOCK:
-            with open(path, "a+", encoding="utf-8") as f:
-                fcntl.flock(f, fcntl.LOCK_EX)
-                try:
-                    f.seek(0)
-                    new_text, updated, changed = _apply(f.read())
-                    if changed:
-                        _rewrite_locked(f, new_text)
-                finally:
-                    fcntl.flock(f, fcntl.LOCK_UN)
-            return updated
-        try:
-            text = path.read_text(encoding="utf-8")
-        except FileNotFoundError:
-            text = ""
-        new_text, updated, changed = _apply(text)
-        if changed:
-            path.write_text(new_text, encoding="utf-8")
-        return updated
+        path = unflagged_idle_path(team_name)
+        if path is None:
+            return {}
+        return _locked_update(path, _apply)
     # TypeError / ValueError are here to keep the module's stated contract —
     # "never raise on missing/corrupt files, empty team name, or MALFORMED
     # RECORDS". A counter entry whose `count` is a non-int is a malformed
@@ -957,13 +971,14 @@ def update_unflagged_idle_counts(mutator, team_name: str | None = None) -> dict:
 
 
 def save_unflagged_idle_counts(counts: dict, team_name: str | None = None) -> bool:
-    path = unflagged_idle_path(team_name)
-    if path is None:
-        return False
     try:
-        _write_text(path, json.dumps(counts if isinstance(counts, dict) else {}))
+        path = unflagged_idle_path(team_name)
+        if path is None:
+            return False
+        text = json.dumps(counts if isinstance(counts, dict) else {})
+        _locked_update(path, lambda _current: (text, True, None))
         return True
-    except OSError:
+    except (OSError, TypeError, ValueError):
         return False
 
 
