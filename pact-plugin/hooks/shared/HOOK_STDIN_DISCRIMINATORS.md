@@ -176,10 +176,3 @@ precise one.
   subagent), each carrying `_meta.capture_method` provenance.
 - `pact-plugin/hooks/shared/pact_context.py` — `is_lead` / `classify_session_role`
   (the resolvers) and `get_journal_path` resolution via the session context.
-
----
-
-*Background: the discriminator audit and the marker-poisoning failure it
-explains are tracked under #812 (audit) and #917 (the emit-path bug);
-teammate-context non-persistence under tmux is #877. These pointers are
-provenance only — the behavioral facts above stand on their own.*
