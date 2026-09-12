@@ -347,4 +347,8 @@ class TestTheMutualWaitSurfaceReachesTheLead:
         except Exception as exc:
             pytest.fail("a task whose metadata is not a dict made run_surface "
                         "raise %r, which drops every lead surface" % (exc,))
-        assert "POSSIBLE MUTUAL WAIT" in out, out
+        assert "POSSIBLE MUTUAL WAIT" in out, (
+            "one task whose metadata is not a dict blanked the mutual-wait "
+            "surface, so a single malformed task hid the lead's alarm for a "
+            "real aged peer pair: %r" % (out,)
+        )
