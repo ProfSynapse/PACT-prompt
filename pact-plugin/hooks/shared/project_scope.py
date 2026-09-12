@@ -23,6 +23,7 @@ consumer would acquire a global namespace mutation to borrow one predicate.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Optional, Set
 
@@ -33,6 +34,12 @@ except ImportError:  # loaded as a top-level module rather than a package member
     from git_helpers import run_git
     from paths import get_claude_config_dir
 
+# Git LOCATES the repository from these instead of discovering it from `-C`.
+# Inherited -- a git hook runs with GIT_DIR exported for its own repository --
+# they make every directory report that one repository, so an unrelated
+# directory compares equal to it. Every git call below runs without them.
+_GIT_LOCATION_VARIABLES = ("GIT_DIR", "GIT_WORK_TREE", "GIT_COMMON_DIR")
+
 
 def _git_output(directory: Path, *args: str) -> Optional[str]:
     """Return the stripped stdout of `git -C <directory> <args>`, or None.
@@ -40,12 +47,17 @@ def _git_output(directory: Path, *args: str) -> Optional[str]:
     None on a git error, a timeout, a non-repo directory or an OSError, so
     every rule built on it fails toward refusal.
     """
+    env = {
+        key: value
+        for key, value in os.environ.items()
+        if key not in _GIT_LOCATION_VARIABLES
+    }
     # `run_git` absorbs TimeoutExpired and FileNotFoundError only. The original
     # predicate caught OSError entire, and that breadth is load-bearing here:
     # a PermissionError reaching a caller as an exception instead of a refusal
     # would turn a fail-safe into a crash on a write path.
     try:
-        result = run_git(["-C", str(directory), *args], timeout=5)
+        result = run_git(["-C", str(directory), *args], timeout=5, env=env)
     except OSError:
         return None
     if result is None or result.returncode != 0 or not result.stdout.strip():
@@ -164,9 +176,10 @@ def stays_in_declared_project(
     so a removed worktree or subdirectory still maps to the repository it was
     in; rules 2 and 3 still require the resolution to land in that repository.
     The ancestor stands in for a directory git can no longer see, so it NEVER
-    admits a resolution into the config root's own CLAUDE.md: a deleted
-    project under a git-versioned home would otherwise project into the
-    user-global file. A live declaration that resolves there is not affected.
+    admits a resolution at the home directory or into the config root's own
+    CLAUDE.md: every project under the user loads those files, and a deleted
+    project under a git-versioned home would otherwise project into them. A
+    live declaration that resolves there is not affected.
 
     REFUSED: a SUBDIRECTORY that is not a checkout root (a path below a root is
     containment, not identity — a nested directory can be its own project), a
@@ -190,10 +203,13 @@ def stays_in_declared_project(
         try:
             if declared.resolve() in _listed_worktrees(resolved):
                 return True
+            if resolved == Path.home().resolve():
+                return False
             config_claude_md = (get_claude_config_dir() / "CLAUDE.md").resolve()
             if Path(claude_md).resolve() == config_claude_md:
                 return False
-        except OSError:
+        except (OSError, RuntimeError):
+            # RuntimeError: Path.home() when no home directory can be found.
             return False
     if same_repository(anchor, resolved):
         return True

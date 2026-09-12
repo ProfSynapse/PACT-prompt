@@ -944,11 +944,53 @@ def _worktree_removed_outside_its_repository(t):
     return removed, main, _document_in(main), {}
 
 
-def _deleted_project_under_a_git_versioned_home(t):
-    home = _committed_repo(t / "home")
+def _deleted_project_resolving_into_the_config_root_document(t):
+    repo = _committed_repo(t / "repo")
+    (repo / "other").mkdir()
+    return (repo / "proj-gone", repo / "other", _document_in(repo),
+            {"CLAUDE_CONFIG_DIR": str(repo / ".claude")})
+
+
+# The suite redirects `Path.home()` to tmp_path, so these layouts make tmp_path
+# itself a git repository to stand for a git-versioned home. The config root is
+# moved elsewhere, so the config-root carve-out cannot be what refuses them.
+
+def _deleted_project_under_a_git_home(t):
+    (t / "other").mkdir()
+    return (t / "proj-gone", t / "other", _document_in(_committed_repo(t)),
+            {"CLAUDE_CONFIG_DIR": str(t / "config-root")})
+
+
+def _deleted_project_under_a_git_home_legacy_document(t):
+    home = _committed_repo(t)
     (home / "other").mkdir()
-    return (home / "proj-gone", home / "other", _document_in(home),
-            {"CLAUDE_CONFIG_DIR": str(home / ".claude")})
+    document = home / "CLAUDE.md"
+    document.write_text(_SEED_DOCUMENT, encoding="utf-8")
+    return (home / "proj-gone", home / "other", document,
+            {"CLAUDE_CONFIG_DIR": str(t / "config-root")})
+
+
+def _live_declaration_under_a_git_home(t):
+    (t / "other").mkdir()
+    return (t / "other", t / "other", _document_in(_committed_repo(t)),
+            {"CLAUDE_CONFIG_DIR": str(t / "config-root")})
+
+
+def _moved_away_worktree_of_a_git_home_landing_at_home(t):
+    # The config root is left at home, so BOTH carve-outs match this layout and
+    # the worktree record is its only way in: it pins that the record is
+    # consulted before either carve-out.
+    home = _committed_repo(t)
+    worktree = _worktree_at(home, t / "moved")
+    worktree.rename(t / "moved-away")
+    return worktree, home, _document_in(home), {}
+
+
+def _inherited_git_dir_naming_another_repository(t):
+    project = _committed_repo(t / "p1")
+    (t / "unrelated").mkdir()
+    return (t / "unrelated", project, _document_in(project),
+            {"GIT_DIR": str(project / ".git")})
 
 
 _SAME_PROJECT = {
@@ -962,6 +1004,8 @@ _SAME_PROJECT = {
     "removed_subdirectory": _removed_subdirectory,
     "moved_away_worktree_still_listed": _moved_away_worktree_still_listed,
     "live_declaration_into_the_config_root_document": _live_declaration_into_the_config_root_document,
+    "live_declaration_under_a_git_home": _live_declaration_under_a_git_home,
+    "moved_away_worktree_of_a_git_home_landing_at_home": _moved_away_worktree_of_a_git_home_landing_at_home,
 }
 
 _OUTSIDE_THE_PROJECT = {
@@ -969,7 +1013,10 @@ _OUTSIDE_THE_PROJECT = {
     "removed_declaration_in_another_repository": _removed_declaration_in_another_repository,
     "repository_root_declared_subdirectory_document": _repository_root_declared_subdirectory_document,
     "worktree_removed_outside_its_repository": _worktree_removed_outside_its_repository,
-    "deleted_project_under_a_git_versioned_home": _deleted_project_under_a_git_versioned_home,
+    "deleted_project_resolving_into_the_config_root_document": _deleted_project_resolving_into_the_config_root_document,
+    "deleted_project_under_a_git_home": _deleted_project_under_a_git_home,
+    "deleted_project_under_a_git_home_legacy_document": _deleted_project_under_a_git_home_legacy_document,
+    "inherited_git_dir_naming_another_repository": _inherited_git_dir_naming_another_repository,
 }
 
 
@@ -1063,4 +1110,40 @@ class TestEverySiteJudgesProjectScopeAlike:
                 _run_site(site)
         assert document.read_bytes() == before, (
             f"{layout}: {site} wrote into a document outside the declared project"
+        )
+
+    @pytest.mark.parametrize("site", _SITES[:2])
+    def test_a_relative_declaration_disagreeing_with_the_record_is_refused(
+        self, tmp_path, monkeypatch, site
+    ):
+        """A RELATIVE `CLAUDE_PROJECT_DIR` whose session record names another
+        project is refused at both sync sites, by the env/record disagreement
+        guard, which runs before resolution. That guard, not the escape guard,
+        stops a relative value from judging resolution against the process's
+        own working directory, so it is the one pinned here.
+
+        MUTANT that reddens a case: delete that site's
+        `_refuse_ambient_sync_on_project_dir_disagreement` call. The escape
+        guard then reads "." as the working directory, resolution lands there,
+        and the write goes through.
+        """
+        from fixtures.project_dir import enable_record_discovery, write_session_context
+        from scripts import pact_session
+        from scripts.pact_session import ProjectScopeDisagreementError
+
+        project = _committed_repo(tmp_path / "p1")
+        document = _document_in(project)
+        recorded = _committed_repo(tmp_path / "p2")
+        enable_record_discovery(monkeypatch, pact_session)
+        monkeypatch.setenv("CLAUDE_CODE_SESSION_ID", "scope-arm-session")
+        write_session_context(Path.home() / ".claude", "scope-arm-session", recorded)
+        monkeypatch.setenv("CLAUDE_PROJECT_DIR", ".")
+        monkeypatch.chdir(project)
+        before = document.read_bytes()
+
+        with pytest.raises(ProjectScopeDisagreementError):
+            _run_site(site)
+        assert document.read_bytes() == before, (
+            f"{site} wrote under a relative declaration that disagrees with the "
+            "session record"
         )
