@@ -302,7 +302,7 @@ def _clear_unflagged_idle(teammate_name: str, team_name: str) -> None:
 
 
 def check_unflagged_background(
-    tasks: list, teammate_name: str, team_name: str
+    tasks: list, teammate_name: str, team_name: str, now=None
 ) -> str | None:
     """Layer 2 — advise once at three consecutive unflagged idles.
 
@@ -344,10 +344,10 @@ def check_unflagged_background(
     # cleared on every tick where the fire predicate is false, so a teammate
     # that flags never accumulates toward the threshold, and one that keeps
     # working does not tick at all.
-    discharge_acknowledged(task, team_name=team_name)
+    discharge_acknowledged(task, team_name=team_name, now=now)
 
     fire, _wait_class, record = unflagged_fire(
-        task, team_name=team_name, tasks=tasks
+        task, team_name=team_name, tasks=tasks, now=now
     )
     if not fire or record is None:
         _clear_unflagged_idle(teammate_name, team_name)
@@ -355,7 +355,7 @@ def check_unflagged_background(
 
     task_id = str(task.get("id") or "")
     if task_id:
-        stamp_idled_at(task_id, team_name=team_name)
+        stamp_idled_at(task_id, team_name=team_name, now=now)
 
     result = {"emit": False}
 

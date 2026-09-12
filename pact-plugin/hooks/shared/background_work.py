@@ -408,8 +408,19 @@ def save_records(
         return False
 
 
-def append_record(record: dict, team_name: str | None = None) -> bool:
-    """Append one sanitized record. Fail-open."""
+def append_record(
+    record: dict,
+    team_name: str | None = None,
+    now: datetime | None = None,
+) -> bool:
+    """Append one sanitized record. Fail-open.
+
+    `now` reaches the EXPIRY PRUNE, which runs on the read inside this write:
+    _atomic_update_records -> _parse_records_text -> _record_expired. Past the
+    TTL and without it, two successive appends silently drop the first record
+    and still return True. This is the module's only clock on this path; the
+    stamp lives in record_background_launch, which threads its own.
+    """
     clean = _sanitize_record(record)
     if clean is None:
         return False
@@ -418,7 +429,7 @@ def append_record(record: dict, team_name: str | None = None) -> bool:
         current.append(clean)
         return current, True
 
-    return _atomic_update_records(_append, team_name=team_name)
+    return _atomic_update_records(_append, team_name=team_name, now=now)
 
 
 def record_task_ids(record: Any) -> list[str]:
@@ -1172,7 +1183,7 @@ def bind_launcher_identity(
     return agent_name, session_id, task_ids, anchor_completed
 
 
-def record_background_launch(input_data: Any) -> bool:
+def record_background_launch(input_data: Any, now: datetime | None = None) -> bool:
     """Write one registry row when the frame is a recordable teammate launch.
 
     Fail-open on every path — the host calls this for its side effect only and
@@ -1217,7 +1228,13 @@ def record_background_launch(input_data: Any) -> bool:
             # separates those two.
             "anchor_completed": anchor_completed,
             "command": command,
-            "registered_at": iso_now(),
+            # BOTH clocks on this path take `now`. A bare iso_now() here
+            # falls through to canonical_since(), which reads datetime.now
+            # DIRECTLY and is not reachable from this module's utc_now — so an
+            # injected clock would prune at `now` while stamping at real-now,
+            # manufacturing a divergence the system clock cannot produce.
+            "registered_at": iso_now(now),
         },
         team_name=team_name,
+        now=now,
     )
