@@ -341,7 +341,9 @@ def emit_unflagged_forensic(stale: list) -> None:
             payload = {
                 "agent": _sanitize_member_name(str(agent)),
                 "registered_at": str(registered),
-                "task_ids": [str(t) for t in task_ids],
+                "task_ids": [
+                    s for s in (_sanitize_member_name(str(t)) for t in task_ids) if s
+                ],
             }
             command = record.get("command")
             if isinstance(command, str) and command:
@@ -367,7 +369,13 @@ def build_unflagged_surface(stale: list) -> "str | None":
     lines = []
     for record in stale:
         agent = _sanitize_member_name(str(record.get("agent_name") or ""))
-        tasks = ", ".join(str(t) for t in record.get("task_ids") or [])
+        # Task ids are rendered into the lead's additionalContext, so they get
+        # the same sanitising as the agent name beside them.
+        raw_ids = record.get("task_ids")
+        ids = raw_ids if isinstance(raw_ids, list) else []
+        tasks = ", ".join(
+            s for s in (_sanitize_member_name(str(t)) for t in ids) if s
+        )
         if not agent:
             continue
         lines.append(f"{agent} (task(s) {tasks})" if tasks else agent)
