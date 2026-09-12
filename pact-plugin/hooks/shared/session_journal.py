@@ -502,13 +502,11 @@ _OPTIONAL_FIELDS_BY_TYPE: dict[str, dict[str, type]] = {
         "reason": str,
     },
     # hooks/missed_wake_scan.py writes unflagged_background_wait with an
-    # optional command (the launch's command text, truncated at write) and
-    # wait_class (missing / null / malformed — WHY no valid wait was found).
+    # optional command (the launch's command text, truncated at write).
     # The required-fields registration above is what ACTIVATES this optional
     # check, per the same pattern as missed_wake.
     "unflagged_background_wait": {
         "command": str,
-        "wait_class": str,
     },
     # hooks/task_lifecycle_gate.py writes teachback_ack with an optional concern
     # string — the teammate's variety_acknowledgment.concern, present only when
