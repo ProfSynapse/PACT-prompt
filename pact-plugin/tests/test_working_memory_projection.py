@@ -410,3 +410,132 @@ class TestSyncRefusesAProjectWithNoId:
         assert target.read_bytes() == before
         assert projected == []
         assert memory.last_sync_status == "empty"
+
+
+# ---------------------------------------------------------------------------
+# Every production caller of a CLAUDE.md resolver calls the escape guard
+# ---------------------------------------------------------------------------
+
+_PLUGIN_ROOT = Path(__file__).resolve().parent.parent
+_DISPLAY_RESOLVER = "_resolve_display_claude_md_with_base"
+_DISPLAY_GUARD = "_refuse_ambient_sync_on_declared_scope_escape"
+
+# (scope, resolver, guard, exempt). A function in scope that calls `resolver`
+# must call `guard` on a later line. The display resolver is searched in every
+# production file, so a new caller anywhere joins the population. archive_pin's
+# resolver is the hooks' shared read resolver, which read-only callers use
+# freely, so only archive_pin itself, which acts on what it resolves, is held
+# to it.
+_GUARDED_RESOLVERS = (
+    (
+        "production",
+        _DISPLAY_RESOLVER,
+        _DISPLAY_GUARD,
+        # The path-only wrapper returns no base, so no write can be
+        # containment-checked through it.
+        frozenset({"_resolve_display_claude_md_path"}),
+    ),
+    (
+        "scripts/archive_pin.py",
+        "get_project_claude_md_path",
+        "_stays_in_declared_project",
+        frozenset(),
+    ),
+)
+
+_KNOWN_GUARDED_CALLERS = {
+    "sync_to_claude_md",
+    "sync_retrieved_to_claude_md",
+    "resolve_claude_md",
+}
+
+
+def _production_files():
+    for path in sorted(_PLUGIN_ROOT.rglob("*.py")):
+        rel = path.relative_to(_PLUGIN_ROOT)
+        if "tests" in rel.parts or path.name.startswith("test_") or path.name == "conftest.py":
+            continue
+        yield path
+
+
+def _unguarded_callers(source, resolver, guard, exempt=frozenset()):
+    """Return (callers, unguarded): the functions that call `resolver`, and those
+    among them with no `guard` call on a line after their first `resolver` call."""
+    import ast
+
+    callers, unguarded = [], []
+    for node in ast.walk(ast.parse(source)):
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        if node.name in exempt:
+            continue
+        lines = {resolver: [], guard: []}
+        for call in ast.walk(node):
+            if not isinstance(call, ast.Call):
+                continue
+            func = call.func
+            name = func.id if isinstance(func, ast.Name) else getattr(func, "attr", None)
+            if name in lines:
+                lines[name].append(call.lineno)
+        if not lines[resolver]:
+            continue
+        callers.append(node.name)
+        if not any(line > min(lines[resolver]) for line in lines[guard]):
+            unguarded.append(node.name)
+    return callers, unguarded
+
+
+class TestEveryResolverCallerCallsTheEscapeGuard:
+    """The escape guard sits at the CALLERS, not inside the resolver, because it
+    needs `target` and `claude_md_root`, which the resolver does not take. So a
+    new caller would not inherit it. This pins that every caller does call it.
+    """
+
+    def test_every_production_caller_of_a_resolver_calls_the_escape_guard(self):
+        """MUTANT that reddens this arm: delete the guard call from
+        `sync_to_claude_md` or `sync_retrieved_to_claude_md`, or the
+        `_stays_in_declared_project` call from `archive_pin.resolve_claude_md`.
+        The failure names the unguarded caller."""
+        members, unguarded = [], []
+        for scope, resolver, guard, exempt in _GUARDED_RESOLVERS:
+            files = (
+                list(_production_files()) if scope == "production"
+                else [_PLUGIN_ROOT / scope]
+            )
+            for path in files:
+                callers, missing = _unguarded_callers(
+                    path.read_text(encoding="utf-8"), resolver, guard, exempt
+                )
+                rel = path.relative_to(_PLUGIN_ROOT)
+                members += [f"{rel}::{name}" for name in callers]
+                unguarded += [f"{rel}::{name}" for name in missing]
+
+        found = {member.split("::")[1] for member in members}
+        assert _KNOWN_GUARDED_CALLERS <= found and len(members) >= len(_KNOWN_GUARDED_CALLERS), (
+            f"the scan found {members}; it must reach every known caller, "
+            "or it is not reading the files it claims to"
+        )
+        assert unguarded == [], (
+            f"these callers resolve a CLAUDE.md without the escape guard after "
+            f"it: {unguarded}"
+        )
+
+    def test_the_scan_catches_an_unguarded_and_a_misordered_caller(self):
+        """The live control: the scan above can report a caller at all."""
+        import textwrap
+
+        source = textwrap.dedent(f"""
+            def unguarded():
+                path, base = {_DISPLAY_RESOLVER}()
+
+            def misordered():
+                {_DISPLAY_GUARD}(None, None, None, None)
+                path, base = {_DISPLAY_RESOLVER}()
+
+            def guarded():
+                path, base = {_DISPLAY_RESOLVER}()
+                {_DISPLAY_GUARD}(None, None, base, path)
+        """)
+        callers, unguarded = _unguarded_callers(source, _DISPLAY_RESOLVER, _DISPLAY_GUARD)
+        assert callers == ["unguarded", "misordered", "guarded"]
+        assert unguarded == ["unguarded", "misordered"]

@@ -42,6 +42,7 @@ Output: deny = {"hookSpecificOutput": {...}} + exit 2;
 from __future__ import annotations
 
 import json
+import os
 import re
 import sys
 
@@ -60,6 +61,99 @@ _FILLER_PATTERN = re.compile(
 _ENV_ASSIGNMENT = re.compile(r"\A[A-Za-z_][A-Za-z0-9_]*=\S*\s+")
 _WRAPPER_PREFIX = re.compile(r"\A(?:command|builtin)\s+")
 _TRAILING_COMMENT = re.compile(r"\s+#.*\Z")
+
+# --- Background-launch advisory (a SECOND, INDEPENDENT concern) -------------
+# Fired at the moment a background launch is committed, which is where the
+# association actually fails: an agent frames the moment as "the tool will
+# wake me" and ends the turn without flagging. A later idle-time reminder
+# reaches that agent only after they have already stalled.
+#
+# IT FIRES ON TEAMMATE FRAMES ONLY, keyed on stdin `agent_type` alone: present,
+# non-empty, and not a lead spelling. No identity, team config or task store is
+# read, so it still works where identity cannot be resolved. A lead frame gets
+# nothing, because a lead IS re-invoked when its background job finishes and
+# holds no task wait to flag. A plain non-PACT frame carries no `agent_type`
+# and gets nothing. An Agent-tool subagent carries a non-lead `agent_type`
+# too, and stdin has no field that separates it from a teammate, so it also
+# receives the advisory.
+#
+# IT IS NOT A TERM IN THE DENY VERDICT AND MUST NEVER BECOME ONE. It rides
+# the ALLOW branch only. `_is_filler_command` and its inputs are untouched by
+# this feature. A denied command never runs, so there is no background work
+# to advise about on that branch — which is why the advisory is attached to
+# the allow output rather than the deny one, and not because the verdict
+# feeds it.
+#
+# DELIVERY: an allow-path `additionalContext` reaches the model together with
+# the tool result, after the call has run. The advisory is read once the
+# launch has happened and before the agent decides how to end the turn, which
+# is the decision it addresses. It is advice, not enforcement: nothing
+# downstream may assume the agent acted on it.
+_BACKGROUND_ADVISORY = (
+    "This Bash call runs in the background. NOTHING WILL WAKE YOU when it "
+    "finishes — the result waits for you to collect it. Before you end this "
+    "turn, either collect the result or SET metadata.intentional_wait on "
+    "every task the wait covers, naming what you are waiting for. "
+    "validate_wait accepts a free-form reason, so a reason describing the "
+    "background job is valid even though KNOWN_REASONS does not enumerate one."
+)
+
+
+def _load_launch_predicate():
+    """`background_launch.is_background_launch`, loaded by file path, or None.
+
+    Loaded by PATH, not imported, so this hook never runs the `shared`
+    package's `__init__`, which costs tens of milliseconds on a call that
+    happens before every Bash. The module is not registered in `sys.modules`.
+    Any failure returns None, and the caller then emits no advisory: the
+    advisory is optional, and the deny verdict never reaches this call.
+    """
+    try:
+        import importlib.util
+
+        path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            "shared",
+            "background_launch.py",
+        )
+        spec = importlib.util.spec_from_file_location("_pact_background_launch", path)
+        if spec is None or spec.loader is None:
+            return None
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module.is_background_launch
+    except Exception:
+        return None
+
+
+def is_background_launch(input_data) -> bool:
+    """True iff this frame launches background work (the flag, or a command
+    ending in a bare `&`). False when the shared predicate cannot be loaded."""
+    launched = _load_launch_predicate()
+    if launched is None:
+        return False
+    try:
+        return launched(input_data) is True
+    except Exception:
+        return False
+
+
+# The lead's `agent_type` spellings. Mirrors `shared.pact_context.LEAD_AGENT_TYPES`,
+# which is the source of truth; held locally because this hook runs before every
+# Bash call and imports the standard library only.
+_LEAD_AGENT_TYPES = frozenset({"PACT:pact-orchestrator", "pact-orchestrator"})
+
+
+def is_teammate_frame(input_data) -> bool:
+    """True iff stdin carries a non-empty `agent_type` that is not a lead spelling."""
+    if not isinstance(input_data, dict):
+        return False
+    agent_type = input_data.get("agent_type")
+    return (
+        isinstance(agent_type, str)
+        and bool(agent_type)
+        and agent_type not in _LEAD_AGENT_TYPES
+    )
 
 
 def _is_filler_command(command: str) -> bool:
@@ -102,6 +196,18 @@ def main() -> None:
         tool_input = input_data.get("tool_input")
         command = tool_input.get("command") if isinstance(tool_input, dict) else None
         if not isinstance(command, str) or not _is_filler_command(command):
+            # ALLOW. The background advisory rides this branch and only this
+            # branch; it did not participate in reaching it.
+            # The role test runs first, so a lead or plain frame never loads
+            # the launch predicate.
+            if is_teammate_frame(input_data) and is_background_launch(input_data):
+                print(json.dumps({
+                    "hookSpecificOutput": {
+                        "hookEventName": "PreToolUse",
+                        "additionalContext": _BACKGROUND_ADVISORY,
+                    }
+                }))
+                sys.exit(0)
             print(_ALLOW_OUTPUT)
             sys.exit(0)
 

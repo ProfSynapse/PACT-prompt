@@ -24,6 +24,14 @@ Output: JSON with systemMessage (shutdown suggestion / stop advisory)
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    # Annotation-only. This file has `from __future__ import annotations`, so
+    # the type below is a string at runtime and this import never executes --
+    # which is what keeps a per-session hook from paying for a type.
+    from datetime import datetime
+
 import json
 import sys
 from collections.abc import Callable
@@ -284,6 +292,124 @@ def check_idle_cleanup(
     return None, False
 
 
+UNFLAGGED_ADVISORY = (
+    "You have outstanding background work and no flagged wait. Either collect "
+    "the result now, or SET metadata.intentional_wait on the task, naming what "
+    "you are waiting for. validate_wait accepts a free-form reason."
+)
+
+
+def _clear_unflagged_idle(teammate_name: str, team_name: str) -> None:
+    from shared.background_work import update_unflagged_idle_counts
+
+    def _drop(counts: dict) -> dict:
+        counts.pop(teammate_name, None)
+        return counts
+
+    update_unflagged_idle_counts(_drop, team_name)
+
+
+def check_unflagged_background(
+    tasks: list, teammate_name: str, team_name: str, now: datetime | None = None
+) -> str | None:
+    """Layer 2 — advise once at three consecutive unflagged idles.
+
+    Uses `unflagged_background_idle.json`, NOT `idle_counts.json`. That file's
+    writer pops the teammate key on every tick where the task is not
+    `completed`, and this counter's entire population is a teammate idling on
+    an `in_progress` task — the exact branch that pops. Sharing the file would
+    reset the counter every tick and this could never reach three.
+    """
+    from shared.background_work import (
+        UNFLAGGED_IDLE_THRESHOLD,
+        discharge_acknowledged,
+        stamp_idled_at,
+        unflagged_fire,
+        update_unflagged_idle_counts,
+    )
+
+    # DISCHARGE BEFORE TESTING, AND BEFORE THE STATUS GATE. A teammate that
+    # flagged a wait covering its launch has demonstrably associated the two,
+    # so the record has done its job and must not outlive the acknowledgment.
+    #
+    # It runs for EVERY task this teammate owns, whatever its status. A
+    # teammate owning no in_progress task still has records (anchored on its
+    # most recently completed task) and still idles, so a discharge placed
+    # behind the status gate below would never retire them. And a record lists
+    # the tasks held at LAUNCH, which need not include the task resolved here:
+    # a teammate holding two tasks may flag the other one, and a consultant
+    # may have completed a newer task since. Each call drops only records
+    # listing that task whose launch its wait covers, so a task with no
+    # covering wait drops nothing.
+    #
+    # WHAT THIS BUYS, STATED AT ITS ACTUAL SIZE: an ACCURATE CITATION, not the
+    # removal of a false alarm. Without it, a teammate that flagged, collected
+    # the result and cleared the wait keeps a live record, and a LATER
+    # unflagged idle draws an advisory naming a job that finished hours ago.
+    # The advice is still correct at that moment — the counter below only
+    # reaches its threshold on three CONSECUTIVE idles with no valid wait, so
+    # the teammate really is idling unflagged — but the reason given is stale.
+    # An agent that checks, finds the job long done, and concludes the alarm
+    # is unreliable is the cost this prevents.
+    #
+    # DO NOT RESTATE THIS AS "the alarm would otherwise fire at teammates who
+    # behaved correctly". That is FALSE and was checked: the counter is
+    # cleared on every tick where the fire predicate is false, so a teammate
+    # that flags never accumulates toward the threshold, and one that keeps
+    # working does not tick at all.
+    for owned in tasks:
+        if isinstance(owned, dict) and owned.get("owner") == teammate_name:
+            discharge_acknowledged(owned, team_name=team_name, now=now)
+
+    task = find_teammate_task(tasks, teammate_name)
+    if not task or task.get("status") != "in_progress":
+        _clear_unflagged_idle(teammate_name, team_name)
+        return None
+
+    fire, _wait_class, record = unflagged_fire(
+        task, team_name=team_name, tasks=tasks, now=now
+    )
+    if not fire or record is None:
+        _clear_unflagged_idle(teammate_name, team_name)
+        return None
+
+    task_id = str(task.get("id") or "")
+    if task_id:
+        stamp_idled_at(task_id, team_name=team_name, now=now)
+
+    result = {"emit": False}
+
+    def _bump(counts: dict) -> dict:
+        entry = counts.get(teammate_name, {})
+        if isinstance(entry, int):
+            entry = {"count": entry, "task_id": ""}
+        if not isinstance(entry, dict):
+            entry = {}
+        last_task_id = entry.get("task_id", "")
+        if last_task_id and last_task_id != task_id:
+            entry = {"count": 0, "task_id": task_id}
+        # TOTAL COERCION. A hand-edited or corrupted counter file can carry a
+        # non-numeric `count`, and a bare int() raises ValueError from inside
+        # the atomic update. Treating an unreadable count as 0 restarts the
+        # threshold rather than crashing the tick — the advisory fires later
+        # than it might have, which is the safe direction for an alarm.
+        try:
+            current = int(entry.get("count", 0) or 0)
+        except (TypeError, ValueError):
+            current = 0
+        # Emit once at N == threshold; later same-task ticks must not re-emit.
+        if last_task_id == task_id and current >= UNFLAGGED_IDLE_THRESHOLD:
+            return counts
+        entry["count"] = current + 1
+        entry["task_id"] = task_id
+        counts[teammate_name] = entry
+        result["emit"] = entry["count"] == UNFLAGGED_IDLE_THRESHOLD
+        return counts
+
+    update_unflagged_idle_counts(_bump, team_name)
+    return UNFLAGGED_ADVISORY if result["emit"] else None
+
+
 def reset_idle_count(teammate_name: str, idle_counts_path: str) -> None:
     """
     Reset a teammate's idle count (e.g., when they receive new work).
@@ -332,6 +458,22 @@ def main():
         )
         if cleanup_msg:
             messages.append(cleanup_msg)
+
+        # APPENDED, NOT `elif`. The cleanup message and this advisory come
+        # from predicates that are mutually exclusive TODAY — cleanup fires on
+        # `completed` tasks, the advisory requires `in_progress` — so an
+        # `elif` would be equivalent now and silently lossy the moment either
+        # predicate widens. Appending costs nothing and does not depend on
+        # that coincidence holding.
+        # Own try/except: an advisory must never cost the zombie cleanup.
+        try:
+            unflagged_msg = check_unflagged_background(
+                tasks, teammate_name, team_name
+            )
+            if unflagged_msg:
+                messages.append(unflagged_msg)
+        except Exception:
+            pass
 
         if messages:
             if should_shutdown:

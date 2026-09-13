@@ -35,9 +35,10 @@ chain. Three real multi-hop cases this catches:
   - task_lifecycle_gate -> teachback_schema -> variety_scorer   (shared 2-hop)
   - session_init -> staleness -> pin_caps                       (top-level 2-hop)
   - <every pact_context importer> -> pact_context -(relative)-> session_registry
-    (session_registry is the identity-resolution seam — reached by 11 hooks via
-    pact_context's `from .session_registry import`; a regex deriver that skips
-    relative edges under-attributes it to just the 2 direct importers)
+    (session_registry is the identity-resolution seam — reached by every
+    pact_context importer via pact_context's `from .session_registry import`;
+    a regex deriver that skips relative edges under-attributes it to its direct
+    importers only)
 A direct-only, shared-only, OR absolute-only map would MISS these — recreating a
 miniature inert-ship false-negative at the classifier layer. The asymmetry
 favors closure: a false positive costs one L2 test; a false negative is the
@@ -66,7 +67,12 @@ SEAM_DEPENDENT_HOOKS: frozenset[str] = frozenset({
     # (fail-LOUD) -> L2-only, never L3 (no mode-divergent signal -> no both-modes
     # matrix). KD-10.
     "merge_guard_pre", "merge_guard_post",
-})  # 14
+    # track_files JOINS with Layer 1 of the background-work registry: it now
+    # reads the team task store and writes
+    # ~/.claude/teams/<team>/background_work.json — task-dir resolution AND
+    # team config, so it meets the criterion above outright.
+    "track_files",
+})
 
 # Hooks confirmed to FAIL SILENTLY on a broken seam (a consequential effect that
 # should fire simply does not, with no error) -> they additionally require an L3
@@ -85,7 +91,7 @@ SEAM_DEPENDENT_HOOKS: frozenset[str] = frozenset({
 L3_LIVE_PROBE_HOOKS: frozenset[str] = frozenset({
     "missed_wake_scan", "teammate_idle", "agent_handoff_emitter",
     "task_lifecycle_gate",
-})  # 4
+})
 
 # Seam-dependent hooks ASSESSED in the CODE-phase fails-silent check and HELD at
 # L2-only (no consequential silent no-op meeting the L3 bar). Retained as a
@@ -101,7 +107,7 @@ L3_LIVE_PROBE_HOOKS: frozenset[str] = frozenset({
 #                      inert-ship way; held at L2.
 L3_CANDIDATE_HOOKS: frozenset[str] = frozenset({
     "file_tracker", "peer_inject", "validate_handoff",
-})  # 3 — assessed, held at L2-only
+})  # assessed, held at L2-only
 
 # dispatch_gate + bootstrap_gate are fail-CLOSED (their decision-domain
 # uncertainty path is exit(2) DENY, and they make no get_task_list call) -> they
@@ -117,7 +123,8 @@ L3_CANDIDATE_HOOKS: frozenset[str] = frozenset({
 # via AST following ABSOLUTE + RELATIVE (`from .X`) + function-level imports
 # (NOT regex — regex silently skips relative edges, e.g. pact_context's
 # `from .session_registry import resolve`, which under-attributes session_registry
-# to its 2 direct importers among the seam hooks instead of every pact_context importer). The
+# to its direct importers among the seam hooks instead of every pact_context
+# importer). The
 # meta-test re-derives the same way (AST, relative-following) and asserts
 # equality so this literal cannot drift. An edit to any helper in a hook's
 # closure can change that hook's behavior -> the edit is SECONDARY.
@@ -134,13 +141,26 @@ L3_CANDIDATE_HOOKS: frozenset[str] = frozenset({
 # derivation).
 _SEAM_HOOK_HELPER_CLOSURE: dict[str, frozenset[str]] = {
     "missed_wake_scan": frozenset({
-        "constants", "intentional_wait", "pact_context", "paths",
+        "background_launch", "background_work",
+        "constants", "intentional_wait", "pact_context",
+        "paths",
         "session_journal", "session_registry", "session_state", "task_utils",
     }),
     "teammate_idle": frozenset({
-        "constants", "error_output", "pact_context", "paths", "session_journal",
+        "background_launch", "background_work",
+        "constants", "error_output", "intentional_wait",
+        "pact_context", "paths", "session_journal",
         "session_registry", "session_state", "task_utils",
     }),
+    "track_files": frozenset({
+        "background_launch", "background_work",
+        "claude_md_manager", "constants", "error_output",
+        "failure_cause", "intentional_wait", "pact_context", "paths",
+        "pin_caps", "session_journal", "session_registry", "session_state",
+        "staleness", "task_utils",
+    }),  # regenerated from the live derivation, not hand-listed: the Layer 1
+         # fold adds background_work + intentional_wait, and the rest were
+         # already reached through the pin-staleness clear this hook carries.
     "agent_handoff_emitter": frozenset({
         "agent_handoff_marker", "canonical_json", "constants",
         "pact_context", "paths",
@@ -257,14 +277,7 @@ _SEAM_HOOK_HELPER_CLOSURE: dict[str, frozenset[str]] = {
 # waiver path.
 SEAM_READING_HELPERS: frozenset[str] = frozenset().union(
     *_SEAM_HOOK_HELPER_CLOSURE.values()
-)  # 30 = 28 modules under hooks/shared/ (including paths, the config-dir
-# SSOT) + 2 top-level hooks (pin_caps, staleness). COUNTING RULE, stated
-# because the number is not checkable without it: the union of the closure
-# values above, split by the directory each module file lives in. DERIVE this,
-# do not recall it. This comment read "28 (25 shared + 3 top-level)" while the
-# union was 29 and the top-level members were 2, so all three of its terms
-# were incorrect at once, and a repair of the total alone would have carried
-# the other two forward.
+)
 
 
 # ─── Path predicates ────────────────────────────────────────────────────────

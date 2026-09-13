@@ -268,11 +268,25 @@ class TestClosureOracleIsNonVacuous:
         # pact_context -> .session_registry is a RELATIVE edge; the full-transitive
         # oracle DOES follow it, so a relative-only-blind derivation differs.
         # This pins that relative edges are part of the canonical closure.
+        #
+        # BOTH edges must be dropped, and the reason is a real graph change
+        # rather than test bookkeeping. missed_wake_scan reaches
+        # session_registry by TWO routes now: the pact_context edge this arm
+        # is named for, and background_work -> session_registry, which the
+        # Layer 3 fold introduced (background_work's Layer 1 half resolves a
+        # launcher identity, and a static closure follows that import even
+        # though Layer 3 never calls it). Dropping only the first leaves the
+        # module reachable and the ablation stops discriminating — MEASURED:
+        # one edge -> still present, both edges -> absent. Naming one edge
+        # would leave an arm that passes without measuring anything.
         idx = _module_index()
         full = derive_closure("missed_wake_scan", idx)
         perturbed = derive_closure(
             "missed_wake_scan", idx,
-            drop_edges=frozenset({("pact_context", "session_registry")}),
+            drop_edges=frozenset({
+                ("pact_context", "session_registry"),
+                ("background_work", "session_registry"),
+            }),
         )
         assert "session_registry" in full, (
             "the canonical (full-transitive) closure follows the relative "
@@ -306,6 +320,12 @@ COVERED_L2 = {
     # loss), so the journal seam gets a real composition test: real init ->
     # session-dir resolution -> real append -> read_events over a tmp root.
     "validate_handoff": "test_validate_handoff_integration.py",
+    # track_files joined SEAM_DEPENDENT_HOOKS with Layer 1 of the
+    # background-work registry (task-dir resolution + team config). It goes in
+    # COVERED, not BACKLOG: parking a brand-new seam dependency in the backlog
+    # would ship an untested seam, which is the inert-feature shape this
+    # classifier exists to prevent.
+    "track_files": "test_track_files_background_integration.py",
 }
 
 # Documented forward-only BACKLOG: seam hooks whose non-mocked L2 test is a named
@@ -510,18 +530,76 @@ def _scan_hook_modules(predicate) -> list[tuple[str, int, str]]:
     return hits
 
 
+# Dynamic imports the static oracle cannot follow, allowed line by line.
+# wait_filler_gate.py loads hooks/shared/background_launch.py BY FILE PATH, so
+# the gate, which runs before every Bash call, never imports the `shared`
+# package. The oracle cannot see that edge. It hides nothing from the closure
+# only while background_launch.py itself imports nothing outside the stdlib and
+# nothing from `shared`, which the arm below pins.
+_ALLOWED_DYNAMIC_IMPORT_LINES = frozenset({
+    ("wait_filler_gate.py", "import importlib.util"),
+    ("wait_filler_gate.py",
+     'spec = importlib.util.spec_from_file_location("_pact_background_launch", path)'),
+    ("wait_filler_gate.py", "module = importlib.util.module_from_spec(spec)"),
+})
+
+
 class TestOracleStaticImportBoundBackstop:
     """Enforce the C6-A oracle's bound so a future dynamic/refresh edge fails
     HERE instead of slipping past the closure equality as a vacuous false-pass."""
 
     def test_no_dynamic_import_of_hook_modules(self):
-        hits = _scan_hook_modules(_is_dynamic_import_line)
+        hits = [hit for hit in _scan_hook_modules(_is_dynamic_import_line)
+                if (hit[0], hit[2]) not in _ALLOWED_DYNAMIC_IMPORT_LINES]
         assert not hits, (
             "a DYNAMIC import (importlib/__import__) appeared in the hooks tree — "
             "the C6-A static-AST oracle CANNOT see it, so the closure literal could "
             "silently false-pass on this edge. Either use a static import, or (if a "
             "legit non-hook dynamic import) allowlist this exact line + extend the "
             f"oracle. Offending: {hits}"
+        )
+
+    def test_the_by_path_loaded_helper_imports_only_the_stdlib(self):
+        """background_launch.py is loaded by file path, an edge the oracle
+        cannot see. The edge hides nothing only while the file imports nothing
+        but the stdlib: a `shared` or relative import reaches back into the
+        hooks tree, and a third-party import is a dependency no consumer
+        session is promised.
+
+        Stdlib membership is read from where each module is found, not from
+        sys.stdlib_module_names, which Python 3.9 in the CI matrix lacks.
+        """
+        import ast
+        import importlib.util
+        import sysconfig
+
+        paths = sysconfig.get_paths()
+        site = (paths["purelib"], paths["platlib"])
+        source = (HOOKS / "shared" / "background_launch.py").read_text(encoding="utf-8")
+        offending = []
+        for node in ast.walk(ast.parse(source)):
+            if isinstance(node, ast.ImportFrom) and node.level:
+                offending.append("." * node.level + (node.module or ""))
+                continue
+            if isinstance(node, ast.Import):
+                names = [alias.name for alias in node.names]
+            elif isinstance(node, ast.ImportFrom):
+                names = [node.module]
+            else:
+                continue
+            for name in names:
+                top = name.split(".")[0]
+                spec = None if top == "shared" else importlib.util.find_spec(top)
+                origin = getattr(spec, "origin", None) or ""
+                in_stdlib = origin in ("built-in", "frozen") or (
+                    origin.startswith(paths["stdlib"]) and not origin.startswith(site)
+                )
+                if not in_stdlib:
+                    offending.append(name)
+        assert not offending, (
+            "hooks/shared/background_launch.py imports %r. wait_filler_gate loads "
+            "that file by path, an edge the closure oracle cannot see, so it must "
+            "import nothing outside the stdlib and nothing from `shared`" % (offending,)
         )
 
     def test_no_refresh_subpackage_edge_in_hooks(self):

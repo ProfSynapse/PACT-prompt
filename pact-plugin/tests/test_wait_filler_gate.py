@@ -45,6 +45,9 @@ Registration pins:
   S4  non-membership: "wait_filler_gate" not in SEAM_DEPENDENT_HOOKS
       (decision pin for the seam classification — the hook reads only the
       stdin input contract, no integration seam).
+  S5  parity: the gate's local copy of the lead `agent_type` spellings
+      equals shared.pact_context.LEAD_AGENT_TYPES, which the hook cannot
+      import.
 
 S1 (script exists) is auto-covered by
 test_hooks_json.py::TestReferencedScriptsExist once registered.
@@ -358,13 +361,23 @@ def test_s2_registered_under_pretooluse_bash_no_async():
         )
 
 
+_STDLIB_ALLOWLIST = frozenset({"__future__", "importlib", "json", "os", "re", "sys"})
+
+
 def test_s3_stdlib_only_imports():
     """The hook imports stdlib only and never shared.* — one subprocess per
     Bash call in every consumer session keeps import cost minimal, and
     staying out of the shared closure keeps it out of every classifier
     sweep. The membership check is an explicit allowlist rather than
     sys.stdlib_module_names (3.10+): the CI matrix runs this suite on
-    Python 3.9, where that attribute does not exist."""
+    Python 3.9, where that attribute does not exist.
+
+    `os` and `importlib` are allowed because the hook loads the shared launch
+    predicate BY FILE PATH (`importlib.util` with an `os.path` join) instead of
+    importing it. That keeps the `shared` package out of the import graph, so
+    its `__init__` never runs on a call made before every Bash, which is the
+    property this arm protects. The allowlist is still a bound: any other
+    module, stdlib or not, fails it."""
     tree = ast.parse(HOOK_PATH.read_text(encoding="utf-8"))
     imported = set()
     for node in ast.walk(tree):
@@ -373,9 +386,9 @@ def test_s3_stdlib_only_imports():
         elif isinstance(node, ast.ImportFrom) and node.module:
             imported.add(node.module.split(".")[0])
     assert "shared" not in imported, f"shared.* import found: {imported}"
-    assert imported <= {"__future__", "json", "re", "sys"}, (
+    assert imported <= _STDLIB_ALLOWLIST, (
         f"imports outside the stdlib allowlist: "
-        f"{sorted(imported - {'__future__', 'json', 're', 'sys'})}"
+        f"{sorted(imported - _STDLIB_ALLOWLIST)}"
     )
 
 
@@ -387,3 +400,21 @@ def test_s4_not_seam_dependent():
     from shared.hook_infra_classifier import SEAM_DEPENDENT_HOOKS
 
     assert "wait_filler_gate" not in SEAM_DEPENDENT_HOOKS
+
+
+def test_s5_lead_spellings_match_the_source_set():
+    """The gate keeps its own copy of the lead `agent_type` spellings because it
+    imports only the standard library. That copy must equal
+    `shared.pact_context.LEAD_AGENT_TYPES`, the source of truth for who is the
+    lead. Both are frozensets, so equality compares members."""
+    import wait_filler_gate
+    from shared.pact_context import LEAD_AGENT_TYPES
+
+    assert wait_filler_gate._LEAD_AGENT_TYPES == LEAD_AGENT_TYPES, (
+        "wait_filler_gate._LEAD_AGENT_TYPES has drifted from "
+        f"shared.pact_context.LEAD_AGENT_TYPES (gate {sorted(wait_filler_gate._LEAD_AGENT_TYPES)}, "
+        f"source {sorted(LEAD_AGENT_TYPES)}). A lead spelling missing from the gate "
+        "makes a lead frame read as a teammate, so the lead gets the "
+        "background-launch advisory; a spelling only in the gate silences every "
+        "teammate whose agent_type matches it. Update the gate's copy."
+    )
